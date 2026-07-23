@@ -1,15 +1,12 @@
 package entities
 
+import "github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+
 type DevilFruit struct {
 	Power
-	fruitType string
-	isAwaken  bool
+	fruitType enums.FruitType
 }
 
-func (d *DevilFruit) FruitType() string {
+func (d *DevilFruit) FruitType() enums.FruitType {
 	return d.fruitType
-}
-
-func (d *DevilFruit) IsAwaken() bool {
-	return d.isAwaken
 }
