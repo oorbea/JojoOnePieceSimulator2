@@ -11,9 +11,12 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 )
+
+var testIDGen = idgen.UUIDGenerator[powers.PowerID]{}
 
 func newTestRepo(t *testing.T) *repositories.StandRepository {
 	t.Helper()
@@ -32,7 +35,7 @@ func newTestRepo(t *testing.T) *repositories.StandRepository {
 
 func newTestStand(t *testing.T, name string, evolvesFrom *powers.Stand) *powers.Stand {
 	t.Helper()
-	power, err := powers.NewPower(name, name+" description", enums.Rare, &[]string{"punch", "dash"}, "pic.png")
+	power, err := powers.NewPower(testIDGen.NewID(), name, name+" description", enums.Rare, &[]string{"punch", "dash"}, "pic.png")
 	if err != nil {
 		t.Fatalf("NewPower: %v", err)
 	}
@@ -43,16 +46,29 @@ func newTestStand(t *testing.T, name string, evolvesFrom *powers.Stand) *powers.
 	return stand
 }
 
+// saveStand saves stand and registers a cleanup that deletes it, so reruns
+// of the same test don't collide with a leftover row - now that ids (and
+// hence upserts) are owned by the application, re-saving under the same
+// name but a fresh id would otherwise hit the unique name constraint.
+func saveStand(t *testing.T, repo *repositories.StandRepository, ctx context.Context, stand *powers.Stand) {
+	t.Helper()
+	if err := repo.Save(ctx, stand); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := repo.Delete(context.Background(), stand.ID()); err != nil && !errors.Is(err, ports.ErrStandNotFound) {
+			t.Errorf("cleanup Delete(%s): %v", stand.Name(), err)
+		}
+	})
+}
+
 func TestStandRepository_SaveAndFindByName(t *testing.T) {
 	repo := newTestRepo(t)
 	ctx := context.Background()
 
 	name := uniqueName(t, "Silver Chariot")
 	stand := newTestStand(t, name, nil)
-
-	if err := repo.Save(ctx, stand); err != nil {
-		t.Fatalf("Save: %v", err)
-	}
+	saveStand(t, repo, ctx, stand)
 
 	got, err := repo.FindByName(ctx, name)
 	if err != nil {
@@ -78,15 +94,11 @@ func TestStandRepository_EvolutionChain(t *testing.T) {
 
 	parentName := uniqueName(t, "Silver Chariot")
 	parent := newTestStand(t, parentName, nil)
-	if err := repo.Save(ctx, parent); err != nil {
-		t.Fatalf("Save parent: %v", err)
-	}
+	saveStand(t, repo, ctx, parent)
 
 	childName := uniqueName(t, "Silver Chariot Requiem")
 	child := newTestStand(t, childName, parent)
-	if err := repo.Save(ctx, child); err != nil {
-		t.Fatalf("Save child: %v", err)
-	}
+	saveStand(t, repo, ctx, child)
 
 	got, err := repo.FindByName(ctx, childName)
 	if err != nil {
@@ -110,6 +122,11 @@ func TestStandRepository_SaveIsIdempotentByName(t *testing.T) {
 	if err := repo.Save(ctx, stand); err != nil {
 		t.Fatalf("Save (1st): %v", err)
 	}
+	t.Cleanup(func() {
+		if err := repo.Delete(context.Background(), stand.ID()); err != nil && !errors.Is(err, ports.ErrStandNotFound) {
+			t.Errorf("cleanup Delete(%s): %v", stand.Name(), err)
+		}
+	})
 	if err := repo.Save(ctx, stand); err != nil {
 		t.Fatalf("Save (2nd): %v", err)
 	}
@@ -145,9 +162,7 @@ func TestStandRepository_Filter(t *testing.T) {
 
 	name := uniqueName(t, "The World")
 	stand := newTestStand(t, name, nil)
-	if err := repo.Save(ctx, stand); err != nil {
-		t.Fatalf("Save: %v", err)
-	}
+	saveStand(t, repo, ctx, stand)
 
 	attackPower := enums.A
 	results, err := repo.Filter(ctx, ports.StandFilters{AttackPower: &attackPower})
@@ -173,6 +188,79 @@ func TestStandRepository_Filter(t *testing.T) {
 		if s.Name() == name {
 			t.Errorf("Filter(Speed=NULL) unexpectedly included %q (its speed is B)", name)
 		}
+	}
+}
+
+func TestStandRepository_FindByID(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	name := uniqueName(t, "Silver Chariot")
+	stand := newTestStand(t, name, nil)
+	saveStand(t, repo, ctx, stand)
+
+	got, err := repo.FindByID(ctx, stand.ID())
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if got.Name() != name {
+		t.Errorf("Name() = %q, want %q", got.Name(), name)
+	}
+	if got.ID() != stand.ID() {
+		t.Errorf("ID() = %v, want %v", got.ID(), stand.ID())
+	}
+}
+
+func TestStandRepository_FindByID_NotFound(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	_, err := repo.FindByID(ctx, testIDGen.NewID())
+	if !errors.Is(err, ports.ErrStandNotFound) {
+		t.Errorf("err = %v, want ports.ErrStandNotFound", err)
+	}
+}
+
+func TestStandRepository_Delete(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	parentName := uniqueName(t, "Silver Chariot")
+	parent := newTestStand(t, parentName, nil)
+	if err := repo.Save(ctx, parent); err != nil {
+		t.Fatalf("Save parent: %v", err)
+	}
+	// Deleted explicitly below rather than via saveStand's cleanup - no
+	// double-delete cleanup needed for the parent.
+
+	childName := uniqueName(t, "Silver Chariot Requiem")
+	child := newTestStand(t, childName, parent)
+	saveStand(t, repo, ctx, child)
+
+	if err := repo.Delete(ctx, parent.ID()); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	if _, err := repo.FindByID(ctx, parent.ID()); !errors.Is(err, ports.ErrStandNotFound) {
+		t.Errorf("FindByID(parent) after delete: err = %v, want ports.ErrStandNotFound", err)
+	}
+
+	got, err := repo.FindByName(ctx, childName)
+	if err != nil {
+		t.Fatalf("FindByName(child): %v", err)
+	}
+	if got.EvolvesFrom() != nil {
+		t.Errorf("EvolvesFrom() = %v, want nil after parent deletion", got.EvolvesFrom())
+	}
+}
+
+func TestStandRepository_Delete_NotFound(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	err := repo.Delete(ctx, testIDGen.NewID())
+	if !errors.Is(err, ports.ErrStandNotFound) {
+		t.Errorf("err = %v, want ports.ErrStandNotFound", err)
 	}
 }
 
