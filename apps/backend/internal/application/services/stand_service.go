@@ -8,9 +8,17 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
-var standRepository ports.StandRepository
+// StandService coordinates Stand creation against the injected repository.
+type StandService struct {
+	standRepo ports.IStandRepository
+}
 
-func CreateStand(
+func NewStandService(standRepo ports.IStandRepository) *StandService {
+	return &StandService{standRepo: standRepo}
+}
+
+func (s *StandService) CreateStand(
+	ctx context.Context,
 	name string,
 	description string,
 	rarity enums.PowerRarity,
@@ -28,19 +36,21 @@ func CreateStand(
 	if err != nil {
 		return nil, err
 	}
-	var evolvesFromStand *powers.Stand = nil
+
+	var evolvesFromStand *powers.Stand
 	if evolvesFrom != nil {
-		evolvesFromStand, err = standRepository.FindByName(context.Background(), *evolvesFrom)
+		evolvesFromStand, err = s.standRepo.FindByName(ctx, *evolvesFrom)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if err != nil {
-		return nil, err
-	}
+
 	stand, err := powers.NewStand(*power, attackPower, speed, attackRange, endurance, precision, potential, evolvesFromStand)
 	if err != nil {
 		return nil, err
 	}
-	err = standRepository.Save(context.Background(), stand)
-	if err != nil {
+
+	if err := s.standRepo.Save(ctx, stand); err != nil {
 		return nil, err
 	}
 	return stand, nil
