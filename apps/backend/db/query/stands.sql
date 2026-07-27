@@ -1,8 +1,9 @@
 -- name: UpsertPower :one
-INSERT INTO powers (kind, name, description, rarity, picture)
-VALUES ('STAND', $1, $2, $3, $4)
-ON CONFLICT (name) DO UPDATE
-    SET description = EXCLUDED.description,
+INSERT INTO powers (id, kind, name, description, rarity, picture)
+VALUES ($1, 'STAND', $2, $3, $4, $5)
+ON CONFLICT (id) DO UPDATE
+    SET name         = EXCLUDED.name,
+        description  = EXCLUDED.description,
         rarity       = EXCLUDED.rarity,
         picture      = EXCLUDED.picture,
         updated_at   = now()
@@ -33,6 +34,9 @@ FROM powers p
          JOIN stands s ON s.id = p.id
 WHERE p.name = $1;
 
+-- name: DeleteStandByID :execrows
+DELETE FROM powers WHERE id = $1;
+
 -- Returns the stand matching `name` (matched = true) plus its full ancestor
 -- chain (matched = false), so the caller can hydrate Stand.EvolvesFrom(...)
 -- without extra round trips, then discard everything but the matched row.
@@ -53,6 +57,77 @@ WITH RECURSIVE chain AS (SELECT p.id,
                           FROM stands s
                                    JOIN powers p ON p.id = s.id
                           WHERE p.name = $1
+                          UNION
+                          SELECT p2.id,
+                                 p2.name,
+                                 p2.description,
+                                 p2.rarity,
+                                 p2.picture,
+                                 s2.attack_power,
+                                 s2.speed,
+                                 s2.attack_range,
+                                 s2.endurance,
+                                 s2."precision",
+                                 s2.potential,
+                                 s2.evolves_from_id,
+                                 false AS matched
+                          FROM stands s2
+                                   JOIN powers p2 ON p2.id = s2.id
+                                   JOIN chain c ON c.evolves_from_id = s2.id),
+     dedup AS (SELECT id,
+                      name,
+                      description,
+                      rarity,
+                      picture,
+                      attack_power,
+                      speed,
+                      attack_range,
+                      endurance,
+                      "precision",
+                      potential,
+                      evolves_from_id,
+                      bool_or(matched) AS matched
+               FROM chain
+               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
+                        "precision", potential, evolves_from_id)
+SELECT d.id,
+       d.name,
+       d.description,
+       d.rarity,
+       d.picture,
+       d.attack_power,
+       d.speed,
+       d.attack_range,
+       d.endurance,
+       d."precision",
+       d.potential,
+       d.evolves_from_id,
+       d.matched,
+       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+FROM dedup d
+         LEFT JOIN power_skills ps ON ps.power_id = d.id
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
+         d."precision", d.potential, d.evolves_from_id, d.matched
+ORDER BY d.name;
+
+-- Same shape as GetStandRowsByName, keyed by id instead of name.
+-- name: GetStandRowsByID :many
+WITH RECURSIVE chain AS (SELECT p.id,
+                                 p.name,
+                                 p.description,
+                                 p.rarity,
+                                 p.picture,
+                                 s.attack_power,
+                                 s.speed,
+                                 s.attack_range,
+                                 s.endurance,
+                                 s."precision",
+                                 s.potential,
+                                 s.evolves_from_id,
+                                 true AS matched
+                          FROM stands s
+                                   JOIN powers p ON p.id = s.id
+                          WHERE p.id = $1
                           UNION
                           SELECT p2.id,
                                  p2.name,
