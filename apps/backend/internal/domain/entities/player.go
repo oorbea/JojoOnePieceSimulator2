@@ -47,3 +47,18 @@ func (p *Player) ObservationHakiToString() (string, error) {
 func (p *Player) ConquerorHakiToString() (string, error) {
 	return onePieceStatToString(p.conquerorHaki)
 }
+
+func (p *Player) DevilFruitMasteryToString() (string, error) {
+	switch p.fruitMastery {
+	case 0:
+		return "No fruit", nil
+	case 1:
+		return "Regular", nil
+	case 2:
+		return "Advanced", nil
+	case 3:
+		return "Awakened", nil
+	default:
+		return "Unknown", errors.New(fmt.Sprintf("Unknown fruit mastery: %v", p.fruitMastery))
+	}
+}
