@@ -17,6 +17,10 @@ type Player struct {
 	spin            byte
 }
 
+func (p *Player) Username() string {
+	return p.username
+}
+
 func onePieceStatToString(stat byte) (string, error) {
 	switch stat {
 	case 0:
@@ -60,5 +64,22 @@ func (p *Player) DevilFruitMasteryToString() (string, error) {
 		return "Awakened", nil
 	default:
 		return "Unknown", errors.New(fmt.Sprintf("Unknown fruit mastery: %v", p.fruitMastery))
+	}
+}
+
+func (p *Player) SpinToString() (string, error) {
+	switch p.spin {
+	case 0:
+		return "No spin", nil
+	case 1:
+		return "Basic", nil
+	case 2:
+		return "Advanced", nil
+	case 3:
+		return "Golden", nil
+	case 4:
+		return "Infinite", nil
+	default:
+		return "Unknown", errors.New(fmt.Sprintf("Unknown spin: %v", p.spin))
 	}
 }
