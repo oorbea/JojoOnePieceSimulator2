@@ -18,7 +18,7 @@ type StandFilters struct {
 	EvolvesFrom *string
 }
 
-type StandRepository interface {
+type IStandRepository interface {
 	Save(ctx context.Context, stand *powers.Stand) error
 	FindByName(ctx context.Context, name string) (*powers.Stand, error)
 	GetAll(ctx context.Context) ([]*powers.Stand, error)
