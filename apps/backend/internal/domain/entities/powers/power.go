@@ -11,6 +11,7 @@ type Power struct {
 	description string
 	rarity      enums.PowerRarity
 	skills      []string
+	picture     string
 }
 
 func NewPower(
@@ -18,6 +19,7 @@ func NewPower(
 	description string,
 	rarity enums.PowerRarity,
 	skills []string,
+	picture string,
 ) (*Power, error) {
 	if name == "" {
 		return nil, errors.New("name is required")
@@ -36,6 +38,7 @@ func NewPower(
 		description: description,
 		rarity:      rarity,
 		skills:      skills,
+		picture:     picture,
 	}, nil
 }
 
@@ -53,4 +56,8 @@ func (p Power) Rarity() enums.PowerRarity {
 
 func (p Power) Skills() []string {
 	return p.skills
+}
+
+func (p Power) Picture() string {
+	return p.picture
 }
