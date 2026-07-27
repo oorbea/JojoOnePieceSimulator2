@@ -2,16 +2,25 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -29,7 +38,28 @@ func main() {
 	defer pool.Close()
 
 	standRepository := repositories.NewStandRepository(pool)
-	_ = services.NewStandService(standRepository)
+	standService := services.NewStandService(standRepository, idgen.UUIDGenerator[powers.PowerID]{})
+	standEndpoints := endpoints.NewStandEndpoints(standService)
 
-	log.Println("JojoOnePieceSimulator2 backend ready")
+	srv := &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           endpoints.NewRouter(standEndpoints),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		log.Printf("JojoOnePieceSimulator2 backend listening on %s", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("serving: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("shutting down: %v", err)
+	}
 }
