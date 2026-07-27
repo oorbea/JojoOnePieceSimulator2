@@ -20,7 +20,9 @@ type StandFilters struct {
 
 type IStandRepository interface {
 	Save(ctx context.Context, stand *powers.Stand) error
+	FindByID(ctx context.Context, id powers.PowerID) (*powers.Stand, error)
 	FindByName(ctx context.Context, name string) (*powers.Stand, error)
 	GetAll(ctx context.Context) ([]*powers.Stand, error)
 	Filter(ctx context.Context, filters StandFilters) ([]*powers.Stand, error)
+	Delete(ctx context.Context, id powers.PowerID) error
 }

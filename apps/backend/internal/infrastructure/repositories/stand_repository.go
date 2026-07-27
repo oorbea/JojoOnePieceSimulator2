@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -47,23 +48,21 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 
 	var evolvesFromID pgtype.UUID
 	if parent := stand.EvolvesFrom(); parent != nil {
-		id, err := q.GetStandIDByName(ctx, parent.Name())
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return fmt.Errorf("%w: evolves_from stand %q", ports.ErrStandNotFound, parent.Name())
-			}
-			return fmt.Errorf("looking up evolves_from stand %q: %w", parent.Name(), err)
-		}
-		evolvesFromID = id
+		evolvesFromID = pgtype.UUID{Bytes: [16]byte(parent.ID()), Valid: true}
 	}
 
 	id, err := q.UpsertPower(ctx, db.UpsertPowerParams{
+		ID:          pgtype.UUID{Bytes: [16]byte(stand.ID()), Valid: true},
 		Name:        stand.Name(),
 		Description: stand.Description(),
 		Rarity:      stand.Rarity().String(),
 		Picture:     stand.Picture(),
 	})
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return fmt.Errorf("%w: %q", ports.ErrStandAlreadyExists, stand.Name())
+		}
 		return fmt.Errorf("upserting power %q: %w", stand.Name(), err)
 	}
 
@@ -95,6 +94,44 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("committing stand %q: %w", stand.Name(), err)
+	}
+	return nil
+}
+
+// FindByID loads the stand with the given id, along with its full
+// evolves_from ancestor chain, in a single round trip.
+func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*powers.Stand, error) {
+	rows, err := r.queries.GetStandRowsByID(ctx, pgtype.UUID{Bytes: [16]byte(id), Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("querying stand %s: %w", id, err)
+	}
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("%w: %s", ports.ErrStandNotFound, id)
+	}
+
+	stands, err := buildStands(standRowsFromGetByID(rows))
+	if err != nil {
+		return nil, err
+	}
+	if len(stands) == 0 {
+		// Every returned row was an ancestor of `id`, meaning `id` itself was
+		// not among the rows - should be unreachable since the query's base
+		// case filters on p.id = id.
+		return nil, fmt.Errorf("%w: %s", ports.ErrStandNotFound, id)
+	}
+	return stands[0], nil
+}
+
+// Delete removes the stand (and its power/skills rows) with the given id.
+// Any descendant stand's evolves_from is cleared automatically by the
+// schema's ON DELETE SET NULL.
+func (r *StandRepository) Delete(ctx context.Context, id powers.PowerID) error {
+	rowsAffected, err := r.queries.DeleteStandByID(ctx, pgtype.UUID{Bytes: [16]byte(id), Valid: true})
+	if err != nil {
+		return fmt.Errorf("deleting stand %s: %w", id, err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%w: %s", ports.ErrStandNotFound, id)
 	}
 	return nil
 }
