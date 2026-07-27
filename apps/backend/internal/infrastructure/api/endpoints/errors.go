@@ -1,0 +1,36 @@
+package endpoints
+
+import (
+	"errors"
+	"log"
+	"net/http"
+
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/valueobjects"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
+)
+
+// handleError maps a domain/service error onto the appropriate HTTP status
+// and writes the response body, logging anything that maps to a 500 so the
+// real cause isn't lost behind a generic message.
+func handleError(w http.ResponseWriter, err error) {
+	var validationErr *dto.ValidationError
+	switch {
+	case errors.Is(err, ports.ErrStandNotFound):
+		writeError(w, http.StatusNotFound, err.Error())
+	case errors.Is(err, ports.ErrStandAlreadyExists):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.As(err, &validationErr):
+		writeError(w, http.StatusBadRequest, "validation failed", validationErr.Errors...)
+	case errors.Is(err, enums.ErrInvalidRarity),
+		errors.Is(err, enums.ErrInvalidStandStat),
+		errors.Is(err, valueobjects.ErrInvalidID),
+		errors.Is(err, services.ErrSelfEvolution):
+		writeError(w, http.StatusBadRequest, err.Error())
+	default:
+		log.Printf("internal error: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal server error")
+	}
+}
