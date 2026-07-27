@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	DatabaseURL string
+	Port        string
 }
 
 // Load reads configuration from the environment. If a .env file is present
@@ -22,5 +23,10 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("DATABASE_URL is required")
 	}
 
-	return &Config{DatabaseURL: dsn}, nil
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	return &Config{DatabaseURL: dsn, Port: port}, nil
 }
