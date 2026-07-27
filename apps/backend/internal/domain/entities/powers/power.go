@@ -18,7 +18,7 @@ func NewPower(
 	name string,
 	description string,
 	rarity enums.PowerRarity,
-	skills []string,
+	skills *[]string,
 	picture string,
 ) (*Power, error) {
 	if name == "" {
@@ -30,14 +30,14 @@ func NewPower(
 	if !rarity.IsValid() {
 		return nil, enums.ErrInvalidRarity
 	}
-	if len(skills) < 1 {
+	if len(*skills) < 1 {
 		return nil, errors.New("skills are required")
 	}
 	return &Power{
 		name:        name,
 		description: description,
 		rarity:      rarity,
-		skills:      skills,
+		skills:      *skills,
 		picture:     picture,
 	}, nil
 }
