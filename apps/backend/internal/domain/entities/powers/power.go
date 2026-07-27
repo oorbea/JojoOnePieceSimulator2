@@ -6,7 +6,10 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 )
 
+type PowerId [16]byte
+
 type Power struct {
+	id          PowerId
 	name        string
 	description string
 	rarity      enums.PowerRarity
