@@ -20,6 +20,18 @@ func (q *Queries) DeletePowerSkills(ctx context.Context, powerID pgtype.UUID) er
 	return err
 }
 
+const deleteStandByID = `-- name: DeleteStandByID :execrows
+DELETE FROM powers WHERE id = $1
+`
+
+func (q *Queries) DeleteStandByID(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteStandByID, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const filterStandRows = `-- name: FilterStandRows :many
 WITH RECURSIVE base AS (SELECT p.id,
                                 p.name,
@@ -196,6 +208,130 @@ func (q *Queries) GetStandIDByName(ctx context.Context, name string) (pgtype.UUI
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getStandRowsByID = `-- name: GetStandRowsByID :many
+WITH RECURSIVE chain AS (SELECT p.id,
+                                 p.name,
+                                 p.description,
+                                 p.rarity,
+                                 p.picture,
+                                 s.attack_power,
+                                 s.speed,
+                                 s.attack_range,
+                                 s.endurance,
+                                 s."precision",
+                                 s.potential,
+                                 s.evolves_from_id,
+                                 true AS matched
+                          FROM stands s
+                                   JOIN powers p ON p.id = s.id
+                          WHERE p.id = $1
+                          UNION
+                          SELECT p2.id,
+                                 p2.name,
+                                 p2.description,
+                                 p2.rarity,
+                                 p2.picture,
+                                 s2.attack_power,
+                                 s2.speed,
+                                 s2.attack_range,
+                                 s2.endurance,
+                                 s2."precision",
+                                 s2.potential,
+                                 s2.evolves_from_id,
+                                 false AS matched
+                          FROM stands s2
+                                   JOIN powers p2 ON p2.id = s2.id
+                                   JOIN chain c ON c.evolves_from_id = s2.id),
+     dedup AS (SELECT id,
+                      name,
+                      description,
+                      rarity,
+                      picture,
+                      attack_power,
+                      speed,
+                      attack_range,
+                      endurance,
+                      "precision",
+                      potential,
+                      evolves_from_id,
+                      bool_or(matched) AS matched
+               FROM chain
+               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
+                        "precision", potential, evolves_from_id)
+SELECT d.id,
+       d.name,
+       d.description,
+       d.rarity,
+       d.picture,
+       d.attack_power,
+       d.speed,
+       d.attack_range,
+       d.endurance,
+       d."precision",
+       d.potential,
+       d.evolves_from_id,
+       d.matched,
+       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+FROM dedup d
+         LEFT JOIN power_skills ps ON ps.power_id = d.id
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
+         d."precision", d.potential, d.evolves_from_id, d.matched
+ORDER BY d.name
+`
+
+type GetStandRowsByIDRow struct {
+	ID            pgtype.UUID
+	Name          string
+	Description   string
+	Rarity        string
+	Picture       string
+	AttackPower   string
+	Speed         string
+	AttackRange   string
+	Endurance     string
+	Precision     string
+	Potential     string
+	EvolvesFromID pgtype.UUID
+	Matched       bool
+	Skills        []string
+}
+
+// Same shape as GetStandRowsByName, keyed by id instead of name.
+func (q *Queries) GetStandRowsByID(ctx context.Context, id pgtype.UUID) ([]GetStandRowsByIDRow, error) {
+	rows, err := q.db.Query(ctx, getStandRowsByID, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetStandRowsByIDRow{}
+	for rows.Next() {
+		var i GetStandRowsByIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Rarity,
+			&i.Picture,
+			&i.AttackPower,
+			&i.Speed,
+			&i.AttackRange,
+			&i.Endurance,
+			&i.Precision,
+			&i.Potential,
+			&i.EvolvesFromID,
+			&i.Matched,
+			&i.Skills,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getStandRowsByName = `-- name: GetStandRowsByName :many
@@ -419,10 +555,11 @@ func (q *Queries) ListStandRows(ctx context.Context) ([]ListStandRowsRow, error)
 }
 
 const upsertPower = `-- name: UpsertPower :one
-INSERT INTO powers (kind, name, description, rarity, picture)
-VALUES ('STAND', $1, $2, $3, $4)
-ON CONFLICT (name) DO UPDATE
-    SET description = EXCLUDED.description,
+INSERT INTO powers (id, kind, name, description, rarity, picture)
+VALUES ($1, 'STAND', $2, $3, $4, $5)
+ON CONFLICT (id) DO UPDATE
+    SET name         = EXCLUDED.name,
+        description  = EXCLUDED.description,
         rarity       = EXCLUDED.rarity,
         picture      = EXCLUDED.picture,
         updated_at   = now()
@@ -430,6 +567,7 @@ RETURNING id
 `
 
 type UpsertPowerParams struct {
+	ID          pgtype.UUID
 	Name        string
 	Description string
 	Rarity      string
@@ -438,6 +576,7 @@ type UpsertPowerParams struct {
 
 func (q *Queries) UpsertPower(ctx context.Context, arg UpsertPowerParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, upsertPower,
+		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.Rarity,
