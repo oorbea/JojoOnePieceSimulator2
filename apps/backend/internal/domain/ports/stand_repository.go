@@ -1,0 +1,26 @@
+package ports
+
+import (
+	"context"
+
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+)
+
+type StandFilters struct {
+	Rarity      *enums.PowerRarity
+	AttackPower *enums.StandStat
+	Speed       *enums.StandStat
+	AttackRange *enums.StandStat
+	Endurance   *enums.StandStat
+	Precision   *enums.StandStat
+	Potential   *enums.StandStat
+	EvolvesFrom *string
+}
+
+type StandRepository interface {
+	Save(ctx context.Context, stand *powers.Stand) error
+	FindByName(ctx context.Context, name string) (*powers.Stand, error)
+	GetAll(ctx context.Context) ([]*powers.Stand, error)
+	Filter(ctx context.Context, filters StandFilters) ([]*powers.Stand, error)
+}
