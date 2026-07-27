@@ -21,6 +21,14 @@ func (p *Player) Username() string {
 	return p.username
 }
 
+func (p *Player) Stand() *Stand {
+	return p.stand
+}
+
+func (p *Player) DevilFruit() *DevilFruit {
+	return p.devilFruit
+}
+
 func onePieceStatToString(stat byte) (string, error) {
 	switch stat {
 	case 0:
