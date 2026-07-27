@@ -3,7 +3,6 @@ package repositories
 import (
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
@@ -32,6 +31,19 @@ type standRow struct {
 }
 
 func standRowsFromGetByName(rs []db.GetStandRowsByNameRow) []standRow {
+	rows := make([]standRow, len(rs))
+	for i, r := range rs {
+		rows[i] = standRow{
+			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
+			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
+			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
+			Matched: r.Matched, Skills: r.Skills,
+		}
+	}
+	return rows
+}
+
+func standRowsFromGetByID(rs []db.GetStandRowsByIDRow) []standRow {
 	rows := make([]standRow, len(rs))
 	for i, r := range rs {
 		rows[i] = standRow{
@@ -78,21 +90,21 @@ func standRowsFromFilter(rs []db.FilterStandRowsRow) []standRow {
 // Only rows with Matched == true are returned, in their original (name)
 // order; ancestor-only rows are used purely to satisfy EvolvesFrom.
 func buildStands(rows []standRow) ([]*powers.Stand, error) {
-	byID := make(map[uuid.UUID]standRow, len(rows))
-	order := make([]uuid.UUID, 0, len(rows))
+	byID := make(map[powers.PowerID]standRow, len(rows))
+	order := make([]powers.PowerID, 0, len(rows))
 	for _, r := range rows {
-		id := uuid.UUID(r.ID.Bytes)
+		id := powers.PowerID(r.ID.Bytes)
 		if _, ok := byID[id]; !ok {
 			order = append(order, id)
 		}
 		byID[id] = r
 	}
 
-	built := make(map[uuid.UUID]*powers.Stand, len(rows))
-	building := make(map[uuid.UUID]bool, len(rows))
+	built := make(map[powers.PowerID]*powers.Stand, len(rows))
+	building := make(map[powers.PowerID]bool, len(rows))
 
-	var resolve func(id uuid.UUID) (*powers.Stand, error)
-	resolve = func(id uuid.UUID) (*powers.Stand, error) {
+	var resolve func(id powers.PowerID) (*powers.Stand, error)
+	resolve = func(id powers.PowerID) (*powers.Stand, error) {
 		if s, ok := built[id]; ok {
 			return s, nil
 		}
@@ -108,7 +120,7 @@ func buildStands(rows []standRow) ([]*powers.Stand, error) {
 
 		var evolvesFrom *powers.Stand
 		if row.EvolvesFromID.Valid {
-			parent, err := resolve(uuid.UUID(row.EvolvesFromID.Bytes))
+			parent, err := resolve(powers.PowerID(row.EvolvesFromID.Bytes))
 			if err != nil {
 				return nil, fmt.Errorf("stand %q: resolving evolves_from: %w", row.Name, err)
 			}
@@ -120,7 +132,7 @@ func buildStands(rows []standRow) ([]*powers.Stand, error) {
 			return nil, fmt.Errorf("stand %q: %w", row.Name, err)
 		}
 		skills := row.Skills
-		power, err := powers.NewPower(row.Name, row.Description, rarity, &skills, row.Picture)
+		power, err := powers.NewPower(id, row.Name, row.Description, rarity, &skills, row.Picture)
 		if err != nil {
 			return nil, fmt.Errorf("stand %q: %w", row.Name, err)
 		}
