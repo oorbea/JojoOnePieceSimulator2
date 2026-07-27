@@ -1,6 +1,8 @@
-package entities
+package powers
 
-import "github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+import (
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+)
 
 type DevilFruit struct {
 	Power

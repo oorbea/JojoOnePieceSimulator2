@@ -1,4 +1,4 @@
-package entities
+package powers
 
 import (
 	"errors"

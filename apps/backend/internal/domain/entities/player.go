@@ -3,13 +3,15 @@ package entities
 import (
 	"errors"
 	"fmt"
+
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 )
 
 type Player struct {
 	username        string
 	physicalForm    byte
-	stand           *Stand
-	devilFruit      *DevilFruit
+	stand           *powers.Stand
+	devilFruit      *powers.DevilFruit
 	fruitMastery    byte
 	armamentHaki    byte
 	observationHaki byte
@@ -21,11 +23,11 @@ func (p *Player) Username() string {
 	return p.username
 }
 
-func (p *Player) Stand() *Stand {
+func (p *Player) Stand() *powers.Stand {
 	return p.stand
 }
 
-func (p *Player) DevilFruit() *DevilFruit {
+func (p *Player) DevilFruit() *powers.DevilFruit {
 	return p.devilFruit
 }
 
