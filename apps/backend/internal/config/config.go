@@ -42,7 +42,7 @@ const defaultR2PresignTTL = 15 * time.Minute
 const defaultPictureMaxBytes = 5 * 1024 * 1024
 
 // defaultPictureAllowedTypes is used when PICTURE_ALLOWED_TYPES is unset.
-var defaultPictureAllowedTypes = []string{"image/jpeg", "image/png", "image/webp"}
+var defaultPictureAllowedTypes = []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}
 
 type Config struct {
 	DatabaseURL string
