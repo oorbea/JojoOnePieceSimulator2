@@ -11,6 +11,10 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
+// ErrPictureQueueFull is returned when the background compression worker's
+// queue has no room for another job.
+var ErrPictureQueueFull = errors.New("picture processing queue is full")
+
 // ErrSelfEvolution is returned when a Stand is asked to evolve from itself.
 var ErrSelfEvolution = errors.New("a stand cannot evolve from itself")
 
@@ -56,18 +60,20 @@ func (p PicturePolicy) allows(contentType string) bool {
 // CreateStand/UpdateStand take one argument instead of a long positional
 // list.
 type StandInput struct {
-	Name        string
-	Description string
-	Rarity      enums.PowerRarity
-	Skills      *[]string
-	Picture     string
-	AttackPower enums.StandStat
-	Speed       enums.StandStat
-	AttackRange enums.StandStat
-	Endurance   enums.StandStat
-	Precision   enums.StandStat
-	Potential   enums.StandStat
-	EvolvesFrom *powers.PowerID
+	Name          string
+	Description   string
+	Rarity        enums.PowerRarity
+	Skills        *[]string
+	Picture       string
+	PictureThumb  string
+	PictureStatus enums.PictureStatus
+	AttackPower   enums.StandStat
+	Speed         enums.StandStat
+	AttackRange   enums.StandStat
+	Endurance     enums.StandStat
+	Precision     enums.StandStat
+	Potential     enums.StandStat
+	EvolvesFrom   *powers.PowerID
 }
 
 // StandService coordinates Stand use cases against the injected repository.
@@ -104,6 +110,8 @@ func (s *StandService) UpdateStand(ctx context.Context, id powers.PowerID, input
 		return nil, ErrSelfEvolution
 	}
 	input.Picture = existing.Picture()
+	input.PictureThumb = existing.PictureThumb()
+	input.PictureStatus = existing.PictureStatus()
 	return s.saveStand(ctx, id, input)
 }
 
@@ -112,6 +120,7 @@ func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input S
 	if err != nil {
 		return nil, err
 	}
+	power.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureStatus)
 
 	var evolvesFromStand *powers.Stand
 	if input.EvolvesFrom != nil {
