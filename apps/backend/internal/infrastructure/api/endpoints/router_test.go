@@ -11,7 +11,8 @@ import (
 
 func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
 	repo := newFakeStandRepository()
-	svc := services.NewStandService(repo, &fakeIDGenerator{})
+	svc := services.NewStandService(repo, &fakeIDGenerator{}, newFakePictureStorage(),
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	handler := endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, corsCfg, endpoints.RateLimitConfig{})
