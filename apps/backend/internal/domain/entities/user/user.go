@@ -6,4 +6,5 @@ type User struct {
 	email        string
 	username     string
 	completeName string
+	isAdmin      bool
 }
