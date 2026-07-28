@@ -7,4 +7,5 @@ type User struct {
 	username     string
 	completeName string
 	isAdmin      bool
+	picture      string
 }
