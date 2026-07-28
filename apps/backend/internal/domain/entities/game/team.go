@@ -1,14 +1,16 @@
 package game
 
-import "github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities"
+import (
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
+)
 
 type Team struct {
 	name    string
 	color   uint32
-	players map[*entities.Player]struct{}
+	players map[*user.Player]struct{}
 }
 
-func NewTeam(name string, color uint32, players map[*entities.Player]struct{}) *Team {
+func NewTeam(name string, color uint32, players map[*user.Player]struct{}) *Team {
 	return &Team{
 		name:    name,
 		color:   color,
@@ -24,6 +26,6 @@ func (t *Team) Color() uint32 {
 	return t.color
 }
 
-func (t *Team) Players() *map[*entities.Player]struct{} {
+func (t *Team) Players() *map[*user.Player]struct{} {
 	return &t.players
 }
