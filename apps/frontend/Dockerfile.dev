@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+
+# Dev-only image: runs the Expo web dev server with hot reload. Source is
+# volume-mounted by docker-compose, so this image only needs deps installed
+# once at build time; code changes are picked up live.
+FROM node:22-alpine
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+# See deployments/docker/Dockerfile.frontend for why this needs to pre-exist.
+RUN touch tamagui-web.css
+
+EXPOSE 8081
+CMD ["pnpm", "expo", "start", "--web", "--port", "8081"]

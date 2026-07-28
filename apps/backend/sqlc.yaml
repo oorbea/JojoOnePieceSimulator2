@@ -22,3 +22,5 @@ sql:
             go_type: "string"
           - db_type: "picture_status"
             go_type: "string"
+          - db_type: "fruit_type"
+            go_type: "string"

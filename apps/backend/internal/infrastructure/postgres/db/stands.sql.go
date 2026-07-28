@@ -21,7 +21,7 @@ func (q *Queries) DeletePowerSkills(ctx context.Context, powerID pgtype.UUID) er
 }
 
 const deleteStandByID = `-- name: DeleteStandByID :execrows
-DELETE FROM powers WHERE id = $1
+DELETE FROM powers WHERE id = $1 AND kind = 'STAND'
 `
 
 func (q *Queries) DeleteStandByID(ctx context.Context, id pgtype.UUID) (int64, error) {

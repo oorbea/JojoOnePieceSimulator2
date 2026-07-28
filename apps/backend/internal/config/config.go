@@ -56,6 +56,16 @@ const defaultPictureWorkers = 2
 const defaultPictureQueueSize = 32
 const defaultPictureJobTimeout = 30 * time.Second
 
+// defaultCache*/defaultRedis* configure the read cache in front of the Stand
+// repository and picture presign URLs. Caching is entirely off when
+// REDIS_URL is unset, regardless of CACHE_ENABLED - see Load.
+const defaultCacheEnabled = true
+const defaultCacheStandTTL = 5 * time.Minute
+const defaultCacheNotFoundTTL = 30 * time.Second
+const defaultCacheHTTPMaxAge = 30 * time.Second
+const defaultRedisDialTimeout = 2 * time.Second
+const defaultRedisOpTimeout = 200 * time.Millisecond
+
 type Config struct {
 	DatabaseURL string
 	Port        string
@@ -106,6 +116,28 @@ type Config struct {
 	PictureWorkers        int
 	PictureQueueSize      int
 	PictureJobTimeout     time.Duration
+
+	// RedisURL is empty by default, which turns caching off entirely (no
+	// connection is ever attempted) - keeps `go run`/`make test` working
+	// with no Redis around. CacheEnabled is a separate kill switch on top of
+	// that, for disabling the cache without unsetting REDIS_URL.
+	RedisURL         string
+	RedisDialTimeout time.Duration
+	RedisOpTimeout   time.Duration
+	CacheEnabled     bool
+
+	// CacheStandTTL/CacheDevilFruitTTL/CacheNotFoundTTL bound how long the
+	// Stand/DevilFruit repository caches can serve stale data if an
+	// invalidation is ever missed. CachePresignTTL does the same for cached
+	// presigned picture URLs, and is validated to stay safely under
+	// R2PresignTTL so a served URL is never close to expiring.
+	// CacheHTTPMaxAge configures the response Cache-Control header
+	// (independent of Redis); 0 disables it.
+	CacheStandTTL      time.Duration
+	CacheDevilFruitTTL time.Duration
+	CacheNotFoundTTL   time.Duration
+	CachePresignTTL    time.Duration
+	CacheHTTPMaxAge    time.Duration
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -368,6 +400,89 @@ func Load() (*Config, error) {
 		pictureJobTimeout = parsed
 	}
 
+	redisURL := os.Getenv("REDIS_URL")
+
+	cacheEnabled := defaultCacheEnabled
+	if raw := os.Getenv("CACHE_ENABLED"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_ENABLED: %w", err)
+		}
+		cacheEnabled = parsed
+	}
+
+	redisDialTimeout := defaultRedisDialTimeout
+	if raw := os.Getenv("REDIS_DIAL_TIMEOUT"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing REDIS_DIAL_TIMEOUT: %w", err)
+		}
+		redisDialTimeout = parsed
+	}
+
+	redisOpTimeout := defaultRedisOpTimeout
+	if raw := os.Getenv("REDIS_OP_TIMEOUT"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing REDIS_OP_TIMEOUT: %w", err)
+		}
+		redisOpTimeout = parsed
+	}
+
+	cacheStandTTL := defaultCacheStandTTL
+	if raw := os.Getenv("CACHE_STAND_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_STAND_TTL: %w", err)
+		}
+		cacheStandTTL = parsed
+	}
+
+	cacheDevilFruitTTL := defaultCacheStandTTL
+	if raw := os.Getenv("CACHE_DEVIL_FRUIT_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_DEVIL_FRUIT_TTL: %w", err)
+		}
+		cacheDevilFruitTTL = parsed
+	}
+
+	cacheNotFoundTTL := defaultCacheNotFoundTTL
+	if raw := os.Getenv("CACHE_NOTFOUND_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_NOTFOUND_TTL: %w", err)
+		}
+		cacheNotFoundTTL = parsed
+	}
+
+	// CachePresignTTL defaults to half of R2PresignTTL so a served URL
+	// always has at least half its validity left; an explicit value must
+	// stay strictly below R2PresignTTL for the same reason.
+	cachePresignTTL := r2PresignTTL / 2
+	if raw := os.Getenv("CACHE_PRESIGN_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_PRESIGN_TTL: %w", err)
+		}
+		if parsed >= r2PresignTTL {
+			return nil, fmt.Errorf("CACHE_PRESIGN_TTL must be less than R2_PRESIGN_TTL")
+		}
+		cachePresignTTL = parsed
+	}
+
+	cacheHTTPMaxAge := defaultCacheHTTPMaxAge
+	if raw := os.Getenv("CACHE_HTTP_MAX_AGE"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_HTTP_MAX_AGE: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("CACHE_HTTP_MAX_AGE must not be negative")
+		}
+		cacheHTTPMaxAge = parsed
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -405,5 +520,15 @@ func Load() (*Config, error) {
 		PictureWorkers:        pictureWorkers,
 		PictureQueueSize:      pictureQueueSize,
 		PictureJobTimeout:     pictureJobTimeout,
+
+		RedisURL:           redisURL,
+		RedisDialTimeout:   redisDialTimeout,
+		RedisOpTimeout:     redisOpTimeout,
+		CacheEnabled:       cacheEnabled,
+		CacheStandTTL:      cacheStandTTL,
+		CacheDevilFruitTTL: cacheDevilFruitTTL,
+		CacheNotFoundTTL:   cacheNotFoundTTL,
+		CachePresignTTL:    cachePresignTTL,
+		CacheHTTPMaxAge:    cacheHTTPMaxAge,
 	}, nil
 }

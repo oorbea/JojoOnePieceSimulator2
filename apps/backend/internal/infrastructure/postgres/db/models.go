@@ -11,6 +11,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type FruitType string
+
+const (
+	FruitTypePARAMECIA        FruitType = "PARAMECIA"
+	FruitTypeZOAN             FruitType = "ZOAN"
+	FruitTypeLOGIA            FruitType = "LOGIA"
+	FruitTypeSPECIALPARAMECIA FruitType = "SPECIAL_PARAMECIA"
+	FruitTypeANCIENTZOAN      FruitType = "ANCIENT_ZOAN"
+	FruitTypeMYTHICALZOAN     FruitType = "MYTHICAL_ZOAN"
+)
+
+func (e *FruitType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FruitType(s)
+	case string:
+		*e = FruitType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FruitType: %T", src)
+	}
+	return nil
+}
+
+type NullFruitType struct {
+	FruitType FruitType
+	Valid     bool // Valid is true if FruitType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFruitType) Scan(value interface{}) error {
+	if value == nil {
+		ns.FruitType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FruitType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFruitType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FruitType), nil
+}
+
 type PictureStatus string
 
 const (
@@ -228,6 +274,12 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.UserRole), nil
+}
+
+type DevilFruit struct {
+	ID        pgtype.UUID
+	Kind      string
+	FruitType string
 }
 
 type Power struct {
