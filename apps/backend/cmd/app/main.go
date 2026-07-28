@@ -13,6 +13,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/auth"
@@ -27,7 +28,7 @@ import (
 
 // @title JojoOnePieceSimulator2 API
 // @version 1.0
-// @description Backend API for JojoOnePieceSimulator2 - Google-only auth, Stands catalogue.
+// @description Backend API for JojoOnePieceSimulator2 - Google-only auth, Stands and Devil Fruits catalogues.
 // @BasePath /api/v1
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -69,13 +70,16 @@ func main() {
 	}
 
 	standRepository := repositories.NewStandRepository(pool)
+	devilFruitRepository := repositories.NewDevilFruitRepository(pool)
 
-	// standRepo/pictures start as the undecorated adapters; both get wrapped
-	// with a Redis-backed cache below when one is configured. Both the
-	// picture worker and the Stand service must receive the *same* decorated
-	// standRepo, or a background transcode publishing READY/FAILED would
-	// invalidate one copy of the cache while readers kept hitting the other.
+	// standRepo/devilFruitRepo/pictures start as the undecorated adapters;
+	// all three get wrapped with a Redis-backed cache below when one is
+	// configured. The picture worker and each catalogue's service must
+	// receive the *same* decorated repo, or a background transcode
+	// publishing READY/FAILED would invalidate one copy of the cache while
+	// readers kept hitting the other.
 	var standRepo ports.IStandRepository = standRepository
+	var devilFruitRepo ports.IDevilFruitRepository = devilFruitRepository
 	var pictures ports.IPictureStorage = pictureStorage
 
 	if cfg.CacheEnabled && cfg.RedisURL != "" {
@@ -94,10 +98,16 @@ func main() {
 		}()
 
 		standRepo = cache.NewStandRepository(standRepo, redisCache, cfg.CacheStandTTL, cfg.CacheNotFoundTTL)
+		devilFruitRepo = cache.NewDevilFruitRepository(devilFruitRepo, redisCache, cfg.CacheDevilFruitTTL, cfg.CacheNotFoundTTL)
 		pictures = cache.NewPictureStorage(pictures, redisCache, cfg.CachePresignTTL)
 	}
 
-	pictureWorker := services.NewPictureWorker(imageProcessor, pictures, standRepo,
+	pictureTargets := map[enums.PowerKind]services.PictureTarget{
+		enums.StandKind:      {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
+		enums.DevilFruitKind: {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
+	}
+
+	pictureWorker := services.NewPictureWorker(imageProcessor, pictures, pictureTargets,
 		idgen.UUIDGenerator[powers.PowerID]{}, services.WorkerConfig{
 			Workers:        cfg.PictureWorkers,
 			QueueSize:      cfg.PictureQueueSize,
@@ -108,14 +118,19 @@ func main() {
 		})
 	pictureWorker.Start()
 
+	picturePolicy := services.PicturePolicy{
+		MaxBytes:     cfg.PictureMaxBytes,
+		AllowedTypes: cfg.PictureAllowedTypes,
+		MaxPixels:    cfg.PictureMaxPixels,
+	}
+
 	standService := services.NewStandService(standRepo, idgen.UUIDGenerator[powers.PowerID]{}, pictures,
-		imageProcessor, pictureWorker,
-		services.PicturePolicy{
-			MaxBytes:     cfg.PictureMaxBytes,
-			AllowedTypes: cfg.PictureAllowedTypes,
-			MaxPixels:    cfg.PictureMaxPixels,
-		})
+		imageProcessor, pictureWorker, picturePolicy)
 	standEndpoints := endpoints.NewStandEndpoints(standService)
+
+	devilFruitService := services.NewDevilFruitService(devilFruitRepo, idgen.UUIDGenerator[powers.PowerID]{}, pictures,
+		imageProcessor, pictureWorker, picturePolicy)
+	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(devilFruitService)
 
 	userRepository := repositories.NewUserRepository(pool)
 	googleVerifier := auth.NewGoogleVerifier(cfg.GoogleClientID)
@@ -154,7 +169,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

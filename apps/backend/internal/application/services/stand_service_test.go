@@ -349,7 +349,7 @@ func TestSetStandPicture_Success_MarksPendingAndEnqueues(t *testing.T) {
 		t.Fatalf("jobs enqueued = %d, want 1", len(enqueuer.jobs))
 	}
 	job := enqueuer.jobs[0]
-	if job.StandID != stand.ID() || job.ContentType != "image/png" || string(job.Content) != "first" {
+	if job.PowerID != stand.ID() || job.Kind != enums.StandKind || job.ContentType != "image/png" || string(job.Content) != "first" {
 		t.Errorf("unexpected job: %+v", job)
 	}
 

@@ -18,14 +18,15 @@ import (
 func handleError(w http.ResponseWriter, err error) {
 	var validationErr *dto.ValidationError
 	switch {
-	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound):
+	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound), errors.Is(err, ports.ErrDevilFruitNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists):
+	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.As(err, &validationErr):
 		writeError(w, http.StatusBadRequest, "validation failed", validationErr.Errors...)
 	case errors.Is(err, enums.ErrInvalidRarity),
 		errors.Is(err, enums.ErrInvalidStandStat),
+		errors.Is(err, enums.ErrInvalidFruitType),
 		errors.Is(err, enums.ErrInvalidUserRole),
 		errors.Is(err, valueobjects.ErrInvalidID),
 		errors.Is(err, services.ErrSelfEvolution),

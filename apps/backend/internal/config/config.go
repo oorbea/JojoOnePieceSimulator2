@@ -126,16 +126,18 @@ type Config struct {
 	RedisOpTimeout   time.Duration
 	CacheEnabled     bool
 
-	// CacheStandTTL/CacheNotFoundTTL bound how long the Stand repository
-	// cache can serve stale data if an invalidation is ever missed.
-	// CachePresignTTL does the same for cached presigned picture URLs, and
-	// is validated to stay safely under R2PresignTTL so a served URL is
-	// never close to expiring. CacheHTTPMaxAge configures the response
-	// Cache-Control header (independent of Redis); 0 disables it.
-	CacheStandTTL    time.Duration
-	CacheNotFoundTTL time.Duration
-	CachePresignTTL  time.Duration
-	CacheHTTPMaxAge  time.Duration
+	// CacheStandTTL/CacheDevilFruitTTL/CacheNotFoundTTL bound how long the
+	// Stand/DevilFruit repository caches can serve stale data if an
+	// invalidation is ever missed. CachePresignTTL does the same for cached
+	// presigned picture URLs, and is validated to stay safely under
+	// R2PresignTTL so a served URL is never close to expiring.
+	// CacheHTTPMaxAge configures the response Cache-Control header
+	// (independent of Redis); 0 disables it.
+	CacheStandTTL      time.Duration
+	CacheDevilFruitTTL time.Duration
+	CacheNotFoundTTL   time.Duration
+	CachePresignTTL    time.Duration
+	CacheHTTPMaxAge    time.Duration
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -436,6 +438,15 @@ func Load() (*Config, error) {
 		cacheStandTTL = parsed
 	}
 
+	cacheDevilFruitTTL := defaultCacheStandTTL
+	if raw := os.Getenv("CACHE_DEVIL_FRUIT_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_DEVIL_FRUIT_TTL: %w", err)
+		}
+		cacheDevilFruitTTL = parsed
+	}
+
 	cacheNotFoundTTL := defaultCacheNotFoundTTL
 	if raw := os.Getenv("CACHE_NOTFOUND_TTL"); raw != "" {
 		parsed, err := time.ParseDuration(raw)
@@ -510,13 +521,14 @@ func Load() (*Config, error) {
 		PictureQueueSize:      pictureQueueSize,
 		PictureJobTimeout:     pictureJobTimeout,
 
-		RedisURL:         redisURL,
-		RedisDialTimeout: redisDialTimeout,
-		RedisOpTimeout:   redisOpTimeout,
-		CacheEnabled:     cacheEnabled,
-		CacheStandTTL:    cacheStandTTL,
-		CacheNotFoundTTL: cacheNotFoundTTL,
-		CachePresignTTL:  cachePresignTTL,
-		CacheHTTPMaxAge:  cacheHTTPMaxAge,
+		RedisURL:           redisURL,
+		RedisDialTimeout:   redisDialTimeout,
+		RedisOpTimeout:     redisOpTimeout,
+		CacheEnabled:       cacheEnabled,
+		CacheStandTTL:      cacheStandTTL,
+		CacheDevilFruitTTL: cacheDevilFruitTTL,
+		CacheNotFoundTTL:   cacheNotFoundTTL,
+		CachePresignTTL:    cachePresignTTL,
+		CacheHTTPMaxAge:    cacheHTTPMaxAge,
 	}, nil
 }
