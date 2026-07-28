@@ -45,6 +45,10 @@ services:
       # Same reasoning as DATABASE_URL above: reach Redis by its compose
       # service name instead of the .env's host-side localhost value.
       REDIS_URL: redis://redis:6379
+      # Without this the backend denies every browser origin by default (see
+      # apps/backend/internal/config/config.go) — the frontend service below
+      # is the origin that needs allowing.
+      CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-3000}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     depends_on:
@@ -52,6 +56,20 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deployments/docker/Dockerfile.frontend
+      args:
+        # EXPO_PUBLIC_* vars are inlined into the client bundle at build
+        # time, so they have to be passed as build args, not env/env_file.
+        EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:${PORT:-8080}/api/v1}
+        EXPO_PUBLIC_SOCKET_URL: ${EXPO_PUBLIC_SOCKET_URL:-}
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres-data:
