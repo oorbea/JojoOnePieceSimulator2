@@ -18,3 +18,5 @@ sql:
             go_type: "string"
           - db_type: "power_kind"
             go_type: "string"
+          - db_type: "user_role"
+            go_type: "string"
