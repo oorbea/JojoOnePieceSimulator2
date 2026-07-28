@@ -44,4 +44,9 @@ var (
 	// ErrRateLimited is returned when a caller has exceeded the request rate
 	// allowed for an endpoint.
 	ErrRateLimited = errors.New("too many requests")
+
+	// ErrInvalidImage is returned when an uploaded picture's bytes cannot be
+	// parsed as an image (corrupt, truncated, or a decompression-bomb sized
+	// header) by an IImageProcessor.
+	ErrInvalidImage = errors.New("invalid image")
 )
