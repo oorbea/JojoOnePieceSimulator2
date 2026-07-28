@@ -18,17 +18,24 @@ import (
 func handleError(w http.ResponseWriter, err error) {
 	var validationErr *dto.ValidationError
 	switch {
-	case errors.Is(err, ports.ErrStandNotFound):
+	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, ports.ErrStandAlreadyExists):
+	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.As(err, &validationErr):
 		writeError(w, http.StatusBadRequest, "validation failed", validationErr.Errors...)
 	case errors.Is(err, enums.ErrInvalidRarity),
 		errors.Is(err, enums.ErrInvalidStandStat),
+		errors.Is(err, enums.ErrInvalidUserRole),
 		errors.Is(err, valueobjects.ErrInvalidID),
-		errors.Is(err, services.ErrSelfEvolution):
+		errors.Is(err, services.ErrSelfEvolution),
+		errors.Is(err, ports.ErrEmailNotVerified),
+		errors.Is(err, ports.ErrConstraintViolation):
 		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken):
+		writeError(w, http.StatusUnauthorized, "unauthenticated")
+	case errors.Is(err, ports.ErrForbidden):
+		writeError(w, http.StatusForbidden, "forbidden")
 	default:
 		log.Printf("internal error: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal server error")

@@ -254,6 +254,45 @@ func TestStandRepository_Delete(t *testing.T) {
 	}
 }
 
+// TestStandRepository_Save_RejectsSelfEvolution proves the
+// stands_no_self_evolution CHECK constraint is the actual enforcement point
+// (not merely a service-layer guard): it builds a Stand whose evolvesFrom
+// shares its own id via two distinct powers.Stand values (the domain type
+// can't literally self-reference before construction completes), bypassing
+// StandService.ErrSelfEvolution entirely by calling the repository direct.
+func TestStandRepository_Save_RejectsSelfEvolution(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	id := testIDGen.NewID()
+	name := uniqueName(t, "Ouroboros")
+
+	selfPower, err := powers.NewPower(id, name, name+" description", enums.Rare, &[]string{"loop"}, "pic.png")
+	if err != nil {
+		t.Fatalf("NewPower (self ref): %v", err)
+	}
+	selfRef, err := powers.NewStand(*selfPower, enums.A, enums.B, enums.C, enums.D, enums.E, enums.Infinite, nil)
+	if err != nil {
+		t.Fatalf("NewStand (self ref): %v", err)
+	}
+
+	power, err := powers.NewPower(id, name, name+" description", enums.Rare, &[]string{"loop"}, "pic.png")
+	if err != nil {
+		t.Fatalf("NewPower: %v", err)
+	}
+	stand, err := powers.NewStand(*power, enums.A, enums.B, enums.C, enums.D, enums.E, enums.Infinite, selfRef)
+	if err != nil {
+		t.Fatalf("NewStand: %v", err)
+	}
+
+	err = repo.Save(ctx, stand)
+	if !errors.Is(err, ports.ErrConstraintViolation) {
+		t.Fatalf("err = %v, want ports.ErrConstraintViolation", err)
+	}
+	// Save rolled back inside its own transaction - the powers row from
+	// UpsertPower never commits, so there is nothing to clean up.
+}
+
 func TestStandRepository_Delete_NotFound(t *testing.T) {
 	repo := newTestRepo(t)
 	ctx := context.Background()

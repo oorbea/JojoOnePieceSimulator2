@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -59,15 +58,11 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 		Picture:     stand.Picture(),
 	})
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return fmt.Errorf("%w: %q", ports.ErrStandAlreadyExists, stand.Name())
-		}
-		return fmt.Errorf("upserting power %q: %w", stand.Name(), err)
+		return fmt.Errorf("upserting power %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
 	}
 
 	if err := q.DeletePowerSkills(ctx, id); err != nil {
-		return fmt.Errorf("clearing skills for %q: %w", stand.Name(), err)
+		return fmt.Errorf("clearing skills for %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
 	}
 	for position, skill := range stand.Skills() {
 		if err := q.InsertPowerSkill(ctx, db.InsertPowerSkillParams{
@@ -75,7 +70,7 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 			Position: int32(position),
 			Skill:    skill,
 		}); err != nil {
-			return fmt.Errorf("inserting skill %q for %q: %w", skill, stand.Name(), err)
+			return fmt.Errorf("inserting skill %q for %q: %w", skill, stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
 		}
 	}
 
@@ -89,7 +84,7 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 		Potential:     stand.Potential().String(),
 		EvolvesFromID: evolvesFromID,
 	}); err != nil {
-		return fmt.Errorf("upserting stand %q: %w", stand.Name(), err)
+		return fmt.Errorf("upserting stand %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
 	}
 
 	if err := tx.Commit(ctx); err != nil {
