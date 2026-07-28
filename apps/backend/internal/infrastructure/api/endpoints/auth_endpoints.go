@@ -20,10 +20,12 @@ func NewAuthEndpoints(svc *services.AuthService) *AuthEndpoints {
 }
 
 // Routes returns the /auth sub-router. Unlike /stands, these routes are
-// public - they are how a caller obtains a token in the first place.
-func (e *AuthEndpoints) Routes() chi.Router {
+// public - they are how a caller obtains a token in the first place, so
+// /google gets its own (tighter, IP-keyed) rate-limit tier rather than
+// relying on the global one alone.
+func (e *AuthEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 	r := chi.NewRouter()
-	r.Post("/google", Wrap(e.loginWithGoogle))
+	r.With(loginRateLimit(rateCfg)).Post("/google", Wrap(e.loginWithGoogle))
 	return r
 }
 
@@ -39,6 +41,7 @@ func (e *AuthEndpoints) Routes() chi.Router {
 //	@Success		201		{object}	dto.LoginResponse	"new user registered"
 //	@Failure		400		{object}	dto.ErrorResponse
 //	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
 //	@Router			/auth/google [post]
 func (e *AuthEndpoints) loginWithGoogle(w http.ResponseWriter, r *http.Request) error {
 	var req dto.GoogleLoginRequest

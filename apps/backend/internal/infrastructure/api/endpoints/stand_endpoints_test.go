@@ -131,12 +131,20 @@ func (fakeTokenIssuer) Issue(_ *user.User) (string, time.Time, error) {
 	return "", time.Time{}, errors.New("not implemented")
 }
 
+// userIDForToken gives each fake token a distinct, deterministic UserID so
+// per-user rate-limit tests can tell two callers' buckets apart.
+var userIDForToken = map[string]user.UserID{
+	"user-token":  {1},
+	"admin-token": {2},
+	"user2-token": {3},
+}
+
 func (fakeTokenIssuer) Parse(token string) (ports.Claims, error) {
 	switch token {
-	case "user-token":
-		return ports.Claims{Role: enums.Regular}, nil
+	case "user-token", "user2-token":
+		return ports.Claims{UserID: userIDForToken[token], Role: enums.Regular}, nil
 	case "admin-token":
-		return ports.Claims{Role: enums.Admin}, nil
+		return ports.Claims{UserID: userIDForToken[token], Role: enums.Admin}, nil
 	default:
 		return ports.Claims{}, ports.ErrUnauthenticated
 	}
@@ -144,12 +152,19 @@ func (fakeTokenIssuer) Parse(token string) (ports.Claims, error) {
 
 var _ ports.ITokenIssuer = fakeTokenIssuer{}
 
+// newTestServer builds a router with rate limiting disabled, so existing
+// (non-rate-limit) tests keep exercising exactly what they exercised before
+// RateLimitConfig existed.
 func newTestServer() http.Handler {
+	return newTestServerWithRateLimit(endpoints.RateLimitConfig{})
+}
+
+func newTestServerWithRateLimit(rateCfg endpoints.RateLimitConfig) http.Handler {
 	repo := newFakeStandRepository()
 	svc := services.NewStandService(repo, &fakeIDGenerator{})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
-	return endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{})
+	return endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg)
 }
 
 func validStandBody(name string) map[string]any {

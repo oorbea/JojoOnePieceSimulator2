@@ -26,8 +26,11 @@ type CORSConfig struct {
 
 // NewRouter builds the full HTTP handler for the backend: common middleware,
 // a health check, Swagger UI, and the versioned API routes. /auth and
-// /swagger are public; everything else requires a valid access token.
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig) http.Handler {
+// /swagger are public; everything else requires a valid access token. Every
+// route, including /health and /swagger, sits behind the global rate limit
+// tier; /auth/google and /stands additionally get their own tighter tiers
+// (see rateCfg and ratelimit.go).
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -45,6 +48,7 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, iss
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(globalRateLimit(rateCfg))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -53,11 +57,11 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, iss
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Mount("/auth", authEndpoints.Routes())
+		r.Mount("/auth", authEndpoints.Routes(rateCfg))
 
 		r.Group(func(r chi.Router) {
 			r.Use(RequireAuth(issuer))
-			r.Mount("/stands", standEndpoints.Routes())
+			r.Mount("/stands", standEndpoints.Routes(rateCfg))
 		})
 	})
 

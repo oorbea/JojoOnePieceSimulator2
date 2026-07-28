@@ -40,4 +40,8 @@ var (
 	// invalid input that Postgres itself caught, as opposed to a uniqueness
 	// conflict (which gets its own, more specific sentinel per entity).
 	ErrConstraintViolation = errors.New("data violates a database constraint")
+
+	// ErrRateLimited is returned when a caller has exceeded the request rate
+	// allowed for an endpoint.
+	ErrRateLimited = errors.New("too many requests")
 )

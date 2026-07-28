@@ -36,6 +36,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
 	case errors.Is(err, ports.ErrForbidden):
 		writeError(w, http.StatusForbidden, "forbidden")
+	case errors.Is(err, ports.ErrRateLimited):
+		writeError(w, http.StatusTooManyRequests, "too many requests")
 	default:
 		log.Printf("internal error: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal server error")
