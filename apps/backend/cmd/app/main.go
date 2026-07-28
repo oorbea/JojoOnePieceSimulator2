@@ -16,6 +16,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/auth"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/r2"
@@ -59,9 +60,31 @@ func main() {
 		log.Fatalf("configuring picture storage: %v", err)
 	}
 
+	imageProcessor, closeImaging, err := imaging.New(imaging.Config{Concurrency: 1})
+	if err != nil {
+		log.Fatalf("configuring image processor: %v", err)
+	}
+
 	standRepository := repositories.NewStandRepository(pool)
+
+	pictureWorker := services.NewPictureWorker(imageProcessor, pictureStorage, standRepository,
+		idgen.UUIDGenerator[powers.PowerID]{}, services.WorkerConfig{
+			Workers:        cfg.PictureWorkers,
+			QueueSize:      cfg.PictureQueueSize,
+			JobTimeout:     cfg.PictureJobTimeout,
+			MaxDimension:   cfg.PictureMaxDimension,
+			ThumbDimension: cfg.PictureThumbDimension,
+			Quality:        cfg.PictureWebPQuality,
+		})
+	pictureWorker.Start()
+
 	standService := services.NewStandService(standRepository, idgen.UUIDGenerator[powers.PowerID]{}, pictureStorage,
-		services.PicturePolicy{MaxBytes: cfg.PictureMaxBytes, AllowedTypes: cfg.PictureAllowedTypes})
+		imageProcessor, pictureWorker,
+		services.PicturePolicy{
+			MaxBytes:     cfg.PictureMaxBytes,
+			AllowedTypes: cfg.PictureAllowedTypes,
+			MaxPixels:    cfg.PictureMaxPixels,
+		})
 	standEndpoints := endpoints.NewStandEndpoints(standService)
 
 	userRepository := repositories.NewUserRepository(pool)
@@ -109,9 +132,16 @@ func main() {
 	<-ctx.Done()
 	log.Println("shutting down")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.PictureJobTimeout+10*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("shutting down: %v", err)
+		log.Printf("shutting down http server: %v", err)
 	}
+	// Let in-flight transcodes finish before libvips is torn down - any job
+	// still queued (not yet picked up by a worker) is left PENDING and must
+	// be retried by re-uploading, since there is no durable job queue.
+	if err := pictureWorker.Shutdown(shutdownCtx); err != nil {
+		log.Printf("shutting down picture worker: %v", err)
+	}
+	closeImaging()
 }

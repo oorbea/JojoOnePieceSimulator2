@@ -44,6 +44,18 @@ const defaultPictureMaxBytes = 5 * 1024 * 1024
 // defaultPictureAllowedTypes is used when PICTURE_ALLOWED_TYPES is unset.
 var defaultPictureAllowedTypes = []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}
 
+// defaultPicture* configure the background image-compression pipeline: every
+// accepted upload is re-encoded to WebP, resized to fit within
+// PictureMaxDimension, with a PictureThumbDimension-capped thumbnail
+// alongside it.
+const defaultPictureMaxDimension = 1024
+const defaultPictureThumbDimension = 256
+const defaultPictureWebPQuality = 80
+const defaultPictureMaxPixels = int64(50_000_000)
+const defaultPictureWorkers = 2
+const defaultPictureQueueSize = 32
+const defaultPictureJobTimeout = 30 * time.Second
+
 type Config struct {
 	DatabaseURL string
 	Port        string
@@ -83,6 +95,17 @@ type Config struct {
 	// /stands/{id}/picture accepts.
 	PictureMaxBytes     int64
 	PictureAllowedTypes []string
+
+	// Picture* below configure the background compression pipeline: the
+	// resize caps and WebP quality applied by the image processor, and the
+	// worker pool that runs it.
+	PictureMaxDimension   int
+	PictureThumbDimension int
+	PictureWebPQuality    int
+	PictureMaxPixels      int64
+	PictureWorkers        int
+	PictureQueueSize      int
+	PictureJobTimeout     time.Duration
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -290,6 +313,61 @@ func Load() (*Config, error) {
 		pictureAllowedTypes = splitCSV(raw)
 	}
 
+	pictureMaxDimension, err := parsePositiveIntEnv("PICTURE_MAX_DIMENSION", defaultPictureMaxDimension)
+	if err != nil {
+		return nil, err
+	}
+
+	pictureThumbDimension, err := parsePositiveIntEnv("PICTURE_THUMB_DIMENSION", defaultPictureThumbDimension)
+	if err != nil {
+		return nil, err
+	}
+
+	pictureWebPQuality, err := parsePositiveIntEnv("PICTURE_WEBP_QUALITY", defaultPictureWebPQuality)
+	if err != nil {
+		return nil, err
+	}
+	if pictureWebPQuality < 1 || pictureWebPQuality > 100 {
+		return nil, fmt.Errorf("PICTURE_WEBP_QUALITY must be between 1 and 100")
+	}
+
+	pictureMaxPixels := defaultPictureMaxPixels
+	if raw := os.Getenv("PICTURE_MAX_PIXELS"); raw != "" {
+		parsed, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("parsing PICTURE_MAX_PIXELS: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("PICTURE_MAX_PIXELS must not be negative")
+		}
+		pictureMaxPixels = parsed
+	}
+
+	pictureWorkers, err := parsePositiveIntEnv("PICTURE_WORKERS", defaultPictureWorkers)
+	if err != nil {
+		return nil, err
+	}
+	if pictureWorkers < 1 {
+		return nil, fmt.Errorf("PICTURE_WORKERS must be at least 1")
+	}
+
+	pictureQueueSize, err := parsePositiveIntEnv("PICTURE_QUEUE_SIZE", defaultPictureQueueSize)
+	if err != nil {
+		return nil, err
+	}
+	if pictureQueueSize < 1 {
+		return nil, fmt.Errorf("PICTURE_QUEUE_SIZE must be at least 1")
+	}
+
+	pictureJobTimeout := defaultPictureJobTimeout
+	if raw := os.Getenv("PICTURE_JOB_TIMEOUT"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing PICTURE_JOB_TIMEOUT: %w", err)
+		}
+		pictureJobTimeout = parsed
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -319,5 +397,13 @@ func Load() (*Config, error) {
 
 		PictureMaxBytes:     pictureMaxBytes,
 		PictureAllowedTypes: pictureAllowedTypes,
+
+		PictureMaxDimension:   pictureMaxDimension,
+		PictureThumbDimension: pictureThumbDimension,
+		PictureWebPQuality:    pictureWebPQuality,
+		PictureMaxPixels:      pictureMaxPixels,
+		PictureWorkers:        pictureWorkers,
+		PictureQueueSize:      pictureQueueSize,
+		PictureJobTimeout:     pictureJobTimeout,
 	}, nil
 }

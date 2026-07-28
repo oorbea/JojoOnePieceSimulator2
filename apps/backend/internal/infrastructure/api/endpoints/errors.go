@@ -31,6 +31,7 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, services.ErrSelfEvolution),
 		errors.Is(err, services.ErrPictureRequired),
 		errors.Is(err, services.ErrUnsupportedPictureType),
+		errors.Is(err, ports.ErrInvalidImage),
 		errors.Is(err, ports.ErrEmailNotVerified),
 		errors.Is(err, ports.ErrConstraintViolation):
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -42,6 +43,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusRequestEntityTooLarge, err.Error())
 	case errors.Is(err, ports.ErrRateLimited):
 		writeError(w, http.StatusTooManyRequests, "too many requests")
+	case errors.Is(err, services.ErrPictureQueueFull):
+		writeError(w, http.StatusServiceUnavailable, err.Error())
 	default:
 		log.Printf("internal error: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal server error")

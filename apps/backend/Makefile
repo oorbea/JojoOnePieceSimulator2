@@ -5,7 +5,7 @@ GOOSE_DRIVER := postgres
 GOOSE_DBSTRING := $(DATABASE_URL)
 GOOSE_DIR := db/migrations
 
-.PHONY: sqlc swagger migrate-up migrate-down migrate-status test run db-up db-down
+.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips run db-up db-down
 
 sqlc:
 	sqlc generate
@@ -24,6 +24,13 @@ migrate-status:
 
 test:
 	go test ./...
+
+# Compiles and exercises the real libvips-backed image processor. Requires a
+# system libvips (vips-dev); on Windows, run it inside the backend container
+# instead (`docker build -f ../../deployments/docker/Dockerfile.backend .`
+# from the repo root, or run this target in WSL2).
+test-vips:
+	go test -tags vips ./...
 
 run:
 	go run ./cmd/app

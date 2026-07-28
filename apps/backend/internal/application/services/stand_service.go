@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
+	"io"
 	"log"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
@@ -30,21 +30,15 @@ var ErrUnsupportedPictureType = errors.New("unsupported picture content type")
 // configured max size.
 var ErrPictureTooLarge = errors.New("picture exceeds the maximum allowed size")
 
-// pictureExtensions maps a sniffed content type to the file extension used
-// in the object key, so keys stay human-readable in the bucket.
-var pictureExtensions = map[string]string{
-	"image/webp": ".webp",
-	"image/avif": ".avif",
-	"image/jpeg": ".jpg",
-	"image/png":  ".png",
-	"image/gif":  ".gif",
-}
-
 // PicturePolicy bounds what SetStandPicture accepts, kept independent from
 // object-storage concerns.
 type PicturePolicy struct {
 	MaxBytes     int64
 	AllowedTypes []string
+	// MaxPixels bounds width*height*pages, checked against the cheap header
+	// probe before any decode - the guard against a small file declaring a
+	// huge decoded size ("decompression bomb"). 0 disables the check.
+	MaxPixels int64
 }
 
 func (p PicturePolicy) allows(contentType string) bool {
@@ -81,6 +75,8 @@ type StandService struct {
 	standRepo ports.IStandRepository
 	idGen     ports.IIdGenerator[powers.PowerID]
 	pictures  ports.IPictureStorage
+	processor ports.IImageProcessor
+	enqueuer  ports.IPictureEnqueuer
 	picPolicy PicturePolicy
 }
 
@@ -88,9 +84,14 @@ func NewStandService(
 	standRepo ports.IStandRepository,
 	idGen ports.IIdGenerator[powers.PowerID],
 	pictures ports.IPictureStorage,
+	processor ports.IImageProcessor,
+	enqueuer ports.IPictureEnqueuer,
 	picPolicy PicturePolicy,
 ) *StandService {
-	return &StandService{standRepo: standRepo, idGen: idGen, pictures: pictures, picPolicy: picPolicy}
+	return &StandService{
+		standRepo: standRepo, idGen: idGen, pictures: pictures,
+		processor: processor, enqueuer: enqueuer, picPolicy: picPolicy,
+	}
 }
 
 // CreateStand builds a new Stand with a freshly generated id and persists it.
@@ -161,10 +162,11 @@ func (s *StandService) DeleteStand(ctx context.Context, id powers.PowerID) error
 	return s.standRepo.Delete(ctx, id)
 }
 
-// SetStandPicture validates and uploads pic to object storage, then persists
-// its resulting key on the Stand identified by id. A previously-stored
-// picture, if any, is deleted best-effort - a failure there is logged but
-// does not fail the request, since the new picture is already saved.
+// SetStandPicture validates an uploaded picture and hands it to the
+// background compression worker, moving the Stand's picture pipeline to
+// PENDING without touching its currently-served renditions. The returned
+// Stand still carries the previous picture/thumbnail keys (or none, on a
+// first upload) - the worker publishes the new ones once it finishes.
 func (s *StandService) SetStandPicture(ctx context.Context, id powers.PowerID, pic ports.Picture) (*powers.Stand, error) {
 	stand, err := s.standRepo.FindByID(ctx, id)
 	if err != nil {
@@ -178,24 +180,38 @@ func (s *StandService) SetStandPicture(ctx context.Context, id powers.PowerID, p
 		return nil, ErrUnsupportedPictureType
 	}
 
-	oldKey := stand.Picture()
-	key := fmt.Sprintf("stands/%s/%s%s", id, s.idGen.NewID(), pictureExtensions[pic.ContentType])
-
-	if err := s.pictures.Upload(ctx, key, pic); err != nil {
+	buf, err := io.ReadAll(pic.Content)
+	if err != nil {
 		return nil, err
 	}
 
-	stand.SetPicture(key)
-	if err := s.standRepo.Save(ctx, stand); err != nil {
+	meta, err := s.processor.Probe(buf)
+	if err != nil {
+		return nil, err
+	}
+	if s.picPolicy.MaxPixels > 0 && int64(meta.Width)*int64(meta.Height)*int64(max(meta.Pages, 1)) > s.picPolicy.MaxPixels {
+		return nil, ports.ErrInvalidImage
+	}
+
+	// Captured before touching the repo or the worker: once Enqueue returns,
+	// the worker may already have run (a synchronous or very fast
+	// implementation) and mutated the persisted renditions, so stand's own
+	// getters can no longer be trusted to still reflect the pre-upload
+	// state.
+	previousMain, previousThumb, previousStatus := stand.Picture(), stand.PictureThumb(), stand.PictureStatus()
+
+	if err := s.standRepo.UpdatePicture(ctx, id, nil, nil, enums.PicturePending); err != nil {
 		return nil, err
 	}
 
-	if oldKey != "" && oldKey != key {
-		if err := s.pictures.Delete(ctx, oldKey); err != nil {
-			log.Printf("deleting old picture %q: %v", oldKey, err)
+	if err := s.enqueuer.Enqueue(ports.PictureJob{StandID: id, Content: buf, ContentType: pic.ContentType}); err != nil {
+		if revertErr := s.standRepo.UpdatePicture(ctx, id, nil, nil, previousStatus); revertErr != nil {
+			log.Printf("reverting picture status for stand %s after enqueue failure: %v", id, revertErr)
 		}
+		return nil, err
 	}
 
+	stand.SetPictureRenditions(previousMain, previousThumb, enums.PicturePending)
 	return stand, nil
 }
 

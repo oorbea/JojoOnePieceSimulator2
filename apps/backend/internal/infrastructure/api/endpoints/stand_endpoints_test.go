@@ -55,7 +55,12 @@ func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*p
 	if !ok {
 		return nil, ports.ErrStandNotFound
 	}
-	return stand, nil
+	// Return a copy, like the real (query-backed) repository does: two
+	// FindByID calls must never alias the same *powers.Stand, or a caller
+	// mutating its result (e.g. SetStandPicture) could clobber a concurrent
+	// mutation from another caller (e.g. the picture worker).
+	cp := *stand
+	return &cp, nil
 }
 
 func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*powers.Stand, error) {
@@ -105,6 +110,24 @@ func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error
 		return ports.ErrStandNotFound
 	}
 	delete(f.stands, id)
+	return nil
+}
+
+func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	stand, ok := f.stands[id]
+	if !ok {
+		return ports.ErrStandNotFound
+	}
+	newMain, newThumb := stand.Picture(), stand.PictureThumb()
+	if main != nil {
+		newMain = *main
+	}
+	if thumb != nil {
+		newThumb = *thumb
+	}
+	stand.SetPictureRenditions(newMain, newThumb, status)
 	return nil
 }
 
@@ -219,6 +242,43 @@ func (f *fakePictureStorage) wasDeleted(key string) bool {
 
 var _ ports.IPictureStorage = (*fakePictureStorage)(nil)
 
+// fakeImageProcessor is an in-memory ports.IImageProcessor: Probe/Transcode
+// never inspect their input, they just return a fixed WebP payload, so
+// endpoint tests can exercise the picture pipeline without libvips.
+type fakeImageProcessor struct {
+	probeErr     error
+	transcodeErr error
+}
+
+func (f *fakeImageProcessor) Probe(_ []byte) (ports.ImageMeta, error) {
+	return ports.ImageMeta{Width: 1, Height: 1, Pages: 1}, f.probeErr
+}
+
+func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (ports.EncodedImage, ports.EncodedImage, error) {
+	if f.transcodeErr != nil {
+		return ports.EncodedImage{}, ports.EncodedImage{}, f.transcodeErr
+	}
+	main := ports.EncodedImage{Bytes: []byte("main-webp"), ContentType: "image/webp"}
+	thumb := ports.EncodedImage{Bytes: []byte("thumb-webp"), ContentType: "image/webp"}
+	return main, thumb, nil
+}
+
+var _ ports.IImageProcessor = (*fakeImageProcessor)(nil)
+
+// syncEnqueuer runs every job synchronously through worker.RunOnce as soon
+// as it's enqueued, so HTTP tests can PATCH a picture and immediately GET
+// its finished state without polling or sleeping.
+type syncEnqueuer struct {
+	worker *services.PictureWorker
+}
+
+func (e syncEnqueuer) Enqueue(job ports.PictureJob) error {
+	e.worker.RunOnce(job)
+	return nil
+}
+
+var _ ports.IPictureEnqueuer = syncEnqueuer{}
+
 // newTestServer builds a router with rate limiting disabled, so existing
 // (non-rate-limit) tests keep exercising exactly what they exercised before
 // RateLimitConfig existed.
@@ -235,7 +295,11 @@ func newTestServerWithRateLimit(rateCfg endpoints.RateLimitConfig) http.Handler 
 // inspect what was uploaded/deleted.
 func newTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fakePictureStorage) http.Handler {
 	repo := newFakeStandRepository()
-	svc := services.NewStandService(repo, &fakeIDGenerator{}, pictures,
+	idGen := &fakeIDGenerator{}
+	worker := services.NewPictureWorker(&fakeImageProcessor{}, pictures, repo, idGen, services.WorkerConfig{
+		Workers: 1, QueueSize: 1, JobTimeout: 5 * time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
+	})
+	svc := services.NewStandService(repo, idGen, pictures, &fakeImageProcessor{}, syncEnqueuer{worker},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
@@ -364,8 +428,8 @@ func TestPatchStandPicture_AllSupportedFormats(t *testing.T) {
 			id := created["id"].(string)
 
 			rec := doMultipartRequest(t, h, http.MethodPatch, "/api/v1/stands/"+id+"/picture", "picture", tc.filename, tc.content, "admin-token")
-			if rec.Code != http.StatusOK {
-				t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+			if rec.Code != http.StatusAccepted {
+				t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusAccepted, rec.Body.String())
 			}
 		})
 	}
@@ -384,34 +448,46 @@ func TestPatchStandPicture(t *testing.T) {
 	}
 
 	rec := doMultipartRequest(t, h, http.MethodPatch, "/api/v1/stands/"+id+"/picture", "picture", "stand.png", pngBytes, "admin-token")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusAccepted, rec.Body.String())
 	}
 
 	var got map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("unmarshal response: %v", err)
 	}
-	firstURL, ok := got["picture"].(string)
-	if !ok || firstURL == "" {
-		t.Fatalf("picture = %v, want a presigned URL", got["picture"])
+	if got["pictureStatus"] != "PENDING" {
+		t.Fatalf("pictureStatus = %v, want PENDING", got["pictureStatus"])
+	}
+	if got["picture"] != "" {
+		t.Fatalf("picture on a first upload's PENDING response = %v, want empty", got["picture"])
 	}
 
-	// GET returns the same (freshly resolved) URL shape.
+	// The test's syncEnqueuer already ran the worker synchronously, so GET
+	// reflects the finished state without any polling.
 	getRec := doRequest(t, h, http.MethodGet, "/api/v1/stands/"+id, nil)
 	var getGot map[string]any
 	_ = json.Unmarshal(getRec.Body.Bytes(), &getGot)
-	if getGot["picture"] != firstURL {
-		t.Errorf("GET picture = %v, want %v", getGot["picture"], firstURL)
+	if getGot["pictureStatus"] != "READY" {
+		t.Fatalf("pictureStatus after worker ran = %v, want READY", getGot["pictureStatus"])
+	}
+	firstURL, ok := getGot["picture"].(string)
+	if !ok || firstURL == "" {
+		t.Fatalf("picture = %v, want a presigned URL", getGot["picture"])
+	}
+	if thumb, _ := getGot["pictureThumb"].(string); thumb == "" {
+		t.Error("pictureThumb should be set once READY")
 	}
 
 	// Uploading a second picture replaces the first and deletes its key.
 	rec = doMultipartRequest(t, h, http.MethodPatch, "/api/v1/stands/"+id+"/picture", "picture", "stand2.png", pngBytes, "admin-token")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("second patch: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("second patch: status = %d, want %d, body = %s", rec.Code, http.StatusAccepted, rec.Body.String())
 	}
-	_ = json.Unmarshal(rec.Body.Bytes(), &got)
-	secondURL, _ := got["picture"].(string)
+
+	getRec = doRequest(t, h, http.MethodGet, "/api/v1/stands/"+id, nil)
+	_ = json.Unmarshal(getRec.Body.Bytes(), &getGot)
+	secondURL, _ := getGot["picture"].(string)
 	if secondURL == firstURL {
 		t.Error("second picture URL should differ from the first (new key)")
 	}
@@ -430,6 +506,61 @@ func TestPatchStandPicture(t *testing.T) {
 func urlToKey(url string) string {
 	url = strings.TrimPrefix(url, "https://r2.test/")
 	return strings.TrimSuffix(url, "?sig=fake")
+}
+
+func TestPatchStandPicture_Undecodable(t *testing.T) {
+	pictures := newFakePictureStorage()
+	repo := newFakeStandRepository()
+	idGen := &fakeIDGenerator{}
+	processor := &fakeImageProcessor{probeErr: ports.ErrInvalidImage}
+	worker := services.NewPictureWorker(processor, pictures, repo, idGen, services.WorkerConfig{
+		Workers: 1, QueueSize: 1, JobTimeout: 5 * time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
+	})
+	svc := services.NewStandService(repo, idGen, pictures, processor, syncEnqueuer{worker},
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
+	standEndpoints := endpoints.NewStandEndpoints(svc)
+	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{})
+
+	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Undecodable"))
+	var created map[string]any
+	_ = json.Unmarshal(createRec.Body.Bytes(), &created)
+	id := created["id"].(string)
+
+	rec := doMultipartRequest(t, h, http.MethodPatch, "/api/v1/stands/"+id+"/picture", "picture", "stand.png", pngBytes, "admin-token")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+	if len(pictures.objects) != 0 {
+		t.Errorf("storage should be untouched, got %d objects", len(pictures.objects))
+	}
+}
+
+// fullQueueEnqueuer always reports the queue as full, for exercising the 503
+// path without racing a real bounded channel.
+type fullQueueEnqueuer struct{}
+
+func (fullQueueEnqueuer) Enqueue(ports.PictureJob) error { return services.ErrPictureQueueFull }
+
+func TestPatchStandPicture_QueueFull(t *testing.T) {
+	pictures := newFakePictureStorage()
+	repo := newFakeStandRepository()
+	idGen := &fakeIDGenerator{}
+	svc := services.NewStandService(repo, idGen, pictures, &fakeImageProcessor{}, fullQueueEnqueuer{},
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
+	standEndpoints := endpoints.NewStandEndpoints(svc)
+	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{})
+
+	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Queue Full"))
+	var created map[string]any
+	_ = json.Unmarshal(createRec.Body.Bytes(), &created)
+	id := created["id"].(string)
+
+	rec := doMultipartRequest(t, h, http.MethodPatch, "/api/v1/stands/"+id+"/picture", "picture", "stand.png", pngBytes, "admin-token")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusServiceUnavailable, rec.Body.String())
+	}
 }
 
 func TestPatchStandPicture_MissingField(t *testing.T) {
@@ -469,7 +600,12 @@ func TestPatchStandPicture_TooLarge(t *testing.T) {
 	pictures := newFakePictureStorage()
 	// MaxBytes: 1 forces any real upload over the limit.
 	repo := newFakeStandRepository()
-	svc := services.NewStandService(repo, &fakeIDGenerator{}, pictures, services.PicturePolicy{MaxBytes: 1, AllowedTypes: []string{"image/png"}})
+	idGen := &fakeIDGenerator{}
+	worker := services.NewPictureWorker(&fakeImageProcessor{}, pictures, repo, idGen, services.WorkerConfig{
+		Workers: 1, QueueSize: 1, JobTimeout: 5 * time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
+	})
+	svc := services.NewStandService(repo, idGen, pictures, &fakeImageProcessor{}, syncEnqueuer{worker},
+		services.PicturePolicy{MaxBytes: 1, AllowedTypes: []string{"image/png"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	h := endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{})
