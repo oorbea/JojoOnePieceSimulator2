@@ -16,6 +16,11 @@ import (
 // admin-write catalogue.
 const standsNamespace = "stands"
 
+// devilFruitsNamespace holds every cached DevilFruit read (FindByID,
+// FindByName, GetAll, Filter) and is invalidated as a whole on any write -
+// same reasoning as standsNamespace.
+const devilFruitsNamespace = "devil_fruits"
+
 // presignNamespace holds cached presigned picture URLs, keyed by object
 // storage key. Never invalidated wholesale - entries are evicted
 // individually (on Delete) or simply expire.
@@ -31,11 +36,11 @@ func nameKey(name string) string {
 
 const allKey = "all"
 
-// filterKey renders filters in a fixed field order (rarity, attackPower,
-// speed, attackRange, endurance, precision, potential, evolvesFrom) so two
-// requests differing only in query-param order share one cache entry, then
-// hashes the result to bound key length.
-func filterKey(filters ports.StandFilters) string {
+// standFilterKey renders filters in a fixed field order (rarity,
+// attackPower, speed, attackRange, endurance, precision, potential,
+// evolvesFrom) so two requests differing only in query-param order share one
+// cache entry, then hashes the result to bound key length.
+func standFilterKey(filters ports.StandFilters) string {
 	canonical := stringifyStat(filters.Rarity) + "|" +
 		stringifyStat(filters.AttackPower) + "|" +
 		stringifyStat(filters.Speed) + "|" +
@@ -44,6 +49,13 @@ func filterKey(filters ports.StandFilters) string {
 		stringifyStat(filters.Precision) + "|" +
 		stringifyStat(filters.Potential) + "|" +
 		derefString(filters.EvolvesFrom)
+	return "filter:" + hashString(canonical)
+}
+
+// devilFruitFilterKey mirrors standFilterKey for ports.DevilFruitFilters
+// (rarity, fruitType).
+func devilFruitFilterKey(filters ports.DevilFruitFilters) string {
+	canonical := stringifyStat(filters.Rarity) + "|" + stringifyStat(filters.FruitType)
 	return "filter:" + hashString(canonical)
 }
 

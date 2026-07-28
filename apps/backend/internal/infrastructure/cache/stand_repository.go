@@ -124,7 +124,7 @@ func (r *StandRepository) GetAll(ctx context.Context) ([]*powers.Stand, error) {
 // Filter is read-through, keyed by a canonical rendering of filters so query
 // param order doesn't fragment the cache.
 func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters) ([]*powers.Stand, error) {
-	key := filterKey(filters)
+	key := standFilterKey(filters)
 	if data, ok := r.cache.Get(ctx, standsNamespace, key); ok {
 		if stands, err := unmarshalStands(data); err == nil {
 			return stands, nil

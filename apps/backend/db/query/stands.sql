@@ -37,7 +37,7 @@ FROM powers p
 WHERE p.name = $1;
 
 -- name: DeleteStandByID :execrows
-DELETE FROM powers WHERE id = $1;
+DELETE FROM powers WHERE id = $1 AND kind = 'STAND';
 
 -- Updates only a Power's picture renditions and pipeline status, without
 -- touching name/description/skills/stats - used by the PATCH .../picture
