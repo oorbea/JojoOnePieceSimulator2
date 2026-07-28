@@ -1,12 +1,14 @@
 -- name: UpsertPower :one
-INSERT INTO powers (id, kind, name, description, rarity, picture)
-VALUES ($1, 'STAND', $2, $3, $4, $5)
+INSERT INTO powers (id, kind, name, description, rarity, picture, picture_thumb, picture_status)
+VALUES ($1, 'STAND', $2, $3, $4, $5, $6, $7)
 ON CONFLICT (id) DO UPDATE
-    SET name         = EXCLUDED.name,
-        description  = EXCLUDED.description,
-        rarity       = EXCLUDED.rarity,
-        picture      = EXCLUDED.picture,
-        updated_at   = now()
+    SET name           = EXCLUDED.name,
+        description    = EXCLUDED.description,
+        rarity         = EXCLUDED.rarity,
+        picture        = EXCLUDED.picture,
+        picture_thumb  = EXCLUDED.picture_thumb,
+        picture_status = EXCLUDED.picture_status,
+        updated_at     = now()
 RETURNING id;
 
 -- name: DeletePowerSkills :exec
@@ -37,6 +39,20 @@ WHERE p.name = $1;
 -- name: DeleteStandByID :execrows
 DELETE FROM powers WHERE id = $1;
 
+-- Updates only a Power's picture renditions and pipeline status, without
+-- touching name/description/skills/stats - used by the PATCH .../picture
+-- handler (status -> PENDING) and by the background compression worker
+-- (status -> READY/FAILED). picture/picture_thumb are left untouched when
+-- NULL is passed, so the handler can move a row to PENDING without
+-- clobbering the renditions currently being served.
+-- name: UpdatePowerPicture :exec
+UPDATE powers
+SET picture        = COALESCE(sqlc.narg('picture')::text, picture),
+    picture_thumb  = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
+    picture_status = sqlc.arg('picture_status')::picture_status,
+    updated_at     = now()
+WHERE id = sqlc.arg('id');
+
 -- Returns the stand matching `name` (matched = true) plus its full ancestor
 -- chain (matched = false), so the caller can hydrate Stand.EvolvesFrom(...)
 -- without extra round trips, then discard everything but the matched row.
@@ -46,6 +62,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.description,
                                  p.rarity,
                                  p.picture,
+                                 p.picture_thumb,
+                                 p.picture_status,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -63,6 +81,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.description,
                                  p2.rarity,
                                  p2.picture,
+                                 p2.picture_thumb,
+                                 p2.picture_status,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -79,6 +99,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       description,
                       rarity,
                       picture,
+                      picture_thumb,
+                      picture_status,
                       attack_power,
                       speed,
                       attack_range,
@@ -88,13 +110,15 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
-                        "precision", potential, evolves_from_id)
+               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+                        attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        d.description,
        d.rarity,
        d.picture,
+       d.picture_thumb,
+       d.picture_status,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -106,8 +130,8 @@ SELECT d.id,
        COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
 FROM dedup d
          LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
-         d."precision", d.potential, d.evolves_from_id, d.matched
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
+         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
 ORDER BY d.name;
 
 -- Same shape as GetStandRowsByName, keyed by id instead of name.
@@ -117,6 +141,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.description,
                                  p.rarity,
                                  p.picture,
+                                 p.picture_thumb,
+                                 p.picture_status,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -134,6 +160,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.description,
                                  p2.rarity,
                                  p2.picture,
+                                 p2.picture_thumb,
+                                 p2.picture_status,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -150,6 +178,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       description,
                       rarity,
                       picture,
+                      picture_thumb,
+                      picture_status,
                       attack_power,
                       speed,
                       attack_range,
@@ -159,13 +189,15 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
-                        "precision", potential, evolves_from_id)
+               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+                        attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        d.description,
        d.rarity,
        d.picture,
+       d.picture_thumb,
+       d.picture_status,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -177,8 +209,8 @@ SELECT d.id,
        COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
 FROM dedup d
          LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
-         d."precision", d.potential, d.evolves_from_id, d.matched
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
+         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
 ORDER BY d.name;
 
 -- Returns every stand (matched = true always, no filter applied). Kept in
@@ -190,6 +222,8 @@ SELECT p.id,
        p.description,
        p.rarity,
        p.picture,
+       p.picture_thumb,
+       p.picture_status,
        s.attack_power,
        s.speed,
        s.attack_range,
@@ -202,8 +236,8 @@ SELECT p.id,
 FROM stands s
          JOIN powers p ON p.id = s.id
          LEFT JOIN power_skills ps ON ps.power_id = p.id
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, s.attack_power, s.speed, s.attack_range, s.endurance,
-         s."precision", s.potential, s.evolves_from_id
+GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, s.attack_power,
+         s.speed, s.attack_range, s.endurance, s."precision", s.potential, s.evolves_from_id
 ORDER BY p.name;
 
 -- Returns every stand matching the (all-optional) filters, marked
@@ -216,6 +250,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 p.description,
                                 p.rarity,
                                 p.picture,
+                                p.picture_thumb,
+                                p.picture_status,
                                 s.attack_power,
                                 s.speed,
                                 s.attack_range,
@@ -250,6 +286,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                       p2.description,
                       p2.rarity,
                       p2.picture,
+                      p2.picture_thumb,
+                      p2.picture_status,
                       s2.attack_power,
                       s2.speed,
                       s2.attack_range,
@@ -266,6 +304,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                       description,
                       rarity,
                       picture,
+                      picture_thumb,
+                      picture_status,
                       attack_power,
                       speed,
                       attack_range,
@@ -275,13 +315,15 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
-                        "precision", potential, evolves_from_id)
+               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+                        attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        d.description,
        d.rarity,
        d.picture,
+       d.picture_thumb,
+       d.picture_status,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -293,6 +335,6 @@ SELECT d.id,
        COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
 FROM dedup d
          LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
-         d."precision", d.potential, d.evolves_from_id, d.matched
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
+         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
 ORDER BY d.name;

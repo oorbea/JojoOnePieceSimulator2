@@ -38,6 +38,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 p.description,
                                 p.rarity,
                                 p.picture,
+                                p.picture_thumb,
+                                p.picture_status,
                                 s.attack_power,
                                 s.speed,
                                 s.attack_range,
@@ -64,7 +66,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 s.potential = $7::stand_stat)
                            AND ($8::text IS NULL OR
                                 efp.name = $8::text)),
-     chain AS (SELECT id, name, description, rarity, picture, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
+     chain AS (SELECT id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
                FROM base
                UNION
                SELECT p2.id,
@@ -72,6 +74,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                       p2.description,
                       p2.rarity,
                       p2.picture,
+                      p2.picture_thumb,
+                      p2.picture_status,
                       s2.attack_power,
                       s2.speed,
                       s2.attack_range,
@@ -88,6 +92,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                       description,
                       rarity,
                       picture,
+                      picture_thumb,
+                      picture_status,
                       attack_power,
                       speed,
                       attack_range,
@@ -97,13 +103,15 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
-                        "precision", potential, evolves_from_id)
+               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+                        attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        d.description,
        d.rarity,
        d.picture,
+       d.picture_thumb,
+       d.picture_status,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -115,8 +123,8 @@ SELECT d.id,
        COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
 FROM dedup d
          LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
-         d."precision", d.potential, d.evolves_from_id, d.matched
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
+         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
 ORDER BY d.name
 `
 
@@ -137,6 +145,8 @@ type FilterStandRowsRow struct {
 	Description   string
 	Rarity        string
 	Picture       string
+	PictureThumb  string
+	PictureStatus string
 	AttackPower   string
 	Speed         string
 	AttackRange   string
@@ -176,6 +186,8 @@ func (q *Queries) FilterStandRows(ctx context.Context, arg FilterStandRowsParams
 			&i.Description,
 			&i.Rarity,
 			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureStatus,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -216,6 +228,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.description,
                                  p.rarity,
                                  p.picture,
+                                 p.picture_thumb,
+                                 p.picture_status,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -233,6 +247,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.description,
                                  p2.rarity,
                                  p2.picture,
+                                 p2.picture_thumb,
+                                 p2.picture_status,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -249,6 +265,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       description,
                       rarity,
                       picture,
+                      picture_thumb,
+                      picture_status,
                       attack_power,
                       speed,
                       attack_range,
@@ -258,13 +276,15 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
-                        "precision", potential, evolves_from_id)
+               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+                        attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        d.description,
        d.rarity,
        d.picture,
+       d.picture_thumb,
+       d.picture_status,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -276,8 +296,8 @@ SELECT d.id,
        COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
 FROM dedup d
          LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
-         d."precision", d.potential, d.evolves_from_id, d.matched
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
+         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
 ORDER BY d.name
 `
 
@@ -287,6 +307,8 @@ type GetStandRowsByIDRow struct {
 	Description   string
 	Rarity        string
 	Picture       string
+	PictureThumb  string
+	PictureStatus string
 	AttackPower   string
 	Speed         string
 	AttackRange   string
@@ -314,6 +336,8 @@ func (q *Queries) GetStandRowsByID(ctx context.Context, id pgtype.UUID) ([]GetSt
 			&i.Description,
 			&i.Rarity,
 			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureStatus,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -340,6 +364,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.description,
                                  p.rarity,
                                  p.picture,
+                                 p.picture_thumb,
+                                 p.picture_status,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -357,6 +383,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.description,
                                  p2.rarity,
                                  p2.picture,
+                                 p2.picture_thumb,
+                                 p2.picture_status,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -373,6 +401,8 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       description,
                       rarity,
                       picture,
+                      picture_thumb,
+                      picture_status,
                       attack_power,
                       speed,
                       attack_range,
@@ -382,13 +412,15 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, attack_power, speed, attack_range, endurance,
-                        "precision", potential, evolves_from_id)
+               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+                        attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        d.description,
        d.rarity,
        d.picture,
+       d.picture_thumb,
+       d.picture_status,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -400,8 +432,8 @@ SELECT d.id,
        COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
 FROM dedup d
          LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.attack_power, d.speed, d.attack_range, d.endurance,
-         d."precision", d.potential, d.evolves_from_id, d.matched
+GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
+         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
 ORDER BY d.name
 `
 
@@ -411,6 +443,8 @@ type GetStandRowsByNameRow struct {
 	Description   string
 	Rarity        string
 	Picture       string
+	PictureThumb  string
+	PictureStatus string
 	AttackPower   string
 	Speed         string
 	AttackRange   string
@@ -440,6 +474,8 @@ func (q *Queries) GetStandRowsByName(ctx context.Context, name string) ([]GetSta
 			&i.Description,
 			&i.Rarity,
 			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureStatus,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -482,6 +518,8 @@ SELECT p.id,
        p.description,
        p.rarity,
        p.picture,
+       p.picture_thumb,
+       p.picture_status,
        s.attack_power,
        s.speed,
        s.attack_range,
@@ -494,8 +532,8 @@ SELECT p.id,
 FROM stands s
          JOIN powers p ON p.id = s.id
          LEFT JOIN power_skills ps ON ps.power_id = p.id
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, s.attack_power, s.speed, s.attack_range, s.endurance,
-         s."precision", s.potential, s.evolves_from_id
+GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, s.attack_power,
+         s.speed, s.attack_range, s.endurance, s."precision", s.potential, s.evolves_from_id
 ORDER BY p.name
 `
 
@@ -505,6 +543,8 @@ type ListStandRowsRow struct {
 	Description   string
 	Rarity        string
 	Picture       string
+	PictureThumb  string
+	PictureStatus string
 	AttackPower   string
 	Speed         string
 	AttackRange   string
@@ -534,6 +574,8 @@ func (q *Queries) ListStandRows(ctx context.Context) ([]ListStandRowsRow, error)
 			&i.Description,
 			&i.Rarity,
 			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureStatus,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -554,24 +596,60 @@ func (q *Queries) ListStandRows(ctx context.Context) ([]ListStandRowsRow, error)
 	return items, nil
 }
 
+const updatePowerPicture = `-- name: UpdatePowerPicture :exec
+UPDATE powers
+SET picture        = COALESCE($1::text, picture),
+    picture_thumb  = COALESCE($2::text, picture_thumb),
+    picture_status = $3::picture_status,
+    updated_at     = now()
+WHERE id = $4
+`
+
+type UpdatePowerPictureParams struct {
+	Picture       *string
+	PictureThumb  *string
+	PictureStatus string
+	ID            pgtype.UUID
+}
+
+// Updates only a Power's picture renditions and pipeline status, without
+// touching name/description/skills/stats - used by the PATCH .../picture
+// handler (status -> PENDING) and by the background compression worker
+// (status -> READY/FAILED). picture/picture_thumb are left untouched when
+// NULL is passed, so the handler can move a row to PENDING without
+// clobbering the renditions currently being served.
+func (q *Queries) UpdatePowerPicture(ctx context.Context, arg UpdatePowerPictureParams) error {
+	_, err := q.db.Exec(ctx, updatePowerPicture,
+		arg.Picture,
+		arg.PictureThumb,
+		arg.PictureStatus,
+		arg.ID,
+	)
+	return err
+}
+
 const upsertPower = `-- name: UpsertPower :one
-INSERT INTO powers (id, kind, name, description, rarity, picture)
-VALUES ($1, 'STAND', $2, $3, $4, $5)
+INSERT INTO powers (id, kind, name, description, rarity, picture, picture_thumb, picture_status)
+VALUES ($1, 'STAND', $2, $3, $4, $5, $6, $7)
 ON CONFLICT (id) DO UPDATE
-    SET name         = EXCLUDED.name,
-        description  = EXCLUDED.description,
-        rarity       = EXCLUDED.rarity,
-        picture      = EXCLUDED.picture,
-        updated_at   = now()
+    SET name           = EXCLUDED.name,
+        description    = EXCLUDED.description,
+        rarity         = EXCLUDED.rarity,
+        picture        = EXCLUDED.picture,
+        picture_thumb  = EXCLUDED.picture_thumb,
+        picture_status = EXCLUDED.picture_status,
+        updated_at     = now()
 RETURNING id
 `
 
 type UpsertPowerParams struct {
-	ID          pgtype.UUID
-	Name        string
-	Description string
-	Rarity      string
-	Picture     string
+	ID            pgtype.UUID
+	Name          string
+	Description   string
+	Rarity        string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
 }
 
 func (q *Queries) UpsertPower(ctx context.Context, arg UpsertPowerParams) (pgtype.UUID, error) {
@@ -581,6 +659,8 @@ func (q *Queries) UpsertPower(ctx context.Context, arg UpsertPowerParams) (pgtyp
 		arg.Description,
 		arg.Rarity,
 		arg.Picture,
+		arg.PictureThumb,
+		arg.PictureStatus,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
