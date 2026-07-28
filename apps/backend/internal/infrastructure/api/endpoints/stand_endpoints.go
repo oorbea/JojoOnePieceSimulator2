@@ -30,10 +30,14 @@ func NewStandEndpoints(svc *services.StandService) *StandEndpoints {
 func (e *StandEndpoints) Routes() chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", Wrap(e.list))
-	r.Post("/", Wrap(e.create))
 	r.Get("/{id}", Wrap(e.get))
-	r.Put("/{id}", Wrap(e.update))
-	r.Delete("/{id}", Wrap(e.delete))
+
+	r.Group(func(r chi.Router) {
+		r.Use(RequireAdmin)
+		r.Post("/", Wrap(e.create))
+		r.Put("/{id}", Wrap(e.update))
+		r.Delete("/{id}", Wrap(e.delete))
+	})
 	return r
 }
 

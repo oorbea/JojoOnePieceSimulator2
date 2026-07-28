@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 )
@@ -118,10 +122,34 @@ func (g *fakeIDGenerator) NewID() powers.PowerID {
 	return id
 }
 
+// fakeTokenIssuer recognizes two fixed tokens ("user-token"/"admin-token")
+// instead of doing real JWT parsing, so endpoint tests can exercise
+// RequireAuth/RequireAdmin without any signing/verification machinery.
+type fakeTokenIssuer struct{}
+
+func (fakeTokenIssuer) Issue(_ *user.User) (string, time.Time, error) {
+	return "", time.Time{}, errors.New("not implemented")
+}
+
+func (fakeTokenIssuer) Parse(token string) (ports.Claims, error) {
+	switch token {
+	case "user-token":
+		return ports.Claims{Role: enums.Regular}, nil
+	case "admin-token":
+		return ports.Claims{Role: enums.Admin}, nil
+	default:
+		return ports.Claims{}, ports.ErrUnauthenticated
+	}
+}
+
+var _ ports.ITokenIssuer = fakeTokenIssuer{}
+
 func newTestServer() http.Handler {
 	repo := newFakeStandRepository()
 	svc := services.NewStandService(repo, &fakeIDGenerator{})
-	return endpoints.NewRouter(endpoints.NewStandEndpoints(svc))
+	standEndpoints := endpoints.NewStandEndpoints(svc)
+	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	return endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{})
 }
 
 func validStandBody(name string) map[string]any {
@@ -154,6 +182,7 @@ func doRequest(t *testing.T, h http.Handler, method, path string, body any) *htt
 	}
 	req := httptest.NewRequest(method, path, reqBody)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer admin-token")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	return rec
@@ -332,5 +361,85 @@ func TestDeleteStand(t *testing.T) {
 	rec = doRequest(t, h, http.MethodGet, "/api/v1/stands/"+id, nil)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status after delete = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+}
+
+// noAuthRequest is like doRequest but never attaches an Authorization
+// header, for exercising RequireAuth's rejection path.
+func noAuthRequest(t *testing.T, h http.Handler, method, path string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewBuffer(nil))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+// userAuthRequest is like doRequest but authenticates as a regular (non
+// admin) user, for exercising RequireAdmin's rejection path.
+func userAuthRequest(t *testing.T, h http.Handler, method, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	var reqBody *bytes.Buffer
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			t.Fatalf("marshal body: %v", err)
+		}
+		reqBody = bytes.NewBuffer(b)
+	} else {
+		reqBody = bytes.NewBuffer(nil)
+	}
+	req := httptest.NewRequest(method, path, reqBody)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer user-token")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestStandRoutes_RequireAuth(t *testing.T) {
+	h := newTestServer()
+
+	rec := noAuthRequest(t, h, http.MethodGet, "/api/v1/stands")
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("GET / without token: status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+
+	rec = noAuthRequest(t, h, http.MethodPost, "/api/v1/stands")
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("POST / without token: status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestStandRoutes_RegularUserCanRead(t *testing.T) {
+	h := newTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Silver Chariot"))
+
+	rec := userAuthRequest(t, h, http.MethodGet, "/api/v1/stands", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+}
+
+func TestStandRoutes_RegularUserCannotWrite(t *testing.T) {
+	h := newTestServer()
+
+	rec := userAuthRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Star Platinum"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("POST: status = %d, want %d, body = %s", rec.Code, http.StatusForbidden, rec.Body.String())
+	}
+
+	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("The World"))
+	var created map[string]any
+	_ = json.Unmarshal(createRec.Body.Bytes(), &created)
+	id := created["id"].(string)
+
+	rec = userAuthRequest(t, h, http.MethodPut, "/api/v1/stands/"+id, validStandBody("The World"))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("PUT: status = %d, want %d, body = %s", rec.Code, http.StatusForbidden, rec.Body.String())
+	}
+
+	rec = userAuthRequest(t, h, http.MethodDelete, "/api/v1/stands/"+id, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("DELETE: status = %d, want %d, body = %s", rec.Code, http.StatusForbidden, rec.Body.String())
 	}
 }
