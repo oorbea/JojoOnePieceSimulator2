@@ -1,6 +1,8 @@
 package user
 
 type User struct {
-	id     UserID
-	player *Player
+	id       UserID
+	player   *Player
+	email    string
+	username string
 }
