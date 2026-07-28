@@ -39,8 +39,6 @@ definitions:
         type: string
       name:
         type: string
-      picture:
-        type: string
       potential:
         type: string
       precision:
@@ -372,6 +370,59 @@ paths:
       security:
       - BearerAuth: []
       summary: Replace a stand
+      tags:
+      - stands
+  /stands/{id}/picture:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Admin only. Uploads the image to object storage and stores its
+        key; the response's `picture` is a presigned URL.
+      parameters:
+      - description: Stand id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file (JPEG, PNG or WebP)
+        in: formData
+        name: picture
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a stand's picture
       tags:
       - stands
 securityDefinitions:

@@ -29,6 +29,8 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, enums.ErrInvalidUserRole),
 		errors.Is(err, valueobjects.ErrInvalidID),
 		errors.Is(err, services.ErrSelfEvolution),
+		errors.Is(err, services.ErrPictureRequired),
+		errors.Is(err, services.ErrUnsupportedPictureType),
 		errors.Is(err, ports.ErrEmailNotVerified),
 		errors.Is(err, ports.ErrConstraintViolation):
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -36,6 +38,8 @@ func handleError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusUnauthorized, "unauthenticated")
 	case errors.Is(err, ports.ErrForbidden):
 		writeError(w, http.StatusForbidden, "forbidden")
+	case errors.Is(err, services.ErrPictureTooLarge):
+		writeError(w, http.StatusRequestEntityTooLarge, err.Error())
 	case errors.Is(err, ports.ErrRateLimited):
 		writeError(w, http.StatusTooManyRequests, "too many requests")
 	default:

@@ -18,6 +18,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/r2"
 )
 
 // @title JojoOnePieceSimulator2 API
@@ -47,8 +48,20 @@ func main() {
 	}
 	defer pool.Close()
 
+	pictureStorage, err := r2.NewPictureStorage(ctx, r2.Config{
+		AccountID:       cfg.R2AccountID,
+		AccessKeyID:     cfg.R2AccessKeyID,
+		SecretAccessKey: cfg.R2SecretAccessKey,
+		Bucket:          cfg.R2Bucket,
+		PresignTTL:      cfg.R2PresignTTL,
+	})
+	if err != nil {
+		log.Fatalf("configuring picture storage: %v", err)
+	}
+
 	standRepository := repositories.NewStandRepository(pool)
-	standService := services.NewStandService(standRepository, idgen.UUIDGenerator[powers.PowerID]{})
+	standService := services.NewStandService(standRepository, idgen.UUIDGenerator[powers.PowerID]{}, pictureStorage,
+		services.PicturePolicy{MaxBytes: cfg.PictureMaxBytes, AllowedTypes: cfg.PictureAllowedTypes})
 	standEndpoints := endpoints.NewStandEndpoints(standService)
 
 	userRepository := repositories.NewUserRepository(pool)

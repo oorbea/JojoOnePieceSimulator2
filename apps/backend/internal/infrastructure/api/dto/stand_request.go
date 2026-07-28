@@ -16,7 +16,6 @@ type StandRequest struct {
 	Description   string   `json:"description"`
 	Rarity        string   `json:"rarity"`
 	Skills        []string `json:"skills"`
-	Picture       string   `json:"picture"`
 	AttackPower   string   `json:"attackPower"`
 	Speed         string   `json:"speed"`
 	AttackRange   string   `json:"attackRange"`
@@ -102,7 +101,6 @@ func (r StandRequest) Validate() (services.StandInput, error) {
 		Description: r.Description,
 		Rarity:      rarity,
 		Skills:      &skills,
-		Picture:     r.Picture,
 		AttackPower: attackPower,
 		Speed:       speed,
 		AttackRange: attackRange,

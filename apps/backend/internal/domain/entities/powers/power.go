@@ -71,3 +71,9 @@ func (p Power) Skills() []string {
 func (p Power) Picture() string {
 	return p.picture
 }
+
+// SetPicture replaces the stored picture key. The empty string means "no
+// picture", which NewPower already allows.
+func (p *Power) SetPicture(picture string) {
+	p.picture = picture
+}
