@@ -4,3 +4,7 @@
 **/.env
 **/*.md
 LICENSE
+**/node_modules
+**/dist
+**/.expo
+**/tamagui-web.css

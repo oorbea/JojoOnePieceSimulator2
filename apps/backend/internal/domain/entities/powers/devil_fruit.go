@@ -9,11 +9,14 @@ type DevilFruit struct {
 	fruitType enums.FruitType
 }
 
-func NewDevilFruit(power Power, fruitType enums.FruitType) *DevilFruit {
+func NewDevilFruit(power Power, fruitType enums.FruitType) (*DevilFruit, error) {
+	if !fruitType.IsValid() {
+		return nil, enums.ErrInvalidFruitType
+	}
 	return &DevilFruit{
 		Power:     power,
 		fruitType: fruitType,
-	}
+	}, nil
 }
 
 func (d *DevilFruit) FruitType() enums.FruitType {

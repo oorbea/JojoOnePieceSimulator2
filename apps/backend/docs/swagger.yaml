@@ -1,5 +1,43 @@
 basePath: /api/v1
 definitions:
+  dto.DevilFruitRequest:
+    properties:
+      description:
+        type: string
+      fruitType:
+        type: string
+      name:
+        type: string
+      rarity:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+    type: object
+  dto.DevilFruitResponse:
+    properties:
+      description:
+        type: string
+      fruitType:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      picture:
+        type: string
+      pictureStatus:
+        type: string
+      pictureThumb:
+        type: string
+      rarity:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+    type: object
   dto.ErrorResponse:
     properties:
       details:
@@ -104,7 +142,8 @@ definitions:
     type: object
 info:
   contact: {}
-  description: Backend API for JojoOnePieceSimulator2 - Google-only auth, Stands catalogue.
+  description: Backend API for JojoOnePieceSimulator2 - Google-only auth, Stands and
+    Devil Fruits catalogues.
   title: JojoOnePieceSimulator2 API
   version: "1.0"
 paths:
@@ -147,9 +186,288 @@ paths:
       summary: Log in or register via Google
       tags:
       - auth
+  /devil-fruits:
+    get:
+      description: |-
+        Lists every DevilFruit, or filters them if any query param is set.
+        Responses carry an ETag; a request with a matching If-None-Match
+        gets 304 Not Modified with no body instead of the full list.
+      parameters:
+      - description: COMMON, RARE, EPIC, LEGENDARY
+        in: query
+        name: rarity
+        type: string
+      - description: PARAMECIA, ZOAN, LOGIA, SPECIAL_PARAMECIA, ANCIENT_ZOAN, MYTHICAL_ZOAN
+        in: query
+        name: fruitType
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.DevilFruitResponse'
+            type: array
+        "304":
+          description: Not Modified
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List or filter devil fruits
+      tags:
+      - devil-fruits
+    post:
+      consumes:
+      - application/json
+      description: Admin only.
+      parameters:
+      - description: Devil fruit to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DevilFruitRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.DevilFruitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a devil fruit
+      tags:
+      - devil-fruits
+  /devil-fruits/{id}:
+    delete:
+      description: Admin only.
+      parameters:
+      - description: Devil fruit id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a devil fruit
+      tags:
+      - devil-fruits
+    get:
+      description: |-
+        The response carries an ETag; a request with a matching If-None-Match
+        gets 304 Not Modified with no body instead of the full DevilFruit.
+      parameters:
+      - description: Devil fruit id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DevilFruitResponse'
+        "304":
+          description: Not Modified
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a devil fruit by id
+      tags:
+      - devil-fruits
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Keeps the original id.
+      parameters:
+      - description: Devil fruit id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Replacement devil fruit
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DevilFruitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.DevilFruitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a devil fruit
+      tags:
+      - devil-fruits
+  /devil-fruits/{id}/picture:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Admin only. Uploads the image to object storage and stores its key; the response's `picture` is a presigned URL.
+        The image is re-encoded to WebP by a background worker: the response is
+        202 Accepted with `pictureStatus` set to PENDING and the previous
+        `picture`/`pictureThumb` URLs (or "" on a first upload); poll GET
+        /devil-fruits/{id} until `pictureStatus` becomes READY or FAILED.
+      parameters:
+      - description: Devil fruit id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file (WebP, AVIF, JPEG, PNG or GIF)
+        in: formData
+        name: picture
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/dto.DevilFruitResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a devil fruit's picture
+      tags:
+      - devil-fruits
   /stands:
     get:
-      description: Lists every Stand, or filters them if any query param is set.
+      description: |-
+        Lists every Stand, or filters them if any query param is set.
+        Responses carry an ETag; a request with a matching If-None-Match
+        gets 304 Not Modified with no body instead of the full list.
       parameters:
       - description: COMMON, RARE, EPIC, LEGENDARY
         in: query
@@ -192,6 +510,8 @@ paths:
             items:
               $ref: '#/definitions/dto.StandResponse'
             type: array
+        "304":
+          description: Not Modified
         "400":
           description: Bad Request
           schema:
@@ -290,6 +610,9 @@ paths:
       tags:
       - stands
     get:
+      description: |-
+        The response carries an ETag; a request with a matching If-None-Match
+        gets 304 Not Modified with no body instead of the full Stand.
       parameters:
       - description: Stand id (UUID)
         in: path
@@ -303,6 +626,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.StandResponse'
+        "304":
+          description: Not Modified
         "400":
           description: Bad Request
           schema:

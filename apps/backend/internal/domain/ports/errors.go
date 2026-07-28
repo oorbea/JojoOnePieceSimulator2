@@ -11,6 +11,15 @@ var (
 	// unique name constraint against a different, already-existing Stand.
 	ErrStandAlreadyExists = errors.New("stand already exists")
 
+	// ErrDevilFruitNotFound is returned when a DevilFruit lookup (by id or by
+	// name) finds no matching row.
+	ErrDevilFruitNotFound = errors.New("devil fruit not found")
+
+	// ErrDevilFruitAlreadyExists is returned when saving a DevilFruit would
+	// violate the unique name constraint against a different,
+	// already-existing DevilFruit.
+	ErrDevilFruitAlreadyExists = errors.New("devil fruit already exists")
+
 	// ErrUserNotFound is returned when a User lookup (by id, google sub,
 	// email, or username) finds no matching row.
 	ErrUserNotFound = errors.New("user not found")

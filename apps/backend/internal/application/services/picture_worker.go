@@ -25,13 +25,14 @@ type WorkerConfig struct {
 }
 
 // PictureWorker transcodes uploaded pictures to WebP renditions in the
-// background and publishes them on the owning Stand. It has no durable
-// queue: a job lost to a process restart leaves its Stand's picture_status
-// at PENDING, and the client must re-upload.
+// background and publishes them on the owning Power (Stand, DevilFruit,
+// ...), routed by job.Kind through targets. It has no durable queue: a job
+// lost to a process restart leaves its Power's picture_status at PENDING,
+// and the client must re-upload.
 type PictureWorker struct {
 	processor ports.IImageProcessor
 	pictures  ports.IPictureStorage
-	standRepo ports.IStandRepository
+	targets   map[enums.PowerKind]PictureTarget
 	idGen     ports.IIdGenerator[powers.PowerID]
 	cfg       WorkerConfig
 	jobs      chan ports.PictureJob
@@ -43,14 +44,14 @@ var _ ports.IPictureEnqueuer = (*PictureWorker)(nil)
 func NewPictureWorker(
 	processor ports.IImageProcessor,
 	pictures ports.IPictureStorage,
-	standRepo ports.IStandRepository,
+	targets map[enums.PowerKind]PictureTarget,
 	idGen ports.IIdGenerator[powers.PowerID],
 	cfg WorkerConfig,
 ) *PictureWorker {
 	return &PictureWorker{
 		processor: processor,
 		pictures:  pictures,
-		standRepo: standRepo,
+		targets:   targets,
 		idGen:     idGen,
 		cfg:       cfg,
 		jobs:      make(chan ports.PictureJob, cfg.QueueSize),
@@ -115,48 +116,53 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	ctx, cancel := context.WithTimeout(context.Background(), w.cfg.JobTimeout)
 	defer cancel()
 
+	target, ok := w.targets[job.Kind]
+	if !ok {
+		log.Printf("no picture target registered for kind %s (power %s)", job.Kind, job.PowerID)
+		return
+	}
+
 	main, thumb, err := w.processor.Transcode(ctx, job.Content, ports.TranscodeOptions{
 		MaxDimension:   w.cfg.MaxDimension,
 		ThumbDimension: w.cfg.ThumbDimension,
 		Quality:        w.cfg.Quality,
 	})
 	if err != nil {
-		log.Printf("transcoding picture for stand %s: %v", job.StandID, err)
-		w.markFailed(ctx, job.StandID)
+		log.Printf("transcoding picture for %s %s: %v", job.Kind, job.PowerID, err)
+		w.markFailed(ctx, target, job.PowerID)
 		return
 	}
 
 	uuid := w.idGen.NewID()
-	mainKey := fmt.Sprintf("stands/%s/%s.webp", job.StandID, uuid)
-	thumbKey := fmt.Sprintf("stands/%s/%s_thumb.webp", job.StandID, uuid)
+	mainKey := fmt.Sprintf("%s/%s/%s.webp", target.KeyPrefix, job.PowerID, uuid)
+	thumbKey := fmt.Sprintf("%s/%s/%s_thumb.webp", target.KeyPrefix, job.PowerID, uuid)
 
 	if err := w.pictures.Upload(ctx, mainKey, ports.Picture{
 		Content: bytes.NewReader(main.Bytes), ContentType: main.ContentType, Size: int64(len(main.Bytes)),
 	}); err != nil {
-		log.Printf("uploading picture for stand %s: %v", job.StandID, err)
-		w.markFailed(ctx, job.StandID)
+		log.Printf("uploading picture for %s %s: %v", job.Kind, job.PowerID, err)
+		w.markFailed(ctx, target, job.PowerID)
 		return
 	}
 	if err := w.pictures.Upload(ctx, thumbKey, ports.Picture{
 		Content: bytes.NewReader(thumb.Bytes), ContentType: thumb.ContentType, Size: int64(len(thumb.Bytes)),
 	}); err != nil {
-		log.Printf("uploading picture thumbnail for stand %s: %v", job.StandID, err)
+		log.Printf("uploading picture thumbnail for %s %s: %v", job.Kind, job.PowerID, err)
 		w.deleteQuietly(ctx, mainKey)
-		w.markFailed(ctx, job.StandID)
+		w.markFailed(ctx, target, job.PowerID)
 		return
 	}
 
-	stand, err := w.standRepo.FindByID(ctx, job.StandID)
+	oldKey, oldThumbKey, err := target.Publisher.PictureKeys(ctx, job.PowerID)
 	if err != nil {
-		log.Printf("loading stand %s before publishing picture: %v", job.StandID, err)
+		log.Printf("loading %s %s before publishing picture: %v", job.Kind, job.PowerID, err)
 		w.deleteQuietly(ctx, mainKey)
 		w.deleteQuietly(ctx, thumbKey)
 		return
 	}
-	oldKey, oldThumbKey := stand.Picture(), stand.PictureThumb()
 
-	if err := w.standRepo.UpdatePicture(ctx, job.StandID, &mainKey, &thumbKey, enums.PictureReady); err != nil {
-		log.Printf("publishing picture for stand %s: %v", job.StandID, err)
+	if err := target.Publisher.UpdatePicture(ctx, job.PowerID, &mainKey, &thumbKey, enums.PictureReady); err != nil {
+		log.Printf("publishing picture for %s %s: %v", job.Kind, job.PowerID, err)
 		w.deleteQuietly(ctx, mainKey)
 		w.deleteQuietly(ctx, thumbKey)
 		return
@@ -170,9 +176,9 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	}
 }
 
-func (w *PictureWorker) markFailed(ctx context.Context, id powers.PowerID) {
-	if err := w.standRepo.UpdatePicture(ctx, id, nil, nil, enums.PictureFailed); err != nil {
-		log.Printf("marking picture failed for stand %s: %v", id, err)
+func (w *PictureWorker) markFailed(ctx context.Context, target PictureTarget, id powers.PowerID) {
+	if err := target.Publisher.UpdatePicture(ctx, id, nil, nil, enums.PictureFailed); err != nil {
+		log.Printf("marking picture failed for %s: %v", id, err)
 	}
 }
 

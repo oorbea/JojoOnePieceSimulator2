@@ -188,13 +188,13 @@ func (r *StandRepository) GetAll(ctx context.Context) ([]*powers.Stand, error) {
 // Filter loads every stand matching the given (all-optional) filters.
 func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters) ([]*powers.Stand, error) {
 	rows, err := r.queries.FilterStandRows(ctx, db.FilterStandRowsParams{
-		Rarity:          standStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
-		AttackPower:     standStrPtr[enums.StandStat, db.StandStat](filters.AttackPower),
-		Speed:           standStrPtr[enums.StandStat, db.StandStat](filters.Speed),
-		AttackRange:     standStrPtr[enums.StandStat, db.StandStat](filters.AttackRange),
-		Endurance:       standStrPtr[enums.StandStat, db.StandStat](filters.Endurance),
-		Precision:       standStrPtr[enums.StandStat, db.StandStat](filters.Precision),
-		Potential:       standStrPtr[enums.StandStat, db.StandStat](filters.Potential),
+		Rarity:          enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		AttackPower:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackPower),
+		Speed:           enumStrPtr[enums.StandStat, db.StandStat](filters.Speed),
+		AttackRange:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackRange),
+		Endurance:       enumStrPtr[enums.StandStat, db.StandStat](filters.Endurance),
+		Precision:       enumStrPtr[enums.StandStat, db.StandStat](filters.Precision),
+		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
 		EvolvesFromName: filters.EvolvesFrom,
 	})
 	if err != nil {
@@ -203,10 +203,10 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 	return buildStands(standRowsFromFilter(rows))
 }
 
-// standStrPtr converts an optional domain enum (which knows how to render
+// enumStrPtr converts an optional domain enum (which knows how to render
 // itself via String()) into an optional sqlc-generated string-based enum
 // type, for use as a nullable query parameter.
-func standStrPtr[D fmt.Stringer, G ~string](v *D) *G {
+func enumStrPtr[D fmt.Stringer, G ~string](v *D) *G {
 	if v == nil {
 		return nil
 	}
