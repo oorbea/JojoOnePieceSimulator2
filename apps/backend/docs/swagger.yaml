@@ -149,7 +149,10 @@ paths:
       - auth
   /stands:
     get:
-      description: Lists every Stand, or filters them if any query param is set.
+      description: |-
+        Lists every Stand, or filters them if any query param is set.
+        Responses carry an ETag; a request with a matching If-None-Match
+        gets 304 Not Modified with no body instead of the full list.
       parameters:
       - description: COMMON, RARE, EPIC, LEGENDARY
         in: query
@@ -192,6 +195,8 @@ paths:
             items:
               $ref: '#/definitions/dto.StandResponse'
             type: array
+        "304":
+          description: Not Modified
         "400":
           description: Bad Request
           schema:
@@ -290,6 +295,9 @@ paths:
       tags:
       - stands
     get:
+      description: |-
+        The response carries an ETag; a request with a matching If-None-Match
+        gets 304 Not Modified with no body instead of the full Stand.
       parameters:
       - description: Stand id (UUID)
         in: path
@@ -303,6 +311,8 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.StandResponse'
+        "304":
+          description: Not Modified
         "400":
           description: Bad Request
           schema:

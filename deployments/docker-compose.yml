@@ -19,6 +19,16 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build:
       context: ..
@@ -32,10 +42,15 @@ services:
       # Postgres is reached via localhost) so the containerized backend
       # reaches Postgres by its service name on the compose network instead.
       DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required, see apps/backend/.env.example}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, see apps/backend/.env.example}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required, see apps/backend/.env.example}?sslmode=disable
+      # Same reasoning as DATABASE_URL above: reach Redis by its compose
+      # service name instead of the .env's host-side localhost value.
+      REDIS_URL: redis://redis:6379
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

@@ -80,7 +80,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lists every Stand, or filters them if any query param is set.",
+                "description": "Lists every Stand, or filters them if any query param is set.\nResponses carry an ETag; a request with a matching If-None-Match\ngets 304 Not Modified with no body instead of the full list.",
                 "produces": [
                     "application/json"
                 ],
@@ -147,6 +147,9 @@ const docTemplate = `{
                                 "$ref": "#/definitions/dto.StandResponse"
                             }
                         }
+                    },
+                    "304": {
+                        "description": "Not Modified"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -243,6 +246,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "The response carries an ETag; a request with a matching If-None-Match\ngets 304 Not Modified with no body instead of the full Stand.",
                 "produces": [
                     "application/json"
                 ],
@@ -265,6 +269,9 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.StandResponse"
                         }
+                    },
+                    "304": {
+                        "description": "Not Modified"
                     },
                     "400": {
                         "description": "Bad Request",

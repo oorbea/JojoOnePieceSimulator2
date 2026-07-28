@@ -13,8 +13,11 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/auth"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache"
+	rediscache "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache/redis"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
@@ -67,7 +70,34 @@ func main() {
 
 	standRepository := repositories.NewStandRepository(pool)
 
-	pictureWorker := services.NewPictureWorker(imageProcessor, pictureStorage, standRepository,
+	// standRepo/pictures start as the undecorated adapters; both get wrapped
+	// with a Redis-backed cache below when one is configured. Both the
+	// picture worker and the Stand service must receive the *same* decorated
+	// standRepo, or a background transcode publishing READY/FAILED would
+	// invalidate one copy of the cache while readers kept hitting the other.
+	var standRepo ports.IStandRepository = standRepository
+	var pictures ports.IPictureStorage = pictureStorage
+
+	if cfg.CacheEnabled && cfg.RedisURL != "" {
+		redisCache, err := rediscache.New(ctx, rediscache.Config{
+			URL:         cfg.RedisURL,
+			DialTimeout: cfg.RedisDialTimeout,
+			OpTimeout:   cfg.RedisOpTimeout,
+		})
+		if err != nil {
+			log.Fatalf("connecting to redis: %v", err)
+		}
+		defer func() {
+			if err := redisCache.Close(); err != nil {
+				log.Printf("closing redis connection: %v", err)
+			}
+		}()
+
+		standRepo = cache.NewStandRepository(standRepo, redisCache, cfg.CacheStandTTL, cfg.CacheNotFoundTTL)
+		pictures = cache.NewPictureStorage(pictures, redisCache, cfg.CachePresignTTL)
+	}
+
+	pictureWorker := services.NewPictureWorker(imageProcessor, pictures, standRepo,
 		idgen.UUIDGenerator[powers.PowerID]{}, services.WorkerConfig{
 			Workers:        cfg.PictureWorkers,
 			QueueSize:      cfg.PictureQueueSize,
@@ -78,7 +108,7 @@ func main() {
 		})
 	pictureWorker.Start()
 
-	standService := services.NewStandService(standRepository, idgen.UUIDGenerator[powers.PowerID]{}, pictureStorage,
+	standService := services.NewStandService(standRepo, idgen.UUIDGenerator[powers.PowerID]{}, pictures,
 		imageProcessor, pictureWorker,
 		services.PicturePolicy{
 			MaxBytes:     cfg.PictureMaxBytes,
@@ -116,9 +146,15 @@ func main() {
 		WritePerUser: cfg.RateLimitWritePerUser,
 	}
 
+	// The ETag/Cache-Control layer is independent of Redis - it stays on
+	// even with REDIS_URL unset.
+	cacheCfg := endpoints.CacheConfig{
+		HTTPMaxAge: int(cfg.CacheHTTPMaxAge.Seconds()),
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer, corsCfg, rateCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
