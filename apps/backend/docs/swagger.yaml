@@ -1,0 +1,359 @@
+basePath: /api/v1
+definitions:
+  dto.ErrorResponse:
+    properties:
+      details:
+        items:
+          type: string
+        type: array
+      error:
+        type: string
+    type: object
+  dto.GoogleLoginRequest:
+    properties:
+      idToken:
+        type: string
+    type: object
+  dto.LoginResponse:
+    properties:
+      accessToken:
+        type: string
+      expiresAt:
+        type: string
+      tokenType:
+        type: string
+      user:
+        $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.StandRequest:
+    properties:
+      attackPower:
+        type: string
+      attackRange:
+        type: string
+      description:
+        type: string
+      endurance:
+        type: string
+      evolvesFromId:
+        type: string
+      name:
+        type: string
+      picture:
+        type: string
+      potential:
+        type: string
+      precision:
+        type: string
+      rarity:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+      speed:
+        type: string
+    type: object
+  dto.StandResponse:
+    properties:
+      attackPower:
+        type: string
+      attackRange:
+        type: string
+      description:
+        type: string
+      endurance:
+        type: string
+      evolvesFrom:
+        $ref: '#/definitions/dto.StandResponse'
+      id:
+        type: string
+      name:
+        type: string
+      picture:
+        type: string
+      potential:
+        type: string
+      precision:
+        type: string
+      rarity:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+      speed:
+        type: string
+    type: object
+  dto.UserResponse:
+    properties:
+      completeName:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      picture:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Backend API for JojoOnePieceSimulator2 - Google-only auth, Stands catalogue.
+  title: JojoOnePieceSimulator2 API
+  version: "1.0"
+paths:
+  /auth/google:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a Google ID token and returns an access token, creating
+        the User the first time this Google account is seen.
+      parameters:
+      - description: Google ID token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.GoogleLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: existing user logged in
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "201":
+          description: new user registered
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Log in or register via Google
+      tags:
+      - auth
+  /stands:
+    get:
+      description: Lists every Stand, or filters them if any query param is set.
+      parameters:
+      - description: COMMON, RARE, EPIC, LEGENDARY
+        in: query
+        name: rarity
+        type: string
+      - description: E, D, C, B, A, INFINITE, NULL
+        in: query
+        name: attackPower
+        type: string
+      - description: E, D, C, B, A, INFINITE, NULL
+        in: query
+        name: speed
+        type: string
+      - description: E, D, C, B, A, INFINITE, NULL
+        in: query
+        name: attackRange
+        type: string
+      - description: E, D, C, B, A, INFINITE, NULL
+        in: query
+        name: endurance
+        type: string
+      - description: E, D, C, B, A, INFINITE, NULL
+        in: query
+        name: precision
+        type: string
+      - description: E, D, C, B, A, INFINITE, NULL
+        in: query
+        name: potential
+        type: string
+      - description: name of the Stand this one evolves from
+        in: query
+        name: evolvesFrom
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.StandResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List or filter stands
+      tags:
+      - stands
+    post:
+      consumes:
+      - application/json
+      description: Admin only.
+      parameters:
+      - description: Stand to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.StandRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.StandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a stand
+      tags:
+      - stands
+  /stands/{id}:
+    delete:
+      description: Admin only.
+      parameters:
+      - description: Stand id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a stand
+      tags:
+      - stands
+    get:
+      parameters:
+      - description: Stand id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a stand by id
+      tags:
+      - stands
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Keeps the original id.
+      parameters:
+      - description: Stand id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Replacement Stand
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.StandRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StandResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a stand
+      tags:
+      - stands
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and the JWT access token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
