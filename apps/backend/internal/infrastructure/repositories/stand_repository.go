@@ -51,11 +51,13 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 	}
 
 	id, err := q.UpsertPower(ctx, db.UpsertPowerParams{
-		ID:          pgtype.UUID{Bytes: stand.ID(), Valid: true},
-		Name:        stand.Name(),
-		Description: stand.Description(),
-		Rarity:      stand.Rarity().String(),
-		Picture:     stand.Picture(),
+		ID:            pgtype.UUID{Bytes: stand.ID(), Valid: true},
+		Name:          stand.Name(),
+		Description:   stand.Description(),
+		Rarity:        stand.Rarity().String(),
+		Picture:       stand.Picture(),
+		PictureThumb:  stand.PictureThumb(),
+		PictureStatus: stand.PictureStatus().String(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting power %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
@@ -115,6 +117,25 @@ func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*pow
 		return nil, fmt.Errorf("%w: %s", ports.ErrStandNotFound, id)
 	}
 	return stands[0], nil
+}
+
+// UpdatePicture updates only a stand's picture renditions and pipeline
+// status, leaving every other column (name, skills, stats, ...) untouched.
+// A nil main or thumb leaves that column as-is - used by the PATCH
+// .../picture handler to move a stand to PENDING without touching the
+// renditions still being served, and by the background compression worker
+// to publish new renditions once ready.
+func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+	err := r.queries.UpdatePowerPicture(ctx, db.UpdatePowerPictureParams{
+		ID:            pgtype.UUID{Bytes: id, Valid: true},
+		Picture:       main,
+		PictureThumb:  thumb,
+		PictureStatus: status.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("updating picture for stand %s: %w", id, err)
+	}
+	return nil
 }
 
 // Delete removes the stand (and its power/skills rows) with the given id.
