@@ -3,7 +3,6 @@ package endpoints
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -265,13 +264,18 @@ func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 //	@Security		BearerAuth
 //	@Param			id		path		string	true	"Stand id (UUID)"
 //	@Param			picture	formData	file	true	"Image file (WebP, AVIF, JPEG, PNG or GIF)"
-//	@Success		200		{object}	dto.StandResponse
+//	@Description	The image is re-encoded to WebP by a background worker: the response is
+//	@Description	202 Accepted with `pictureStatus` set to PENDING and the previous
+//	@Description	`picture`/`pictureThumb` URLs (or "" on a first upload); poll GET
+//	@Description	/stands/{id} until `pictureStatus` becomes READY or FAILED.
+//	@Success		202		{object}	dto.StandResponse
 //	@Failure		400		{object}	dto.ErrorResponse
 //	@Failure		401		{object}	dto.ErrorResponse
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse
 //	@Failure		413		{object}	dto.ErrorResponse
 //	@Failure		429		{object}	dto.ErrorResponse
+//	@Failure		503		{object}	dto.ErrorResponse
 //	@Router			/stands/{id}/picture [patch]
 func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) error {
 	id, err := parsePowerID(r)
@@ -290,7 +294,7 @@ func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 		_ = r.MultipartForm.RemoveAll()
 	}()
 
-	file, header, err := r.FormFile("picture")
+	file, _, err := r.FormFile("picture")
 	if err != nil {
 		return services.ErrPictureRequired
 	}
@@ -298,19 +302,31 @@ func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 		_ = file.Close()
 	}()
 
-	// Sniff the real content type; a client-supplied Content-Type header is
-	// not trustworthy.
-	head := make([]byte, sniffLen)
-	n, err := io.ReadFull(file, head)
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+	// The pipeline needs the whole image in memory: it is both probed and
+	// handed to the background worker as a single buffer. Read one byte past
+	// the configured limit so an oversized file is detected reliably -
+	// header.Size is client-supplied and not trustworthy.
+	maxBytes := e.svc.MaxPictureBytes()
+	buf, err := io.ReadAll(io.LimitReader(file, maxBytes+1))
+	if err != nil {
 		return err
 	}
-	contentType := sniffContentType(head[:n])
+	if maxBytes > 0 && int64(len(buf)) > maxBytes {
+		return services.ErrPictureTooLarge
+	}
+
+	// Sniff the real content type; a client-supplied Content-Type header is
+	// not trustworthy.
+	head := buf
+	if len(head) > sniffLen {
+		head = head[:sniffLen]
+	}
+	contentType := sniffContentType(head)
 
 	stand, err := e.svc.SetStandPicture(r.Context(), id, ports.Picture{
-		Content:     io.MultiReader(bytes.NewReader(head[:n]), file),
+		Content:     bytes.NewReader(buf),
 		ContentType: contentType,
-		Size:        header.Size,
+		Size:        int64(len(buf)),
 	})
 	if err != nil {
 		return err
@@ -320,7 +336,7 @@ func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, resp)
+	writeJSON(w, http.StatusAccepted, resp)
 	return nil
 }
 

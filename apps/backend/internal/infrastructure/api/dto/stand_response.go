@@ -10,19 +10,21 @@ import (
 // its evolves_from ancestor chain (which the repository already loads in a
 // single round trip).
 type StandResponse struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	Rarity      string         `json:"rarity"`
-	Skills      []string       `json:"skills"`
-	Picture     string         `json:"picture"`
-	AttackPower string         `json:"attackPower"`
-	Speed       string         `json:"speed"`
-	AttackRange string         `json:"attackRange"`
-	Endurance   string         `json:"endurance"`
-	Precision   string         `json:"precision"`
-	Potential   string         `json:"potential"`
-	EvolvesFrom *StandResponse `json:"evolvesFrom"`
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Description   string         `json:"description"`
+	Rarity        string         `json:"rarity"`
+	Skills        []string       `json:"skills"`
+	Picture       string         `json:"picture"`
+	PictureThumb  string         `json:"pictureThumb"`
+	PictureStatus string         `json:"pictureStatus"`
+	AttackPower   string         `json:"attackPower"`
+	Speed         string         `json:"speed"`
+	AttackRange   string         `json:"attackRange"`
+	Endurance     string         `json:"endurance"`
+	Precision     string         `json:"precision"`
+	Potential     string         `json:"potential"`
+	EvolvesFrom   *StandResponse `json:"evolvesFrom"`
 }
 
 // PictureURLResolver turns a Stand's stored picture key into a URL a client
@@ -50,21 +52,27 @@ func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureU
 	if err != nil {
 		return StandResponse{}, err
 	}
+	pictureThumbURL, err := resolve(ctx, stand.PictureThumb())
+	if err != nil {
+		return StandResponse{}, err
+	}
 
 	return StandResponse{
-		ID:          stand.ID().String(),
-		Name:        stand.Name(),
-		Description: stand.Description(),
-		Rarity:      stand.Rarity().String(),
-		Skills:      skills,
-		Picture:     pictureURL,
-		AttackPower: stand.AttackPower().String(),
-		Speed:       stand.Speed().String(),
-		AttackRange: stand.AttackRange().String(),
-		Endurance:   stand.Endurance().String(),
-		Precision:   stand.Precision().String(),
-		Potential:   stand.Potential().String(),
-		EvolvesFrom: evolvesFrom,
+		ID:            stand.ID().String(),
+		Name:          stand.Name(),
+		Description:   stand.Description(),
+		Rarity:        stand.Rarity().String(),
+		Skills:        skills,
+		Picture:       pictureURL,
+		PictureThumb:  pictureThumbURL,
+		PictureStatus: stand.PictureStatus().String(),
+		AttackPower:   stand.AttackPower().String(),
+		Speed:         stand.Speed().String(),
+		AttackRange:   stand.AttackRange().String(),
+		Endurance:     stand.Endurance().String(),
+		Precision:     stand.Precision().String(),
+		Potential:     stand.Potential().String(),
+		EvolvesFrom:   evolvesFrom,
 	}, nil
 }
 

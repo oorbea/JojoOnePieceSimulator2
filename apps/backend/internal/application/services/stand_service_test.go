@@ -39,7 +39,12 @@ func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*p
 	if !ok {
 		return nil, ports.ErrStandNotFound
 	}
-	return stand, nil
+	// Return a copy, like the real (query-backed) repository does: two
+	// FindByID calls must never alias the same *powers.Stand, or a caller
+	// mutating its result (e.g. SetStandPicture) could clobber a concurrent
+	// mutation from another caller (e.g. the picture worker).
+	cp := *stand
+	return &cp, nil
 }
 
 func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*powers.Stand, error) {
@@ -74,6 +79,24 @@ func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error
 		return ports.ErrStandNotFound
 	}
 	delete(f.stands, id)
+	return nil
+}
+
+func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	stand, ok := f.stands[id]
+	if !ok {
+		return ports.ErrStandNotFound
+	}
+	newMain, newThumb := stand.Picture(), stand.PictureThumb()
+	if main != nil {
+		newMain = *main
+	}
+	if thumb != nil {
+		newThumb = *thumb
+	}
+	stand.SetPictureRenditions(newMain, newThumb, status)
 	return nil
 }
 
@@ -139,6 +162,58 @@ func (f *fakePictureStorage) Delete(_ context.Context, key string) error {
 
 var _ ports.IPictureStorage = (*fakePictureStorage)(nil)
 
+// fakeImageProcessor is an in-memory ports.IImageProcessor: Probe/Transcode
+// never inspect their input bytes, they just return the configured
+// meta/result/error, so tests can exercise the pipeline without libvips.
+type fakeImageProcessor struct {
+	probeMeta    ports.ImageMeta
+	probeErr     error
+	transcodeErr error
+	main         ports.EncodedImage
+	thumb        ports.EncodedImage
+}
+
+func newFakeImageProcessor() *fakeImageProcessor {
+	return &fakeImageProcessor{
+		probeMeta: ports.ImageMeta{Width: 1, Height: 1, Pages: 1},
+		main:      ports.EncodedImage{Bytes: []byte("main-webp"), ContentType: "image/webp"},
+		thumb:     ports.EncodedImage{Bytes: []byte("thumb-webp"), ContentType: "image/webp"},
+	}
+}
+
+func (f *fakeImageProcessor) Probe(_ []byte) (ports.ImageMeta, error) {
+	return f.probeMeta, f.probeErr
+}
+
+func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (ports.EncodedImage, ports.EncodedImage, error) {
+	if f.transcodeErr != nil {
+		return ports.EncodedImage{}, ports.EncodedImage{}, f.transcodeErr
+	}
+	return f.main, f.thumb, nil
+}
+
+var _ ports.IImageProcessor = (*fakeImageProcessor)(nil)
+
+// fakePictureEnqueuer records every job handed to it and can be made to fail
+// (simulating a full queue) via enqueueErr.
+type fakePictureEnqueuer struct {
+	mu         sync.Mutex
+	jobs       []ports.PictureJob
+	enqueueErr error
+}
+
+func (f *fakePictureEnqueuer) Enqueue(job ports.PictureJob) error {
+	if f.enqueueErr != nil {
+		return f.enqueueErr
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.jobs = append(f.jobs, job)
+	return nil
+}
+
+var _ ports.IPictureEnqueuer = (*fakePictureEnqueuer)(nil)
+
 func newTestStand(t *testing.T, repo *fakeStandRepository, idGen *fakeStandIDGenerator, name string) *powers.Stand {
 	t.Helper()
 	id := idGen.NewID()
@@ -156,10 +231,16 @@ func newTestStand(t *testing.T, repo *fakeStandRepository, idGen *fakeStandIDGen
 	return stand
 }
 
+func newTestStandService(repo *fakeStandRepository, idGen *fakeStandIDGenerator, pictures *fakePictureStorage,
+	processor *fakeImageProcessor, enqueuer *fakePictureEnqueuer, policy services.PicturePolicy) *services.StandService {
+	return services.NewStandService(repo, idGen, pictures, processor, enqueuer, policy)
+}
+
 func TestSetStandPicture_NotFound_DoesNotTouchStorage(t *testing.T) {
 	repo := newFakeStandRepository()
 	pictures := newFakePictureStorage()
-	svc := services.NewStandService(repo, &fakeStandIDGenerator{}, pictures,
+	enqueuer := &fakePictureEnqueuer{}
+	svc := newTestStandService(repo, &fakeStandIDGenerator{}, pictures, newFakeImageProcessor(), enqueuer,
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	_, err := svc.SetStandPicture(context.Background(), powers.PowerID{1}, ports.Picture{
@@ -173,77 +254,8 @@ func TestSetStandPicture_NotFound_DoesNotTouchStorage(t *testing.T) {
 	if len(pictures.objects) != 0 {
 		t.Errorf("storage should be untouched, got %d objects", len(pictures.objects))
 	}
-}
-
-func TestSetStandPicture_ReplacesAndDeletesOldKey(t *testing.T) {
-	repo := newFakeStandRepository()
-	idGen := &fakeStandIDGenerator{}
-	pictures := newFakePictureStorage()
-	svc := services.NewStandService(repo, idGen, pictures,
-		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
-
-	stand := newTestStand(t, repo, idGen, "Crazy Diamond")
-
-	updated, err := svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
-		Content:     bytes.NewReader([]byte("first")),
-		ContentType: "image/png",
-		Size:        5,
-	})
-	if err != nil {
-		t.Fatalf("first SetStandPicture: %v", err)
-	}
-	firstKey := updated.Picture()
-	if firstKey == "" {
-		t.Fatal("first picture key is empty")
-	}
-
-	updated, err = svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
-		Content:     bytes.NewReader([]byte("second")),
-		ContentType: "image/png",
-		Size:        6,
-	})
-	if err != nil {
-		t.Fatalf("second SetStandPicture: %v", err)
-	}
-	secondKey := updated.Picture()
-	if secondKey == firstKey {
-		t.Fatal("second picture key should differ from the first")
-	}
-
-	found := false
-	for _, k := range pictures.deleted {
-		if k == firstKey {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("deleted = %v, want it to contain the old key %q", pictures.deleted, firstKey)
-	}
-	if _, ok := pictures.objects[secondKey]; !ok {
-		t.Error("new key not present in storage")
-	}
-}
-
-func TestSetStandPicture_DeleteFailureIsNonFatal(t *testing.T) {
-	repo := newFakeStandRepository()
-	idGen := &fakeStandIDGenerator{}
-	pictures := newFakePictureStorage()
-	pictures.deleteErr = errors.New("boom")
-	svc := services.NewStandService(repo, idGen, pictures,
-		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
-
-	stand := newTestStand(t, repo, idGen, "Star Platinum")
-
-	if _, err := svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
-		Content: bytes.NewReader([]byte("first")), ContentType: "image/png", Size: 5,
-	}); err != nil {
-		t.Fatalf("first SetStandPicture: %v", err)
-	}
-
-	if _, err := svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
-		Content: bytes.NewReader([]byte("second")), ContentType: "image/png", Size: 6,
-	}); err != nil {
-		t.Fatalf("second SetStandPicture should succeed despite the delete failure: %v", err)
+	if len(enqueuer.jobs) != 0 {
+		t.Errorf("no job should be enqueued, got %d", len(enqueuer.jobs))
 	}
 }
 
@@ -251,7 +263,7 @@ func TestSetStandPicture_RejectsUnsupportedType(t *testing.T) {
 	repo := newFakeStandRepository()
 	idGen := &fakeStandIDGenerator{}
 	pictures := newFakePictureStorage()
-	svc := services.NewStandService(repo, idGen, pictures,
+	svc := newTestStandService(repo, idGen, pictures, newFakeImageProcessor(), &fakePictureEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	stand := newTestStand(t, repo, idGen, "The World")
@@ -268,7 +280,7 @@ func TestSetStandPicture_RejectsTooLarge(t *testing.T) {
 	repo := newFakeStandRepository()
 	idGen := &fakeStandIDGenerator{}
 	pictures := newFakePictureStorage()
-	svc := services.NewStandService(repo, idGen, pictures,
+	svc := newTestStandService(repo, idGen, pictures, newFakeImageProcessor(), &fakePictureEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1, AllowedTypes: []string{"image/png"}})
 
 	stand := newTestStand(t, repo, idGen, "Killer Queen")
@@ -281,21 +293,112 @@ func TestSetStandPicture_RejectsTooLarge(t *testing.T) {
 	}
 }
 
-func TestUpdateStand_PreservesExistingPicture(t *testing.T) {
+func TestSetStandPicture_ProbeFailure_UploadsNothing(t *testing.T) {
 	repo := newFakeStandRepository()
 	idGen := &fakeStandIDGenerator{}
 	pictures := newFakePictureStorage()
-	svc := services.NewStandService(repo, idGen, pictures,
+	processor := newFakeImageProcessor()
+	processor.probeErr = ports.ErrInvalidImage
+	enqueuer := &fakePictureEnqueuer{}
+	svc := newTestStandService(repo, idGen, pictures, processor, enqueuer,
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
-	stand := newTestStand(t, repo, idGen, "Gold Experience")
-	withPic, err := svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
+	stand := newTestStand(t, repo, idGen, "Killer Queen Bites the Dust")
+
+	_, err := svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
 		Content: bytes.NewReader([]byte("data")), ContentType: "image/png", Size: 4,
+	})
+	if !errors.Is(err, ports.ErrInvalidImage) {
+		t.Fatalf("err = %v, want ports.ErrInvalidImage", err)
+	}
+	if len(pictures.objects) != 0 {
+		t.Errorf("storage should be untouched, got %d objects", len(pictures.objects))
+	}
+	if len(enqueuer.jobs) != 0 {
+		t.Errorf("no job should be enqueued, got %d", len(enqueuer.jobs))
+	}
+	if stand.PictureStatus() != enums.PictureNone {
+		t.Errorf("picture status = %v, want unchanged NONE", stand.PictureStatus())
+	}
+}
+
+func TestSetStandPicture_Success_MarksPendingAndEnqueues(t *testing.T) {
+	repo := newFakeStandRepository()
+	idGen := &fakeStandIDGenerator{}
+	pictures := newFakePictureStorage()
+	enqueuer := &fakePictureEnqueuer{}
+	svc := newTestStandService(repo, idGen, pictures, newFakeImageProcessor(), enqueuer,
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
+
+	stand := newTestStand(t, repo, idGen, "Crazy Diamond")
+
+	updated, err := svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
+		Content: bytes.NewReader([]byte("first")), ContentType: "image/png", Size: 5,
 	})
 	if err != nil {
 		t.Fatalf("SetStandPicture: %v", err)
 	}
-	key := withPic.Picture()
+	if updated.PictureStatus() != enums.PicturePending {
+		t.Fatalf("picture status = %v, want PENDING", updated.PictureStatus())
+	}
+	if updated.Picture() != "" {
+		t.Fatalf("picture key should stay empty on a first upload, got %q", updated.Picture())
+	}
+
+	if len(enqueuer.jobs) != 1 {
+		t.Fatalf("jobs enqueued = %d, want 1", len(enqueuer.jobs))
+	}
+	job := enqueuer.jobs[0]
+	if job.StandID != stand.ID() || job.ContentType != "image/png" || string(job.Content) != "first" {
+		t.Errorf("unexpected job: %+v", job)
+	}
+
+	persisted, err := repo.FindByID(context.Background(), stand.ID())
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if persisted.PictureStatus() != enums.PicturePending {
+		t.Errorf("persisted status = %v, want PENDING", persisted.PictureStatus())
+	}
+}
+
+func TestSetStandPicture_QueueFull_RevertsStatus(t *testing.T) {
+	repo := newFakeStandRepository()
+	idGen := &fakeStandIDGenerator{}
+	pictures := newFakePictureStorage()
+	enqueuer := &fakePictureEnqueuer{enqueueErr: services.ErrPictureQueueFull}
+	svc := newTestStandService(repo, idGen, pictures, newFakeImageProcessor(), enqueuer,
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
+
+	stand := newTestStand(t, repo, idGen, "Star Platinum")
+
+	_, err := svc.SetStandPicture(context.Background(), stand.ID(), ports.Picture{
+		Content: bytes.NewReader([]byte("data")), ContentType: "image/png", Size: 4,
+	})
+	if !errors.Is(err, services.ErrPictureQueueFull) {
+		t.Fatalf("err = %v, want ErrPictureQueueFull", err)
+	}
+
+	persisted, err := repo.FindByID(context.Background(), stand.ID())
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if persisted.PictureStatus() != enums.PictureNone {
+		t.Errorf("status = %v, want reverted to NONE", persisted.PictureStatus())
+	}
+}
+
+func TestUpdateStand_PreservesExistingPicture(t *testing.T) {
+	repo := newFakeStandRepository()
+	idGen := &fakeStandIDGenerator{}
+	pictures := newFakePictureStorage()
+	svc := newTestStandService(repo, idGen, pictures, newFakeImageProcessor(), &fakePictureEnqueuer{},
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
+
+	stand := newTestStand(t, repo, idGen, "Gold Experience")
+	if err := repo.UpdatePicture(context.Background(), stand.ID(), strPtr("stands/x/main.webp"), strPtr("stands/x/main_thumb.webp"), enums.PictureReady); err != nil {
+		t.Fatalf("UpdatePicture: %v", err)
+	}
 
 	updated, err := svc.UpdateStand(context.Background(), stand.ID(), services.StandInput{
 		Name:        "Gold Experience",
@@ -312,7 +415,15 @@ func TestUpdateStand_PreservesExistingPicture(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UpdateStand: %v", err)
 	}
-	if updated.Picture() != key {
-		t.Errorf("picture after update = %q, want preserved %q", updated.Picture(), key)
+	if updated.Picture() != "stands/x/main.webp" {
+		t.Errorf("picture after update = %q, want preserved", updated.Picture())
+	}
+	if updated.PictureThumb() != "stands/x/main_thumb.webp" {
+		t.Errorf("picture thumb after update = %q, want preserved", updated.PictureThumb())
+	}
+	if updated.PictureStatus() != enums.PictureReady {
+		t.Errorf("picture status after update = %v, want preserved READY", updated.PictureStatus())
 	}
 }
+
+func strPtr(s string) *string { return &s }
