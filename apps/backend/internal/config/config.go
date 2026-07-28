@@ -22,7 +22,7 @@ const minJWTSecretLen = 32
 // defaultCORSAllowedMethods/Headers/MaxAge are used when their respective
 // env vars are unset, but only take effect once CORS_ALLOWED_ORIGINS is
 // non-empty - see Load.
-var defaultCORSAllowedMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+var defaultCORSAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization"}
 
 const defaultCORSMaxAge = 300
@@ -34,6 +34,15 @@ const defaultRateLimitGlobalPerIP = 120
 const defaultRateLimitLoginPerIP = 10
 const defaultRateLimitReadPerUser = 100
 const defaultRateLimitWritePerUser = 30
+
+// defaultR2PresignTTL is used when R2_PRESIGN_TTL is unset.
+const defaultR2PresignTTL = 15 * time.Minute
+
+// defaultPictureMaxBytes is used when PICTURE_MAX_BYTES is unset.
+const defaultPictureMaxBytes = 5 * 1024 * 1024
+
+// defaultPictureAllowedTypes is used when PICTURE_ALLOWED_TYPES is unset.
+var defaultPictureAllowedTypes = []string{"image/jpeg", "image/png", "image/webp"}
 
 type Config struct {
 	DatabaseURL string
@@ -62,6 +71,18 @@ type Config struct {
 	RateLimitLoginPerIP   int
 	RateLimitReadPerUser  int
 	RateLimitWritePerUser int
+
+	// R2* configure the Cloudflare R2 bucket Stand pictures are stored in.
+	R2AccountID       string
+	R2AccessKeyID     string
+	R2SecretAccessKey string
+	R2Bucket          string
+	R2PresignTTL      time.Duration
+
+	// PictureMaxBytes/PictureAllowedTypes bound what PATCH
+	// /stands/{id}/picture accepts.
+	PictureMaxBytes     int64
+	PictureAllowedTypes []string
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -223,6 +244,52 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	r2AccountID := os.Getenv("R2_ACCOUNT_ID")
+	if r2AccountID == "" {
+		return nil, fmt.Errorf("R2_ACCOUNT_ID is required")
+	}
+
+	r2AccessKeyID := os.Getenv("R2_ACCESS_KEY_ID")
+	if r2AccessKeyID == "" {
+		return nil, fmt.Errorf("R2_ACCESS_KEY_ID is required")
+	}
+
+	r2SecretAccessKey := os.Getenv("R2_SECRET_ACCESS_KEY")
+	if r2SecretAccessKey == "" {
+		return nil, fmt.Errorf("R2_SECRET_ACCESS_KEY is required")
+	}
+
+	r2Bucket := os.Getenv("R2_BUCKET")
+	if r2Bucket == "" {
+		return nil, fmt.Errorf("R2_BUCKET is required")
+	}
+
+	r2PresignTTL := defaultR2PresignTTL
+	if raw := os.Getenv("R2_PRESIGN_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing R2_PRESIGN_TTL: %w", err)
+		}
+		r2PresignTTL = parsed
+	}
+
+	pictureMaxBytes := int64(defaultPictureMaxBytes)
+	if raw := os.Getenv("PICTURE_MAX_BYTES"); raw != "" {
+		parsed, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("parsing PICTURE_MAX_BYTES: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("PICTURE_MAX_BYTES must not be negative")
+		}
+		pictureMaxBytes = parsed
+	}
+
+	pictureAllowedTypes := defaultPictureAllowedTypes
+	if raw := os.Getenv("PICTURE_ALLOWED_TYPES"); raw != "" {
+		pictureAllowedTypes = splitCSV(raw)
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -243,5 +310,14 @@ func Load() (*Config, error) {
 		RateLimitLoginPerIP:   rateLimitLoginPerIP,
 		RateLimitReadPerUser:  rateLimitReadPerUser,
 		RateLimitWritePerUser: rateLimitWritePerUser,
+
+		R2AccountID:       r2AccountID,
+		R2AccessKeyID:     r2AccessKeyID,
+		R2SecretAccessKey: r2SecretAccessKey,
+		R2Bucket:          r2Bucket,
+		R2PresignTTL:      r2PresignTTL,
+
+		PictureMaxBytes:     pictureMaxBytes,
+		PictureAllowedTypes: pictureAllowedTypes,
 	}, nil
 }
