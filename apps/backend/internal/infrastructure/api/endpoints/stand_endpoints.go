@@ -26,14 +26,19 @@ func NewStandEndpoints(svc *services.StandService) *StandEndpoints {
 }
 
 // Routes returns the /stands sub-router: GET/POST on the collection,
-// GET/PUT/DELETE on a single stand by id.
-func (e *StandEndpoints) Routes() chi.Router {
+// GET/PUT/DELETE on a single stand by id. Reads and writes are rate-limited
+// as separate tiers (see rateCfg), each keyed by the authenticated user id;
+// both GETs share a single readRateLimit instance so they draw from one
+// budget instead of doubling it.
+func (e *StandEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 	r := chi.NewRouter()
-	r.Get("/", Wrap(e.list))
-	r.Get("/{id}", Wrap(e.get))
+	read := readRateLimit(rateCfg)
+	r.With(read).Get("/", Wrap(e.list))
+	r.With(read).Get("/{id}", Wrap(e.get))
 
 	r.Group(func(r chi.Router) {
 		r.Use(RequireAdmin)
+		r.Use(writeRateLimit(rateCfg))
 		r.Post("/", Wrap(e.create))
 		r.Put("/{id}", Wrap(e.update))
 		r.Delete("/{id}", Wrap(e.delete))
@@ -59,6 +64,7 @@ func (e *StandEndpoints) Routes() chi.Router {
 //	@Success		200			{array}		dto.StandResponse
 //	@Failure		400			{object}	dto.ErrorResponse
 //	@Failure		401			{object}	dto.ErrorResponse
+//	@Failure		429			{object}	dto.ErrorResponse
 //	@Router			/stands [get]
 func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	filters, hasFilters, err := dto.StandFiltersFromQuery(r.URL.Query())
@@ -93,6 +99,7 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 //	@Failure		401		{object}	dto.ErrorResponse
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		409		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
 //	@Router			/stands [post]
 func (e *StandEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 	var req dto.StandRequest
@@ -126,6 +133,7 @@ func (e *StandEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 //	@Failure		400	{object}	dto.ErrorResponse
 //	@Failure		401	{object}	dto.ErrorResponse
 //	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
 //	@Router			/stands/{id} [get]
 func (e *StandEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	id, err := parsePowerID(r)
@@ -157,6 +165,7 @@ func (e *StandEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 //	@Failure		403		{object}	dto.ErrorResponse
 //	@Failure		404		{object}	dto.ErrorResponse
 //	@Failure		409		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
 //	@Router			/stands/{id} [put]
 func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 	id, err := parsePowerID(r)
@@ -194,6 +203,7 @@ func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 //	@Failure		401	{object}	dto.ErrorResponse
 //	@Failure		403	{object}	dto.ErrorResponse
 //	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
 //	@Router			/stands/{id} [delete]
 func (e *StandEndpoints) delete(w http.ResponseWriter, r *http.Request) error {
 	id, err := parsePowerID(r)

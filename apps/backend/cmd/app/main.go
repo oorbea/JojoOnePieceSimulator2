@@ -71,9 +71,18 @@ func main() {
 		MaxAge:           cfg.CORSMaxAge,
 	}
 
+	rateCfg := endpoints.RateLimitConfig{
+		Enabled:      cfg.RateLimitEnabled,
+		Window:       cfg.RateLimitWindow,
+		GlobalPerIP:  cfg.RateLimitGlobalPerIP,
+		LoginPerIP:   cfg.RateLimitLoginPerIP,
+		ReadPerUser:  cfg.RateLimitReadPerUser,
+		WritePerUser: cfg.RateLimitWritePerUser,
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer, corsCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer, corsCfg, rateCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

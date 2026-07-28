@@ -14,7 +14,7 @@ func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
 	svc := services.NewStandService(repo, &fakeIDGenerator{})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
-	handler := endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, corsCfg)
+	handler := endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, corsCfg, endpoints.RateLimitConfig{})
 	return httptest.NewServer(handler)
 }
 
@@ -43,7 +43,7 @@ func TestCORS_NoOriginsConfigured_NoHeadersEverAdded(t *testing.T) {
 
 	req := newRequestWithOrigin(t, srv.URL+"/health", "http://evil.example")
 	resp := doRawRequest(t, req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "" {
 		t.Errorf("Access-Control-Allow-Origin = %q, want empty (deny-all when unconfigured)", got)
@@ -60,7 +60,7 @@ func TestCORS_ConfiguredOrigin_IsEchoedBack(t *testing.T) {
 
 	req := newRequestWithOrigin(t, srv.URL+"/health", "http://localhost:5173")
 	resp := doRawRequest(t, req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
 		t.Errorf("Access-Control-Allow-Origin = %q, want %q", got, "http://localhost:5173")
@@ -77,7 +77,7 @@ func TestCORS_ConfiguredOrigin_RejectsOtherOrigins(t *testing.T) {
 
 	req := newRequestWithOrigin(t, srv.URL+"/health", "http://evil.example")
 	resp := doRawRequest(t, req)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "" {
 		t.Errorf("Access-Control-Allow-Origin = %q, want empty for an unconfigured origin", got)

@@ -1,0 +1,170 @@
+package endpoints_test
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
+)
+
+func TestRateLimit_Disabled_NoLimiting(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{Enabled: false})
+
+	for i := 0; i < 10; i++ {
+		rec := noAuthRequest(t, h, http.MethodGet, "/health")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("request %d: status = %d, want %d", i, rec.Code, http.StatusOK)
+		}
+	}
+}
+
+func TestRateLimit_GlobalPerIP_Returns429(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 2,
+	})
+
+	for i := 0; i < 2; i++ {
+		rec := noAuthRequest(t, h, http.MethodGet, "/health")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("request %d: status = %d, want %d, body = %s", i, rec.Code, http.StatusOK, rec.Body.String())
+		}
+	}
+
+	rec := noAuthRequest(t, h, http.MethodGet, "/health")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+	if got := rec.Body.String(); got != `{"error":"too many requests"}`+"\n" {
+		t.Errorf("body = %q, want %q", got, `{"error":"too many requests"}`+"\n")
+	}
+	if rec.Header().Get("Retry-After") == "" {
+		t.Error("Retry-After header not set")
+	}
+	if rec.Header().Get("X-RateLimit-Limit") == "" {
+		t.Error("X-RateLimit-Limit header not set")
+	}
+}
+
+func TestRateLimit_LoginTier_IsStricterThanGlobal(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 100,
+		LoginPerIP:  1,
+	})
+
+	rec := doRawJSONRequest(t, h, http.MethodPost, "/api/v1/auth/google", `{"idToken":"bogus"}`)
+	if rec.Code == http.StatusTooManyRequests {
+		t.Fatalf("first login request already rate-limited, body = %s", rec.Body.String())
+	}
+
+	rec = doRawJSONRequest(t, h, http.MethodPost, "/api/v1/auth/google", `{"idToken":"bogus"}`)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("second login request: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+
+	// /health is unaffected: it only draws from the (much larger) global tier.
+	healthRec := noAuthRequest(t, h, http.MethodGet, "/health")
+	if healthRec.Code != http.StatusOK {
+		t.Fatalf("/health status = %d, want %d", healthRec.Code, http.StatusOK)
+	}
+}
+
+func TestRateLimit_WriteTier_SeparateFromReadTier(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:      true,
+		Window:       time.Minute,
+		GlobalPerIP:  1000,
+		ReadPerUser:  1000,
+		WritePerUser: 1,
+	})
+
+	rec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Crazy Diamond"))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("first create: status = %d, want %d, body = %s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+
+	rec = doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Star Platinum"))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("second create: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+
+	// Reads still work: the write tier being exhausted must not affect reads.
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/stands", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("read after write exhausted: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+}
+
+func TestRateLimit_PerUser_KeysAreIndependent(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 1000,
+		ReadPerUser: 1,
+	})
+
+	rec := userAuthRequest(t, h, http.MethodGet, "/api/v1/stands", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("user 1 first read: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	rec = userAuthRequest(t, h, http.MethodGet, "/api/v1/stands", nil)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("user 1 second read: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+
+	// A different authenticated user has an independent budget.
+	rec = user2AuthRequest(t, h, http.MethodGet, "/api/v1/stands")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("user 2 first read: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+}
+
+func TestRateLimit_HealthAndSwaggerAreLimited(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 1,
+	})
+
+	rec := noAuthRequest(t, h, http.MethodGet, "/health")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("first /health: status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	rec = httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/swagger/index.html", nil)
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("/swagger after global budget exhausted by /health: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+}
+
+// doRawJSONRequest posts a raw JSON body without an Authorization header, for
+// exercising the public /auth/google route.
+func doRawJSONRequest(t *testing.T, h http.Handler, method, path, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+// user2AuthRequest is like userAuthRequest but authenticates as a second,
+// distinct regular user (see userIDForToken), for exercising per-user
+// rate-limit key independence.
+func user2AuthRequest(t *testing.T, h http.Handler, method, path string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, nil)
+	req.Header.Set("Authorization", "Bearer user2-token")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
