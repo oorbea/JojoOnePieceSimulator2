@@ -48,11 +48,11 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 
 	var evolvesFromID pgtype.UUID
 	if parent := stand.EvolvesFrom(); parent != nil {
-		evolvesFromID = pgtype.UUID{Bytes: [16]byte(parent.ID()), Valid: true}
+		evolvesFromID = pgtype.UUID{Bytes: parent.ID(), Valid: true}
 	}
 
 	id, err := q.UpsertPower(ctx, db.UpsertPowerParams{
-		ID:          pgtype.UUID{Bytes: [16]byte(stand.ID()), Valid: true},
+		ID:          pgtype.UUID{Bytes: stand.ID(), Valid: true},
 		Name:        stand.Name(),
 		Description: stand.Description(),
 		Rarity:      stand.Rarity().String(),
@@ -101,7 +101,7 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 // FindByID loads the stand with the given id, along with its full
 // evolves_from ancestor chain, in a single round trip.
 func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*powers.Stand, error) {
-	rows, err := r.queries.GetStandRowsByID(ctx, pgtype.UUID{Bytes: [16]byte(id), Valid: true})
+	rows, err := r.queries.GetStandRowsByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		return nil, fmt.Errorf("querying stand %s: %w", id, err)
 	}
@@ -126,7 +126,7 @@ func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*pow
 // Any descendant stand's evolves_from is cleared automatically by the
 // schema's ON DELETE SET NULL.
 func (r *StandRepository) Delete(ctx context.Context, id powers.PowerID) error {
-	rowsAffected, err := r.queries.DeleteStandByID(ctx, pgtype.UUID{Bytes: [16]byte(id), Valid: true})
+	rowsAffected, err := r.queries.DeleteStandByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		return fmt.Errorf("deleting stand %s: %w", id, err)
 	}
