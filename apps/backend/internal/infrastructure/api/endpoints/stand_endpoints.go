@@ -41,6 +41,25 @@ func (e *StandEndpoints) Routes() chi.Router {
 	return r
 }
 
+// list godoc
+//
+//	@Summary		List or filter stands
+//	@Description	Lists every Stand, or filters them if any query param is set.
+//	@Tags			stands
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			rarity		query		string	false	"COMMON, RARE, EPIC, LEGENDARY"
+//	@Param			attackPower	query		string	false	"E, D, C, B, A, INFINITE, NULL"
+//	@Param			speed		query		string	false	"E, D, C, B, A, INFINITE, NULL"
+//	@Param			attackRange	query		string	false	"E, D, C, B, A, INFINITE, NULL"
+//	@Param			endurance	query		string	false	"E, D, C, B, A, INFINITE, NULL"
+//	@Param			precision	query		string	false	"E, D, C, B, A, INFINITE, NULL"
+//	@Param			potential	query		string	false	"E, D, C, B, A, INFINITE, NULL"
+//	@Param			evolvesFrom	query		string	false	"name of the Stand this one evolves from"
+//	@Success		200			{array}		dto.StandResponse
+//	@Failure		400			{object}	dto.ErrorResponse
+//	@Failure		401			{object}	dto.ErrorResponse
+//	@Router			/stands [get]
 func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	filters, hasFilters, err := dto.StandFiltersFromQuery(r.URL.Query())
 	if err != nil {
@@ -60,6 +79,21 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// create godoc
+//
+//	@Summary		Create a stand
+//	@Description	Admin only.
+//	@Tags			stands
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		dto.StandRequest	true	"Stand to create"
+//	@Success		201		{object}	dto.StandResponse
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		409		{object}	dto.ErrorResponse
+//	@Router			/stands [post]
 func (e *StandEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 	var req dto.StandRequest
 	if err := decode(w, r, &req); err != nil {
@@ -81,6 +115,18 @@ func (e *StandEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// get godoc
+//
+//	@Summary		Get a stand by id
+//	@Tags			stands
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string	true	"Stand id (UUID)"
+//	@Success		200	{object}	dto.StandResponse
+//	@Failure		400	{object}	dto.ErrorResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/stands/{id} [get]
 func (e *StandEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	id, err := parsePowerID(r)
 	if err != nil {
@@ -95,6 +141,23 @@ func (e *StandEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// update godoc
+//
+//	@Summary		Replace a stand
+//	@Description	Admin only. Keeps the original id.
+//	@Tags			stands
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		string				true	"Stand id (UUID)"
+//	@Param			request	body		dto.StandRequest	true	"Replacement Stand"
+//	@Success		200		{object}	dto.StandResponse
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		409		{object}	dto.ErrorResponse
+//	@Router			/stands/{id} [put]
 func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 	id, err := parsePowerID(r)
 	if err != nil {
@@ -119,6 +182,19 @@ func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// delete godoc
+//
+//	@Summary		Delete a stand
+//	@Description	Admin only.
+//	@Tags			stands
+//	@Security		BearerAuth
+//	@Param			id	path	string	true	"Stand id (UUID)"
+//	@Success		204
+//	@Failure		400	{object}	dto.ErrorResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Router			/stands/{id} [delete]
 func (e *StandEndpoints) delete(w http.ResponseWriter, r *http.Request) error {
 	id, err := parsePowerID(r)
 	if err != nil {
