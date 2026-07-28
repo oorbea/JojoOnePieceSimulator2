@@ -29,9 +29,11 @@ var ErrPictureTooLarge = errors.New("picture exceeds the maximum allowed size")
 // pictureExtensions maps a sniffed content type to the file extension used
 // in the object key, so keys stay human-readable in the bucket.
 var pictureExtensions = map[string]string{
+	"image/webp": ".webp",
+	"image/avif": ".avif",
 	"image/jpeg": ".jpg",
 	"image/png":  ".png",
-	"image/webp": ".webp",
+	"image/gif":  ".gif",
 }
 
 // PicturePolicy bounds what SetStandPicture accepts, kept independent from

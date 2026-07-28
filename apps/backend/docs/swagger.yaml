@@ -384,7 +384,7 @@ paths:
         name: id
         required: true
         type: string
-      - description: Image file (JPEG, PNG or WebP)
+      - description: Image file (WebP, AVIF, JPEG, PNG or GIF)
         in: formData
         name: picture
         required: true

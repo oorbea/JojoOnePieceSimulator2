@@ -25,8 +25,42 @@ const maxRequestBodyBytes = 1 << 20 // 1 MiB
 const maxMultipartMemory = 1 << 20 // 1 MiB
 
 // sniffLen is how many leading bytes of an uploaded picture are read to
-// detect its real content type via http.DetectContentType.
+// detect its real content type.
 const sniffLen = 512
+
+// avifFtypBrands are the ISOBMFF brand codes that mark a file as AVIF -
+// checked manually because http.DetectContentType has no AVIF signature.
+var avifFtypBrands = [][]byte{[]byte("avif"), []byte("avis")}
+
+// sniffContentType detects head's real content type, recognizing AVIF on
+// top of everything http.DetectContentType already covers.
+func sniffContentType(head []byte) string {
+	if isAVIF(head) {
+		return "image/avif"
+	}
+	return http.DetectContentType(head)
+}
+
+// isAVIF reports whether head starts with an ISOBMFF "ftyp" box whose major
+// or a compatible brand is "avif" (still image) or "avis" (image sequence).
+func isAVIF(head []byte) bool {
+	if len(head) < 16 || !bytes.Equal(head[4:8], []byte("ftyp")) {
+		return false
+	}
+	for _, brand := range avifFtypBrands {
+		if bytes.Equal(head[8:12], brand) {
+			return true
+		}
+	}
+	for i := 16; i+4 <= len(head); i += 4 {
+		for _, brand := range avifFtypBrands {
+			if bytes.Equal(head[i:i+4], brand) {
+				return true
+			}
+		}
+	}
+	return false
+}
 
 // StandEndpoints wires the Stand HTTP surface to the application service.
 type StandEndpoints struct {
@@ -230,7 +264,7 @@ func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			id		path		string	true	"Stand id (UUID)"
-//	@Param			picture	formData	file	true	"Image file (JPEG, PNG or WebP)"
+//	@Param			picture	formData	file	true	"Image file (WebP, AVIF, JPEG, PNG or GIF)"
 //	@Success		200		{object}	dto.StandResponse
 //	@Failure		400		{object}	dto.ErrorResponse
 //	@Failure		401		{object}	dto.ErrorResponse
@@ -271,7 +305,7 @@ func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
 		return err
 	}
-	contentType := http.DetectContentType(head[:n])
+	contentType := sniffContentType(head[:n])
 
 	stand, err := e.svc.SetStandPicture(r.Context(), id, ports.Picture{
 		Content:     io.MultiReader(bytes.NewReader(head[:n]), file),

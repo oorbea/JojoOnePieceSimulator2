@@ -457,7 +457,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "file",
-                        "description": "Image file (JPEG, PNG or WebP)",
+                        "description": "Image file (WebP, AVIF, JPEG, PNG or GIF)",
                         "name": "picture",
                         "in": "formData",
                         "required": true
