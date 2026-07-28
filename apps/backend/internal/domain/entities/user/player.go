@@ -8,7 +8,7 @@ import (
 )
 
 type Player struct {
-	username        string
+	User
 	physicalForm    byte
 	stand           *powers.Stand
 	devilFruit      *powers.DevilFruit
@@ -17,10 +17,6 @@ type Player struct {
 	observationHaki byte
 	conquerorHaki   byte
 	spin            byte
-}
-
-func (p *Player) Username() string {
-	return p.username
 }
 
 func (p *Player) Stand() *powers.Stand {

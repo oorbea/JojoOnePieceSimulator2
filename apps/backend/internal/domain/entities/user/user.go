@@ -1,11 +1,12 @@
 package user
 
+import "github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+
 type User struct {
 	id           UserID
-	player       *Player
 	email        string
 	username     string
 	completeName string
-	isAdmin      bool
+	role         enums.UserRole
 	picture      string
 }
