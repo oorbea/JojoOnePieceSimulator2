@@ -27,6 +27,19 @@ func (e *AuthEndpoints) Routes() chi.Router {
 	return r
 }
 
+// loginWithGoogle godoc
+//
+//	@Summary		Log in or register via Google
+//	@Description	Verifies a Google ID token and returns an access token, creating the User the first time this Google account is seen.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		dto.GoogleLoginRequest	true	"Google ID token"
+//	@Success		200		{object}	dto.LoginResponse	"existing user logged in"
+//	@Success		201		{object}	dto.LoginResponse	"new user registered"
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Router			/auth/google [post]
 func (e *AuthEndpoints) loginWithGoogle(w http.ResponseWriter, r *http.Request) error {
 	var req dto.GoogleLoginRequest
 	if err := decode(w, r, &req); err != nil {

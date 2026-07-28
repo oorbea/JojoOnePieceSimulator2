@@ -149,7 +149,7 @@ func newTestServer() http.Handler {
 	svc := services.NewStandService(repo, &fakeIDGenerator{})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
-	return endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{})
+	return endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{})
 }
 
 func validStandBody(name string) map[string]any {
