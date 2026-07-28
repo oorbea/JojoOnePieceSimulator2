@@ -29,8 +29,9 @@ type CORSConfig struct {
 // /swagger are public; everything else requires a valid access token. Every
 // route, including /health and /swagger, sits behind the global rate limit
 // tier; /auth/google and /stands additionally get their own tighter tiers
-// (see rateCfg and ratelimit.go).
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig) http.Handler {
+// (see rateCfg and ratelimit.go). cacheCfg configures the ETag/Cache-Control
+// layer applied to the Stand read routes (see cache_headers.go).
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -61,7 +62,7 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, iss
 
 		r.Group(func(r chi.Router) {
 			r.Use(RequireAuth(issuer))
-			r.Mount("/stands", standEndpoints.Routes(rateCfg))
+			r.Mount("/stands", standEndpoints.Routes(rateCfg, cacheCfg))
 		})
 	})
 

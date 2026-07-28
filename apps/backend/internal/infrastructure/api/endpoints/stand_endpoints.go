@@ -74,12 +74,15 @@ func NewStandEndpoints(svc *services.StandService) *StandEndpoints {
 // GET/PUT/PATCH/DELETE on a single stand by id. Reads and writes are
 // rate-limited as separate tiers (see rateCfg), each keyed by the
 // authenticated user id; both GETs share a single readRateLimit instance so
-// they draw from one budget instead of doubling it.
-func (e *StandEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
+// they draw from one budget instead of doubling it. Both GETs also get the
+// ETag/Cache-Control layer (see cacheCfg, cache_headers.go); writes never do,
+// since their responses aren't meant to be cached by the client.
+func (e *StandEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConfig) chi.Router {
 	r := chi.NewRouter()
 	read := readRateLimit(rateCfg)
-	r.With(read).Get("/", Wrap(e.list))
-	r.With(read).Get("/{id}", Wrap(e.get))
+	cache := cacheHeaders(cacheCfg)
+	r.With(read, cache).Get("/", Wrap(e.list))
+	r.With(read, cache).Get("/{id}", Wrap(e.get))
 
 	r.Group(func(r chi.Router) {
 		r.Use(RequireAdmin)
@@ -107,7 +110,10 @@ func (e *StandEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 //	@Param			precision	query		string	false	"E, D, C, B, A, INFINITE, NULL"
 //	@Param			potential	query		string	false	"E, D, C, B, A, INFINITE, NULL"
 //	@Param			evolvesFrom	query		string	false	"name of the Stand this one evolves from"
+//	@Description	Responses carry an ETag; a request with a matching If-None-Match
+//	@Description	gets 304 Not Modified with no body instead of the full list.
 //	@Success		200			{array}		dto.StandResponse
+//	@Success		304
 //	@Failure		400			{object}	dto.ErrorResponse
 //	@Failure		401			{object}	dto.ErrorResponse
 //	@Failure		429			{object}	dto.ErrorResponse
@@ -184,7 +190,10 @@ func (e *StandEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			id	path		string	true	"Stand id (UUID)"
+//	@Description	The response carries an ETag; a request with a matching If-None-Match
+//	@Description	gets 304 Not Modified with no body instead of the full Stand.
 //	@Success		200	{object}	dto.StandResponse
+//	@Success		304
 //	@Failure		400	{object}	dto.ErrorResponse
 //	@Failure		401	{object}	dto.ErrorResponse
 //	@Failure		404	{object}	dto.ErrorResponse
