@@ -5,10 +5,13 @@ GOOSE_DRIVER := postgres
 GOOSE_DBSTRING := $(DATABASE_URL)
 GOOSE_DIR := db/migrations
 
-.PHONY: sqlc migrate-up migrate-down migrate-status test run db-up db-down
+.PHONY: sqlc swagger migrate-up migrate-down migrate-status test run db-up db-down
 
 sqlc:
 	sqlc generate
+
+swagger:
+	go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/app/main.go -o docs --parseInternal
 
 migrate-up:
 	goose -dir $(GOOSE_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" up
