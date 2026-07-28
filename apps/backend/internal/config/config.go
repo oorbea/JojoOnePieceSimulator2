@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +19,14 @@ const defaultJWTTTL = 24 * time.Hour
 // minJWTSecretLen guards against a signing key short enough to brute-force.
 const minJWTSecretLen = 32
 
+// defaultCORSAllowedMethods/Headers/MaxAge are used when their respective
+// env vars are unset, but only take effect once CORS_ALLOWED_ORIGINS is
+// non-empty - see Load.
+var defaultCORSAllowedMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization"}
+
+const defaultCORSMaxAge = 300
+
 type Config struct {
 	DatabaseURL string
 	Port        string
@@ -27,6 +36,30 @@ type Config struct {
 	JWTIssuer      string
 	JWTTTL         time.Duration
 	AdminEmails    []string
+
+	// CORSAllowedOrigins is deny-all (no CORS headers added at all) when
+	// empty, which is the safe default: the browser blocks cross-origin
+	// calls exactly as if the server didn't know about CORS.
+	CORSAllowedOrigins   []string
+	CORSAllowedMethods   []string
+	CORSAllowedHeaders   []string
+	CORSAllowCredentials bool
+	CORSMaxAge           int
+}
+
+// splitCSV splits raw on commas, trimming whitespace and dropping empty
+// entries. Returns nil (not an empty slice) if nothing is left, so callers
+// can treat "unset" and "explicitly empty" the same way.
+func splitCSV(raw string) []string {
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		out = append(out, part)
+	}
+	return out
 }
 
 // Load reads configuration from the environment. If a .env file is present
@@ -83,13 +116,52 @@ func Load() (*Config, error) {
 		}
 	}
 
+	// CORS is deny-all unless CORS_ALLOWED_ORIGINS is set: the other
+	// CORS_* vars are meaningless (and left unparsed) with no origins to
+	// allow, so their defaults only ever apply alongside a configured
+	// origin list.
+	corsAllowedOrigins := splitCSV(os.Getenv("CORS_ALLOWED_ORIGINS"))
+
+	corsAllowedMethods := defaultCORSAllowedMethods
+	if raw := os.Getenv("CORS_ALLOWED_METHODS"); raw != "" {
+		corsAllowedMethods = splitCSV(raw)
+	}
+
+	corsAllowedHeaders := defaultCORSAllowedHeaders
+	if raw := os.Getenv("CORS_ALLOWED_HEADERS"); raw != "" {
+		corsAllowedHeaders = splitCSV(raw)
+	}
+
+	corsAllowCredentials := false
+	if raw := os.Getenv("CORS_ALLOW_CREDENTIALS"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CORS_ALLOW_CREDENTIALS: %w", err)
+		}
+		corsAllowCredentials = parsed
+	}
+
+	corsMaxAge := defaultCORSMaxAge
+	if raw := os.Getenv("CORS_MAX_AGE"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CORS_MAX_AGE: %w", err)
+		}
+		corsMaxAge = parsed
+	}
+
 	return &Config{
-		DatabaseURL:    dsn,
-		Port:           port,
-		GoogleClientID: googleClientID,
-		JWTSecret:      jwtSecret,
-		JWTIssuer:      jwtIssuer,
-		JWTTTL:         jwtTTL,
-		AdminEmails:    adminEmails,
+		DatabaseURL:          dsn,
+		Port:                 port,
+		GoogleClientID:       googleClientID,
+		JWTSecret:            jwtSecret,
+		JWTIssuer:            jwtIssuer,
+		JWTTTL:               jwtTTL,
+		AdminEmails:          adminEmails,
+		CORSAllowedOrigins:   corsAllowedOrigins,
+		CORSAllowedMethods:   corsAllowedMethods,
+		CORSAllowedHeaders:   corsAllowedHeaders,
+		CORSAllowCredentials: corsAllowCredentials,
+		CORSMaxAge:           corsMaxAge,
 	}, nil
 }
