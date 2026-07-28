@@ -236,7 +236,7 @@ func newTestServerWithRateLimit(rateCfg endpoints.RateLimitConfig) http.Handler 
 func newTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fakePictureStorage) http.Handler {
 	repo := newFakeStandRepository()
 	svc := services.NewStandService(repo, &fakeIDGenerator{}, pictures,
-		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/jpeg", "image/png", "image/webp"}})
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	return endpoints.NewRouter(authEndpoints, standEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg)
@@ -314,6 +314,61 @@ var pngBytes = []byte{
 	0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x62, 0x00, 0x01, 0x00, 0x00,
 	0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
 	0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+}
+
+// gifBytes is a minimal valid 1x1 GIF89a.
+var gifBytes = []byte{
+	0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00,
+	0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x21, 0xf9, 0x04, 0x01, 0x00,
+	0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
+	0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
+}
+
+// jpegBytes is the shortest header http.DetectContentType still recognizes
+// as image/jpeg (it only inspects the magic bytes, not a full valid stream).
+var jpegBytes = []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01}
+
+// webpBytes is the shortest header http.DetectContentType still recognizes
+// as image/webp: a RIFF container with a WEBP form type.
+var webpBytes = []byte{
+	0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
+	0x56, 0x50, 0x38, 0x20,
+}
+
+// avifBytes is a minimal ISOBMFF "ftyp" box with major brand "avif" -
+// http.DetectContentType has no AVIF signature, so isAVIF handles this one.
+var avifBytes = []byte{
+	0x00, 0x00, 0x00, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x61, 0x76, 0x69, 0x66,
+	0x00, 0x00, 0x00, 0x00, 0x61, 0x76, 0x69, 0x66, 0x6d, 0x69, 0x66, 0x31,
+}
+
+func TestPatchStandPicture_AllSupportedFormats(t *testing.T) {
+	cases := []struct {
+		name     string
+		filename string
+		content  []byte
+	}{
+		{"webp", "stand.webp", webpBytes},
+		{"avif", "stand.avif", avifBytes},
+		{"jpeg", "stand.jpg", jpegBytes},
+		{"png", "stand.png", pngBytes},
+		{"gif", "stand.gif", gifBytes},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newTestServer()
+			createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Stand "+tc.name))
+			var created map[string]any
+			_ = json.Unmarshal(createRec.Body.Bytes(), &created)
+			id := created["id"].(string)
+
+			rec := doMultipartRequest(t, h, http.MethodPatch, "/api/v1/stands/"+id+"/picture", "picture", tc.filename, tc.content, "admin-token")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+			}
+		})
+	}
 }
 
 func TestPatchStandPicture(t *testing.T) {
