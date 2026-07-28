@@ -7,12 +7,14 @@ import (
 )
 
 type Power struct {
-	id          PowerID
-	name        string
-	description string
-	rarity      enums.PowerRarity
-	skills      []string
-	picture     string
+	id            PowerID
+	name          string
+	description   string
+	rarity        enums.PowerRarity
+	skills        []string
+	picture       string
+	pictureThumb  string
+	pictureStatus enums.PictureStatus
 }
 
 func NewPower(
@@ -72,8 +74,30 @@ func (p Power) Picture() string {
 	return p.picture
 }
 
+// PictureThumb returns the stored thumbnail rendition's key, or "" if none
+// has been produced yet.
+func (p Power) PictureThumb() string {
+	return p.pictureThumb
+}
+
+// PictureStatus reports where this Power's picture is in the async
+// compression pipeline.
+func (p Power) PictureStatus() enums.PictureStatus {
+	return p.pictureStatus
+}
+
 // SetPicture replaces the stored picture key. The empty string means "no
 // picture", which NewPower already allows.
 func (p *Power) SetPicture(picture string) {
 	p.picture = picture
+}
+
+// SetPictureRenditions replaces the stored main and thumbnail picture keys
+// together with the pipeline status that produced them, so the three always
+// change as one unit (e.g. a worker moving a Power to READY sets all three
+// at once; PENDING/FAILED leave main/thumb untouched).
+func (p *Power) SetPictureRenditions(main, thumb string, status enums.PictureStatus) {
+	p.picture = main
+	p.pictureThumb = thumb
+	p.pictureStatus = status
 }

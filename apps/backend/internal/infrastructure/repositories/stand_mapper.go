@@ -19,6 +19,8 @@ type standRow struct {
 	Description   string
 	Rarity        string
 	Picture       string
+	PictureThumb  string
+	PictureStatus string
 	AttackPower   string
 	Speed         string
 	AttackRange   string
@@ -35,6 +37,7 @@ func standRowsFromGetByName(rs []db.GetStandRowsByNameRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
+			PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -48,6 +51,7 @@ func standRowsFromGetByID(rs []db.GetStandRowsByIDRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
+			PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -61,6 +65,7 @@ func standRowsFromList(rs []db.ListStandRowsRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
+			PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -74,6 +79,7 @@ func standRowsFromFilter(rs []db.FilterStandRowsRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
+			PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -136,6 +142,11 @@ func buildStands(rows []standRow) ([]*powers.Stand, error) {
 		if err != nil {
 			return nil, fmt.Errorf("stand %q: %w", row.Name, err)
 		}
+		pictureStatus, err := enums.ParsePictureStatus(row.PictureStatus)
+		if err != nil {
+			return nil, fmt.Errorf("stand %q: picture_status: %w", row.Name, err)
+		}
+		power.SetPictureRenditions(row.Picture, row.PictureThumb, pictureStatus)
 
 		attackPower, err := enums.ParseStandStat(row.AttackPower)
 		if err != nil {
