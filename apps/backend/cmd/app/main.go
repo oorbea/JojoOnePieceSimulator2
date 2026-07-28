@@ -12,7 +12,9 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/auth"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
@@ -41,9 +43,21 @@ func main() {
 	standService := services.NewStandService(standRepository, idgen.UUIDGenerator[powers.PowerID]{})
 	standEndpoints := endpoints.NewStandEndpoints(standService)
 
+	userRepository := repositories.NewUserRepository(pool)
+	googleVerifier := auth.NewGoogleVerifier(cfg.GoogleClientID)
+	tokenIssuer := auth.NewJWTIssuer([]byte(cfg.JWTSecret), cfg.JWTIssuer, cfg.JWTTTL)
+	authService := services.NewAuthService(
+		userRepository,
+		idgen.UUIDGenerator[user.UserID]{},
+		googleVerifier,
+		tokenIssuer,
+		cfg.AdminEmails,
+	)
+	authEndpoints := endpoints.NewAuthEndpoints(authService)
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(standEndpoints),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
