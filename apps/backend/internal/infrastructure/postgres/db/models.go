@@ -11,6 +11,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type PictureStatus string
+
+const (
+	PictureStatusNONE    PictureStatus = "NONE"
+	PictureStatusPENDING PictureStatus = "PENDING"
+	PictureStatusREADY   PictureStatus = "READY"
+	PictureStatusFAILED  PictureStatus = "FAILED"
+)
+
+func (e *PictureStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PictureStatus(s)
+	case string:
+		*e = PictureStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PictureStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPictureStatus struct {
+	PictureStatus PictureStatus
+	Valid         bool // Valid is true if PictureStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPictureStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PictureStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PictureStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPictureStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PictureStatus), nil
+}
+
 type PowerKind string
 
 const (
@@ -187,14 +231,16 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 }
 
 type Power struct {
-	ID          pgtype.UUID
-	Kind        string
-	Name        string
-	Description string
-	Rarity      string
-	Picture     string
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+	ID            pgtype.UUID
+	Kind          string
+	Name          string
+	Description   string
+	Rarity        string
+	Picture       string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	PictureThumb  string
+	PictureStatus string
 }
 
 type PowerSkill struct {
