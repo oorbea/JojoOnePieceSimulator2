@@ -1,0 +1,42 @@
+name: JojoOnePieceSimulator
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required, see apps/backend/.env.example}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, see apps/backend/.env.example}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required, see apps/backend/.env.example}
+    ports:
+      - "${POSTGRES_PORT:?POSTGRES_PORT is required, see apps/backend/.env.example}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      # Reads POSTGRES_USER/POSTGRES_DB from the container's own environment
+      # (set above), not from host-side interpolation.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deployments/docker/Dockerfile.backend
+    # Loads PORT (and any other backend-only vars) straight from the same
+    # file used for local `go run`/tests.
+    env_file:
+      - ../apps/backend/.env
+    environment:
+      # Overrides the .env value (meant for host-side `go run`, where
+      # Postgres is reached via localhost) so the containerized backend
+      # reaches Postgres by its service name on the compose network instead.
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required, see apps/backend/.env.example}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, see apps/backend/.env.example}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required, see apps/backend/.env.example}?sslmode=disable
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
