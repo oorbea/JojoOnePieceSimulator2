@@ -25,4 +25,7 @@ type IStandRepository interface {
 	GetAll(ctx context.Context) ([]*powers.Stand, error)
 	Filter(ctx context.Context, filters StandFilters) ([]*powers.Stand, error)
 	Delete(ctx context.Context, id powers.PowerID) error
+	// UpdatePicture updates only a stand's picture renditions and pipeline
+	// status. A nil main or thumb leaves that column untouched.
+	UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error
 }
