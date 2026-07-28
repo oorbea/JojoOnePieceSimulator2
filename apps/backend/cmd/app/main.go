@@ -20,6 +20,14 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 )
 
+// @title JojoOnePieceSimulator2 API
+// @version 1.0
+// @description Backend API for JojoOnePieceSimulator2 - Google-only auth, Stands catalogue.
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and the JWT access token.
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -55,9 +63,17 @@ func main() {
 	)
 	authEndpoints := endpoints.NewAuthEndpoints(authService)
 
+	corsCfg := endpoints.CORSConfig{
+		AllowedOrigins:   cfg.CORSAllowedOrigins,
+		AllowedMethods:   cfg.CORSAllowedMethods,
+		AllowedHeaders:   cfg.CORSAllowedHeaders,
+		AllowCredentials: cfg.CORSAllowCredentials,
+		MaxAge:           cfg.CORSMaxAge,
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, tokenIssuer, corsCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
