@@ -1,16 +1,25 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.26-alpine AS builder
+# Pinned to the same alpine minor as the runtime stage: the builder's
+# vips-dev and the runtime's vips must come from the same apk snapshot,
+# since the binary is now dynamically linked against libvips.
+FROM golang:1.26-alpine3.22 AS builder
 WORKDIR /src
+# The base image's Go patch version can lag go.mod's `go` directive; let the
+# toolchain fetch the pinned version itself instead of failing the build.
+ENV GOTOOLCHAIN=auto
+
+RUN apk add --no-cache build-base pkgconfig vips-dev
 
 COPY apps/backend/go.mod apps/backend/go.sum ./
 RUN go mod download
 
 COPY apps/backend/. .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/app
+# CGO_ENABLED=1 and -tags vips: see internal/infrastructure/imaging.
+RUN CGO_ENABLED=1 GOOS=linux go build -tags vips -o /out/server ./cmd/app
 
 FROM alpine:3.22
-RUN apk add --no-cache ca-certificates \
+RUN apk add --no-cache ca-certificates vips \
     && adduser -D -u 10001 app
 USER app
 
