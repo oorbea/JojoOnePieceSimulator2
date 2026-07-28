@@ -27,6 +27,14 @@ var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization"}
 
 const defaultCORSMaxAge = 300
 
+// defaultRateLimit* are used when their respective env vars are unset.
+const defaultRateLimitEnabled = true
+const defaultRateLimitWindow = time.Minute
+const defaultRateLimitGlobalPerIP = 120
+const defaultRateLimitLoginPerIP = 10
+const defaultRateLimitReadPerUser = 100
+const defaultRateLimitWritePerUser = 30
+
 type Config struct {
 	DatabaseURL string
 	Port        string
@@ -45,6 +53,15 @@ type Config struct {
 	CORSAllowedHeaders   []string
 	CORSAllowCredentials bool
 	CORSMaxAge           int
+
+	// RateLimitEnabled turns the whole tiered limiter off when false (all
+	// other RateLimit* fields are then ignored).
+	RateLimitEnabled      bool
+	RateLimitWindow       time.Duration
+	RateLimitGlobalPerIP  int
+	RateLimitLoginPerIP   int
+	RateLimitReadPerUser  int
+	RateLimitWritePerUser int
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -60,6 +77,24 @@ func splitCSV(raw string) []string {
 		out = append(out, part)
 	}
 	return out
+}
+
+// parsePositiveIntEnv parses name as an int, defaulting to def when unset.
+// Rejects a negative value outright, since a typo'd negative limit would
+// otherwise silently disable a rate-limit tier instead of failing loudly.
+func parsePositiveIntEnv(name string, def int) (int, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return def, nil
+	}
+	parsed, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parsing %s: %w", name, err)
+	}
+	if parsed < 0 {
+		return 0, fmt.Errorf("%s must not be negative", name)
+	}
+	return parsed, nil
 }
 
 // Load reads configuration from the environment. If a .env file is present
@@ -150,6 +185,44 @@ func Load() (*Config, error) {
 		corsMaxAge = parsed
 	}
 
+	rateLimitEnabled := defaultRateLimitEnabled
+	if raw := os.Getenv("RATE_LIMIT_ENABLED"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing RATE_LIMIT_ENABLED: %w", err)
+		}
+		rateLimitEnabled = parsed
+	}
+
+	rateLimitWindow := defaultRateLimitWindow
+	if raw := os.Getenv("RATE_LIMIT_WINDOW"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing RATE_LIMIT_WINDOW: %w", err)
+		}
+		rateLimitWindow = parsed
+	}
+
+	rateLimitGlobalPerIP, err := parsePositiveIntEnv("RATE_LIMIT_GLOBAL_PER_IP", defaultRateLimitGlobalPerIP)
+	if err != nil {
+		return nil, err
+	}
+
+	rateLimitLoginPerIP, err := parsePositiveIntEnv("RATE_LIMIT_LOGIN_PER_IP", defaultRateLimitLoginPerIP)
+	if err != nil {
+		return nil, err
+	}
+
+	rateLimitReadPerUser, err := parsePositiveIntEnv("RATE_LIMIT_READ_PER_USER", defaultRateLimitReadPerUser)
+	if err != nil {
+		return nil, err
+	}
+
+	rateLimitWritePerUser, err := parsePositiveIntEnv("RATE_LIMIT_WRITE_PER_USER", defaultRateLimitWritePerUser)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -163,5 +236,12 @@ func Load() (*Config, error) {
 		CORSAllowedHeaders:   corsAllowedHeaders,
 		CORSAllowCredentials: corsAllowCredentials,
 		CORSMaxAge:           corsMaxAge,
+
+		RateLimitEnabled:      rateLimitEnabled,
+		RateLimitWindow:       rateLimitWindow,
+		RateLimitGlobalPerIP:  rateLimitGlobalPerIP,
+		RateLimitLoginPerIP:   rateLimitLoginPerIP,
+		RateLimitReadPerUser:  rateLimitReadPerUser,
+		RateLimitWritePerUser: rateLimitWritePerUser,
 	}, nil
 }
