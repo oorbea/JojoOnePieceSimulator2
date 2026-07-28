@@ -70,6 +70,10 @@ definitions:
         type: string
       picture:
         type: string
+      pictureStatus:
+        type: string
+      pictureThumb:
+        type: string
       potential:
         type: string
       precision:
@@ -376,8 +380,12 @@ paths:
     patch:
       consumes:
       - multipart/form-data
-      description: Admin only. Uploads the image to object storage and stores its
-        key; the response's `picture` is a presigned URL.
+      description: |-
+        Admin only. Uploads the image to object storage and stores its key; the response's `picture` is a presigned URL.
+        The image is re-encoded to WebP by a background worker: the response is
+        202 Accepted with `pictureStatus` set to PENDING and the previous
+        `picture`/`pictureThumb` URLs (or "" on a first upload); poll GET
+        /stands/{id} until `pictureStatus` becomes READY or FAILED.
       parameters:
       - description: Stand id (UUID)
         in: path
@@ -392,8 +400,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "202":
+          description: Accepted
           schema:
             $ref: '#/definitions/dto.StandResponse'
         "400":
@@ -418,6 +426,10 @@ paths:
             $ref: '#/definitions/dto.ErrorResponse'
         "429":
           description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       security:

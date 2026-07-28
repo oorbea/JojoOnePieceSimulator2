@@ -436,7 +436,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin only. Uploads the image to object storage and stores its key; the response's ` + "`" + `picture` + "`" + ` is a presigned URL.",
+                "description": "Admin only. Uploads the image to object storage and stores its key; the response's ` + "`" + `picture` + "`" + ` is a presigned URL.\nThe image is re-encoded to WebP by a background worker: the response is\n202 Accepted with ` + "`" + `pictureStatus` + "`" + ` set to PENDING and the previous\n` + "`" + `picture` + "`" + `/` + "`" + `pictureThumb` + "`" + ` URLs (or \"\" on a first upload); poll GET\n/stands/{id} until ` + "`" + `pictureStatus` + "`" + ` becomes READY or FAILED.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -464,8 +464,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/dto.StandResponse"
                         }
@@ -502,6 +502,12 @@ const docTemplate = `{
                     },
                     "429": {
                         "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -616,6 +622,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "picture": {
+                    "type": "string"
+                },
+                "pictureStatus": {
+                    "type": "string"
+                },
+                "pictureThumb": {
                     "type": "string"
                 },
                 "potential": {
