@@ -9,7 +9,7 @@ tags:
 # JojoOnePieceSimulator2 — ADR
 
 ## Status
-Solo hobby/learning project. Not deployed to prod yet — no target infra decided (docker-compose is dev-only for now).
+Solo hobby/learning project. Not deployed to prod yet, but target infra is now decided: a single server reachable via an external Docker network `public-net` (shared across services on that host, created outside this repo). All 4 compose services join it; local dev is Docker-only (see [[docker-setup]]).
 
 ## Stack
 - Backend: Go, hexagonal/clean architecture (`internal/domain`, `internal/application`, `internal/infrastructure`), sqlc + Postgres, Chi-style router, Swagger docs, Redis-like `ICache` port.
