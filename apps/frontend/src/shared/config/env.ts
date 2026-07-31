@@ -5,7 +5,7 @@ import { z } from 'zod'
 // `undefined` request URLs deep inside the app.
 const envSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
-  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: z.string().optional(),
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: z.string().min(1),
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_SOCKET_URL: z.string().optional(),
