@@ -17,6 +17,10 @@ RUN go mod download
 COPY apps/backend/. .
 # CGO_ENABLED=1 and -tags vips: see internal/infrastructure/imaging.
 RUN CGO_ENABLED=1 GOOS=linux go build -tags vips -o /out/server ./cmd/app
+# goose CLI for `docker compose exec backend goose ...` (down/status - `up` is
+# already run automatically on server startup, see internal/infrastructure/postgres/migrate.go).
+# Already a go.mod dependency, so this needs no extra module fetch.
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/goose github.com/pressly/goose/v3/cmd/goose
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates vips \
@@ -24,6 +28,10 @@ RUN apk add --no-cache ca-certificates vips \
 USER app
 
 COPY --from=builder /out/server /usr/local/bin/server
+COPY --from=builder /out/goose /usr/local/bin/goose
+# The server embeds these via go:embed (see db/migrations/embed.go) for its
+# own startup migration; goose CLI needs them as real files on disk instead.
+COPY apps/backend/db/migrations/*.sql /migrations/
 
 EXPOSE 8080
 ENTRYPOINT ["server"]
