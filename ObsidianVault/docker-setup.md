@@ -48,6 +48,10 @@ Root `.dockerignore` (`C:\code\JojoOnePieceSimulator2\.dockerignore`) needed `**
 
 ## Verified
 
-Prod image built + run standalone: `docker run` + curl confirmed `/`, `/manifest.json`, `/sw.js` all correct (200s, `sw.js` has `Cache-Control: no-cache`). NOT yet verified: `docker compose up` running backend+frontend together (deferred as a manual/optional check per plan).
+Prod image built + run standalone: `docker run` + curl confirmed `/`, `/manifest.json`, `/sw.js` all correct (200s, `sw.js` has `Cache-Control: no-cache`). `docker compose up` running backend+frontend together, full Google login flow end-to-end: verified working 2026-08-01 (see [[frontend-stack]] for the 3 bugs found/fixed along the way).
+
+## Rebuild gotcha (2026-08-01)
+
+`docker compose up -d --build` alone is not always enough to prove a frontend fix landed — BuildKit layer caching can report the `pnpm expo export` step as `CACHED` even after a real source change, if an earlier layer's cache key didn't bust correctly. When in doubt (e.g. verifying a fix actually took effect), use `docker compose build --no-cache frontend` then `docker compose up -d --force-recreate frontend`, and independently confirm via `docker compose exec frontend grep ... /usr/share/nginx/html/...` that the expected string/behavior is actually in the served files — don't trust the build log alone.
 
 Related: [[frontend-stack]], [[backend-contract]]
