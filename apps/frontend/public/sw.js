@@ -31,13 +31,23 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached
-      return fetch(event.request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
-        }
-        return response
-      })
+      return fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+        .catch((error) => {
+          // A rejected fetch (offline, or the browser cancelling this SW-side
+          // request in favor of the real navigation's own fetch — a known
+          // race on a page's very first load right after the SW installs)
+          // must not surface as an unhandled rejection; fall back to
+          // whatever's cached, or let the error propagate as a normal failed
+          // response instead of an uncaught exception.
+          return caches.match(event.request).then((fallback) => fallback ?? Promise.reject(error))
+        })
     })
   )
 })
