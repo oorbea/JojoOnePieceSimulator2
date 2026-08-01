@@ -19,8 +19,13 @@ COPY apps/backend/. .
 RUN CGO_ENABLED=1 GOOS=linux go build -tags vips -o /out/server ./cmd/app
 # goose CLI for `docker compose exec backend goose ...` (down/status - `up` is
 # already run automatically on server startup, see internal/infrastructure/postgres/migrate.go).
-# Already a go.mod dependency, so this needs no extra module fetch.
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/goose github.com/pressly/goose/v3/cmd/goose
+# Built with `go install pkg@version`, not `go build`: cmd/goose pulls extra
+# deps (godotenv, xflag, modernc.org/sqlite) that this project's own go.sum
+# doesn't track (Go 1.17+ module graph pruning only records checksums for
+# what the main module actually imports) - `go build` fails wanting a `go get`
+# that -mod=readonly refuses to run. `go install ...@version` resolves the
+# module independently instead of relying on this project's go.sum.
+RUN CGO_ENABLED=0 GOOS=linux GOBIN=/out go install github.com/pressly/goose/v3/cmd/goose@v3.27.3
 
 FROM alpine:3.22
 RUN apk add --no-cache ca-certificates vips \
