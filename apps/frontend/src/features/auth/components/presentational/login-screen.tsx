@@ -27,7 +27,7 @@ export function LoginScreen({ onSignIn, isLoading, isReady, error }: Props) {
           bg="rgba(255,255,255,0.55)"
           borderWidth={1}
           borderColor="rgba(255,255,255,0.5)"
-          shadowColor="$shadowColor"
+          shadowColor="rgba(0,0,0,0.2)"
           shadowRadius={30}
           shadowOpacity={0.2}
         >
