@@ -6,6 +6,7 @@ networks:
 
 services:
   postgres:
+    container_name: jojo-one-piece-simulator-postgres
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required, see deployments/.env.example}
@@ -25,6 +26,7 @@ services:
       retries: 10
 
   redis:
+    container_name: jojo-one-piece-simulator-redis
     image: redis:8-alpine
     networks:
       - public-net
@@ -36,6 +38,7 @@ services:
       retries: 10
 
   backend:
+    container_name: jojo-one-piece-simulator-backend
     build:
       context: ..
       dockerfile: deployments/docker/Dockerfile.backend
@@ -69,6 +72,7 @@ services:
         condition: service_healthy
 
   frontend:
+    container_name: jojo-one-piece-simulator-frontend
     build:
       context: ..
       dockerfile: deployments/docker/Dockerfile.frontend
