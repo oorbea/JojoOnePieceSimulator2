@@ -1,0 +1,146 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  continuous-deploy:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    # Merges to main only reach here once ci.yml's ci-success check has
+    # passed (branch protection), so there's no separate `needs` gate here.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v4.1.3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      # Writes every repository secret/variable into deployments/.env, using
+      # the exact same [SECRET]/[CONFIG] names documented in
+      # deployments/.env.example. Excludes the CD pipeline's own
+      # infra-access credentials, which the app itself never reads.
+      - name: Build deployments/.env from secrets + variables
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+          VARS_JSON: ${{ toJSON(vars) }}
+        run: |
+          python3 -c "
+          import os, json
+
+          def dotenv_escape(value):
+              if any(c in value for c in [' ', '\$', '\"', '\n', '\t', '#', '\\\\', \"'\"]):
+                  value = value.replace(\"'\", \"'\\\\''\")
+                  return f\"'{value}'\"
+              return value
+
+          secrets = json.loads(os.environ['SECRETS_JSON'])
+          variables = json.loads(os.environ['VARS_JSON'])
+
+          exclude = {
+              'TS_OAUTH_CLIENT_ID', 'TS_OAUTH_SECRET',
+              'SERVER_IP', 'SERVER_USER', 'SSH_PRIVATE_KEY',
+              'GITHUB_TOKEN',
+          }
+
+          with open('deployments/.env', 'w') as f:
+              for source in (variables, secrets):
+                  for key, value in source.items():
+                      if key in exclude or key.startswith('github_'):
+                          continue
+                      f.write(f'{key}={dotenv_escape(str(value))}\n')
+          "
+
+      - name: Copy deployments/.env to server
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deployments/.env"
+          target: "projects/JojoOnePieceSimulator2"
+          strip_components: 0
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ~/projects/JojoOnePieceSimulator2
+
+            COMPOSE="docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.prod.yml"
+
+            # public-net must already exist on this host (shared with the
+            # reverse proxy) - fail fast with a clear message if it doesn't.
+            if ! docker network inspect public-net >/dev/null 2>&1; then
+              echo "ERROR: docker network 'public-net' does not exist on this host."
+              exit 1
+            fi
+
+            PREVIOUS_COMMIT=$(git rev-parse HEAD)
+            git remote set-url origin "git@github.com:${{ github.repository }}.git"
+            git pull origin main
+
+            # Bring up the stateful services first (covers the first-ever
+            # deploy, where postgres/redis don't exist yet).
+            $COMPOSE up -d postgres redis
+            echo "Waiting for postgres/redis to be healthy..."
+            timeout 60 bash -c '
+              until [ "$(docker inspect -f "{{.State.Health.Status}}" jojo-one-piece-simulator-postgres 2>/dev/null)" = "healthy" ] &&
+                    [ "$(docker inspect -f "{{.State.Health.Status}}" jojo-one-piece-simulator-redis 2>/dev/null)" = "healthy" ]; do
+                sleep 2
+              done
+            '
+
+            # Record the DB's current goose version so a failed migration
+            # below can be rolled back to it. "none" covers both a fresh DB
+            # and the case where the backend isn't running yet.
+            CURRENT_VERSION=$(docker exec jojo-one-piece-simulator-backend sh -c 'goose -dir /migrations postgres "$DATABASE_URL" version' 2>/dev/null | grep -oE '[0-9]+' | tail -1 || echo "none")
+            echo "Previous commit: $PREVIOUS_COMMIT"
+            echo "Current DB version: $CURRENT_VERSION"
+
+            # Build the new images without starting them yet - the old
+            # backend/frontend containers (if any) keep serving traffic.
+            $COMPOSE build backend frontend
+
+            # Migrate with the NEW image before replacing the running
+            # container, so a bad migration is caught before anything good
+            # is torn down. Redundant with the backend's own startup
+            # auto-migrate (internal/infrastructure/postgres/migrate.go) -
+            # that's the point: this run happens first, and failing it stops
+            # the deploy before the healthy container is touched.
+            echo "Applying database migrations..."
+            if ! $COMPOSE run --rm --no-deps --entrypoint sh backend -c 'goose -dir /migrations postgres "$DATABASE_URL" up'; then
+              echo "Migration failed! Rolling back..."
+
+              if [ "$CURRENT_VERSION" != "none" ]; then
+                echo "Rolling back DB to version: $CURRENT_VERSION"
+                $COMPOSE run --rm --no-deps --entrypoint sh backend -c "goose -dir /migrations postgres \"\$DATABASE_URL\" down-to $CURRENT_VERSION" || true
+              fi
+
+              echo "Rolling back code to commit: $PREVIOUS_COMMIT"
+              git reset --hard "$PREVIOUS_COMMIT"
+
+              echo "Rollback complete. Deploy failed due to migration error."
+              exit 1
+            fi
+            echo "Migrations applied successfully!"
+
+            $COMPOSE up -d --remove-orphans backend frontend
+
+            echo "Waiting for backend to be healthy..."
+            timeout 90 bash -c 'until [ "$(docker inspect -f "{{.State.Health.Status}}" jojo-one-piece-simulator-backend 2>/dev/null)" = "healthy" ]; do sleep 2; done'
+
+            docker image prune -f
