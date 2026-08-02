@@ -54,4 +54,15 @@ Prod image built + run standalone: `docker run` + curl confirmed `/`, `/manifest
 
 `docker compose up -d --build` alone is not always enough to prove a frontend fix landed — BuildKit layer caching can report the `pnpm expo export` step as `CACHED` even after a real source change, if an earlier layer's cache key didn't bust correctly. When in doubt (e.g. verifying a fix actually took effect), use `docker compose build --no-cache frontend` then `docker compose up -d --force-recreate frontend`, and independently confirm via `docker compose exec frontend grep ... /usr/share/nginx/html/...` that the expected string/behavior is actually in the served files — don't trust the build log alone.
 
-Related: [[frontend-stack]], [[backend-contract]]
+## Compose split: base / dev / prod (2026-08-02)
+
+`deployments/docker-compose.yml` no longer publishes `ports:` for `backend`/`frontend` — it's the shared base for both environments now. Two overrides layer on top:
+
+- `deployments/docker-compose.dev.yml` — adds back `backend`'s `${PORT:-8080}:${PORT:-8080}` and `frontend`'s `${FRONTEND_PORT:-3000}:80`. `apps/backend/Makefile`'s `$(COMPOSE)` now passes both `-f` files.
+- `deployments/docker-compose.prod.yml` — overrides `CORS_ALLOWED_ORIGINS` to `https://jojo-one-piece-simulator.duckdns.org`. No ports at all: in prod, Nginx Proxy Manager (already on the host's `public-net`) reaches both services by container name.
+
+**Gotcha discovered**: Compose *merges* `ports:` lists across `-f` files instead of replacing them — an override cannot un-publish a port the base file already publishes. That's why publishing had to move entirely out of the base file into `docker-compose.dev.yml`, rather than trying to have `docker-compose.prod.yml` "remove" it.
+
+Also added a `backend` healthcheck to the base file (`wget -qO- http://localhost:${PORT:-8080}/health`, busybox wget already in the alpine runtime image) — needed by the CD pipeline to know when the new container is actually ready, see [[cicd-deployment]].
+
+Related: [[frontend-stack]], [[backend-contract]], [[cicd-deployment]]
