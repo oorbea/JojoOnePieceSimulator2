@@ -3,7 +3,7 @@
 # needing DATABASE_URL/goose on the host. test/test-vips still run on the
 # host: the runtime image is a minimal multi-stage build with only the
 # compiled binary, no Go toolchain or source, so tests can't run inside it.
-COMPOSE := docker compose -f ../../deployments/docker-compose.yml
+COMPOSE := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.dev.yml
 
 .PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down
 
