@@ -142,7 +142,10 @@ jobs:
             config
 
   ci-success:
-    name: CI success
+    # Name must match the "ci-success" required status check context set in
+    # branch protection exactly (GitHub reports checks by this display name,
+    # not the job id).
+    name: ci-success
     runs-on: ubuntu-latest
     needs: [backend, frontend, backend-image, frontend-image, compose-config]
     # Single required status check - adding/renaming jobs above never
