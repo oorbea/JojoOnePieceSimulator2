@@ -1,16 +1,22 @@
 name: JojoOnePieceSimulator
 
+networks:
+  public-net:
+    external: true
+
 services:
   postgres:
+    container_name: jojo-one-piece-simulator-postgres
     image: postgres:18-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required, see apps/backend/.env.example}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, see apps/backend/.env.example}
-      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required, see apps/backend/.env.example}
-    ports:
-      - "${POSTGRES_PORT:?POSTGRES_PORT is required, see apps/backend/.env.example}:5432"
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required, see deployments/.env.example}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, see deployments/.env.example}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required, see deployments/.env.example}
     volumes:
       - postgres-data:/var/lib/postgresql
+    networks:
+      - public-net
+    restart: unless-stopped
     healthcheck:
       # Reads POSTGRES_USER/POSTGRES_DB from the container's own environment
       # (set above), not from host-side interpolation.
@@ -20,9 +26,11 @@ services:
       retries: 10
 
   redis:
+    container_name: jojo-one-piece-simulator-redis
     image: redis:8-alpine
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - public-net
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -30,18 +38,21 @@ services:
       retries: 10
 
   backend:
+    container_name: jojo-one-piece-simulator-backend
     build:
       context: ..
       dockerfile: deployments/docker/Dockerfile.backend
-    # Loads PORT (and any other backend-only vars) straight from the same
-    # file used for local `go run`/tests.
+    # Single source of truth for all backend vars in the Docker context - see
+    # deployments/.env.example. Optional so `docker compose` still works in CI,
+    # where GitHub Actions sets these as real environment variables instead.
     env_file:
-      - ../apps/backend/.env
+      - path: .env
+        required: false
     environment:
       # Overrides the .env value (meant for host-side `go run`, where
       # Postgres is reached via localhost) so the containerized backend
       # reaches Postgres by its service name on the compose network instead.
-      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required, see apps/backend/.env.example}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, see apps/backend/.env.example}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required, see apps/backend/.env.example}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required, see deployments/.env.example}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required, see deployments/.env.example}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB is required, see deployments/.env.example}?sslmode=disable
       # Same reasoning as DATABASE_URL above: reach Redis by its compose
       # service name instead of the .env's host-side localhost value.
       REDIS_URL: redis://redis:6379
@@ -49,15 +60,30 @@ services:
       # apps/backend/internal/config/config.go) — the frontend service below
       # is the origin that needs allowing.
       CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-3000}
-    ports:
-      - "${PORT:-8080}:${PORT:-8080}"
+    # No `ports:` here on purpose - see docker-compose.dev.yml/.prod.yml.
+    # Compose merges (not replaces) port lists across override files, so a
+    # port published here could never be removed by an override; publishing
+    # only lives in docker-compose.dev.yml, prod reaches this service by name
+    # inside public-net (e.g. via the reverse proxy).
+    networks:
+      - public-net
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      # Used by the CD pipeline to wait for the new container before
+      # considering the deploy successful. busybox wget ships in the alpine
+      # runtime image (deployments/docker/Dockerfile.backend).
+      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-8080}/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   frontend:
+    container_name: jojo-one-piece-simulator-frontend
     build:
       context: ..
       dockerfile: deployments/docker/Dockerfile.frontend
@@ -66,8 +92,11 @@ services:
         # time, so they have to be passed as build args, not env/env_file.
         EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:${PORT:-8080}/api/v1}
         EXPO_PUBLIC_SOCKET_URL: ${EXPO_PUBLIC_SOCKET_URL:-}
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
+        EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID:-}
+    # No `ports:` here either - see the backend service comment above.
+    networks:
+      - public-net
+    restart: unless-stopped
     depends_on:
       - backend
 

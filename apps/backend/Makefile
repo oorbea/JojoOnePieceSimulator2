@@ -1,11 +1,11 @@
--include .env
-export
+# Local dev is Docker-only (see deployments/.env.example for the full env var
+# set) - migrate-*/db-* exec into the running backend container rather than
+# needing DATABASE_URL/goose on the host. test/test-vips still run on the
+# host: the runtime image is a minimal multi-stage build with only the
+# compiled binary, no Go toolchain or source, so tests can't run inside it.
+COMPOSE := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.dev.yml
 
-GOOSE_DRIVER := postgres
-GOOSE_DBSTRING := $(DATABASE_URL)
-GOOSE_DIR := db/migrations
-
-.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips run db-up db-down
+.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down
 
 sqlc:
 	sqlc generate
@@ -13,14 +13,16 @@ sqlc:
 swagger:
 	go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/app/main.go -o docs --parseInternal
 
+# `up` is already applied automatically on backend startup (see
+# internal/infrastructure/postgres/migrate.go) - kept here for parity/CI.
 migrate-up:
-	goose -dir $(GOOSE_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" up
+	$(COMPOSE) exec backend sh -c 'goose -dir /migrations postgres "$$DATABASE_URL" up'
 
 migrate-down:
-	goose -dir $(GOOSE_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" down
+	$(COMPOSE) exec backend sh -c 'goose -dir /migrations postgres "$$DATABASE_URL" down'
 
 migrate-status:
-	goose -dir $(GOOSE_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" status
+	$(COMPOSE) exec backend sh -c 'goose -dir /migrations postgres "$$DATABASE_URL" status'
 
 test:
 	go test ./...
@@ -32,11 +34,8 @@ test:
 test-vips:
 	go test -tags vips ./...
 
-run:
-	go run ./cmd/app
-
 db-up:
-	docker compose -f ../../deployments/docker-compose.yml up -d
+	$(COMPOSE) up -d
 
 db-down:
-	docker compose -f ../../deployments/docker-compose.yml down
+	$(COMPOSE) down

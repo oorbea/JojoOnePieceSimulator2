@@ -1,0 +1,15 @@
+# Local development override - adds back the host port publishing that
+# docker-compose.yml deliberately omits (see its comments). Not used in
+# prod (see docker-compose.prod.yml instead).
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml <cmd>
+# (apps/backend/Makefile's $(COMPOSE) already does this.)
+
+services:
+  backend:
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
+
+  frontend:
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
