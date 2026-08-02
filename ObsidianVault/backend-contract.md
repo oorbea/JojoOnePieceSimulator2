@@ -17,6 +17,8 @@ Go/chi backend, `apps/backend`. Base path `/api/v1`, port 8080 (`apps/backend/in
 - **No refresh token, no cookies.** 24h JWT. 401 anywhere → force re-login, no silent refresh.
 - All other routes: `Authorization: Bearer <token>` required.
 - Writes additionally require `role === "ADMIN"`.
+- **Frontend gotcha (bit us once, 2026-08-01)**: axios `baseURL` (`EXPO_PUBLIC_API_URL`) already includes `/api/v1` — feature API calls must use bare paths (`/auth/google`, not `/api/v1/auth/google`) or you get a silent double-prefixed 404. See [[frontend-stack]] for the full incident.
+- **Web OAuth flow is full-page redirect, NOT popup** (`use-google-auth.ts`): `expo-auth-session`'s popup flow breaks because `accounts.google.com` sends its own strict COOP header, permanently severing `window.opener`. Web builds `response_type=id_token` redirect URLs by hand, round-trips `state`/`nonce` via `sessionStorage`, and reads the `id_token` back out of the URL hash on return. The nginx `Cross-Origin-Opener-Policy: same-origin-allow-popups` header (`docker-setup.md`) predates this and is now unused by the web path — kept in case native/popup flow returns.
 
 ## Caching
 

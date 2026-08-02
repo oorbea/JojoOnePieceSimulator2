@@ -1,6 +1,6 @@
 import '../tamagui-web.css'
 
-import { Stack } from 'expo-router'
+import { Slot } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { Platform } from 'react-native'
 import { useEffect } from 'react'
@@ -28,7 +28,7 @@ export default function RootLayout() {
   return (
     <AppProviders>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Slot />
     </AppProviders>
   )
 }

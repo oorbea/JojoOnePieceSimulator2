@@ -1,0 +1,16 @@
+# Production override, applied by the CD pipeline (.github/workflows/cd.yml).
+#
+# Deliberately does NOT publish any ports - both services stay reachable only
+# inside the external `public-net` network, where the Nginx Proxy Manager
+# already running on that host reverse-proxies to them by service name
+# (jojo-one-piece-simulator.duckdns.org -> frontend:80, /api -> backend:8080).
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml <cmd>
+
+services:
+  backend:
+    environment:
+      # Overrides the base file's localhost default - the browser calls the
+      # backend through the public domain here, not through the dev
+      # frontend's port.
+      CORS_ALLOWED_ORIGINS: https://jojo-one-piece-simulator.duckdns.org
