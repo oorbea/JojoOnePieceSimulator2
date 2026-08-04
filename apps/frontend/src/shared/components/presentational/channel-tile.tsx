@@ -59,6 +59,8 @@ export function ChannelTile({
     <YStack
       width={96}
       height={96}
+      $md={{ width: 112, height: 112 }}
+      $lg={{ width: 128, height: 128 }}
       rounded="$card"
       overflow="hidden"
       position="relative"

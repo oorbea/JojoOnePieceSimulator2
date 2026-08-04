@@ -27,11 +27,6 @@ const ChannelBarFrame = styled(XStack, {
   width: '100%',
 
   variants: {
-    dock: {
-      top: { position: 'absolute', t: 0, l: 0, r: 0 },
-      bottom: { position: 'absolute', b: 0, l: 0, r: 0 },
-      static: {},
-    },
     density: {
       compact: { height: 52 },
       regular: {},
@@ -39,17 +34,30 @@ const ChannelBarFrame = styled(XStack, {
   } as const,
 
   defaultVariants: {
-    dock: 'static',
     density: 'regular',
   },
 })
 
-type ChannelBarProps = React.ComponentProps<typeof ChannelBarFrame>
+type ChannelBarDock = 'top' | 'bottom' | 'static'
+
+type ChannelBarProps = React.ComponentProps<typeof ChannelBarFrame> & {
+  dock?: ChannelBarDock
+}
 
 // The floating Wii channel menu: a glass pill with a gloss cut across the
 // top, real backdrop blur on web, alpha-compensated on native.
-export function ChannelBar({ children, style, ...rest }: ChannelBarProps) {
-  return (
+//
+// `dock="top"|"bottom"` used to put `position:absolute; left:0; right:0`
+// directly on the pill, which over-constrains it against the pill's own
+// `maxW:1080; self:'center'` — an absolutely positioned box with both `left`
+// and `right` pinned ignores `alignSelf`, so past 1080px wide the bar hugged
+// the left edge instead of centering (and pushed the logout button to the
+// 1080px mark rather than the right edge). Docking now wraps the pill — kept
+// in normal flow, so `self:'center'` finally works — in a thin full-bleed
+// absolute host whose only job is centering; the host itself never captures
+// touches, so it can't intercept clicks outside the pill's own bounds.
+export function ChannelBar({ children, style, dock = 'static', t, b, ...rest }: ChannelBarProps) {
+  const frame = (
     <ChannelBarFrame
       {...rest}
       bg={isWeb ? '$channelFill' : '$glassFillNative'}
@@ -58,6 +66,22 @@ export function ChannelBar({ children, style, ...rest }: ChannelBarProps) {
       <GlossOverlay coverage="half" shape="pill" />
       {children}
     </ChannelBarFrame>
+  )
+
+  if (dock === 'static') return frame
+
+  return (
+    <YStack
+      position="absolute"
+      t={dock === 'top' ? t : undefined}
+      b={dock === 'bottom' ? b : undefined}
+      l={0}
+      r={0}
+      items="center"
+      style={{ pointerEvents: 'box-none' }}
+    >
+      {frame}
+    </YStack>
   )
 }
 
