@@ -1,14 +1,21 @@
+import { Fredoka_500Medium, Fredoka_600SemiBold } from '@expo-google-fonts/fredoka'
+import { Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito'
 import { useFonts } from 'expo-font'
 import { Platform, useColorScheme } from 'react-native'
 import { TamaguiProvider as TamaguiRootProvider } from 'tamagui'
+
+import { useThemeStore } from '@/shared/stores/theme.store'
 
 import tamaguiConfig from '../../tamagui.config'
 
 export function TamaguiProvider({ children }: { children: React.ReactNode }) {
   const scheme = useColorScheme()
+  const mode = useThemeStore((state) => state.mode)
   const [fontsLoaded] = useFonts({
-    Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
-    InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
+    Fredoka_500Medium,
+    Fredoka_600SemiBold,
+    Nunito_500Medium,
+    Nunito_700Bold,
   })
 
   // Web fonts ship via the CSS emitted by @tamagui/metro-plugin
@@ -19,8 +26,10 @@ export function TamaguiProvider({ children }: { children: React.ReactNode }) {
   // (surfaces as React error #419 / "Switched to client rendering").
   if (Platform.OS !== 'web' && !fontsLoaded) return null
 
+  const resolvedTheme = mode === 'system' ? (scheme ?? 'light') : mode
+
   return (
-    <TamaguiRootProvider config={tamaguiConfig} defaultTheme={scheme ?? 'light'}>
+    <TamaguiRootProvider config={tamaguiConfig} defaultTheme={resolvedTheme}>
       {children}
     </TamaguiRootProvider>
   )

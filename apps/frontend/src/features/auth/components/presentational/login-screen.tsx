@@ -1,7 +1,14 @@
-import { LinearGradient } from '@tamagui/linear-gradient'
+import { LogIn } from '@tamagui/lucide-icons-2'
 import { Image } from 'react-native'
-import { Button, H1, Paragraph, Spinner, YStack } from 'tamagui'
+import { Spinner } from 'tamagui'
 
+import { GlassPanel } from '@/shared/components/presentational/glass-panel'
+import { GlossButton } from '@/shared/components/presentational/gloss-button'
+import { GlowText } from '@/shared/components/presentational/glow-text'
+import { PageShell } from '@/shared/components/presentational/page-shell'
+import { SpeechBubble } from '@/shared/components/presentational/speech-bubble'
+import { WiiCard } from '@/shared/components/presentational/wii-card'
+import { logoAsset } from '@/shared/assets'
 import type { AppError } from '@/shared/api/errors'
 
 type Props = {
@@ -11,60 +18,61 @@ type Props = {
   error: AppError | null
 }
 
-// Pure UI — Frutiger Aero: soft gradient backdrop, glossy translucent card,
-// rounded everything. No data/session logic lives here.
+// Pure UI — Wii Party channel-menu energy dressed in Aero glass. No
+// data/session logic lives here.
 export function LoginScreen({ onSignIn, isLoading, isReady, error }: Props) {
   return (
-    <LinearGradient flex={1} colors={['#bfe9ff', '#e8f6ff', '#f3e8ff']} start={[0, 0]} end={[1, 1]}>
-      <YStack flex={1} items="center" justify="center" p="$5">
-        <YStack
-          maxW={440}
-          width="100%"
-          gap="$4"
-          p="$6"
-          rounded="$10"
-          items="center"
-          bg="rgba(255,255,255,0.55)"
-          borderWidth={1}
-          borderColor="rgba(255,255,255,0.5)"
-          shadowColor="rgba(0,0,0,0.2)"
-          shadowRadius={30}
-          shadowOpacity={0.2}
-        >
+    <PageShell align="center" maxWidth={440}>
+      <GlassPanel
+        glossy
+        radiusSize="hero"
+        elevate={3}
+        width="100%"
+        p="$6"
+        items="center"
+        gap="$4"
+        transition="bouncy"
+        enterStyle={{ scale: 0.9, y: 20, opacity: 0 }}
+      >
+        <WiiCard aspect="square" width={128} height={128} tone="plastic" interactive={false}>
           <Image
-            source={require('../../../../../assets/images/logo.png')}
-            style={{ width: 120, height: 120, borderRadius: 24 }}
+            source={logoAsset}
+            style={{ width: '100%', height: '100%' }}
             resizeMode="contain"
           />
+        </WiiCard>
 
-          <H1 text="center" color="$standPurple">
-            JoJo x One Piece Simulator
-          </H1>
-          <Paragraph theme="alt2" text="center">
-            Sign in with your Google account to continue.
-          </Paragraph>
+        <GlowText level="title" align="center">
+          JoJo x One Piece Simulator
+        </GlowText>
+        <GlowText level="label" align="center">
+          Continue with your Google account to pick a channel.
+        </GlowText>
 
-          <Button
-            disabled={!isReady || isLoading}
-            opacity={!isReady || isLoading ? 0.6 : 1}
-            bg="$strawHatRed"
-            color="white"
-            rounded="$10"
-            size="$5"
-            width="100%"
-            icon={isLoading ? () => <Spinner color="white" /> : undefined}
-            onPress={onSignIn}
-          >
-            {isLoading ? 'Signing in…' : 'Sign in with Google'}
-          </Button>
+        <GlossButton
+          tone="red"
+          btnSize="lg"
+          shape="pill"
+          flare
+          width="100%"
+          disabled={!isReady || isLoading}
+          icon={
+            isLoading ? () => <Spinner color="white" /> : () => <LogIn size={20} color="white" />
+          }
+          onPress={onSignIn}
+          accessibilityLabel="Continue with Google"
+        >
+          {isLoading ? 'Signing in…' : 'Continue with Google'}
+        </GlossButton>
 
-          {error ? (
-            <Paragraph color="$red10" text="center">
+        {error ? (
+          <SpeechBubble tailSide="top" tone="strong" width="100%">
+            <GlowText level="label" align="center" color="$strawHatRedDeep">
               {error.message}
-            </Paragraph>
-          ) : null}
-        </YStack>
-      </YStack>
-    </LinearGradient>
+            </GlowText>
+          </SpeechBubble>
+        ) : null}
+      </GlassPanel>
+    </PageShell>
   )
 }
