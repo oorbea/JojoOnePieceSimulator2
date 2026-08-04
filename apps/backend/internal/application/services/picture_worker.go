@@ -32,7 +32,7 @@ type WorkerConfig struct {
 type PictureWorker struct {
 	processor ports.IImageProcessor
 	pictures  ports.IPictureStorage
-	targets   map[enums.PowerKind]PictureTarget
+	targets   map[enums.PictureSubjectKind]PictureTarget
 	idGen     ports.IIdGenerator[powers.PowerID]
 	cfg       WorkerConfig
 	jobs      chan ports.PictureJob
@@ -44,7 +44,7 @@ var _ ports.IPictureEnqueuer = (*PictureWorker)(nil)
 func NewPictureWorker(
 	processor ports.IImageProcessor,
 	pictures ports.IPictureStorage,
-	targets map[enums.PowerKind]PictureTarget,
+	targets map[enums.PictureSubjectKind]PictureTarget,
 	idGen ports.IIdGenerator[powers.PowerID],
 	cfg WorkerConfig,
 ) *PictureWorker {
@@ -118,7 +118,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 
 	target, ok := w.targets[job.Kind]
 	if !ok {
-		log.Printf("no picture target registered for kind %s (power %s)", job.Kind, job.PowerID)
+		log.Printf("no picture target registered for kind %s (subject %s)", job.Kind, job.SubjectID)
 		return
 	}
 
@@ -128,41 +128,41 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 		Quality:        w.cfg.Quality,
 	})
 	if err != nil {
-		log.Printf("transcoding picture for %s %s: %v", job.Kind, job.PowerID, err)
-		w.markFailed(ctx, target, job.PowerID)
+		log.Printf("transcoding picture for %s %s: %v", job.Kind, job.SubjectID, err)
+		w.markFailed(ctx, target, job.SubjectID)
 		return
 	}
 
 	uuid := w.idGen.NewID()
-	mainKey := fmt.Sprintf("%s/%s/%s.webp", target.KeyPrefix, job.PowerID, uuid)
-	thumbKey := fmt.Sprintf("%s/%s/%s_thumb.webp", target.KeyPrefix, job.PowerID, uuid)
+	mainKey := fmt.Sprintf("%s/%s/%s.webp", target.KeyPrefix, job.SubjectID, uuid)
+	thumbKey := fmt.Sprintf("%s/%s/%s_thumb.webp", target.KeyPrefix, job.SubjectID, uuid)
 
 	if err := w.pictures.Upload(ctx, mainKey, ports.Picture{
 		Content: bytes.NewReader(main.Bytes), ContentType: main.ContentType, Size: int64(len(main.Bytes)),
 	}); err != nil {
-		log.Printf("uploading picture for %s %s: %v", job.Kind, job.PowerID, err)
-		w.markFailed(ctx, target, job.PowerID)
+		log.Printf("uploading picture for %s %s: %v", job.Kind, job.SubjectID, err)
+		w.markFailed(ctx, target, job.SubjectID)
 		return
 	}
 	if err := w.pictures.Upload(ctx, thumbKey, ports.Picture{
 		Content: bytes.NewReader(thumb.Bytes), ContentType: thumb.ContentType, Size: int64(len(thumb.Bytes)),
 	}); err != nil {
-		log.Printf("uploading picture thumbnail for %s %s: %v", job.Kind, job.PowerID, err)
+		log.Printf("uploading picture thumbnail for %s %s: %v", job.Kind, job.SubjectID, err)
 		w.deleteQuietly(ctx, mainKey)
-		w.markFailed(ctx, target, job.PowerID)
+		w.markFailed(ctx, target, job.SubjectID)
 		return
 	}
 
-	oldKey, oldThumbKey, err := target.Publisher.PictureKeys(ctx, job.PowerID)
+	oldKey, oldThumbKey, err := target.Publisher.PictureKeys(ctx, job.SubjectID)
 	if err != nil {
-		log.Printf("loading %s %s before publishing picture: %v", job.Kind, job.PowerID, err)
+		log.Printf("loading %s %s before publishing picture: %v", job.Kind, job.SubjectID, err)
 		w.deleteQuietly(ctx, mainKey)
 		w.deleteQuietly(ctx, thumbKey)
 		return
 	}
 
-	if err := target.Publisher.UpdatePicture(ctx, job.PowerID, &mainKey, &thumbKey, enums.PictureReady); err != nil {
-		log.Printf("publishing picture for %s %s: %v", job.Kind, job.PowerID, err)
+	if err := target.Publisher.UpdatePicture(ctx, job.SubjectID, &mainKey, &thumbKey, enums.PictureReady); err != nil {
+		log.Printf("publishing picture for %s %s: %v", job.Kind, job.SubjectID, err)
 		w.deleteQuietly(ctx, mainKey)
 		w.deleteQuietly(ctx, thumbKey)
 		return
@@ -176,7 +176,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	}
 }
 
-func (w *PictureWorker) markFailed(ctx context.Context, target PictureTarget, id powers.PowerID) {
+func (w *PictureWorker) markFailed(ctx context.Context, target PictureTarget, id string) {
 	if err := target.Publisher.UpdatePicture(ctx, id, nil, nil, enums.PictureFailed); err != nil {
 		log.Printf("marking picture failed for %s: %v", id, err)
 	}
