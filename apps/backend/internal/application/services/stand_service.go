@@ -204,7 +204,7 @@ func (s *StandService) SetStandPicture(ctx context.Context, id powers.PowerID, p
 		return nil, err
 	}
 
-	if err := s.enqueuer.Enqueue(ports.PictureJob{PowerID: id, Kind: enums.StandKind, Content: buf, ContentType: pic.ContentType}); err != nil {
+	if err := s.enqueuer.Enqueue(ports.PictureJob{SubjectID: id.String(), Kind: enums.StandSubject, Content: buf, ContentType: pic.ContentType}); err != nil {
 		if revertErr := s.standRepo.UpdatePicture(ctx, id, nil, nil, previousStatus); revertErr != nil {
 			log.Printf("reverting picture status for stand %s after enqueue failure: %v", id, revertErr)
 		}
