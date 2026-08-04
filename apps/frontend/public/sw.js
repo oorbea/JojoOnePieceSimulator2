@@ -1,7 +1,7 @@
 // Minimal cache-first service worker for the app shell. Bump CACHE_NAME on
 // every deploy that changes shell assets so stale caches get evicted instead
 // of serving an old bundle forever.
-const CACHE_NAME = 'jops-shell-v1'
+const CACHE_NAME = 'jops-shell-v2'
 const SHELL_URLS = ['/', '/manifest.json']
 
 self.addEventListener('install', (event) => {
