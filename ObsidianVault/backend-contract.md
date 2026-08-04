@@ -21,6 +21,19 @@ Go/chi backend, `apps/backend`. Base path `/api/v1`, port 8080 (`apps/backend/in
 - **Frontend gotcha (bit us once, 2026-08-01)**: axios `baseURL` (`EXPO_PUBLIC_API_URL`) already includes `/api/v1` — feature API calls must use bare paths (`/auth/google`, not `/api/v1/auth/google`) or you get a silent double-prefixed 404. See [[frontend-stack]] for the full incident.
 - **Web OAuth flow is full-page redirect, NOT popup** (`use-google-auth.ts`): `expo-auth-session`'s popup flow breaks because `accounts.google.com` sends its own strict COOP header, permanently severing `window.opener`. Web builds `response_type=id_token` redirect URLs by hand, round-trips `state`/`nonce` via `sessionStorage`, and reads the `id_token` back out of the URL hash on return. The nginx `Cross-Origin-Opener-Policy: same-origin-allow-popups` header (`docker-setup.md`) predates this and is now unused by the web path — kept in case native/popup flow returns.
 
+## Known test flake (fixed 2026-08-04) — don't re-derive
+
+`internal/infrastructure/auth/jwt_issuer_test.go`'s `TestJWTIssuer_Parse_RejectsTamperedSignature`
+used to tamper a token by replacing its **last** base64url char (`token[:len(token)-1] + "x"`). An
+HS256 signature is 32 bytes → 43 base64url chars, and the *last* char only carries 4 significant bits
+(its low 2 bits are decoder-ignored padding) — so ~1 in 16 CI runs, the "tampered" signature decoded
+to the exact same bytes as the original and `Parse` correctly accepted it, failing the test on a
+real backend behavior that was never actually broken. This is what failed `develop` CI
+(`Backend (test + vips)`) on 2026-08-04 — `jwt_issuer.go` itself was fine
+(`WithValidMethods`/`WithIssuer`/`WithExpirationRequired` all correct). Fixed by flipping the
+signature's **first** char instead (6 significant bits, any change alters the decoded bytes).
+Verified with `go test -count=300 -run TestJWTIssuer ./internal/infrastructure/auth/`.
+
 ## Caching
 
 Read routes emit `ETag` + `Cache-Control: private` + `Vary: Authorization`, honor `If-None-Match` → `304`. (`apps/backend/internal/infrastructure/api/endpoints/cache_headers.go`)
