@@ -1,6 +1,7 @@
 import { Lock } from '@tamagui/lucide-icons-2'
 import { YStack } from 'tamagui'
 
+import { a11yProps } from '@/shared/lib/a11y'
 import { asToken } from '@/shared/lib/tamagui-token'
 
 import { GlossOverlay } from './gloss-overlay'
@@ -79,8 +80,7 @@ export function ChannelTile({
       hoverStyle={locked ? undefined : { scale: 1.05, y: -4 }}
       pressStyle={locked ? undefined : { scale: 0.94, y: 2 }}
       cursor={locked ? 'default' : 'pointer'}
-      accessibilityRole={locked ? 'none' : 'button'}
-      accessibilityLabel={locked ? `${label}, coming soon` : label}
+      {...a11yProps(locked ? `${label}, coming soon` : label, locked ? 'none' : 'button')}
       accessibilityState={locked ? { disabled: true } : undefined}
     >
       <InsetRing rounded="$card" />

@@ -15,7 +15,7 @@ export const InsetRing = styled(YStack, {
   b: 0,
   borderWidth: 2,
   borderColor: '$glossPeak',
-  pointerEvents: 'none',
+  style: { pointerEvents: 'none' },
 })
 
 export const InsetShade = styled(LinearGradient, {
@@ -28,7 +28,7 @@ export const InsetShade = styled(LinearGradient, {
   colors: ['$glossNil', 'rgba(0,0,0,0.07)'],
   start: [0, 0],
   end: [0, 1],
-  pointerEvents: 'none',
+  style: { pointerEvents: 'none' },
 })
 
 export const WiiCard = styled(YStack, {

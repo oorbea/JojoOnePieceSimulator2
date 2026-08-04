@@ -1,5 +1,6 @@
 import { Contrast, Moon, Sun } from '@tamagui/lucide-icons-2'
 
+import { a11yProps } from '@/shared/lib/a11y'
 import type { ThemeMode } from '@/shared/stores/theme.store'
 
 import { ChannelBarItem } from './channel-bar'
@@ -32,8 +33,7 @@ export function ThemeToggle({ mode, onCycle }: ThemeToggleProps) {
       iconOnly
       onPress={onCycle}
       pressStyle={{ scale: 0.9, rotate: '-12deg' }}
-      accessibilityRole="button"
-      accessibilityLabel={LABEL[mode]}
+      {...a11yProps(LABEL[mode], 'button')}
       hitSlop={8}
     >
       <Icon size={22} color="$panelText" strokeWidth={2.5} />
