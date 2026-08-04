@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/valueobjects"
@@ -20,7 +21,8 @@ func handleError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound), errors.Is(err, ports.ErrDevilFruitNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists):
+	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists),
+		errors.Is(err, services.ErrLastAdmin):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.As(err, &validationErr):
 		writeError(w, http.StatusBadRequest, "validation failed", validationErr.Errors...)
@@ -28,6 +30,7 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, enums.ErrInvalidStandStat),
 		errors.Is(err, enums.ErrInvalidFruitType),
 		errors.Is(err, enums.ErrInvalidUserRole),
+		errors.Is(err, user.ErrInvalidUsername),
 		errors.Is(err, valueobjects.ErrInvalidID),
 		errors.Is(err, services.ErrSelfEvolution),
 		errors.Is(err, services.ErrPictureRequired),
