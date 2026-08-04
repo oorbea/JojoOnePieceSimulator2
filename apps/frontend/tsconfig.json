@@ -11,7 +11,7 @@
     },
     // Global `describe`/`it`/`expect`/`jest` in every *.test.ts(x) file and
     // jest.setup.ts, without needing a per-file import.
-    "types": ["jest"]
+    "types": ["jest", "node"]
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }
