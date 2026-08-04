@@ -32,6 +32,11 @@ function AllProviders({ children }: { children: ReactNode }) {
   )
 }
 
+// `render()` from this version of @testing-library/react-native is async —
+// always `await renderWithProviders(...)`. Skipping the await doesn't throw;
+// it just means `screen` hasn't registered the result yet, so every query
+// right after fails with "render function has not been called" even though
+// the component renders fine a tick later.
 export function renderWithProviders(ui: ReactElement, options?: RenderOptions) {
   return render(ui, { wrapper: AllProviders, ...options })
 }
