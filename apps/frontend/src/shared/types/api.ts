@@ -17,6 +17,8 @@ export type UserResponse = {
   email: string
   username: string
   completeName: string
-  picture: string | null
+  avatar: string
+  avatarThumb: string
+  avatarStatus: PictureStatus
   role: Role
 }
