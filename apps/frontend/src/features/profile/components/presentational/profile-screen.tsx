@@ -1,6 +1,6 @@
 import { Camera } from '@tamagui/lucide-icons-2'
 import { Image } from 'react-native'
-import { Paragraph, Spinner, YStack } from 'tamagui'
+import { Paragraph, Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -60,7 +60,7 @@ export function ProfileScreen({
 
   return (
     <YStack flex={1} position="relative">
-      <PageShell align="top" navPadding scroll maxWidth={560}>
+      <PageShell align="top" navPadding scroll maxWidth={640}>
         <GlassPanel glossy elevate={2} width="100%" p="$6" gap="$5" items="center">
           <YStack position="relative" width={112} height={112}>
             <YStack
@@ -131,7 +131,7 @@ export function ProfileScreen({
             {profile.avatarStatus === 'PENDING'
               ? 'Processing your new picture…'
               : profile.avatarStatus === 'FAILED'
-                ? "Couldn't process that picture — try another one"
+                ? "We couldn't use that picture. Try another one."
                 : 'Tap the camera to change your picture'}
           </GlowText>
 
@@ -157,43 +157,45 @@ export function ProfileScreen({
           </YStack>
         </GlassPanel>
 
-        <GlassPanel tone="plastic" elevate={0} width="100%" p="$5" gap="$3">
+        <GlassPanel tone="plastic" elevate={0} width="100%" p="$5" gap="$4">
           <GlowText level="heading" fontSize="$5">
             Account details
           </GlowText>
 
-          <YStack gap="$1">
-            <GlowText level="label" tone="soft">
-              Full name
-            </GlowText>
-            <GlowText level="label">{profile.completeName}</GlowText>
-            <GlowText level="label" tone="soft" fontSize="$2">
-              From your Google account
-            </GlowText>
-          </YStack>
+          <XStack flexWrap="wrap" gap="$4">
+            <YStack gap="$1.5" flexBasis={220} grow={1}>
+              <GlowText level="label" tone="soft">
+                Full name
+              </GlowText>
+              <GlowText level="label">{profile.completeName}</GlowText>
+              <GlowText level="label" tone="soft" fontSize="$2">
+                From your Google account
+              </GlowText>
+            </YStack>
 
-          <YStack gap="$1">
-            <GlowText level="label" tone="soft">
-              Email
-            </GlowText>
-            <GlowText level="label">{profile.email}</GlowText>
-            <GlowText level="label" tone="soft" fontSize="$2">
-              From your Google account
-            </GlowText>
-          </YStack>
+            <YStack gap="$1.5" flexBasis={220} grow={1}>
+              <GlowText level="label" tone="soft">
+                Email
+              </GlowText>
+              <GlowText level="label">{profile.email}</GlowText>
+              <GlowText level="label" tone="soft" fontSize="$2">
+                From your Google account
+              </GlowText>
+            </YStack>
 
-          <YStack gap="$1">
-            <GlowText level="label" tone="soft">
-              Role
-            </GlowText>
-            <GlowText level="label">{profile.role}</GlowText>
-            <GlowText level="label" tone="soft" fontSize="$2">
-              Set by an administrator
-            </GlowText>
-          </YStack>
+            <YStack gap="$1.5" flexBasis={220} grow={1}>
+              <GlowText level="label" tone="soft">
+                Role
+              </GlowText>
+              <GlowText level="label">{profile.role}</GlowText>
+              <GlowText level="label" tone="soft" fontSize="$2">
+                Set by an administrator
+              </GlowText>
+            </YStack>
+          </XStack>
         </GlassPanel>
 
-        <YStack width="100%" borderTopWidth={1.5} borderColor="$glassEdge" />
+        <YStack width="100%" my="$2" borderTopWidth={1.5} borderColor="$glassEdge" />
 
         <GlassPanel tone="strong" elevate={0} width="100%" p="$5" gap="$3">
           <GlowText level="heading" fontSize="$5" color="$strawHatRedDeep">
