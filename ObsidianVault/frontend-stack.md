@@ -62,4 +62,13 @@ Three independent bugs stacked on top of each other; all now fixed:
 
 3. **Uncaught `sw.js:34` fetch rejection** — the service worker's fetch handler had no `.catch()`, so a rejected `fetch()` (offline, or the browser cancelling the SW's shadow fetch in favor of the real navigation's own fetch — a known race on a page's very first load right after the SW installs) surfaced as an unhandled promise rejection in console. Added a `.catch()` that falls back to cache or re-rejects normally. **Gotcha when verifying this class of fix**: an already-registered service worker keeps controlling every tab in that browser profile/incognito session until *all* windows of that session are closed — a plain reload or even a new tab is not enough to pick up a new `sw.js`, which makes an old bug look unfixed. Always fully close all incognito windows (not just the tab) before retesting SW changes.
 
+## Wii Party / Aero / iOS-gloss redesign (2026-08-04)
+
+Full visual restyle — design system + all screens + new nav shell. Full writeup, palette, and the Tamagui v4 gotchas hit (missing `color` token group, `animation`→`transition` rename, shorthand-only quirks, `+html.tsx` inert in `output: "single"`) live in [[frontend-responsive-frutiger-aero]]. Two pre-existing bugs fixed as part of this pass:
+
+- `$standPurple`/`$strawHatRed` were referenced in 6 places but never rendered — `@tamagui/config/v4`'s `defaultConfig` ships no `color` token group at all, so there was nothing to register them into. Fixed by adding `tokens.color` in `tamagui.config.ts`.
+- PWA manifest was never linked from the HTML shell (no installability) — fixed via a `public/index.html` override, not `+html.tsx` (which is inert under `web.output: "single"`).
+
+New deps added via CLI: `@tamagui/lucide-icons-2` (not the deprecated `@tamagui/lucide-icons`) + its undeclared peer `react-native-svg`, `@expo-google-fonts/fredoka`, `@expo-google-fonts/nunito`. `tsconfig.json` needed `moduleSuffixes: [".web", ".native", ""]` added for `tsc` to resolve the new platform-split bubble-field files the same way Metro does.
+
 Related: [[docker-setup]], [[backend-contract]]
