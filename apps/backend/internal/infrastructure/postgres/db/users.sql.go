@@ -11,20 +11,65 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAdmins = `-- name: CountAdmins :one
+SELECT count(*)
+FROM users
+WHERE role = 'ADMIN'
+`
+
+func (q *Queries) CountAdmins(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdmins)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users
+WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
+}
+
+const getUserAvatarKeys = `-- name: GetUserAvatarKeys :one
+SELECT avatar_key, avatar_thumb_key
+FROM users
+WHERE id = $1
+`
+
+type GetUserAvatarKeysRow struct {
+	AvatarKey      string
+	AvatarThumbKey string
+}
+
+func (q *Queries) GetUserAvatarKeys(ctx context.Context, id pgtype.UUID) (GetUserAvatarKeysRow, error) {
+	row := q.db.QueryRow(ctx, getUserAvatarKeys, id)
+	var i GetUserAvatarKeysRow
+	err := row.Scan(&i.AvatarKey, &i.AvatarThumbKey)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, google_sub, email, username, complete_name, picture, role
+SELECT id, google_sub, email, username, complete_name, google_picture, role,
+       avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE email = $1
 `
 
 type GetUserByEmailRow struct {
-	ID           pgtype.UUID
-	GoogleSub    string
-	Email        string
-	Username     string
-	CompleteName string
-	Picture      string
-	Role         string
+	ID             pgtype.UUID
+	GoogleSub      string
+	Email          string
+	Username       string
+	CompleteName   string
+	GooglePicture  string
+	Role           string
+	AvatarKey      string
+	AvatarThumbKey string
+	AvatarStatus   string
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -36,26 +81,33 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Email,
 		&i.Username,
 		&i.CompleteName,
-		&i.Picture,
+		&i.GooglePicture,
 		&i.Role,
+		&i.AvatarKey,
+		&i.AvatarThumbKey,
+		&i.AvatarStatus,
 	)
 	return i, err
 }
 
 const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
-SELECT id, google_sub, email, username, complete_name, picture, role
+SELECT id, google_sub, email, username, complete_name, google_picture, role,
+       avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE google_sub = $1
 `
 
 type GetUserByGoogleSubRow struct {
-	ID           pgtype.UUID
-	GoogleSub    string
-	Email        string
-	Username     string
-	CompleteName string
-	Picture      string
-	Role         string
+	ID             pgtype.UUID
+	GoogleSub      string
+	Email          string
+	Username       string
+	CompleteName   string
+	GooglePicture  string
+	Role           string
+	AvatarKey      string
+	AvatarThumbKey string
+	AvatarStatus   string
 }
 
 func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (GetUserByGoogleSubRow, error) {
@@ -67,26 +119,33 @@ func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (Get
 		&i.Email,
 		&i.Username,
 		&i.CompleteName,
-		&i.Picture,
+		&i.GooglePicture,
 		&i.Role,
+		&i.AvatarKey,
+		&i.AvatarThumbKey,
+		&i.AvatarStatus,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, google_sub, email, username, complete_name, picture, role
+SELECT id, google_sub, email, username, complete_name, google_picture, role,
+       avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE id = $1
 `
 
 type GetUserByIDRow struct {
-	ID           pgtype.UUID
-	GoogleSub    string
-	Email        string
-	Username     string
-	CompleteName string
-	Picture      string
-	Role         string
+	ID             pgtype.UUID
+	GoogleSub      string
+	Email          string
+	Username       string
+	CompleteName   string
+	GooglePicture  string
+	Role           string
+	AvatarKey      string
+	AvatarThumbKey string
+	AvatarStatus   string
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
@@ -98,26 +157,33 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.Email,
 		&i.Username,
 		&i.CompleteName,
-		&i.Picture,
+		&i.GooglePicture,
 		&i.Role,
+		&i.AvatarKey,
+		&i.AvatarThumbKey,
+		&i.AvatarStatus,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, google_sub, email, username, complete_name, picture, role
+SELECT id, google_sub, email, username, complete_name, google_picture, role,
+       avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE username = $1
 `
 
 type GetUserByUsernameRow struct {
-	ID           pgtype.UUID
-	GoogleSub    string
-	Email        string
-	Username     string
-	CompleteName string
-	Picture      string
-	Role         string
+	ID             pgtype.UUID
+	GoogleSub      string
+	Email          string
+	Username       string
+	CompleteName   string
+	GooglePicture  string
+	Role           string
+	AvatarKey      string
+	AvatarThumbKey string
+	AvatarStatus   string
 }
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
@@ -129,33 +195,153 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.Email,
 		&i.Username,
 		&i.CompleteName,
-		&i.Picture,
+		&i.GooglePicture,
 		&i.Role,
+		&i.AvatarKey,
+		&i.AvatarThumbKey,
+		&i.AvatarStatus,
 	)
 	return i, err
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT id, google_sub, email, username, complete_name, google_picture, role,
+       avatar_key, avatar_thumb_key, avatar_status
+FROM users
+ORDER BY created_at, id
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int32
+	Offset int32
+}
+
+type ListUsersRow struct {
+	ID             pgtype.UUID
+	GoogleSub      string
+	Email          string
+	Username       string
+	CompleteName   string
+	GooglePicture  string
+	Role           string
+	AvatarKey      string
+	AvatarThumbKey string
+	AvatarStatus   string
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersRow
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GoogleSub,
+			&i.Email,
+			&i.Username,
+			&i.CompleteName,
+			&i.GooglePicture,
+			&i.Role,
+			&i.AvatarKey,
+			&i.AvatarThumbKey,
+			&i.AvatarStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateUserAvatar = `-- name: UpdateUserAvatar :exec
+UPDATE users
+SET avatar_key       = COALESCE($1::text, avatar_key),
+    avatar_thumb_key = COALESCE($2::text, avatar_thumb_key),
+    avatar_status    = $3::picture_status,
+    updated_at       = now()
+WHERE id = $4
+`
+
+type UpdateUserAvatarParams struct {
+	AvatarKey      *string
+	AvatarThumbKey *string
+	AvatarStatus   string
+	ID             pgtype.UUID
+}
+
+func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error {
+	_, err := q.db.Exec(ctx, updateUserAvatar,
+		arg.AvatarKey,
+		arg.AvatarThumbKey,
+		arg.AvatarStatus,
+		arg.ID,
+	)
+	return err
+}
+
+const updateUserRole = `-- name: UpdateUserRole :exec
+UPDATE users
+SET role       = $1,
+    updated_at = now()
+WHERE id = $2
+`
+
+type UpdateUserRoleParams struct {
+	Role string
+	ID   pgtype.UUID
+}
+
+func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error {
+	_, err := q.db.Exec(ctx, updateUserRole, arg.Role, arg.ID)
+	return err
+}
+
+const updateUsername = `-- name: UpdateUsername :exec
+UPDATE users
+SET username   = $1,
+    updated_at = now()
+WHERE id = $2
+`
+
+type UpdateUsernameParams struct {
+	Username string
+	ID       pgtype.UUID
+}
+
+func (q *Queries) UpdateUsername(ctx context.Context, arg UpdateUsernameParams) error {
+	_, err := q.db.Exec(ctx, updateUsername, arg.Username, arg.ID)
+	return err
+}
+
 const upsertUser = `-- name: UpsertUser :one
-INSERT INTO users (id, google_sub, email, username, complete_name, picture, role)
+INSERT INTO users (id, google_sub, email, username, complete_name, google_picture, role)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (id) DO UPDATE
-    SET email         = EXCLUDED.email,
-        username      = EXCLUDED.username,
-        complete_name = EXCLUDED.complete_name,
-        picture       = EXCLUDED.picture,
-        role          = EXCLUDED.role,
-        updated_at    = now()
+    SET email          = EXCLUDED.email,
+        username       = EXCLUDED.username,
+        complete_name  = EXCLUDED.complete_name,
+        google_picture = EXCLUDED.google_picture,
+        role           = EXCLUDED.role,
+        updated_at     = now()
 RETURNING id
 `
 
 type UpsertUserParams struct {
-	ID           pgtype.UUID
-	GoogleSub    string
-	Email        string
-	Username     string
-	CompleteName string
-	Picture      string
-	Role         string
+	ID            pgtype.UUID
+	GoogleSub     string
+	Email         string
+	Username      string
+	CompleteName  string
+	GooglePicture string
+	Role          string
 }
 
 func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (pgtype.UUID, error) {
@@ -165,7 +351,7 @@ func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (pgtype.
 		arg.Email,
 		arg.Username,
 		arg.CompleteName,
-		arg.Picture,
+		arg.GooglePicture,
 		arg.Role,
 	)
 	var id pgtype.UUID
