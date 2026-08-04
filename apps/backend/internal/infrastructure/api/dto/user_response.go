@@ -1,6 +1,8 @@
 package dto
 
 import (
+	"context"
+
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 )
 
@@ -11,18 +13,50 @@ type UserResponse struct {
 	Email        string `json:"email"`
 	Username     string `json:"username"`
 	CompleteName string `json:"completeName"`
-	Picture      string `json:"picture"`
+	Avatar       string `json:"avatar"`
+	AvatarThumb  string `json:"avatarThumb"`
+	AvatarStatus string `json:"avatarStatus"`
 	Role         string `json:"role"`
 }
 
-// NewUserResponse builds a UserResponse from a domain User.
-func NewUserResponse(u *user.User) UserResponse {
+// resolveAvatar picks the avatar to show: the user's own uploaded avatar
+// (presigned through resolve, an R2 object key) if one exists, else the
+// Google-synced picture (already a full external URL - never passed through
+// resolve, which only knows how to presign this app's own object-storage
+// keys).
+func resolveAvatar(ctx context.Context, u *user.User, resolve PictureURLResolver) (main, thumb string, err error) {
+	if u.AvatarKey() == "" {
+		return u.GooglePicture(), "", nil
+	}
+	main, err = resolve(ctx, u.AvatarKey())
+	if err != nil {
+		return "", "", err
+	}
+	if u.AvatarThumbKey() != "" {
+		thumb, err = resolve(ctx, u.AvatarThumbKey())
+		if err != nil {
+			return "", "", err
+		}
+	}
+	return main, thumb, nil
+}
+
+// NewUserResponse builds a UserResponse from a domain User, resolving its
+// avatar (own upload, or the Google-synced picture as a fallback) through
+// resolve.
+func NewUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver) (UserResponse, error) {
+	avatar, avatarThumb, err := resolveAvatar(ctx, u, resolve)
+	if err != nil {
+		return UserResponse{}, err
+	}
 	return UserResponse{
 		ID:           u.ID().String(),
 		Email:        u.Email(),
 		Username:     u.Username(),
 		CompleteName: u.CompleteName(),
-		Picture:      u.Picture(),
+		Avatar:       avatar,
+		AvatarThumb:  avatarThumb,
+		AvatarStatus: u.AvatarStatus().String(),
 		Role:         u.Role().String(),
-	}
+	}, nil
 }
