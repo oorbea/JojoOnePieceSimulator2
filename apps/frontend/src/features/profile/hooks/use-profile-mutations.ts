@@ -52,7 +52,7 @@ export function useUploadAvatar() {
     onSuccess: (user) => {
       queryClient.setQueryData(profileKeys.me, user)
       syncSession(user)
-      showSuccessToast('Avatar uploading — this takes a moment')
+      showSuccessToast('Uploading your picture. This takes a moment.')
     },
   })
 }
