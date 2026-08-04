@@ -136,8 +136,8 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 	repo := newFakeDevilFruitRepository()
 	idGen := &fakeIDGenerator{}
 	pictures := newFakePictureStorage()
-	targets := map[enums.PowerKind]services.PictureTarget{
-		enums.DevilFruitKind: {Publisher: services.NewDevilFruitPicturePublisher(repo), KeyPrefix: "devil-fruits"},
+	targets := map[enums.PictureSubjectKind]services.PictureTarget{
+		enums.DevilFruitSubject: {Publisher: services.NewDevilFruitPicturePublisher(repo), KeyPrefix: "devil-fruits"},
 	}
 	worker := services.NewPictureWorker(&fakeImageProcessor{}, pictures, targets, idGen, services.WorkerConfig{
 		Workers: 1, QueueSize: 1, JobTimeout: 5 * time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
@@ -151,7 +151,7 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, fakeTokenIssuer{},
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), fakeTokenIssuer{},
 		endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 	return h, repo, pictures
 }
