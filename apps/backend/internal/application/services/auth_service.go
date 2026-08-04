@@ -36,17 +36,21 @@ type AuthService struct {
 	verifier    ports.IGoogleTokenVerifier
 	tokens      ports.ITokenIssuer
 	adminEmails map[string]struct{}
+	pictures    ports.IPictureStorage
 }
 
 // NewAuthService builds an AuthService. adminEmails is matched
 // case-insensitively against the verified Google account email to decide
-// whether a user should hold the ADMIN role.
+// whether a user should hold the ADMIN role. pictures is used only to
+// presign a caller's self-uploaded avatar key in the login response - see
+// PictureURL.
 func NewAuthService(
 	users ports.IUserRepository,
 	idGen ports.IIdGenerator[user.UserID],
 	verifier ports.IGoogleTokenVerifier,
 	tokens ports.ITokenIssuer,
 	adminEmails []string,
+	pictures ports.IPictureStorage,
 ) *AuthService {
 	set := make(map[string]struct{}, len(adminEmails))
 	for _, email := range adminEmails {
@@ -56,7 +60,17 @@ func NewAuthService(
 		}
 		set[email] = struct{}{}
 	}
-	return &AuthService{users: users, idGen: idGen, verifier: verifier, tokens: tokens, adminEmails: set}
+	return &AuthService{users: users, idGen: idGen, verifier: verifier, tokens: tokens, adminEmails: set, pictures: pictures}
+}
+
+// PictureURL resolves a stored object-storage key into a URL a client can
+// GET, or "" if key is empty. Mirrors StandService.PictureURL - used to
+// presign a User's self-uploaded avatar key in dto.NewUserResponse.
+func (s *AuthService) PictureURL(ctx context.Context, key string) (string, error) {
+	if key == "" {
+		return "", nil
+	}
+	return s.pictures.PresignGetURL(ctx, key)
 }
 
 // LoginWithGoogle verifies rawIDToken, then logs the caller in - creating a
@@ -109,6 +123,7 @@ func (s *AuthService) findOrRegister(ctx context.Context, identity ports.GoogleI
 		if buildErr != nil {
 			return nil, false, buildErr
 		}
+		linked.SetAvatarRenditions(u.AvatarKey(), u.AvatarThumbKey(), u.AvatarStatus())
 		if saveErr := s.users.Save(ctx, linked); saveErr != nil {
 			return nil, false, saveErr
 		}
@@ -121,7 +136,7 @@ func (s *AuthService) findOrRegister(ctx context.Context, identity ports.GoogleI
 }
 
 func (s *AuthService) syncExisting(ctx context.Context, u *user.User, identity ports.GoogleIdentity, role enums.UserRole) (*user.User, bool, error) {
-	if u.Email() == identity.Email && u.CompleteName() == identity.Name && u.Picture() == identity.Picture && u.Role() == role {
+	if u.Email() == identity.Email && u.CompleteName() == identity.Name && u.GooglePicture() == identity.Picture && u.Role() == role {
 		return u, false, nil
 	}
 
@@ -129,6 +144,11 @@ func (s *AuthService) syncExisting(ctx context.Context, u *user.User, identity p
 	if err != nil {
 		return nil, false, err
 	}
+	// NewUser always starts with no avatar; Save never touches the avatar
+	// columns anyway, but the returned User must still report the caller's
+	// existing self-uploaded avatar (if any) rather than silently dropping
+	// it from the response.
+	synced.SetAvatarRenditions(u.AvatarKey(), u.AvatarThumbKey(), u.AvatarStatus())
 	if err := s.users.Save(ctx, synced); err != nil {
 		return nil, false, err
 	}

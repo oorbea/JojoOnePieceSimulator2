@@ -331,7 +331,7 @@ func TestSetDevilFruitPicture_Success_MarksPendingAndEnqueues(t *testing.T) {
 		t.Fatalf("jobs enqueued = %d, want 1", len(enqueuer.jobs))
 	}
 	job := enqueuer.jobs[0]
-	if job.PowerID != fruit.ID() || job.Kind != enums.DevilFruitKind || job.ContentType != "image/png" || string(job.Content) != "first" {
+	if job.SubjectID != fruit.ID().String() || job.Kind != enums.DevilFruitSubject || job.ContentType != "image/png" || string(job.Content) != "first" {
 		t.Errorf("unexpected job: %+v", job)
 	}
 

@@ -148,7 +148,7 @@ func (s *DevilFruitService) SetDevilFruitPicture(ctx context.Context, id powers.
 		return nil, err
 	}
 
-	if err := s.enqueuer.Enqueue(ports.PictureJob{PowerID: id, Kind: enums.DevilFruitKind, Content: buf, ContentType: pic.ContentType}); err != nil {
+	if err := s.enqueuer.Enqueue(ports.PictureJob{SubjectID: id.String(), Kind: enums.DevilFruitSubject, Content: buf, ContentType: pic.ContentType}); err != nil {
 		if revertErr := s.repo.UpdatePicture(ctx, id, nil, nil, previousStatus); revertErr != nil {
 			log.Printf("reverting picture status for devil fruit %s after enqueue failure: %v", id, revertErr)
 		}

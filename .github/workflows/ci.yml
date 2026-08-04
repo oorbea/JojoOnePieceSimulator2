@@ -50,7 +50,7 @@ jobs:
         run: go test -tags vips ./...
 
   frontend:
-    name: Frontend (typecheck + lint)
+    name: Frontend (typecheck + lint + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -79,6 +79,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Test
+        run: pnpm test:ci
 
   backend-image:
     name: Build backend image

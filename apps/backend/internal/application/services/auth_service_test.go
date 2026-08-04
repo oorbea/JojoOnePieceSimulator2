@@ -81,6 +81,94 @@ func (f *fakeUserRepository) FindByUsername(_ context.Context, username string) 
 	return nil, ports.ErrUserNotFound
 }
 
+func (f *fakeUserRepository) UpdateUsername(_ context.Context, id user.UserID, username string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	return u.ChangeUsername(username)
+}
+
+func (f *fakeUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	newMain, newThumb := u.AvatarKey(), u.AvatarThumbKey()
+	if main != nil {
+		newMain = *main
+	}
+	if thumb != nil {
+		newThumb = *thumb
+	}
+	u.SetAvatarRenditions(newMain, newThumb, status)
+	return nil
+}
+
+func (f *fakeUserRepository) AvatarKeys(_ context.Context, id user.UserID) (string, string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return "", "", ports.ErrUserNotFound
+	}
+	return u.AvatarKey(), u.AvatarThumbKey(), nil
+}
+
+func (f *fakeUserRepository) UpdateRole(_ context.Context, id user.UserID, role enums.UserRole) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	return u.ChangeRole(role)
+}
+
+func (f *fakeUserRepository) Delete(_ context.Context, id user.UserID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.users[id]; !ok {
+		return ports.ErrUserNotFound
+	}
+	delete(f.users, id)
+	return nil
+}
+
+func (f *fakeUserRepository) List(_ context.Context, limit, offset int32) ([]*user.User, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	all := make([]*user.User, 0, len(f.users))
+	for _, u := range f.users {
+		all = append(all, u)
+	}
+	start := int(offset)
+	if start > len(all) {
+		start = len(all)
+	}
+	end := start + int(limit)
+	if end > len(all) {
+		end = len(all)
+	}
+	return all[start:end], nil
+}
+
+func (f *fakeUserRepository) CountAdmins(_ context.Context) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var count int64
+	for _, u := range f.users {
+		if u.IsAdmin() {
+			count++
+		}
+	}
+	return count, nil
+}
+
 var _ ports.IUserRepository = (*fakeUserRepository)(nil)
 
 // fakeIDGenerator returns deterministic, incrementing ids.
@@ -127,7 +215,7 @@ func (fakeTokenIssuer) Parse(string) (ports.Claims, error) {
 func newAuthService(t *testing.T, verifier fakeGoogleVerifier, adminEmails []string) (*services.AuthService, *fakeUserRepository) {
 	t.Helper()
 	repo := newFakeUserRepository()
-	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, adminEmails)
+	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, adminEmails, nil)
 	return svc, repo
 }
 
@@ -181,14 +269,14 @@ func TestLoginWithGoogle_RepeatedLoginIsNotRegistration(t *testing.T) {
 func TestLoginWithGoogle_UsernameCollisionGetsSuffixed(t *testing.T) {
 	verifier1 := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
 	repo := newFakeUserRepository()
-	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier1, fakeTokenIssuer{}, nil)
+	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier1, fakeTokenIssuer{}, nil, nil)
 
 	if _, err := svc.LoginWithGoogle(context.Background(), "raw-token"); err != nil {
 		t.Fatalf("first registration: %v", err)
 	}
 
 	verifier2 := fakeGoogleVerifier{identity: verifiedIdentity("sub-2", "jotaro@other.com", "Jotaro Impostor")}
-	svc2 := services.NewAuthService(repo, &fakeIDGenerator{}, verifier2, fakeTokenIssuer{}, nil)
+	svc2 := services.NewAuthService(repo, &fakeIDGenerator{}, verifier2, fakeTokenIssuer{}, nil, nil)
 
 	result, err := svc2.LoginWithGoogle(context.Background(), "raw-token")
 	if err != nil {
@@ -227,12 +315,12 @@ func TestLoginWithGoogle_RemovingFromAdminEmailsDemotesOnNextLogin(t *testing.T)
 	verifier := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
 	repo := newFakeUserRepository()
 
-	adminSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, []string{"jotaro@example.com"})
+	adminSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, []string{"jotaro@example.com"}, nil)
 	if _, err := adminSvc.LoginWithGoogle(context.Background(), "raw-token"); err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
 
-	regularSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, nil)
+	regularSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, nil, nil)
 	result, err := regularSvc.LoginWithGoogle(context.Background(), "raw-token")
 	if err != nil {
 		t.Fatalf("second login: %v", err)
@@ -254,7 +342,7 @@ func TestLoginWithGoogle_LinksExistingAccountByEmail(t *testing.T) {
 	}
 
 	verifier := fakeGoogleVerifier{identity: verifiedIdentity("real-google-sub", "jotaro@example.com", "Jotaro Kujo")}
-	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, nil)
+	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, nil, nil)
 
 	result, err := svc.LoginWithGoogle(context.Background(), "raw-token")
 	if err != nil {

@@ -1,0 +1,20 @@
+// Cross-feature UI primitives — the Wii Party / Aero glass / iOS-gloss
+// design system. Feature-local presentational components stay in their own
+// feature folder; only things reused across features live here.
+export { AquaBackground } from './aqua-background'
+export { AppShell } from './app-shell'
+export { ChannelBar, ChannelBarItem } from './channel-bar'
+export { ChannelTile } from './channel-tile'
+export type { ChannelTileTone } from './channel-tile'
+export { GlassField } from './glass-field'
+export { GlassPanel } from './glass-panel'
+export { GlossButton } from './gloss-button'
+export type { GlossButtonShape, GlossButtonSize, GlossButtonTone } from './gloss-button'
+export { GlossOverlay } from './gloss-overlay'
+export { GlowText } from './glow-text'
+export { LensFlare } from './lens-flare'
+export { LoadingScreen } from './loading-screen'
+export { PageShell } from './page-shell'
+export { SpeechBubble } from './speech-bubble'
+export { ThemeToggle } from './theme-toggle'
+export { InsetRing, InsetShade, WiiCard } from './wii-card'

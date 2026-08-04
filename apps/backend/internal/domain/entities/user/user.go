@@ -7,22 +7,30 @@ import (
 )
 
 type User struct {
-	id           UserID
-	googleSub    string
-	email        string
-	username     string
-	completeName string
-	role         enums.UserRole
-	picture      string
+	id             UserID
+	googleSub      string
+	email          string
+	username       string
+	completeName   string
+	role           enums.UserRole
+	googlePicture  string
+	avatarKey      string
+	avatarThumbKey string
+	avatarStatus   enums.PictureStatus
 }
 
+// NewUser builds a User from the fields synced from Google. avatar* fields
+// always start empty/NONE - a self-uploaded avatar is set afterwards via
+// SetAvatarRenditions (mirroring powers.Power's NewPower + SetPictureRenditions
+// split), so hydrating a User with an existing avatar from the repository is
+// a two-step build just like a Power's picture.
 func NewUser(
 	id UserID,
 	googleSub string,
 	email string,
 	username string,
 	completeName string,
-	picture string,
+	googlePicture string,
 	role enums.UserRole,
 ) (*User, error) {
 	if id.IsNil() {
@@ -41,13 +49,14 @@ func NewUser(
 		return nil, enums.ErrInvalidUserRole
 	}
 	return &User{
-		id:           id,
-		googleSub:    googleSub,
-		email:        email,
-		username:     username,
-		completeName: completeName,
-		picture:      picture,
-		role:         role,
+		id:            id,
+		googleSub:     googleSub,
+		email:         email,
+		username:      username,
+		completeName:  completeName,
+		googlePicture: googlePicture,
+		role:          role,
+		avatarStatus:  enums.PictureNone,
 	}, nil
 }
 
@@ -71,8 +80,22 @@ func (u *User) CompleteName() string {
 	return u.completeName
 }
 
-func (u *User) Picture() string {
-	return u.picture
+// GooglePicture is the avatar URL synced from the Google account on every
+// login. It is never user-editable.
+func (u *User) GooglePicture() string {
+	return u.googlePicture
+}
+
+func (u *User) AvatarKey() string {
+	return u.avatarKey
+}
+
+func (u *User) AvatarThumbKey() string {
+	return u.avatarThumbKey
+}
+
+func (u *User) AvatarStatus() enums.PictureStatus {
+	return u.avatarStatus
 }
 
 func (u *User) Role() enums.UserRole {
@@ -84,11 +107,34 @@ func (u *User) IsAdmin() bool {
 }
 
 // ChangeRole updates the user's role, validating it first. Used to sync the
-// ADMIN/USER role against the ADMIN_EMAILS configuration on every login.
+// ADMIN/USER role against the ADMIN_EMAILS configuration on every login, and
+// by an admin changing another user's role.
 func (u *User) ChangeRole(role enums.UserRole) error {
 	if !role.IsValid() {
 		return enums.ErrInvalidUserRole
 	}
 	u.role = role
 	return nil
+}
+
+// ChangeUsername validates and updates username. This is the only
+// self-service profile mutation besides the avatar - email, role, and
+// completeName (Google-owned) are never touched here.
+func (u *User) ChangeUsername(username string) error {
+	if err := ValidateUsername(username); err != nil {
+		return err
+	}
+	u.username = username
+	return nil
+}
+
+// SetAvatarRenditions replaces the user-owned avatar's object-storage keys
+// together with the pipeline status that produced them, so the three always
+// change as one unit - mirrors powers.Power.SetPictureRenditions. Passing
+// ("", "", enums.PictureNone) clears the avatar entirely (DELETE
+// /users/me/picture), reverting display to GooglePicture.
+func (u *User) SetAvatarRenditions(key, thumbKey string, status enums.PictureStatus) {
+	u.avatarKey = key
+	u.avatarThumbKey = thumbKey
+	u.avatarStatus = status
 }

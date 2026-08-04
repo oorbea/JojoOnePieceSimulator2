@@ -2,9 +2,16 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // Lets tsc resolve platform-split files (e.g. bubble-field.web.tsx /
+    // bubble-field.native.tsx imported as `./bubble-field`) the same way
+    // Metro does at bundle time.
+    "moduleSuffixes": [".web", ".native", ""],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    // Global `describe`/`it`/`expect`/`jest` in every *.test.ts(x) file and
+    // jest.setup.ts, without needing a per-file import.
+    "types": ["jest", "node"]
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }
