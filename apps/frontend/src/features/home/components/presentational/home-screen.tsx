@@ -15,11 +15,13 @@ import type { SessionUser } from '@/shared/stores/session.store'
 type Props = {
   user: SessionUser
   onLogout: () => void
+  onOpenProfile: () => void
 }
 
 // The domains behind the empty channel slots aren't built yet — showing
 // them locked and honest beats faking navigation to routes that don't
-// exist (typedRoutes would refuse to compile a fake href anyway).
+// exist (typedRoutes would refuse to compile a fake href anyway). Profile
+// is the one reserved slot that's actually wired up.
 const CHANNELS = [
   { key: 'profile', label: 'Profile', tone: 'blue' as const, icon: HomeIcon, locked: false },
   { key: 'stands', label: 'Stands', tone: 'grape' as const, icon: Sparkles, locked: true },
@@ -29,7 +31,7 @@ const CHANNELS = [
 
 // Pure UI — now lives inside the authenticated app shell, so it doesn't
 // carry its own gradient/nav; PageShell + AppShell already provide those.
-export function HomeScreen({ user, onLogout }: Props) {
+export function HomeScreen({ user, onLogout, onOpenProfile }: Props) {
   const firstName = user.completeName.split(' ')[0] ?? user.completeName
 
   return (
@@ -86,6 +88,7 @@ export function HomeScreen({ user, onLogout }: Props) {
             tone={channel.tone}
             icon={channel.icon}
             locked={channel.locked}
+            onPress={channel.key === 'profile' ? onOpenProfile : undefined}
           />
         ))}
       </XStack>
