@@ -71,4 +71,76 @@ Full visual restyle — design system + all screens + new nav shell. Full writeu
 
 New deps added via CLI: `@tamagui/lucide-icons-2` (not the deprecated `@tamagui/lucide-icons`) + its undeclared peer `react-native-svg`, `@expo-google-fonts/fredoka`, `@expo-google-fonts/nunito`. `tsconfig.json` needed `moduleSuffixes: [".web", ".native", ""]` added for `tsc` to resolve the new platform-split bubble-field files the same way Metro does.
 
+## Frontend test infra (2026-08-04) — jest-expo, first tests ever added
+
+Before this pass the frontend had **zero tests** and CI's `Frontend` job only ran typecheck+lint —
+that's exactly why the layout bugs in [[frontend-responsive-frutiger-aero]] (dead `gap`, inverted
+`zIndex`, over-constrained absolute) shipped unnoticed for a while: they all pass `tsc` fine.
+
+- Deps: `jest`, `jest-expo`, `@testing-library/react-native`, `@types/jest`, `@types/node`,
+  `@react-native/jest-preset` (peer dep `jest-expo` needs explicitly under pnpm). **Pin `jest@^29`,
+  not the installed-by-default `^30`** — `jest-expo@57` depends on `jest-mock@^29.2.1` etc. internally;
+  mixing majors throws `this._moduleMocker.clearMocksOnScope is not a function` at the very first test
+  run. `tsconfig.json` needs `"types": ["jest", "node"]` or every ambient ts-jest ambient global
+  (`describe`, `require`, `__dirname`...) disappears at once — Expo's base tsconfig has no explicit
+  `types` array, so adding one for jest silently drops the implicit "all installed @types" default.
+- `jest.config.js` splits into **two projects**, not one:
+  - `logic` (jsdom, `jest-expo/web` preset): pure, non-rendering checks only —
+    `tamagui.config.ts`'s real `zIndex` token order, `layout.ts`'s pure clearance/width math, and a
+    static-analysis guard that fails if a `—`/`–` shows up in any user-facing string literal
+    (`src/test/__tests__/copy.test.ts`). `testMatch` is scoped to exactly those two directories.
+  - `native` (`jest-expo` default preset, react-test-renderer): everything that renders a component.
+    `Platform.OS` here is a real native value (not react-native-web's fixed `'web'`), so
+    `a11yProps()`'s `accessibilityLabel`/`accessibilityRole` path is what's actually exercised —
+    querying by `aria-label` would need the `logic`/jsdom project instead, which doesn't render
+    Tamagui components at all. Picking the right project for a new test is a judgment call, not a
+    convention to encode further — see which one already covers a similar file first.
+  - Both need `transformIgnorePatterns: []` **and** an extended `transform` matching `\.mjs$` too —
+    jest-expo's own default only transforms `.[jt]sx?`, and pnpm nests every package two levels deep
+    (`node_modules/.pnpm/<pkg>/node_modules/<realpkg>`), which breaks the *default* whitelist regex
+    (its negative lookahead matches at the outer `node_modules/.pnpm/` segment, before ever reaching
+    the real package name) — `@tamagui/*`'s real `.mjs` ESM files hit "Cannot use import statement
+    outside a module" without both fixes.
+  - `jest.setup.ts` mocks: `react-native-safe-area-context` (fixed zero insets — deliberately, so
+    `layout.ts`'s clearance numbers under test are exactly the named constants, no device noise),
+    `@tamagui/linear-gradient` (`LinearGradient` → plain `View`; detect it in a rendered tree via its
+    `colors` prop, not `type`, since the type name is gone after mocking), `expo-image-picker`,
+    `expo-secure-store`, and a **hand-rolled `react-native-reanimated` mock** — the package's own
+    `react-native-reanimated/mock` still pulls in `react-native-worklets`' native init chain
+    (`loadUnpackers`), which throws outside a real device/simulator. The hand-rolled version only
+    covers what `bubble-field.native.tsx`/`use-reduced-motion.ts` actually call
+    (`useSharedValue`/`useAnimatedStyle`/`withTiming`/`withRepeat`/`withDelay`/`interpolate`/
+    `useReducedMotion`/`runOnJS`) — cheap and enough, don't reach for the official mock again.
+  - `window.matchMedia` needs a manual jsdom polyfill — Tamagui's web build (`@tamagui/select`) calls
+    it eagerly at *module load*, before any component mounts, so this has to live in `jest.setup.ts`,
+    not a per-test `beforeEach`.
+- **`render()` from this `@testing-library/react-native` version is `async`.** Forgetting to `await`
+  it doesn't throw — `screen.getByText(...)` right after just fails with `` `render` function has not
+  been called `` even though the component renders fine a tick later, because `setRenderResult` only
+  fires once the awaited `act()` resolves. Cost real time to track down; `src/test/render.tsx` has a
+  comment on `renderWithProviders` now so it isn't re-derived.
+- **Don't try to globally fake-time animations across a whole file.** The instinct to wrap every test
+  in `jest.useFakeTimers()`/`runOnlyPendingTimers()` to settle Tamagui's `transition="bouncy"` springs
+  before teardown (they otherwise fire a scheduled frame *after* Jest tears the test down, logging
+  "environment has been torn down") backfires: it made `react-test-renderer`'s *second* `render()`
+  call in a file return a **silently empty tree** with no error at all — worse than the noisy-but-
+  harmless `console.error("...not wrapped in act(...)")` warnings it was meant to prevent. Left
+  disabled; the act-warning noise is cosmetic, doesn't fail CI.
+- A real RN `<Modal>` (used by `ConfirmSheet`, not mocked — see the fix in
+  [[frontend-responsive-frutiger-aero]]) drives its own fade with real `Animated`/real timers; several
+  renders of it in **one file** leave an earlier test's still-settling animation corrupting a later
+  one. Splitting the `isConfirming` case into its own file
+  (`confirm-sheet-confirming.test.tsx`) sidesteps it — different test files get separate module/timer
+  state, so isolate rather than trying to force-settle animations.
+- Disabled Tamagui `<Button disabled>` renders `aria-disabled` (not RN's `accessibilityState`) even
+  under the native project's real `Platform.OS`, and RNTL's `getByLabelText`/`getByRole` queries
+  exclude elements it considers inert. Query the still-visible text instead and check
+  `.parent.props['aria-disabled']` directly when asserting a disabled state.
+- Axios interceptors have no public single-shot invocation API — tests reach into
+  `client.interceptors.request/response`'s internal `.handlers[0]` array (`{fulfilled, rejected}`) to
+  call a registered interceptor without a real HTTP round trip. Undocumented but stable across axios
+  1.x; if it ever breaks, that's the thing to re-derive.
+- CI: `.github/workflows/ci.yml`'s `Frontend` job gained a `pnpm test:ci` (`jest --ci`) step after
+  Lint — job renamed to "Frontend (typecheck + lint + test)".
+
 Related: [[docker-setup]], [[backend-contract]]
