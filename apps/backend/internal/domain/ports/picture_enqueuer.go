@@ -1,17 +1,19 @@
 package ports
 
 import (
-	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 )
 
 // PictureJob is the work handed to an IPictureEnqueuer: the raw bytes of a
-// newly-uploaded picture, to be transcoded and stored against a Power
-// (Stand, DevilFruit, ...) in the background. Kind tells the worker which
-// subtype repository to publish the result to.
+// newly-uploaded picture, to be transcoded and stored against a subject
+// (Stand, DevilFruit, User, ...) in the background. SubjectID is that
+// subject's id formatted as a string (e.g. powers.PowerID.String() or
+// user.UserID.String()) - kept as a plain string here so the worker and
+// PicturePublisher stay subject-type-agnostic. Kind tells the worker which
+// PictureTarget to publish the result to.
 type PictureJob struct {
-	PowerID     powers.PowerID
-	Kind        enums.PowerKind
+	SubjectID   string
+	Kind        enums.PictureSubjectKind
 	Content     []byte
 	ContentType string
 }
