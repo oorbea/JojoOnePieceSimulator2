@@ -20,10 +20,57 @@ jest.mock('react-native-safe-area-context', () => {
   }
 })
 
+// Reanimated 4's own `react-native-reanimated/mock` still pulls in
+// react-native-worklets' native module init chain (loadUnpackers →
+// NativeWorklets), which crashes outside a real native runtime. Hand-rolled
+// instead, covering exactly the surface this repo's native-only files
+// actually use (bubble-field.native.tsx, use-reduced-motion.ts): worklets
+// run synchronously on the JS thread, shared values are plain refs, and
+// Animated.* passes straight through to core RN components.
 jest.mock('react-native-reanimated', () => {
-  const Reanimated = require('react-native-reanimated/mock')
-  Reanimated.default.call = () => undefined
-  return Reanimated
+  const React = require('react')
+  const RN = require('react-native')
+
+  function useSharedValue(initial: number) {
+    const ref = React.useRef({ value: initial })
+    return ref.current
+  }
+
+  function useAnimatedStyle(factory: () => Record<string, unknown>) {
+    return factory()
+  }
+
+  const withTiming = (toValue: number) => toValue
+  const withRepeat = (animation: number) => animation
+  const withDelay = (_delay: number, animation: number) => animation
+  const interpolate = (value: number, input: number[], output: number[]) => {
+    const [inMin, inMax] = [input[0], input[input.length - 1]]
+    const [outMin, outMax] = [output[0], output[output.length - 1]]
+    if (inMax === inMin) return outMin
+    const t = (value - inMin) / (inMax - inMin)
+    return outMin + t * (outMax - outMin)
+  }
+
+  return {
+    __esModule: true,
+    default: {
+      View: RN.View,
+      Text: RN.Text,
+      ScrollView: RN.ScrollView,
+      Image: RN.Image,
+      createAnimatedComponent: (Component: unknown) => Component,
+    },
+    Easing: { linear: (t: number) => t },
+    useSharedValue,
+    useAnimatedStyle,
+    useReducedMotion: () => false,
+    withTiming,
+    withRepeat,
+    withDelay,
+    interpolate,
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+    cancelAnimation: () => undefined,
+  }
 })
 
 jest.mock('@tamagui/linear-gradient', () => {
