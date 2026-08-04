@@ -30,7 +30,9 @@ describe('topClearance / bottomClearance', () => {
 
   it('adds device safe-area insets on top of the bar reservation', () => {
     const insets = { top: 44, bottom: 34 }
-    expect(topClearance(insets, true)).toBe(44 + NAV_BAR_TOP_OFFSET + NAV_BAR_HEIGHT + NAV_BAR_CLEARANCE)
+    expect(topClearance(insets, true)).toBe(
+      44 + NAV_BAR_TOP_OFFSET + NAV_BAR_HEIGHT + NAV_BAR_CLEARANCE
+    )
     expect(bottomClearance(insets, true)).toBe(
       34 + DOCK_BAR_BOTTOM_OFFSET + DOCK_BAR_HEIGHT + DOCK_BAR_CLEARANCE
     )
@@ -42,9 +44,7 @@ describe('desktopBottomClearance', () => {
   // app-shell.tsx) — desktop pages must not carry the mobile dock's ~96px
   // reservation as dead space once it's not actually rendered.
   it('is independent of the dock height', () => {
-    expect(desktopBottomClearance(ZERO_INSETS)).toBeLessThan(
-      bottomClearance(ZERO_INSETS, true)
-    )
+    expect(desktopBottomClearance(ZERO_INSETS)).toBeLessThan(bottomClearance(ZERO_INSETS, true))
   })
 })
 
