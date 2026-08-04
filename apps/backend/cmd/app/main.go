@@ -102,9 +102,13 @@ func main() {
 		pictures = cache.NewPictureStorage(pictures, redisCache, cfg.CachePresignTTL)
 	}
 
-	pictureTargets := map[enums.PowerKind]services.PictureTarget{
-		enums.StandKind:      {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
-		enums.DevilFruitKind: {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
+	userRepository := repositories.NewUserRepository(pool)
+	var userRepo ports.IUserRepository = userRepository
+
+	pictureTargets := map[enums.PictureSubjectKind]services.PictureTarget{
+		enums.StandSubject:      {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
+		enums.DevilFruitSubject: {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
+		enums.UserSubject:       {Publisher: services.NewUserPicturePublisher(userRepo), KeyPrefix: "users"},
 	}
 
 	pictureWorker := services.NewPictureWorker(imageProcessor, pictures, pictureTargets,
@@ -132,17 +136,20 @@ func main() {
 		imageProcessor, pictureWorker, picturePolicy)
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(devilFruitService)
 
-	userRepository := repositories.NewUserRepository(pool)
 	googleVerifier := auth.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenIssuer := auth.NewJWTIssuer([]byte(cfg.JWTSecret), cfg.JWTIssuer, cfg.JWTTTL)
 	authService := services.NewAuthService(
-		userRepository,
+		userRepo,
 		idgen.UUIDGenerator[user.UserID]{},
 		googleVerifier,
 		tokenIssuer,
 		cfg.AdminEmails,
+		pictures,
 	)
 	authEndpoints := endpoints.NewAuthEndpoints(authService)
+
+	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
+	userEndpoints := endpoints.NewUserEndpoints(userService)
 
 	corsCfg := endpoints.CORSConfig{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
@@ -169,7 +176,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
