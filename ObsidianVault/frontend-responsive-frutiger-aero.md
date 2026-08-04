@@ -56,3 +56,37 @@ Stack is Expo/React Native Web + Tamagui 2.6.2, not Tailwind/CSS. Substitutes us
 
 Related: [[frontend-stack]], [[ADR]], [[norma-diseno-ui-ux]] (obligación de pasar por las skills
 frontend-design + ui-ux-pro-max al tocar cualquier pantalla, incluida esta)
+
+## Higiene de layout responsive (2026-08-04) — no re-derivar
+
+Pase de limpieza sobre desktop tras reporte del owner (superposición, texto sin agrupar, botones
+inalcanzables, secciones sin centrar). Cuatro causas raíz encontradas en la capa de primitivas, no en
+las pantallas — arreglarlas ahí corrigió las tres pantallas de golpe:
+
+- **`GlassPanel` anulaba todo `gap`/`flexDirection`**: envolvía `children` en un único
+  `<YStack z="$content" flex={1}>`, dejando al frame un solo hijo en flujo. Cualquier `gap` pasado al
+  panel no separaba nada — los bloques de texto de home/profile/login se veían pegados. Fix: los hijos
+  se renderizan directos como hijos del frame; `GlossOverlay` sigue absoluto fuera de flujo.
+- **Gloss pintaba sobre el texto**: `tamagui.config.ts` tenía `gloss:20 > content:10`. Bajado a
+  `gloss:5` (por debajo de `content:10`). Test de regresión en
+  `src/shared/lib/__tests__/tokens.test.ts` fija el orden `gloss < content < nav < overlay`.
+- **`ChannelBar` no se centraba por encima de 1080px**: las variantes `dock` ponían
+  `position:absolute; left:0; right:0` directamente en la píldora, que también tenía
+  `maxW:1080; self:'center'` — un absoluto con `left`+`right` fijados ignora `alignSelf`, así que la
+  barra (y el botón de logout, empujado por el `flex:1` intermedio) se pegaba al borde izquierdo en
+  monitores anchos. Fix: la píldora queda en flujo normal (así `self:'center'` sí funciona) dentro de
+  un host absoluto de solo centrado, no interactivo (`pointerEvents:'box-none'`).
+- **`AquaBackground` montado dos veces** por ruta autenticada (`AppShell` + `PageShell`). `PageShell`
+  ganó una prop `backdrop?: boolean` (default `!navPadding`) para no duplicar el fondo cuando ya vive
+  dentro del shell.
+- **`ConfirmSheet`** pasó de absolute-en-página a `Modal` real de RN: al ser hermano del contenido y no
+  de las `ChannelBar` (que viven un nivel arriba en el árbol), su `z:$overlay` (700) nunca competía de
+  verdad con `z:$nav` (500) de las barras — RN sólo compara z-index entre hermanos. `Modal` resuelve
+  esto al montar en la raíz.
+- Nueva escala de columna por breakpoint en `src/shared/lib/layout.ts` (`columnMaxWidth`): antes solo
+  había un salto en `$md` (768) y se quedaba ahí para siempre; ahora crece también en `$lg`/`$xl`,
+  tope alineado al `maxW:1080` de la navbar.
+- Home: el saludo `"Ready when you are, {firstName}."` se sustituyó por solo `user.username` en
+  `GlowText level="hero"` — a petición del owner, sin frase de relleno.
+
+Related: [[a11y-web-leak]] si se vuelve a tocar `a11yProps`.
