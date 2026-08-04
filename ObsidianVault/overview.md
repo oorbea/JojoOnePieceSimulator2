@@ -19,6 +19,7 @@ See:
 - [[frontend-stack]] — full frontend stack, config decisions, gotchas
 - [[docker-setup]] — dev/prod images, compose wiring
 - [[norma-diseno-ui-ux]] — norma: todo diseño de UI/UX pasa por las skills frontend-design + ui-ux-pro-max
+- [[user-profile-feature]] — user profile/admin panel (2026-08-04): self-service username+avatar, picture worker generalized beyond Powers
 
 ## Status (2026-07-28)
 
