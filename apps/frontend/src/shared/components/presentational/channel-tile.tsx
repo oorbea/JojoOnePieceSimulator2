@@ -80,8 +80,11 @@ export function ChannelTile({
       hoverStyle={locked ? undefined : { scale: 1.05, y: -4 }}
       pressStyle={locked ? undefined : { scale: 0.94, y: 2 }}
       cursor={locked ? 'default' : 'pointer'}
-      {...a11yProps(locked ? `${label}, coming soon` : label, locked ? 'none' : 'button')}
-      accessibilityState={locked ? { disabled: true } : undefined}
+      {...a11yProps(
+        locked ? `${label}, coming soon` : label,
+        locked ? 'none' : 'button',
+        locked ? { disabled: true } : undefined
+      )}
     >
       <InsetRing rounded="$card" />
       {!locked ? <GlossOverlay coverage="half" shape="card" /> : null}
