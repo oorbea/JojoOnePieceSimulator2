@@ -53,13 +53,17 @@ type GlassPanelProps = React.ComponentProps<typeof GlassPanelFrame> & {
 // Aero panel: translucent fill, bright thin border, soft big shadow. Real
 // `backdrop-filter` blur on web; native compensates with a higher opacity
 // fill (no `expo-blur` dependency added for this pass).
+//
+// Children render directly as the frame's own flex children (not wrapped in
+// an extra YStack) so that `gap`/`flexDirection`/responsive props passed to
+// GlassPanel actually apply between them — a single-child wrapper here used
+// to swallow every one of those props silently. GlossOverlay stays an
+// absolute sibling, below content thanks to zIndex.gloss < zIndex.content.
 export function GlassPanel({ glossy, children, style, ...rest }: GlassPanelProps) {
   return (
     <GlassPanelFrame {...rest} style={[WEB_BLUR_STYLE, style as object]}>
       {glossy ? <GlossOverlay coverage="half" shape="card" /> : null}
-      <YStack z="$content" flex={1}>
-        {children}
-      </YStack>
+      {children}
     </GlassPanelFrame>
   )
 }
