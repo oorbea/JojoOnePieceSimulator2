@@ -18,6 +18,7 @@ See:
 - [[backend-contract]] — API shape, auth, caching, enums
 - [[frontend-stack]] — full frontend stack, config decisions, gotchas
 - [[docker-setup]] — dev/prod images, compose wiring
+- [[norma-diseno-ui-ux]] — norma: todo diseño de UI/UX pasa por las skills frontend-design + ui-ux-pro-max
 
 ## Status (2026-07-28)
 

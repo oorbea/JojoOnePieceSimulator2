@@ -54,4 +54,5 @@ Stack is Expo/React Native Web + Tamagui 2.6.2, not Tailwind/CSS. Substitutes us
 - **`app/+html.tsx` has no effect when `app.json`'s `web.output` is `"single"`** (SPA mode) — that customization hook is only consulted by expo-router's per-route static prerendering path. For single-mode, the actual override point is a local `public/index.html` (checked by `@expo/cli` before its built-in template; use `%LANG_ISO_CODE%`/`%WEB_TITLE%` placeholders, omit the auto-injected favicon/CSS/script tags). This is how the PWA manifest link and `<meta name="theme-color">` finally got wired up.
 - The extracted `tamagui-web.css` still builds to 0 bytes even after this pass (confirmed via a real `expo export -p web`) — `@tamagui/babel-plugin` CSS extraction isn't producing output in this project, so webfonts on web are carried entirely by `expo-font`'s runtime `@font-face` injection, not by the extracted stylesheet. Not blocking, but don't assume the CSS file has content when debugging web styling.
 
-Related: [[frontend-stack]], [[ADR]]
+Related: [[frontend-stack]], [[ADR]], [[norma-diseno-ui-ux]] (obligación de pasar por las skills
+frontend-design + ui-ux-pro-max al tocar cualquier pantalla, incluida esta)
