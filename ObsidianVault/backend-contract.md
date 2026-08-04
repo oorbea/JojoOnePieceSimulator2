@@ -12,7 +12,8 @@ Go/chi backend, `apps/backend`. Base path `/api/v1`, port 8080 (`apps/backend/in
 
 ## Auth
 
-- `POST /api/v1/auth/google` `{idToken}` → `{accessToken, tokenType:"Bearer", expiresAt, user{id,email,username,completeName,picture,role}}`
+- `POST /api/v1/auth/google` `{idToken}` → `{accessToken, tokenType:"Bearer", expiresAt, user{id,email,username,completeName,avatar,avatarThumb,avatarStatus,role}}`
+  (2026-08-04: `picture` was replaced by `avatar`/`avatarThumb`/`avatarStatus` — see [[user-profile-feature]])
 - 201 first login, 200 returning.
 - **No refresh token, no cookies.** 24h JWT. 401 anywhere → force re-login, no silent refresh.
 - All other routes: `Authorization: Bearer <token>` required.
@@ -37,6 +38,13 @@ camelCase. Errors: `{error, details?[]}`.
 - fruitType: `PARAMECIA|ZOAN|LOGIA|SPECIAL_PARAMECIA|ANCIENT_ZOAN|MYTHICAL_ZOAN`
 - role: `REGULAR|ADMIN`
 - pictureStatus: `NONE|PENDING|READY|FAILED`
+
+## Users (added 2026-08-04)
+
+See [[user-profile-feature]] for the full design. Summary:
+- `GET/PATCH /users/me`, `PATCH/DELETE /users/me/picture`, `DELETE /users/me` — id always comes from the JWT claims, never from path/body. `PATCH /users/me` accepts only `{username}`; email/role/completeName in the body → 400 (unknown-field rejection).
+- `GET /users/{id}` (any authenticated caller) → `PublicUserResponse` (`id,username,completeName,avatar,avatarThumb`), never email/role.
+- Admin-only: `GET /users` (paginated), `PATCH /users/{id}` (username), `PATCH /users/{id}/role`, `DELETE /users/{id}` — self-demotion/self-delete via these routes is blocked (403), and the last remaining admin can't be demoted/deleted (409).
 
 ## CORS
 

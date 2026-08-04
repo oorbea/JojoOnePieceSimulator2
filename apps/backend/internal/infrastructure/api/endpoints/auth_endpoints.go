@@ -62,11 +62,16 @@ func (e *AuthEndpoints) loginWithGoogle(w http.ResponseWriter, r *http.Request) 
 		status = http.StatusCreated
 	}
 
+	userResp, err := dto.NewUserResponse(r.Context(), result.User, e.svc.PictureURL)
+	if err != nil {
+		return err
+	}
+
 	writeJSON(w, status, dto.LoginResponse{
 		AccessToken: result.AccessToken,
 		TokenType:   "Bearer",
 		ExpiresAt:   result.ExpiresAt,
-		User:        dto.NewUserResponse(result.User),
+		User:        userResp,
 	})
 	return nil
 }

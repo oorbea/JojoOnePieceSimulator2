@@ -217,9 +217,9 @@ func newTestWorker(processor *fakeImageProcessor, pictures *fakePictureStorage, 
 
 // newTestTargets builds the single-target (Stand only) registry most tests
 // need; tests exercising the DevilFruit path build their own.
-func newTestTargets(repo *fakeStandRepository) map[enums.PowerKind]PictureTarget {
-	return map[enums.PowerKind]PictureTarget{
-		enums.StandKind: {Publisher: NewStandPicturePublisher(repo), KeyPrefix: "stands"},
+func newTestTargets(repo *fakeStandRepository) map[enums.PictureSubjectKind]PictureTarget {
+	return map[enums.PictureSubjectKind]PictureTarget{
+		enums.StandSubject: {Publisher: NewStandPicturePublisher(repo), KeyPrefix: "stands"},
 	}
 }
 
@@ -232,7 +232,7 @@ func TestProcess_Success_PublishesKeysAndDeletesOld(t *testing.T) {
 
 	stand := newWorkerTestStand(t, repo, idGen, "stands/x/old.webp", "stands/x/old_thumb.webp", enums.PicturePending)
 
-	worker.process(ports.PictureJob{PowerID: stand.ID(), Kind: enums.StandKind, Content: []byte("data"), ContentType: "image/png"})
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
 
 	updated, err := repo.FindByID(context.Background(), stand.ID())
 	if err != nil {
@@ -280,7 +280,7 @@ func TestProcess_TranscodeFailure_MarksFailedKeepsOldPicture(t *testing.T) {
 
 	stand := newWorkerTestStand(t, repo, idGen, "stands/x/old.webp", "stands/x/old_thumb.webp", enums.PicturePending)
 
-	worker.process(ports.PictureJob{PowerID: stand.ID(), Kind: enums.StandKind, Content: []byte("data"), ContentType: "image/png"})
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
 
 	updated, err := repo.FindByID(context.Background(), stand.ID())
 	if err != nil {
@@ -311,7 +311,7 @@ func TestProcess_UploadThumbFailure_DeletesPartialUploadAndMarksFailed(t *testin
 
 	stand := newWorkerTestStand(t, repo, idGen, "", "", enums.PicturePending)
 
-	worker.process(ports.PictureJob{PowerID: stand.ID(), Kind: enums.StandKind, Content: []byte("data"), ContentType: "image/png"})
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
 
 	updated, err := repo.FindByID(context.Background(), stand.ID())
 	if err != nil {
@@ -353,7 +353,7 @@ func TestShutdown_WaitsForInFlightJobs(t *testing.T) {
 
 	stand := newWorkerTestStand(t, repo, idGen, "", "", enums.PictureNone)
 	worker.Start()
-	if err := worker.Enqueue(ports.PictureJob{PowerID: stand.ID(), Kind: enums.StandKind, Content: []byte("data"), ContentType: "image/png"}); err != nil {
+	if err := worker.Enqueue(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"}); err != nil {
 		t.Fatalf("Enqueue: %v", err)
 	}
 
@@ -381,10 +381,10 @@ func TestEnqueue_FullQueueReturnsErrPictureQueueFull(t *testing.T) {
 		Workers: 0, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
 	})
 	// No Start(): nothing drains the queue, so the second Enqueue must see it full.
-	if err := worker.Enqueue(ports.PictureJob{PowerID: powers.PowerID{1}, Kind: enums.StandKind}); err != nil {
+	if err := worker.Enqueue(ports.PictureJob{SubjectID: powers.PowerID{1}.String(), Kind: enums.StandSubject}); err != nil {
 		t.Fatalf("first Enqueue: %v", err)
 	}
-	if err := worker.Enqueue(ports.PictureJob{PowerID: powers.PowerID{2}, Kind: enums.StandKind}); !errors.Is(err, ErrPictureQueueFull) {
+	if err := worker.Enqueue(ports.PictureJob{SubjectID: powers.PowerID{2}.String(), Kind: enums.StandSubject}); !errors.Is(err, ErrPictureQueueFull) {
 		t.Fatalf("err = %v, want ErrPictureQueueFull", err)
 	}
 }
@@ -498,9 +498,9 @@ func TestProcess_DevilFruitKind_PublishesUnderDevilFruitsPrefix(t *testing.T) {
 	pictures := newFakePictureStorage()
 	processor := newFakeImageProcessor()
 
-	targets := map[enums.PowerKind]PictureTarget{
-		enums.StandKind:      {Publisher: NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
-		enums.DevilFruitKind: {Publisher: NewDevilFruitPicturePublisher(fruitRepo), KeyPrefix: "devil-fruits"},
+	targets := map[enums.PictureSubjectKind]PictureTarget{
+		enums.StandSubject:      {Publisher: NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
+		enums.DevilFruitSubject: {Publisher: NewDevilFruitPicturePublisher(fruitRepo), KeyPrefix: "devil-fruits"},
 	}
 	worker := NewPictureWorker(processor, pictures, targets, idGen, WorkerConfig{
 		Workers: 1, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
@@ -508,7 +508,7 @@ func TestProcess_DevilFruitKind_PublishesUnderDevilFruitsPrefix(t *testing.T) {
 
 	fruit := newWorkerTestDevilFruit(t, fruitRepo, idGen, "devil-fruits/x/old.webp", "devil-fruits/x/old_thumb.webp", enums.PicturePending)
 
-	worker.process(ports.PictureJob{PowerID: fruit.ID(), Kind: enums.DevilFruitKind, Content: []byte("data"), ContentType: "image/png"})
+	worker.process(ports.PictureJob{SubjectID: fruit.ID().String(), Kind: enums.DevilFruitSubject, Content: []byte("data"), ContentType: "image/png"})
 
 	updated, err := fruitRepo.FindByID(context.Background(), fruit.ID())
 	if err != nil {
@@ -534,7 +534,7 @@ func TestProcess_UnknownKind_TouchesNothing(t *testing.T) {
 
 	stand := newWorkerTestStand(t, repo, idGen, "", "", enums.PictureNone)
 
-	worker.process(ports.PictureJob{PowerID: stand.ID(), Kind: enums.PowerKind(99), Content: []byte("data"), ContentType: "image/png"})
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.PictureSubjectKind(99), Content: []byte("data"), ContentType: "image/png"})
 
 	updated, err := repo.FindByID(context.Background(), stand.ID())
 	if err != nil {

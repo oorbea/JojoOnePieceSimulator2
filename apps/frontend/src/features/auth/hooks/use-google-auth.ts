@@ -65,7 +65,14 @@ export function useGoogleAuth() {
       await setSession({
         accessToken: data.accessToken,
         expiresAt: data.expiresAt,
-        user: data.user,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          username: data.user.username,
+          completeName: data.user.completeName,
+          picture: data.user.avatar || null,
+          role: data.user.role,
+        },
       })
     } catch (err) {
       setError(toAppError(err))
@@ -98,14 +105,17 @@ export function useGoogleAuth() {
       window.sessionStorage.removeItem(WEB_STATE_KEY)
       window.sessionStorage.removeItem(WEB_NONCE_KEY)
 
+      // "state mismatch" and "nonce mismatch" are the same failure from the
+      // user's point of view, so they get the same message; the technical
+      // detail stays in the thrown Error, not on screen.
       if (!expectedState || returnedState !== expectedState) {
-        setError(toAppError(new Error('Google sign-in state mismatch — please try again')))
+        setError(toAppError(new Error('Something went wrong signing in with Google. Try again.')))
         return
       }
 
       const nonce = decodeJwtPayload(idToken).nonce
       if (!expectedNonce || nonce !== expectedNonce) {
-        setError(toAppError(new Error('Google sign-in nonce mismatch — please try again')))
+        setError(toAppError(new Error('Something went wrong signing in with Google. Try again.')))
         return
       }
 

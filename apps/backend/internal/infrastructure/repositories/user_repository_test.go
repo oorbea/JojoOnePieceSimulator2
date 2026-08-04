@@ -148,7 +148,7 @@ func TestUserRepository_SaveIsIdempotentByID(t *testing.T) {
 		}
 	})
 
-	promoted, err := user.NewUser(u.ID(), u.GoogleSub(), u.Email(), u.Username(), u.CompleteName(), u.Picture(), enums.Admin)
+	promoted, err := user.NewUser(u.ID(), u.GoogleSub(), u.Email(), u.Username(), u.CompleteName(), u.GooglePicture(), enums.Admin)
 	if err != nil {
 		t.Fatalf("NewUser (promoted): %v", err)
 	}

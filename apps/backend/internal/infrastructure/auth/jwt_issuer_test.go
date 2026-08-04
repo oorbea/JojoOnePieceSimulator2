@@ -2,6 +2,7 @@ package auth_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -60,7 +61,23 @@ func TestJWTIssuer_Parse_RejectsTamperedSignature(t *testing.T) {
 		t.Fatalf("Issue: %v", err)
 	}
 
-	tampered := token[:len(token)-1] + "x"
+	// Flip the signature's first base64url char rather than its last: the
+	// last char of a base64url-encoded 32-byte HMAC only carries 4 significant
+	// bits (the low 2 are padding the decoder ignores), so ~1 in 16 runs a
+	// same-suffix replacement decodes to the exact same bytes and the
+	// "tampered" token is accidentally still valid. The first char has no such
+	// padding, so any change to it always changes the decoded signature.
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		t.Fatalf("token has %d segments, want 3", len(parts))
+	}
+	sig := []byte(parts[2])
+	if sig[0] == 'A' {
+		sig[0] = 'B'
+	} else {
+		sig[0] = 'A'
+	}
+	tampered := parts[0] + "." + parts[1] + "." + string(sig)
 	if _, err := issuer.Parse(tampered); err == nil {
 		t.Fatal("Parse accepted a tampered signature")
 	}

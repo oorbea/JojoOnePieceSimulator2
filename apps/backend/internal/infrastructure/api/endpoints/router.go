@@ -32,7 +32,7 @@ type CORSConfig struct {
 // tighter tiers (see rateCfg and ratelimit.go). cacheCfg configures the
 // ETag/Cache-Control layer applied to the Stand and DevilFruit read routes
 // (see cache_headers.go).
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -65,6 +65,7 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 			r.Use(RequireAuth(issuer))
 			r.Mount("/stands", standEndpoints.Routes(rateCfg, cacheCfg))
 			r.Mount("/devil-fruits", devilFruitEndpoints.Routes(rateCfg, cacheCfg))
+			r.Mount("/users", userEndpoints.Routes(rateCfg))
 		})
 	})
 
