@@ -2,6 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    // Lets tsc resolve platform-split files (e.g. bubble-field.web.tsx /
+    // bubble-field.native.tsx imported as `./bubble-field`) the same way
+    // Metro does at bundle time.
+    "moduleSuffixes": [".web", ".native", ""],
     "paths": {
       "@/*": ["./src/*"]
     }
