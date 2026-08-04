@@ -205,8 +205,11 @@ const config = createTamagui({
     zIndex: {
       ...defaultConfig.tokens.zIndex,
       backdrop: 0,
+      // Below content, not above it: GlossOverlay is a decorative absolute
+      // sibling, and it must never paint over the in-flow text/icons it
+      // sits next to (it did, before this was 20).
+      gloss: 5,
       content: 10,
-      gloss: 20,
       nav: 500,
       overlay: 700,
     },
