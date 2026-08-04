@@ -65,7 +65,14 @@ export function useGoogleAuth() {
       await setSession({
         accessToken: data.accessToken,
         expiresAt: data.expiresAt,
-        user: data.user,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          username: data.user.username,
+          completeName: data.user.completeName,
+          picture: data.user.avatar || null,
+          role: data.user.role,
+        },
       })
     } catch (err) {
       setError(toAppError(err))
