@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { XStack, YStack } from 'tamagui'
 
 import { logoAsset } from '@/shared/assets'
+import { a11yProps } from '@/shared/lib/a11y'
 import type { ThemeMode } from '@/shared/stores/theme.store'
 
 import { AquaBackground } from './aqua-background'
@@ -72,8 +73,7 @@ export function AppShell({
               key={item.href}
               active={item.active}
               onPress={() => onNavigate(item.href)}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
+              {...a11yProps(item.label, 'button')}
             >
               <item.icon size={20} color={item.active ? 'white' : '$panelText'} strokeWidth={2.5} />
               <GlowText level="label" tone={item.active ? 'onColor' : 'ink'} fontSize="$2">
@@ -88,8 +88,7 @@ export function AppShell({
         <ChannelBarItem
           iconOnly
           onPress={onLogout}
-          accessibilityRole="button"
-          accessibilityLabel="Log out"
+          {...a11yProps('Log out', 'button')}
           hitSlop={8}
         >
           <LogOut size={20} color="$panelText" strokeWidth={2.5} />
@@ -113,8 +112,7 @@ export function AppShell({
               active={item.active}
               iconOnly
               onPress={() => onNavigate(item.href)}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
+              {...a11yProps(item.label, 'button')}
             >
               <item.icon size={22} color={item.active ? 'white' : '$panelText'} strokeWidth={2.5} />
             </ChannelBarItem>

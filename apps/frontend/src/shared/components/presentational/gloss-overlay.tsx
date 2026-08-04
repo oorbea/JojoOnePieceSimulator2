@@ -13,7 +13,7 @@ export const GlossOverlay = styled(LinearGradient, {
   t: 0,
   l: 0,
   r: 0,
-  pointerEvents: 'none',
+  style: { pointerEvents: 'none' },
   z: '$gloss',
   colors: ['$glossPeak', '$glossFade', '$glossNil'],
   start: [0, 0],

@@ -33,7 +33,7 @@ export function AquaBackground({ plain = false }: AquaBackgroundProps) {
       r={0}
       b={0}
       z="$backdrop"
-      pointerEvents="none"
+      style={{ pointerEvents: 'none' }}
       overflow="hidden"
     >
       <LinearGradient

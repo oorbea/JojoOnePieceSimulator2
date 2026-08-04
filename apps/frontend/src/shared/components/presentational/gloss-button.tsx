@@ -1,5 +1,6 @@
 import { Button, YStack, type ButtonProps } from 'tamagui'
 
+import { a11yProps } from '@/shared/lib/a11y'
 import { asToken } from '@/shared/lib/tamagui-token'
 
 import { GlossOverlay } from './gloss-overlay'
@@ -60,6 +61,7 @@ export function GlossButton({
   flare = false,
   children,
   disabled,
+  accessibilityLabel,
   ...rest
 }: GlossButtonProps) {
   const toneStyle = TONE_STYLES[tone]
@@ -96,7 +98,7 @@ export function GlossButton({
         pressStyle={{ scale: 0.94, y: 3, borderBottomWidth: 2, shadowRadius: 6 }}
         focusStyle={{ outlineColor: '$channelActive', outlineWidth: 3, outlineStyle: 'solid' }}
         disabledStyle={{ opacity: 0.55, borderBottomWidth: 3 }}
-        accessibilityRole="button"
+        {...a11yProps(accessibilityLabel as string | undefined, 'button')}
       >
         <GlossOverlay coverage="half" shape={shape === 'circle' ? 'circle' : 'pill'} />
         {children}

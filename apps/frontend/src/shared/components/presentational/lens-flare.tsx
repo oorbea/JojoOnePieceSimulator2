@@ -60,8 +60,10 @@ export function LensFlare({ size = 'md', streak = true }: LensFlareProps) {
       items="center"
       justify="center"
       z="$backdrop"
-      pointerEvents="none"
-      style={isWeb ? ({ filter: 'blur(28px)' } as React.CSSProperties as object) : undefined}
+      style={{
+        pointerEvents: 'none',
+        ...(isWeb ? ({ filter: 'blur(28px)' } as React.CSSProperties as object) : null),
+      }}
     >
       {RING_STOPS.map((ring) => (
         <Ring
