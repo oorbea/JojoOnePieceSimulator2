@@ -1,15 +1,16 @@
-import { Home } from '@tamagui/lucide-icons-2'
+import { Home, User } from '@tamagui/lucide-icons-2'
 import { usePathname, useRouter } from 'expo-router'
 
 import { AppShell, type AppShellNavItem } from '@/shared/components/presentational/app-shell'
 import { useSessionStore } from '@/shared/stores/session.store'
 import { useThemeStore } from '@/shared/stores/theme.store'
 
-// `experiments.typedRoutes` is on and the only route today is `/`, so a
-// `href` to anything else is a compile error. This array is the single
-// extension point for future nav items — add a route here once it exists.
-const NAV_ITEMS: { href: '/'; label: string; icon: AppShellNavItem['icon'] }[] = [
+// `experiments.typedRoutes` is on, so a `href` to anything else is a compile
+// error. This array is the single extension point for future nav items —
+// widen the union and add an entry here once a new route exists.
+const NAV_ITEMS: { href: '/' | '/profile'; label: string; icon: AppShellNavItem['icon'] }[] = [
   { href: '/', label: 'Home', icon: Home },
+  { href: '/profile', label: 'Profile', icon: User },
 ]
 
 export function AppShellContainer({ children }: { children: React.ReactNode }) {
