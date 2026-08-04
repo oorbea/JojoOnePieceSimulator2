@@ -4,17 +4,14 @@ import { Paragraph, XStack, YStack } from 'tamagui'
 
 import { ChannelTile } from '@/shared/components/presentational/channel-tile'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
-import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { GlossOverlay } from '@/shared/components/presentational/gloss-overlay'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { PageShell } from '@/shared/components/presentational/page-shell'
-import { SpeechBubble } from '@/shared/components/presentational/speech-bubble'
 import type { SessionUser } from '@/shared/stores/session.store'
 
 type Props = {
   user: SessionUser
-  onLogout: () => void
   onOpenProfile: () => void
 }
 
@@ -29,11 +26,10 @@ const CHANNELS = [
   { key: 'powers', label: 'Powers', tone: 'yellow' as const, icon: Zap, locked: true },
 ]
 
-// Pure UI — now lives inside the authenticated app shell, so it doesn't
-// carry its own gradient/nav; PageShell + AppShell already provide those.
-export function HomeScreen({ user, onLogout, onOpenProfile }: Props) {
-  const firstName = user.completeName.split(' ')[0] ?? user.completeName
-
+// Pure UI — lives inside the authenticated app shell, so it doesn't carry
+// its own backdrop or logout button; AppShell already provides both (a
+// second logout here would just duplicate the one in the top bar).
+export function HomeScreen({ user, onOpenProfile }: Props) {
   return (
     <PageShell align="top" navPadding scroll maxWidth={720}>
       <GlassPanel
@@ -42,28 +38,27 @@ export function HomeScreen({ user, onLogout, onOpenProfile }: Props) {
         width="100%"
         p="$6"
         gap="$5"
-        $md={{ flexDirection: 'row', items: 'center' }}
+        items="center"
+        $md={{ flexDirection: 'row' }}
       >
-        <YStack items="center" gap="$3">
-          <YStack width={96} height={96} rounded="$circle" overflow="hidden" position="relative">
-            <InsetRing rounded="$circle" />
-            <GlossOverlay coverage="third" shape="circle" />
-            {user.picture ? (
-              <Image source={{ uri: user.picture }} style={{ width: '100%', height: '100%' }} />
-            ) : (
-              <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
-                <Paragraph color="white" fontSize="$8" fontWeight="800">
-                  {user.completeName.charAt(0).toUpperCase()}
-                </Paragraph>
-              </YStack>
-            )}
-          </YStack>
+        <YStack width={96} height={96} rounded="$circle" overflow="hidden" position="relative">
+          <InsetRing rounded="$circle" />
+          <GlossOverlay coverage="third" shape="circle" />
+          {user.picture ? (
+            <Image source={{ uri: user.picture }} style={{ width: '100%', height: '100%' }} />
+          ) : (
+            <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
+              <Paragraph color="white" fontSize="$8" fontWeight="800">
+                {user.completeName.charAt(0).toUpperCase()}
+              </Paragraph>
+            </YStack>
+          )}
         </YStack>
 
-        <YStack flex={1} gap="$3">
-          <SpeechBubble tailSide="left">
-            <GlowText level="heading">Ready when you are, {firstName}.</GlowText>
-          </SpeechBubble>
+        <YStack items="center" gap="$3" $md={{ items: 'flex-start' }}>
+          <GlowText level="hero" $md={{ fontSize: '$12' }}>
+            {user.username}
+          </GlowText>
 
           <XStack flexWrap="wrap" gap="$2" justify="center" $md={{ justify: 'flex-start' }}>
             <GlassPanel tone="plastic" px="$3" py="$1.5" rounded="$pill" elevate={0}>
@@ -92,10 +87,6 @@ export function HomeScreen({ user, onLogout, onOpenProfile }: Props) {
           />
         ))}
       </XStack>
-
-      <GlossButton tone="red" btnSize="md" onPress={onLogout} accessibilityLabel="Log out">
-        Log out
-      </GlossButton>
     </PageShell>
   )
 }
