@@ -24,4 +24,15 @@ module.exports = defineConfig([
       'import/no-unresolved': 'off',
     },
   },
+  {
+    // '@/providers/toaster-mount' only resolves via the platform-suffixed
+    // pair toaster-mount.web.tsx/toaster-mount.native.tsx (same pattern as
+    // bubble-field.web/.native) - the import resolver understands that for
+    // relative imports but not through the `@/*` alias, so it flags an
+    // otherwise-valid import as unresolved.
+    files: ['src/providers/app-providers.tsx'],
+    rules: {
+      'import/no-unresolved': 'off',
+    },
+  },
 ])
