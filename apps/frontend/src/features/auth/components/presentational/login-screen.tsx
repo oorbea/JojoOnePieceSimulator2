@@ -50,7 +50,7 @@ export function LoginScreen({ onSignIn, isLoading, isReady, error }: Props) {
         </GlowText>
 
         <GlossButton
-          tone="red"
+          tone="blue"
           btnSize="lg"
           shape="pill"
           flare
