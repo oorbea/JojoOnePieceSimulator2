@@ -9,6 +9,9 @@ import { GlassPanel } from './glass-panel'
 import { GlossButton } from './gloss-button'
 import { GlowText } from './glow-text'
 
+/**
+ * Props for the dynamic skills input used by the admin forms.
+ */
 type SkillsFieldProps = {
   label: string
   skills: string[]
@@ -17,11 +20,13 @@ type SkillsFieldProps = {
   error?: string
 }
 
-// The one dynamic string[] input the admin forms need (Power.skills). Kept
-// as a small compound component rather than a generic "array field" — it
-// owns its own draft-text state for the pending entry, while the array
-// itself stays fully controlled through onAdd/onRemove so the parent form
-// (react-hook-form via useController) is the single source of truth.
+/**
+ * The one dynamic string[] input the admin forms need (Power.skills).
+ * Kept as a small compound component rather than a generic "array field" —
+ * it owns its own draft-text state for the pending entry, while the array
+ * itself stays fully controlled through onAdd/onRemove so the parent form
+ * (react-hook-form via useController) is the single source of truth.
+ */
 export function SkillsField({ label, skills, onAdd, onRemove, error }: SkillsFieldProps) {
   const [draft, setDraft] = useState('')
 
