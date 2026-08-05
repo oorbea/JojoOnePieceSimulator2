@@ -14,12 +14,12 @@ import (
 // DevilFruit, so CreateDevilFruit/UpdateDevilFruit take one argument instead
 // of a long positional list.
 type DevilFruitInput struct {
+	Skills        *[]string
 	Name          string
 	Description   string
-	Rarity        enums.PowerRarity
-	Skills        *[]string
 	Picture       string
 	PictureThumb  string
+	Rarity        enums.PowerRarity
 	PictureStatus enums.PictureStatus
 	FruitType     enums.FruitType
 }
