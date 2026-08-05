@@ -67,45 +67,40 @@ const defaultRedisDialTimeout = 2 * time.Second
 const defaultRedisOpTimeout = 200 * time.Millisecond
 
 type Config struct {
-	DatabaseURL string
-	Port        string
-
+	DatabaseURL    string
+	Port           string
 	GoogleClientID string
 	JWTSecret      string
 	JWTIssuer      string
-	JWTTTL         time.Duration
-	AdminEmails    []string
-
-	// CORSAllowedOrigins is deny-all (no CORS headers added at all) when
-	// empty, which is the safe default: the browser blocks cross-origin
-	// calls exactly as if the server didn't know about CORS.
-	CORSAllowedOrigins   []string
-	CORSAllowedMethods   []string
-	CORSAllowedHeaders   []string
-	CORSAllowCredentials bool
-	CORSMaxAge           int
-
-	// RateLimitEnabled turns the whole tiered limiter off when false (all
-	// other RateLimit* fields are then ignored).
-	RateLimitEnabled      bool
-	RateLimitWindow       time.Duration
-	RateLimitGlobalPerIP  int
-	RateLimitLoginPerIP   int
-	RateLimitReadPerUser  int
-	RateLimitWritePerUser int
-
 	// R2* configure the Cloudflare R2 bucket Stand pictures are stored in.
 	R2AccountID       string
 	R2AccessKeyID     string
 	R2SecretAccessKey string
 	R2Bucket          string
-	R2PresignTTL      time.Duration
-
+	// RedisURL is empty by default, which turns caching off entirely (no
+	// connection is ever attempted) - keeps `go run`/`make test` working
+	// with no Redis around. CacheEnabled is a separate kill switch on top of
+	// that, for disabling the cache without unsetting REDIS_URL.
+	RedisURL    string
+	AdminEmails []string
+	// CORSAllowedOrigins is deny-all (no CORS headers added at all) when
+	// empty, which is the safe default: the browser blocks cross-origin
+	// calls exactly as if the server didn't know about CORS.
+	CORSAllowedOrigins    []string
+	CORSAllowedMethods    []string
+	CORSAllowedHeaders    []string
+	PictureAllowedTypes   []string
+	JWTTTL                time.Duration
+	CORSMaxAge            int
+	RateLimitWindow       time.Duration
+	RateLimitGlobalPerIP  int
+	RateLimitLoginPerIP   int
+	RateLimitReadPerUser  int
+	RateLimitWritePerUser int
+	R2PresignTTL          time.Duration
 	// PictureMaxBytes/PictureAllowedTypes bound what PATCH
 	// /stands/{id}/picture accepts.
-	PictureMaxBytes     int64
-	PictureAllowedTypes []string
-
+	PictureMaxBytes int64
 	// Picture* below configure the background compression pipeline: the
 	// resize caps and WebP quality applied by the image processor, and the
 	// worker pool that runs it.
@@ -116,16 +111,8 @@ type Config struct {
 	PictureWorkers        int
 	PictureQueueSize      int
 	PictureJobTimeout     time.Duration
-
-	// RedisURL is empty by default, which turns caching off entirely (no
-	// connection is ever attempted) - keeps `go run`/`make test` working
-	// with no Redis around. CacheEnabled is a separate kill switch on top of
-	// that, for disabling the cache without unsetting REDIS_URL.
-	RedisURL         string
-	RedisDialTimeout time.Duration
-	RedisOpTimeout   time.Duration
-	CacheEnabled     bool
-
+	RedisDialTimeout      time.Duration
+	RedisOpTimeout        time.Duration
 	// CacheStandTTL/CacheDevilFruitTTL/CacheNotFoundTTL bound how long the
 	// Stand/DevilFruit repository caches can serve stale data if an
 	// invalidation is ever missed. CachePresignTTL does the same for cached
@@ -133,11 +120,16 @@ type Config struct {
 	// R2PresignTTL so a served URL is never close to expiring.
 	// CacheHTTPMaxAge configures the response Cache-Control header
 	// (independent of Redis); 0 disables it.
-	CacheStandTTL      time.Duration
-	CacheDevilFruitTTL time.Duration
-	CacheNotFoundTTL   time.Duration
-	CachePresignTTL    time.Duration
-	CacheHTTPMaxAge    time.Duration
+	CacheStandTTL        time.Duration
+	CacheDevilFruitTTL   time.Duration
+	CacheNotFoundTTL     time.Duration
+	CachePresignTTL      time.Duration
+	CacheHTTPMaxAge      time.Duration
+	CORSAllowCredentials bool
+	// RateLimitEnabled turns the whole tiered limiter off when false (all
+	// other RateLimit* fields are then ignored).
+	RateLimitEnabled bool
+	CacheEnabled     bool
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty

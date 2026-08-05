@@ -7,15 +7,15 @@ import (
 )
 
 type User struct {
-	id             UserID
 	googleSub      string
 	email          string
 	username       string
 	completeName   string
-	role           enums.UserRole
 	googlePicture  string
 	avatarKey      string
 	avatarThumbKey string
+	id             UserID
+	role           enums.UserRole
 	avatarStatus   enums.PictureStatus
 }
 
