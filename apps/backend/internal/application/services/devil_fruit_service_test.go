@@ -17,15 +17,19 @@ import (
 // following this package's convention (see fakeStandRepository above) of
 // duplicating small fakes per test file rather than sharing them.
 type fakeDevilFruitRepository struct {
-	mu     sync.Mutex
-	fruits map[powers.PowerID]*powers.DevilFruit
+	mu           sync.Mutex
+	fruits       map[powers.PowerID]*powers.DevilFruit
+	translations map[powers.PowerID]ports.PowerTranslations
 }
 
 func newFakeDevilFruitRepository() *fakeDevilFruitRepository {
-	return &fakeDevilFruitRepository{fruits: make(map[powers.PowerID]*powers.DevilFruit)}
+	return &fakeDevilFruitRepository{
+		fruits:       make(map[powers.PowerID]*powers.DevilFruit),
+		translations: make(map[powers.PowerID]ports.PowerTranslations),
+	}
 }
 
-func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit) error {
+func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit, translations ports.PowerTranslations) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for id, existing := range f.fruits {
@@ -34,10 +38,11 @@ func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFr
 		}
 	}
 	f.fruits[fruit.ID()] = fruit
+	f.translations[fruit.ID()] = translations
 	return nil
 }
 
-func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	fruit, ok := f.fruits[id]
@@ -48,7 +53,7 @@ func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID
 	return &cp, nil
 }
 
-func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string) (*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, fruit := range f.fruits {
@@ -59,7 +64,7 @@ func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string) (*
 	return nil, ports.ErrDevilFruitNotFound
 }
 
-func (f *fakeDevilFruitRepository) GetAll(_ context.Context) ([]*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	all := make([]*powers.DevilFruit, 0, len(f.fruits))
@@ -69,8 +74,18 @@ func (f *fakeDevilFruitRepository) GetAll(_ context.Context) ([]*powers.DevilFru
 	return all, nil
 }
 
-func (f *fakeDevilFruitRepository) Filter(_ context.Context, _ ports.DevilFruitFilters) ([]*powers.DevilFruit, error) {
-	return f.GetAll(context.Background())
+func (f *fakeDevilFruitRepository) Filter(_ context.Context, _ ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
+	return f.GetAll(context.Background(), locale)
+}
+
+func (f *fakeDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.translations[id]
+	if !ok {
+		return nil, ports.ErrDevilFruitNotFound
+	}
+	return t, nil
 }
 
 func (f *fakeDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -114,7 +129,8 @@ func newTestDevilFruit(t *testing.T, repo *fakeDevilFruitRepository, idGen *fake
 	if err != nil {
 		t.Fatalf("building devil fruit: %v", err)
 	}
-	if err := repo.Save(context.Background(), fruit); err != nil {
+	translations := ports.PowerTranslations{enums.EnGB: {Description: name + " description", Skills: []string{"skill"}}}
+	if err := repo.Save(context.Background(), fruit, translations); err != nil {
 		t.Fatalf("saving devil fruit: %v", err)
 	}
 	return fruit
@@ -132,7 +148,7 @@ func TestCreateDevilFruit_RejectsInvalidFruitType(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	_, err := svc.CreateDevilFruit(context.Background(), services.DevilFruitInput{
-		Name: "Bad Fruit", Description: "description", Rarity: enums.Rare, Skills: &[]string{"skill"},
+		Name: "Bad Fruit", Translations: ports.PowerTranslations{enums.EnGB: {Description: "description", Skills: []string{"skill"}}}, Rarity: enums.Rare,
 		FruitType: enums.FruitType(99),
 	})
 	if !errors.Is(err, enums.ErrInvalidFruitType) {
@@ -147,7 +163,7 @@ func TestCreateDevilFruit_ListGetFilterDelete(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	created, err := svc.CreateDevilFruit(context.Background(), services.DevilFruitInput{
-		Name: "Gomu Gomu no Mi", Description: "rubber", Rarity: enums.Legendary, Skills: &[]string{"Gear Second"},
+		Name: "Gomu Gomu no Mi", Translations: ports.PowerTranslations{enums.EnGB: {Description: "rubber", Skills: []string{"Gear Second"}}}, Rarity: enums.Legendary,
 		FruitType: enums.MythicalZoan,
 	})
 	if err != nil {
@@ -157,7 +173,7 @@ func TestCreateDevilFruit_ListGetFilterDelete(t *testing.T) {
 		t.Errorf("fruit type = %v, want MYTHICAL_ZOAN", created.FruitType())
 	}
 
-	got, err := svc.GetDevilFruit(context.Background(), created.ID())
+	got, err := svc.GetDevilFruit(context.Background(), created.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("GetDevilFruit: %v", err)
 	}
@@ -165,7 +181,7 @@ func TestCreateDevilFruit_ListGetFilterDelete(t *testing.T) {
 		t.Errorf("name = %q, want Gomu Gomu no Mi", got.Name())
 	}
 
-	all, err := svc.ListDevilFruits(context.Background())
+	all, err := svc.ListDevilFruits(context.Background(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("ListDevilFruits: %v", err)
 	}
@@ -174,7 +190,7 @@ func TestCreateDevilFruit_ListGetFilterDelete(t *testing.T) {
 	}
 
 	rarity := enums.Legendary
-	filtered, err := svc.FilterDevilFruits(context.Background(), ports.DevilFruitFilters{Rarity: &rarity})
+	filtered, err := svc.FilterDevilFruits(context.Background(), ports.DevilFruitFilters{Rarity: &rarity}, enums.EnGB)
 	if err != nil {
 		t.Fatalf("FilterDevilFruits: %v", err)
 	}
@@ -185,7 +201,7 @@ func TestCreateDevilFruit_ListGetFilterDelete(t *testing.T) {
 	if err := svc.DeleteDevilFruit(context.Background(), created.ID()); err != nil {
 		t.Fatalf("DeleteDevilFruit: %v", err)
 	}
-	if _, err := svc.GetDevilFruit(context.Background(), created.ID()); !errors.Is(err, ports.ErrDevilFruitNotFound) {
+	if _, err := svc.GetDevilFruit(context.Background(), created.ID(), enums.EnGB); !errors.Is(err, ports.ErrDevilFruitNotFound) {
 		t.Fatalf("err after delete = %v, want ErrDevilFruitNotFound", err)
 	}
 }
@@ -202,8 +218,8 @@ func TestUpdateDevilFruit_PreservesExistingPicture(t *testing.T) {
 	}
 
 	updated, err := svc.UpdateDevilFruit(context.Background(), fruit.ID(), services.DevilFruitInput{
-		Name: "Mera Mera no Mi", Description: "updated description", Rarity: enums.Epic,
-		Skills: &[]string{"skill"}, FruitType: enums.Logia,
+		Name: "Mera Mera no Mi", Translations: ports.PowerTranslations{enums.EnGB: {Description: "updated description", Skills: []string{"skill"}}}, Rarity: enums.Epic,
+		FruitType: enums.Logia,
 	})
 	if err != nil {
 		t.Fatalf("UpdateDevilFruit: %v", err)
@@ -335,7 +351,7 @@ func TestSetDevilFruitPicture_Success_MarksPendingAndEnqueues(t *testing.T) {
 		t.Errorf("unexpected job: %+v", job)
 	}
 
-	persisted, err := repo.FindByID(context.Background(), fruit.ID())
+	persisted, err := repo.FindByID(context.Background(), fruit.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -361,7 +377,7 @@ func TestSetDevilFruitPicture_QueueFull_RevertsStatus(t *testing.T) {
 		t.Fatalf("err = %v, want ErrPictureQueueFull", err)
 	}
 
-	persisted, err := repo.FindByID(context.Background(), fruit.ID())
+	persisted, err := repo.FindByID(context.Background(), fruit.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}

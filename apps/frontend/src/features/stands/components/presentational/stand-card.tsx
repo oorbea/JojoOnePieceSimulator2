@@ -1,6 +1,7 @@
 import { Pencil, Sparkles, Trash2 } from '@tamagui/lucide-icons-2'
+import { useTranslation } from 'react-i18next'
 import { Image } from 'react-native'
-import { XStack, YStack } from 'tamagui'
+import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -12,6 +13,7 @@ type Props = {
   stand: StandResponse
   onEdit: () => void
   onDelete: () => void
+  isEditBusy?: boolean
 }
 
 const STAT_LABELS: { key: keyof Pick<StandResponse, 'attackPower' | 'speed' | 'attackRange' | 'endurance' | 'precision' | 'potential'>; label: string }[] = [
@@ -23,7 +25,8 @@ const STAT_LABELS: { key: keyof Pick<StandResponse, 'attackPower' | 'speed' | 'a
   { key: 'potential', label: 'DEV' },
 ]
 
-export function StandCard({ stand, onEdit, onDelete }: Props) {
+export function StandCard({ stand, onEdit, onDelete, isEditBusy }: Props) {
+  const { t } = useTranslation()
   return (
     <WiiCard padded width={280} gap="$3">
       <YStack width="100%" height={140} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
@@ -43,12 +46,12 @@ export function StandCard({ stand, onEdit, onDelete }: Props) {
         </GlowText>
         <XStack gap="$2" flexWrap="wrap">
           <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-            <GlowText level="label">{stand.rarity}</GlowText>
+            <GlowText level="label">{t(`enums.rarity.${stand.rarity}`)}</GlowText>
           </GlassPanel>
           {stand.evolvesFrom ? (
             <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
               <GlowText level="label" numberOfLines={1}>
-                From: {stand.evolvesFrom.name}
+                {t('stands.evolvesFromBadge', { name: stand.evolvesFrom.name })}
               </GlowText>
             </GlassPanel>
           ) : null}
@@ -57,22 +60,35 @@ export function StandCard({ stand, onEdit, onDelete }: Props) {
 
       <XStack flexWrap="wrap" gap="$2">
         {STAT_LABELS.map(({ key, label }) => (
-          <YStack key={key} width={80} items="center" gap="$0.5">
+          <YStack key={key} flexBasis={72} grow={1} minW={72} items="center" gap="$0.5">
             <GlowText level="label" tone="soft" fontSize="$1">
               {label}
             </GlowText>
             <GlowText level="label" fontSize="$4">
-              {stand[key]}
+              {t(`enums.standStat.${stand[key]}`)}
             </GlowText>
           </YStack>
         ))}
       </XStack>
 
       <XStack gap="$2" justify="flex-end">
-        <GlossButton tone="blue" btnSize="sm" shape="circle" onPress={onEdit} accessibilityLabel={`Edit ${stand.name}`}>
-          <Pencil size={16} color="white" />
+        <GlossButton
+          tone="blue"
+          btnSize="sm"
+          shape="circle"
+          onPress={onEdit}
+          disabled={isEditBusy}
+          accessibilityLabel={t('stands.editA11y', { name: stand.name })}
+        >
+          {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
         </GlossButton>
-        <GlossButton tone="red" btnSize="sm" shape="circle" onPress={onDelete} accessibilityLabel={`Delete ${stand.name}`}>
+        <GlossButton
+          tone="red"
+          btnSize="sm"
+          shape="circle"
+          onPress={onDelete}
+          accessibilityLabel={t('stands.deleteA11y', { name: stand.name })}
+        >
           <Trash2 size={16} color="white" />
         </GlossButton>
       </XStack>

@@ -2,6 +2,7 @@ import type { AxiosInstance } from 'axios'
 
 import { getKnownEtag, rememberEtag } from '@/shared/api/etag'
 import { toAppError } from '@/shared/api/errors'
+import { useLanguageStore } from '@/shared/stores/language.store'
 import { getSessionToken, useSessionStore } from '@/shared/stores/session.store'
 
 export function registerInterceptors(client: AxiosInstance): void {
@@ -10,6 +11,12 @@ export function registerInterceptors(client: AxiosInstance): void {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // Tells the backend which locale to resolve Stand/DevilFruit
+    // description/skills into (see the resolveLocale middleware, apps/backend
+    // .../api/endpoints/locale.go) - every request carries it, not just reads,
+    // so admin writes and the cache layer see a consistent locale too.
+    config.headers['Accept-Language'] = useLanguageStore.getState().locale
 
     // Conditional GET: attach the last-seen ETag for this exact URL so an
     // unchanged resource comes back as a cheap 304 instead of a full body.

@@ -12,7 +12,11 @@ PWA, standalone pnpm project (own `pnpm-lock.yaml`, no root workspace — `pnpm-
 
 ## Stack
 
-TypeScript, Expo SDK 57, React Native 0.86, React Native Web, Expo Router (file routing), TanStack Query v5 + `@tanstack/query-async-storage-persister` (persisted via AsyncStorage), Zustand v5, React Hook Form + Zod, Axios, Tamagui v2.5.1 (UI kit — NativeWind dropped, one styling system only), socket.io-client (installed, unwired, no backend WS yet), Expo SecureStore (native) / localStorage (web), Expo PWA (manifest + custom SW).
+TypeScript, Expo SDK 57, React Native 0.86, React Native Web, Expo Router (file routing), TanStack Query v5 + `@tanstack/query-async-storage-persister` (persisted via AsyncStorage), Zustand v5, React Hook Form + Zod, Axios, Tamagui v2.5.1 (UI kit — NativeWind dropped, one styling system only), socket.io-client (installed, unwired, no backend WS yet), Expo SecureStore (native) / localStorage (web), Expo PWA (manifest + custom SW), i18next + react-i18next + expo-localization (2026-08-06, see [[i18n-multi-language]]).
+
+## i18n (2026-08-06)
+
+`src/shared/i18n/` (init + `locales/{en-GB,es-ES,ca-ES}.json`), `src/shared/stores/language.store.ts` (device detect → AsyncStorage → overridden by `session.user.language` once logged in, mirrors `theme.store.ts`'s shape). `src/shared/api/interceptors.ts` sends `Accept-Language` on every request. TanStack Query keys for Stand/DevilFruit branch by locale (`standKeys.all()`/`devilFruitKeys.all()`) so switching language doesn't serve the previous language's cached list; mutations invalidate the unlocalized `allLocales` prefix to drop every locale's cache at once. `copy.test.ts`'s em/en-dash guard now also scans the locale JSON catalogs, and a new `i18n-keys.test.ts` asserts all three catalogs have identical key sets. **Not done yet**: most of `src/` still has hardcoded English copy (only login/error-fallback/theme-toggle migrated so far), and the Stand/DevilFruit admin forms don't yet have a per-locale input UI for the backend's `translations` map. See [[i18n-multi-language]] for the full decision record and the follow-up list.
 
 All deps installed via CLI only, never hand-edited into `package.json` (user hard requirement). Package manager: pnpm.
 

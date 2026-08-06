@@ -1,6 +1,8 @@
 import { ChevronDown, X } from '@tamagui/lucide-icons-2'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScrollView, XStack, YStack } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
@@ -39,10 +41,13 @@ export function GlassSelect({
   options,
   value,
   onChange,
-  placeholder = 'Select…',
+  placeholder,
   searchable = false,
   clearable = false,
 }: GlassSelectProps) {
+  const { t } = useTranslation()
+  const effectivePlaceholder = placeholder ?? t('common.select')
+  const insets = useSafeAreaInsets()
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -74,7 +79,7 @@ export function GlassSelect({
         items="center"
         onPress={openPicker}
         cursor="pointer"
-        {...a11yProps(selected ? `${label}: ${selected.label}` : `${label}: ${placeholder}`, 'button')}
+        {...a11yProps(selected ? `${label}: ${selected.label}` : `${label}: ${effectivePlaceholder}`, 'button')}
       >
         <InsetRing rounded="$card" />
         <XStack
@@ -89,7 +94,7 @@ export function GlassSelect({
           justify="space-between"
         >
           <GlowText level="label" color={selected ? '$panelText' : '$panelTextSoft'} numberOfLines={1}>
-            {selected ? selected.label : placeholder}
+            {selected ? selected.label : effectivePlaceholder}
           </GlowText>
           <XStack items="center" gap="$2">
             {clearable && selected ? (
@@ -99,7 +104,7 @@ export function GlassSelect({
                   e.stopPropagation?.()
                   choose(null)
                 }}
-                {...a11yProps(`Clear ${label}`, 'button')}
+                {...a11yProps(t('common.clearLabel', { label }), 'button')}
               >
                 <X size={16} color="$panelTextSoft" />
               </XStack>
@@ -126,6 +131,8 @@ export function GlassSelect({
           items="center"
           justify="center"
           p="$4"
+          pt={insets.top + 16}
+          pb={insets.bottom + 16}
           bg="rgba(10,12,20,0.45)"
           onPress={() => setIsOpen(false)}
           {...a11yProps(label, 'none')}
@@ -148,10 +155,10 @@ export function GlassSelect({
 
             {searchable ? (
               <GlassField
-                label="Search"
+                label={t('common.search')}
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Type to filter…"
+                placeholder={t('common.typeToFilter')}
                 autoFocus
               />
             ) : null}
@@ -165,10 +172,10 @@ export function GlassSelect({
                     bg={value === null ? '$glassFillStrong' : undefined}
                     onPress={() => choose(null)}
                     cursor="pointer"
-                    {...a11yProps('None', 'button')}
+                    {...a11yProps(t('common.none'), 'button')}
                   >
                     <GlowText level="label" tone="soft">
-                      None
+                      {t('common.none')}
                     </GlowText>
                   </YStack>
                 ) : null}
@@ -187,7 +194,7 @@ export function GlassSelect({
                 ))}
                 {searchable && filtered.length === 0 ? (
                   <GlowText level="label" tone="soft" align="center">
-                    No matches
+                    {t('common.noMatches')}
                   </GlowText>
                 ) : null}
               </YStack>

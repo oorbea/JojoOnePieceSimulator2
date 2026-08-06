@@ -19,13 +19,22 @@ type StandFilters struct {
 }
 
 type IStandRepository interface {
-	Save(ctx context.Context, stand *powers.Stand) error
-	FindByID(ctx context.Context, id powers.PowerID) (*powers.Stand, error)
-	FindByName(ctx context.Context, name string) (*powers.Stand, error)
-	GetAll(ctx context.Context) ([]*powers.Stand, error)
-	Filter(ctx context.Context, filters StandFilters) ([]*powers.Stand, error)
+	// Save upserts the given stand's powers/stands rows, then replaces its
+	// power_translations rows with translations (en-GB mandatory, es-ES/ca-ES
+	// optional) - any locale missing from translations is deleted.
+	Save(ctx context.Context, stand *powers.Stand, translations PowerTranslations) error
+	// FindByID/FindByName/GetAll/Filter resolve description/skills for
+	// locale, falling back through enums.FallbackChain(locale) down to
+	// en-GB.
+	FindByID(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.Stand, error)
+	FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.Stand, error)
+	GetAll(ctx context.Context, locale enums.Locale) ([]*powers.Stand, error)
+	Filter(ctx context.Context, filters StandFilters, locale enums.Locale) ([]*powers.Stand, error)
 	Delete(ctx context.Context, id powers.PowerID) error
 	// UpdatePicture updates only a stand's picture renditions and pipeline
 	// status. A nil main or thumb leaves that column untouched.
 	UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error
+	// Translations returns every locale's content for id, for admin edit
+	// forms that need all locales at once instead of one resolved locale.
+	Translations(ctx context.Context, id powers.PowerID) (PowerTranslations, error)
 }

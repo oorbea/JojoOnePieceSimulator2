@@ -53,7 +53,7 @@ func (q *Queries) GetUserAvatarKeys(ctx context.Context, id pgtype.UUID) (GetUse
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE email = $1
@@ -67,6 +67,7 @@ type GetUserByEmailRow struct {
 	CompleteName   string
 	GooglePicture  string
 	Role           string
+	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
 	AvatarStatus   string
@@ -83,6 +84,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.CompleteName,
 		&i.GooglePicture,
 		&i.Role,
+		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
 		&i.AvatarStatus,
@@ -91,7 +93,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE google_sub = $1
@@ -105,6 +107,7 @@ type GetUserByGoogleSubRow struct {
 	CompleteName   string
 	GooglePicture  string
 	Role           string
+	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
 	AvatarStatus   string
@@ -121,6 +124,7 @@ func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (Get
 		&i.CompleteName,
 		&i.GooglePicture,
 		&i.Role,
+		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
 		&i.AvatarStatus,
@@ -129,7 +133,7 @@ func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (Get
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE id = $1
@@ -143,6 +147,7 @@ type GetUserByIDRow struct {
 	CompleteName   string
 	GooglePicture  string
 	Role           string
+	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
 	AvatarStatus   string
@@ -159,6 +164,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.CompleteName,
 		&i.GooglePicture,
 		&i.Role,
+		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
 		&i.AvatarStatus,
@@ -167,7 +173,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE username = $1
@@ -181,6 +187,7 @@ type GetUserByUsernameRow struct {
 	CompleteName   string
 	GooglePicture  string
 	Role           string
+	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
 	AvatarStatus   string
@@ -197,6 +204,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.CompleteName,
 		&i.GooglePicture,
 		&i.Role,
+		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
 		&i.AvatarStatus,
@@ -205,7 +213,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 ORDER BY created_at, id
@@ -225,6 +233,7 @@ type ListUsersRow struct {
 	CompleteName   string
 	GooglePicture  string
 	Role           string
+	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
 	AvatarStatus   string
@@ -236,7 +245,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListUsersRow
+	items := []ListUsersRow{}
 	for rows.Next() {
 		var i ListUsersRow
 		if err := rows.Scan(
@@ -247,6 +256,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 			&i.CompleteName,
 			&i.GooglePicture,
 			&i.Role,
+			&i.Language,
 			&i.AvatarKey,
 			&i.AvatarThumbKey,
 			&i.AvatarStatus,
@@ -277,6 +287,11 @@ type UpdateUserAvatarParams struct {
 	ID             pgtype.UUID
 }
 
+// Updates only a User's avatar renditions and pipeline status, without
+// touching username/email/role - used by PATCH /users/me/picture (status ->
+// PENDING), by the background compression worker (status -> READY/FAILED),
+// and by DELETE /users/me/picture (key/thumb -> "", status -> NONE).
+// avatar_key/avatar_thumb_key are left untouched when NULL is passed.
 func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error {
 	_, err := q.db.Exec(ctx, updateUserAvatar,
 		arg.AvatarKey,
@@ -284,6 +299,23 @@ func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarPara
 		arg.AvatarStatus,
 		arg.ID,
 	)
+	return err
+}
+
+const updateUserLanguage = `-- name: UpdateUserLanguage :exec
+UPDATE users
+SET language   = $1,
+    updated_at = now()
+WHERE id = $2
+`
+
+type UpdateUserLanguageParams struct {
+	Language string
+	ID       pgtype.UUID
+}
+
+func (q *Queries) UpdateUserLanguage(ctx context.Context, arg UpdateUserLanguageParams) error {
+	_, err := q.db.Exec(ctx, updateUserLanguage, arg.Language, arg.ID)
 	return err
 }
 

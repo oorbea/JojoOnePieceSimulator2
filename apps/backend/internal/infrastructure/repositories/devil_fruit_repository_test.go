@@ -51,7 +51,7 @@ func newTestDevilFruit(t *testing.T, name string, fruitType enums.FruitType) *po
 // as saveStand.
 func saveDevilFruit(t *testing.T, repo *repositories.DevilFruitRepository, ctx context.Context, fruit *powers.DevilFruit) {
 	t.Helper()
-	if err := repo.Save(ctx, fruit); err != nil {
+	if err := repo.Save(ctx, fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 	t.Cleanup(func() {
@@ -69,7 +69,7 @@ func TestDevilFruitRepository_SaveAndFindByName(t *testing.T) {
 	fruit := newTestDevilFruit(t, name, enums.MythicalZoan)
 	saveDevilFruit(t, repo, ctx, fruit)
 
-	got, err := repo.FindByName(ctx, name)
+	got, err := repo.FindByName(ctx, name, enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByName: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestDevilFruitRepository_SaveIsIdempotentByName(t *testing.T) {
 	name := uniqueName(t, "Mera Mera no Mi")
 	fruit := newTestDevilFruit(t, name, enums.Logia)
 
-	if err := repo.Save(ctx, fruit); err != nil {
+	if err := repo.Save(ctx, fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}}); err != nil {
 		t.Fatalf("Save (1st): %v", err)
 	}
 	t.Cleanup(func() {
@@ -99,11 +99,11 @@ func TestDevilFruitRepository_SaveIsIdempotentByName(t *testing.T) {
 			t.Errorf("cleanup Delete(%s): %v", fruit.Name(), err)
 		}
 	})
-	if err := repo.Save(ctx, fruit); err != nil {
+	if err := repo.Save(ctx, fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}}); err != nil {
 		t.Fatalf("Save (2nd): %v", err)
 	}
 
-	all, err := repo.GetAll(ctx)
+	all, err := repo.GetAll(ctx, enums.EnGB)
 	if err != nil {
 		t.Fatalf("GetAll: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestDevilFruitRepository_FindByName_NotFound(t *testing.T) {
 	repo := newTestDevilFruitRepo(t)
 	ctx := context.Background()
 
-	_, err := repo.FindByName(ctx, uniqueName(t, "Nonexistent Fruit"))
+	_, err := repo.FindByName(ctx, uniqueName(t, "Nonexistent Fruit"), enums.EnGB)
 	if !errors.Is(err, ports.ErrDevilFruitNotFound) {
 		t.Errorf("err = %v, want ports.ErrDevilFruitNotFound", err)
 	}
@@ -137,7 +137,7 @@ func TestDevilFruitRepository_Filter(t *testing.T) {
 	saveDevilFruit(t, repo, ctx, fruit)
 
 	rarity := enums.Rare
-	results, err := repo.Filter(ctx, ports.DevilFruitFilters{Rarity: &rarity})
+	results, err := repo.Filter(ctx, ports.DevilFruitFilters{Rarity: &rarity}, enums.EnGB)
 	if err != nil {
 		t.Fatalf("Filter: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestDevilFruitRepository_Filter(t *testing.T) {
 	}
 
 	fruitType := enums.Logia
-	results, err = repo.Filter(ctx, ports.DevilFruitFilters{FruitType: &fruitType})
+	results, err = repo.Filter(ctx, ports.DevilFruitFilters{FruitType: &fruitType}, enums.EnGB)
 	if err != nil {
 		t.Fatalf("Filter: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestDevilFruitRepository_FindByID(t *testing.T) {
 	fruit := newTestDevilFruit(t, name, enums.Paramecia)
 	saveDevilFruit(t, repo, ctx, fruit)
 
-	got, err := repo.FindByID(ctx, fruit.ID())
+	got, err := repo.FindByID(ctx, fruit.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestDevilFruitRepository_FindByID_NotFound(t *testing.T) {
 	repo := newTestDevilFruitRepo(t)
 	ctx := context.Background()
 
-	_, err := repo.FindByID(ctx, testIDGen.NewID())
+	_, err := repo.FindByID(ctx, testIDGen.NewID(), enums.EnGB)
 	if !errors.Is(err, ports.ErrDevilFruitNotFound) {
 		t.Errorf("err = %v, want ports.ErrDevilFruitNotFound", err)
 	}
@@ -199,14 +199,14 @@ func TestDevilFruitRepository_Delete(t *testing.T) {
 
 	name := uniqueName(t, "Yami Yami no Mi")
 	fruit := newTestDevilFruit(t, name, enums.Logia)
-	if err := repo.Save(ctx, fruit); err != nil {
+	if err := repo.Save(ctx, fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
 	if err := repo.Delete(ctx, fruit.ID()); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
-	if _, err := repo.FindByID(ctx, fruit.ID()); !errors.Is(err, ports.ErrDevilFruitNotFound) {
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.EnGB); !errors.Is(err, ports.ErrDevilFruitNotFound) {
 		t.Errorf("FindByID after delete: err = %v, want ports.ErrDevilFruitNotFound", err)
 	}
 }
@@ -241,7 +241,7 @@ func TestDeleteStandByID_DoesNotDeleteDevilFruit(t *testing.T) {
 	}
 
 	// The fruit itself must still be there.
-	if _, err := fruitRepo.FindByID(ctx, fruit.ID()); err != nil {
+	if _, err := fruitRepo.FindByID(ctx, fruit.ID(), enums.EnGB); err != nil {
 		t.Fatalf("FindByID(fruit) after cross-kind delete attempt: %v", err)
 	}
 }
@@ -261,7 +261,7 @@ func TestDeleteDevilFruitByID_DoesNotDeleteStand(t *testing.T) {
 		t.Fatalf("fruitRepo.Delete(standID) err = %v, want ports.ErrDevilFruitNotFound", err)
 	}
 
-	if _, err := standRepo.FindByID(ctx, stand.ID()); err != nil {
+	if _, err := standRepo.FindByID(ctx, stand.ID(), enums.EnGB); err != nil {
 		t.Fatalf("FindByID(stand) after cross-kind delete attempt: %v", err)
 	}
 }

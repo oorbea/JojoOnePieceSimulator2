@@ -29,7 +29,7 @@ describe('StandCard', () => {
     await renderWithProviders(<StandCard stand={baseStand()} onEdit={jest.fn()} onDelete={jest.fn()} />)
 
     expect(screen.getByText('Star Platinum')).toBeTruthy()
-    expect(screen.getByText('LEGENDARY')).toBeTruthy()
+    expect(screen.getByText('Legendary')).toBeTruthy()
   })
 
   it('shows the evolvesFrom badge when present', async () => {

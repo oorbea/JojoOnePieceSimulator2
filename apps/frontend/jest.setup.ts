@@ -6,6 +6,18 @@
 // matchers (toBeVisible, toHaveTextContent, ...) on import — no separate
 // jest-native setup import needed.
 
+// @react-native-async-storage/async-storage has no native module in either
+// jest-expo preset (unlike most Expo-owned modules, this is a community
+// package with no built-in test mock) - without this, anything importing it
+// transitively (theme.store.ts, language.store.ts, and now interceptors.ts
+// via language.store.ts for the Accept-Language header) throws
+// "NativeModule: AsyncStorage is null" the moment the module loads, in both
+// the jsdom and native projects. The package ships this exact in-memory mock
+// for tests.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+)
+
 // react-native-safe-area-context: fixed, controllable insets. A real device
 // would give the top ChannelBar/bottom dock clearance math (see
 // src/shared/lib/layout.ts) real safe-area values; tests use zero insets so
@@ -104,4 +116,14 @@ jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn().mockResolvedValue(null),
   setItemAsync: jest.fn().mockResolvedValue(undefined),
   deleteItemAsync: jest.fn().mockResolvedValue(undefined),
+}))
+
+// expo-localization pulls in expo-modules-core's native Platform.select
+// bridge, which only exists under jest-expo's native preset - the `logic`
+// project (jest-expo/web, jsdom) has no native module registry at all, so
+// anything importing shared/i18n (directly or via power-translations.ts /
+// language.store.ts) throws "Cannot read properties of undefined (reading
+// 'select')" the moment the module loads, in both projects alike.
+jest.mock('expo-localization', () => ({
+  getLocales: () => [{ languageTag: 'en-GB', languageCode: 'en' }],
 }))

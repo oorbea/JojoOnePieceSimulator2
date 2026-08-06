@@ -15,6 +15,8 @@ type IUserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*user.User, error)
 	// UpdateUsername changes only id's username.
 	UpdateUsername(ctx context.Context, id user.UserID, username string) error
+	// UpdateLanguage changes only id's preferred locale.
+	UpdateLanguage(ctx context.Context, id user.UserID, language enums.Locale) error
 	// UpdateAvatar updates only id's avatar renditions and pipeline status. A
 	// nil main or thumb leaves that column untouched, mirroring
 	// IStandRepository.UpdatePicture.

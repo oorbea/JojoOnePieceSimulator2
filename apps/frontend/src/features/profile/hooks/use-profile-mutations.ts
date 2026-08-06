@@ -1,14 +1,17 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 import {
   deleteAccount,
   deleteAvatar,
+  updateLanguage,
   updateUsername,
   uploadAvatar,
   type PickedAvatar,
 } from '@/features/profile/api/profile.api'
 import { profileKeys } from '@/features/profile/api/profile.keys'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
+import type { Locale } from '@/shared/lib/zod'
 import { showSuccessToast } from '@/shared/lib/toast'
 import { useSessionStore } from '@/shared/stores/session.store'
 
@@ -24,12 +27,18 @@ function useSyncSessionOnSuccess() {
     if (!session) return
     void setSession({
       ...session,
-      user: { ...session.user, username: user.username, picture: user.avatar || null },
+      user: {
+        ...session.user,
+        username: user.username,
+        picture: user.avatar || null,
+        language: user.language,
+      },
     })
   }
 }
 
 export function useUpdateUsername() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const syncSession = useSyncSessionOnSuccess()
 
@@ -38,12 +47,30 @@ export function useUpdateUsername() {
     onSuccess: (user) => {
       queryClient.setQueryData(profileKeys.me, user)
       syncSession(user)
-      showSuccessToast('Username updated')
+      showSuccessToast(t('toasts.usernameUpdated'))
+    },
+  })
+}
+
+export function useUpdateLanguage() {
+  const queryClient = useQueryClient()
+  const syncSession = useSyncSessionOnSuccess()
+
+  return useMutation({
+    mutationFn: ({ username, language }: { username: string; language: Locale }) =>
+      updateLanguage(username, language),
+    onSuccess: (user) => {
+      queryClient.setQueryData(profileKeys.me, user)
+      syncSession(user)
+      // Not shown as a toast on purpose - the visible language switch across
+      // the whole UI (see language.store.ts, driven by session.user.language
+      // via app/_layout.tsx) is already all the feedback this needs.
     },
   })
 }
 
 export function useUploadAvatar() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const syncSession = useSyncSessionOnSuccess()
 
@@ -52,12 +79,13 @@ export function useUploadAvatar() {
     onSuccess: (user) => {
       queryClient.setQueryData(profileKeys.me, user)
       syncSession(user)
-      showSuccessToast('Uploading your picture. This takes a moment.')
+      showSuccessToast(t('toasts.avatarUploading'))
     },
   })
 }
 
 export function useDeleteAvatar() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const syncSession = useSyncSessionOnSuccess()
 
@@ -66,12 +94,13 @@ export function useDeleteAvatar() {
     onSuccess: (user) => {
       queryClient.setQueryData(profileKeys.me, user)
       syncSession(user)
-      showSuccessToast('Avatar removed')
+      showSuccessToast(t('toasts.avatarRemoved'))
     },
   })
 }
 
 export function useDeleteAccount() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const clearSession = useSessionStore((state) => state.clearSession)
 
@@ -80,7 +109,7 @@ export function useDeleteAccount() {
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: profileKeys.me })
       await clearSession()
-      showSuccessToast('Account deleted')
+      showSuccessToast(t('toasts.accountDeleted'))
     },
   })
 }

@@ -1,5 +1,8 @@
 import { Camera, Sparkles } from '@tamagui/lucide-icons-2'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Image, Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Controller, type Control, type FieldErrors } from 'react-hook-form'
 import { ScrollView, Spinner, XStack, YStack } from 'tamagui'
 
@@ -8,22 +11,21 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlassSelect, type GlassSelectOption } from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { SkillsField } from '@/shared/components/presentational/skills-field'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import { raritySchema, standStatSchema } from '@/shared/lib/zod'
+import { DEFAULT_LOCALE } from '@/shared/i18n'
+import { raritySchema, standStatSchema, type Locale } from '@/shared/lib/zod'
 import type { StandFormValues } from '@/features/stands/types/stands.types'
 
-const RARITY_OPTIONS: GlassSelectOption[] = raritySchema.options.map((v) => ({ value: v, label: v }))
-const STAND_STAT_OPTIONS: GlassSelectOption[] = standStatSchema.options.map((v) => ({ value: v, label: v }))
-
-const STAT_FIELDS: { name: keyof StandFormValues; label: string }[] = [
-  { name: 'attackPower', label: 'Attack Power' },
-  { name: 'speed', label: 'Speed' },
-  { name: 'attackRange', label: 'Range' },
-  { name: 'endurance', label: 'Endurance' },
-  { name: 'precision', label: 'Precision' },
-  { name: 'potential', label: 'Potential' },
+const STAT_FIELD_NAMES: (keyof StandFormValues)[] = [
+  'attackPower',
+  'speed',
+  'attackRange',
+  'endurance',
+  'precision',
+  'potential',
 ]
 
 type Props = {
@@ -38,6 +40,9 @@ type Props = {
   pictureUri: string | null
   onPickPicture: () => void
   isPictureBusy: boolean
+  activeLocale: Locale
+  onLocaleChange: (locale: Locale) => void
+  erroredLocales: Locale[]
 }
 
 // Create/edit Stand form, same full-window Modal + centered glass card
@@ -56,10 +61,43 @@ export function StandFormModal({
   pictureUri,
   onPickPicture,
   isPictureBusy,
+  activeLocale,
+  onLocaleChange,
+  erroredLocales,
 }: Props) {
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
+
+  // Constants at module scope wouldn't react to changeLanguage() - these
+  // are recomputed whenever the active language changes instead.
+  const RARITY_OPTIONS: GlassSelectOption[] = useMemo(
+    () => raritySchema.options.map((v) => ({ value: v, label: t(`enums.rarity.${v}`) })),
+    [t]
+  )
+  const STAND_STAT_OPTIONS: GlassSelectOption[] = useMemo(
+    () => standStatSchema.options.map((v) => ({ value: v, label: t(`enums.standStat.${v}`) })),
+    [t]
+  )
+  const STAT_FIELDS = useMemo(
+    () =>
+      STAT_FIELD_NAMES.map((name) => ({
+        name,
+        label: t(`stands.stats.${name}`),
+      })),
+    [t]
+  )
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
-      <YStack flex={1} items="center" justify="center" p="$4" bg="rgba(10,12,20,0.45)">
+      <YStack
+        flex={1}
+        items="center"
+        justify="center"
+        p="$4"
+        pt={insets.top + 16}
+        pb={insets.bottom + 16}
+        bg="rgba(10,12,20,0.45)"
+      >
         <GlassPanel
           tone="strong"
           radiusSize="panel"
@@ -71,10 +109,10 @@ export function StandFormModal({
           gap="$4"
         >
           <GlowText level="heading" align="center">
-            {mode === 'create' ? 'New Stand' : 'Edit Stand'}
+            {mode === 'create' ? t('stands.newStand') : t('stands.editTitle')}
           </GlowText>
 
-          <ScrollView keyboardShouldPersistTaps="handled">
+          <ScrollView flex={1} minH={0} keyboardShouldPersistTaps="handled">
             <YStack gap="$4" pb="$2">
               <YStack items="center" gap="$2">
                 <YStack
@@ -86,7 +124,7 @@ export function StandFormModal({
                   bg="$plasticEdge"
                   onPress={onPickPicture}
                   cursor="pointer"
-                  {...a11yProps('Change Stand picture', 'button', { disabled: isPictureBusy })}
+                  {...a11yProps(t('stands.changePicture'), 'button', { disabled: isPictureBusy })}
                 >
                   <InsetRing rounded="$card" />
                   {pictureUri ? (
@@ -133,26 +171,57 @@ export function StandFormModal({
                 name="name"
                 render={({ field }) => (
                   <GlassField
-                    label="Name"
+                    label={t('stands.name')}
                     value={field.value}
                     onChangeText={field.onChange}
-                    error={errors.name?.message}
+                    error={errors.name?.message && t(errors.name.message)}
+                  />
+                )}
+              />
+
+              <LocaleTabs
+                value={activeLocale}
+                onChange={onLocaleChange}
+                requiredLocale={DEFAULT_LOCALE}
+                localesWithErrors={erroredLocales}
+                requiredLabel={t('locale.required')}
+                errorLabel={t('locale.hasError')}
+              />
+
+              <Controller
+                key={`translations.${activeLocale}.description`}
+                control={control}
+                name={`translations.${activeLocale}.description`}
+                render={({ field }) => (
+                  <GlassField
+                    label={t('stands.description')}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={
+                      errors.translations?.[activeLocale]?.description?.message &&
+                      t(errors.translations[activeLocale].description.message)
+                    }
+                    multiline
+                    numberOfLines={3}
+                    height={90}
                   />
                 )}
               />
 
               <Controller
+                key={`translations.${activeLocale}.skills`}
                 control={control}
-                name="description"
+                name={`translations.${activeLocale}.skills`}
                 render={({ field }) => (
-                  <GlassField
-                    label="Description"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.description?.message}
-                    multiline
-                    numberOfLines={3}
-                    height={90}
+                  <SkillsField
+                    label={t('stands.skills')}
+                    skills={field.value}
+                    onAdd={(skill) => field.onChange([...field.value, skill])}
+                    onRemove={(index) => field.onChange(field.value.filter((_, i) => i !== index))}
+                    error={
+                      errors.translations?.[activeLocale]?.skills?.message &&
+                      t(errors.translations[activeLocale].skills.message)
+                    }
                   />
                 )}
               />
@@ -162,25 +231,11 @@ export function StandFormModal({
                 name="rarity"
                 render={({ field }) => (
                   <GlassSelect
-                    label="Rarity"
+                    label={t('stands.rarity')}
                     options={RARITY_OPTIONS}
                     value={field.value}
                     onChange={(v) => field.onChange(v)}
                     error={errors.rarity?.message}
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="skills"
-                render={({ field }) => (
-                  <SkillsField
-                    label="Skills"
-                    skills={field.value}
-                    onAdd={(skill) => field.onChange([...field.value, skill])}
-                    onRemove={(index) => field.onChange(field.value.filter((_, i) => i !== index))}
-                    error={errors.skills?.message}
                   />
                 )}
               />
@@ -209,8 +264,8 @@ export function StandFormModal({
                 name="evolvesFromId"
                 render={({ field }) => (
                   <GlassSelect
-                    label="Evolves From"
-                    placeholder="Doesn't evolve from another Stand"
+                    label={t('stands.evolvesFrom')}
+                    placeholder={t('stands.evolvesFromPlaceholder')}
                     options={evolvesFromOptions}
                     value={field.value}
                     onChange={(v) => field.onChange(v)}
@@ -224,13 +279,19 @@ export function StandFormModal({
 
           <XStack gap="$2">
             <YStack flex={1}>
-              <GlossButton tone="glass" btnSize="md" disabled={isSaving} onPress={onCancel} accessibilityLabel="Cancel">
-                Cancel
+              <GlossButton tone="glass" btnSize="md" disabled={isSaving} onPress={onCancel} accessibilityLabel={t('common.cancel')}>
+                {t('common.cancel')}
               </GlossButton>
             </YStack>
             <YStack flex={1}>
-              <GlossButton tone="blue" btnSize="md" disabled={isSaving} onPress={onSubmit} accessibilityLabel="Save Stand">
-                {isSaving ? 'Saving…' : 'Save'}
+              <GlossButton
+                tone="blue"
+                btnSize="md"
+                disabled={isSaving}
+                onPress={onSubmit}
+                accessibilityLabel={t('stands.saveA11y')}
+              >
+                {isSaving ? t('common.saving') : t('common.save')}
               </GlossButton>
             </YStack>
           </XStack>

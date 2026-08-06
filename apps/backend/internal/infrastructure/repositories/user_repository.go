@@ -104,6 +104,18 @@ func (r *UserRepository) UpdateUsername(ctx context.Context, id user.UserID, use
 	return nil
 }
 
+// UpdateLanguage changes only id's preferred locale.
+func (r *UserRepository) UpdateLanguage(ctx context.Context, id user.UserID, language enums.Locale) error {
+	err := r.queries.UpdateUserLanguage(ctx, db.UpdateUserLanguageParams{
+		Language: language.String(),
+		ID:       pgtype.UUID{Bytes: id, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("updating language for user %s: %w", id, err)
+	}
+	return nil
+}
+
 // UpdateAvatar updates only id's avatar renditions and pipeline status.
 func (r *UserRepository) UpdateAvatar(ctx context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
 	err := r.queries.UpdateUserAvatar(ctx, db.UpdateUserAvatarParams{

@@ -1,0 +1,221 @@
+{
+  "common": {
+    "loading": "Cargando",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "delete": "Eliminar",
+    "tryAgain": "Inténtalo de nuevo",
+    "somethingWentWrong": "Algo ha ido mal",
+    "working": "Procesando…",
+    "select": "Seleccionar…",
+    "none": "Ninguno",
+    "search": "Buscar",
+    "typeToFilter": "Escribe para filtrar…",
+    "noMatches": "Sin resultados",
+    "clearLabel": "Borrar {{label}}"
+  },
+  "auth": {
+    "appName": "JoJo x One Piece Simulator",
+    "signInPrompt": "Continúa con tu cuenta de Google para elegir un canal.",
+    "signingIn": "Iniciando sesión…",
+    "continueWithGoogle": "Continuar con Google",
+    "googleSignInError": "Algo ha ido mal al iniciar sesión con Google. Inténtalo de nuevo.",
+    "googleNoIdToken": "Google no ha devuelto un ID token"
+  },
+  "errorFallback": {
+    "title": "Algo se ha roto.",
+    "fallbackMessage": "Inténtalo de nuevo, o vuelve en un rato.",
+    "retry": "Reintentar"
+  },
+  "theme": {
+    "system": "Seguir el tema del sistema",
+    "light": "Tema claro",
+    "dark": "Tema oscuro"
+  },
+  "nav": {
+    "home": "Inicio",
+    "profile": "Perfil",
+    "admin": "Admin",
+    "logOut": "Cerrar sesión"
+  },
+  "home": {
+    "pickChannel": "Elige un canal",
+    "channels": {
+      "profile": "Perfil",
+      "stands": "Stands",
+      "devilFruits": "Frutas del Diablo",
+      "powers": "Poderes"
+    }
+  },
+  "admin": {
+    "title": "Panel de administración",
+    "pickChannel": "Elige un canal para gestionar",
+    "stands": "Stands",
+    "devilFruits": "Frutas del Diablo"
+  },
+  "profile": {
+    "avatarProcessing": "Procesando tu nueva foto…",
+    "avatarFailed": "No hemos podido usar esa foto. Prueba con otra.",
+    "avatarTapHint": "Toca la cámara para cambiar tu foto",
+    "changePicture": "Cambiar foto de perfil",
+    "username": "Nombre de usuario",
+    "saveUsername": "Guardar nombre de usuario",
+    "language": "Idioma",
+    "languageSaving": "Idioma (guardando…)",
+    "accountDetails": "Detalles de la cuenta",
+    "fullName": "Nombre completo",
+    "fromGoogleAccount": "De tu cuenta de Google",
+    "email": "Correo electrónico",
+    "role": "Rol",
+    "setByAdmin": "Establecido por un administrador",
+    "dangerZone": "Zona de peligro",
+    "removeAvatar": "Quitar foto de perfil",
+    "deleteAccount": "Eliminar cuenta",
+    "removeAvatarConfirmTitle": "¿Quitar foto de perfil?",
+    "removeAvatarConfirmMessage": "Tu foto volverá a ser la de tu cuenta de Google.",
+    "deleteAccountConfirmTitle": "¿Eliminar cuenta?",
+    "deleteAccountConfirmMessage": "Esto elimina tu cuenta y todo su contenido de forma permanente. No se puede deshacer."
+  },
+  "stands": {
+    "title": "Stands",
+    "newStand": "Nuevo Stand",
+    "emptyTitle": "Todavía no hay Stands. Crea el primero.",
+    "editTitle": "Editar Stand",
+    "changePicture": "Cambiar foto del Stand",
+    "name": "Nombre",
+    "description": "Descripción",
+    "rarity": "Rareza",
+    "skills": "Habilidades",
+    "evolvesFrom": "Evoluciona de",
+    "evolvesFromPlaceholder": "No evoluciona de otro Stand",
+    "evolvesFromBadge": "De: {{name}}",
+    "editA11y": "Editar {{name}}",
+    "deleteA11y": "Eliminar {{name}}",
+    "saveA11y": "Guardar Stand",
+    "deleteConfirmTitle": "¿Eliminar Stand?",
+    "deleteConfirmButton": "Eliminar Stand",
+    "deleteConfirmMessage": "\"{{name}}\" se eliminará de forma permanente. No se puede deshacer.",
+    "stats": {
+      "attackPower": "Ataque",
+      "speed": "Velocidad",
+      "attackRange": "Alcance",
+      "endurance": "Resistencia",
+      "precision": "Precisión",
+      "potential": "Potencial"
+    }
+  },
+  "devilFruits": {
+    "title": "Frutas del Diablo",
+    "newDevilFruit": "Nueva Fruta del Diablo",
+    "emptyTitle": "Todavía no hay Frutas del Diablo. Crea la primera.",
+    "editTitle": "Editar Fruta del Diablo",
+    "changePicture": "Cambiar foto de la Fruta del Diablo",
+    "name": "Nombre",
+    "description": "Descripción",
+    "rarity": "Rareza",
+    "skills": "Habilidades",
+    "fruitType": "Tipo de fruta",
+    "editA11y": "Editar {{name}}",
+    "deleteA11y": "Eliminar {{name}}",
+    "saveA11y": "Guardar Fruta del Diablo",
+    "deleteConfirmTitle": "¿Eliminar Fruta del Diablo?",
+    "deleteConfirmButton": "Eliminar Fruta del Diablo",
+    "deleteConfirmMessage": "\"{{name}}\" se eliminará de forma permanente. No se puede deshacer."
+  },
+  "locale": {
+    "required": "obligatorio",
+    "hasError": "tiene un error"
+  },
+  "skillsField": {
+    "addPlaceholder": "Añade una habilidad…",
+    "addA11y": "Añadir habilidad",
+    "removeA11y": "Quitar {{skill}}"
+  },
+  "validation": {
+    "nameRequired": "El nombre es obligatorio",
+    "nameTooLong": "El nombre es demasiado largo",
+    "descriptionRequired": "La descripción es obligatoria",
+    "descriptionTooLong": "La descripción es demasiado larga",
+    "skillsRequired": "Se necesita al menos una habilidad",
+    "translationIncomplete": "Rellena la descripción y las habilidades para este idioma, o déjalo en blanco",
+    "usernameMinLength": "El nombre de usuario debe tener al menos 3 caracteres",
+    "usernameMaxLength": "El nombre de usuario debe tener como máximo 32 caracteres",
+    "usernameFormat": "Solo letras minúsculas, números y guiones bajos"
+  },
+  "toasts": {
+    "standCreated": "Stand creado",
+    "standUpdated": "Stand actualizado",
+    "standDeleted": "Stand eliminado",
+    "standPictureUploading": "Subiendo la foto. Esto tarda un momento.",
+    "devilFruitCreated": "Fruta del Diablo creada",
+    "devilFruitUpdated": "Fruta del Diablo actualizada",
+    "devilFruitDeleted": "Fruta del Diablo eliminada",
+    "devilFruitPictureUploading": "Subiendo la foto. Esto tarda un momento.",
+    "usernameUpdated": "Nombre de usuario actualizado",
+    "avatarUploading": "Subiendo tu foto. Esto tarda un momento.",
+    "avatarRemoved": "Foto de perfil eliminada",
+    "accountDeleted": "Cuenta eliminada"
+  },
+  "notFound": {
+    "title": "Esta pantalla no existe.",
+    "goHome": "Ir al inicio"
+  },
+  "enums": {
+    "rarity": {
+      "COMMON": "Común",
+      "RARE": "Rara",
+      "EPIC": "Épica",
+      "LEGENDARY": "Legendaria"
+    },
+    "standStat": {
+      "E": "E",
+      "D": "D",
+      "C": "C",
+      "B": "B",
+      "A": "A",
+      "INFINITE": "Infinito",
+      "NULL": "Ninguno"
+    },
+    "fruitType": {
+      "PARAMECIA": "Paramecia",
+      "ZOAN": "Zoan",
+      "LOGIA": "Logia",
+      "SPECIAL_PARAMECIA": "Paramecia Especial",
+      "ANCIENT_ZOAN": "Zoan Antiguo",
+      "MYTHICAL_ZOAN": "Zoan Mítico"
+    },
+    "role": {
+      "REGULAR": "Usuario",
+      "ADMIN": "Admin"
+    }
+  },
+  "errors": {
+    "STAND_NOT_FOUND": "No se ha encontrado este Stand.",
+    "USER_NOT_FOUND": "No se ha encontrado este usuario.",
+    "DEVIL_FRUIT_NOT_FOUND": "No se ha encontrado esta Fruta del Diablo.",
+    "STAND_ALREADY_EXISTS": "Ya existe un Stand con ese nombre.",
+    "USER_ALREADY_EXISTS": "Ya existe un usuario con ese correo.",
+    "DEVIL_FRUIT_ALREADY_EXISTS": "Ya existe una Fruta del Diablo con ese nombre.",
+    "LAST_ADMIN": "No puedes eliminar al último administrador.",
+    "VALIDATION_FAILED": "Revisa los campos marcados e inténtalo de nuevo.",
+    "INVALID_RARITY": "Esa rareza no es válida.",
+    "INVALID_STAND_STAT": "Esa estadística no es válida.",
+    "INVALID_FRUIT_TYPE": "Ese tipo de fruta no es válido.",
+    "INVALID_USER_ROLE": "Ese rol no es válido.",
+    "INVALID_USERNAME": "Ese nombre de usuario no es válido.",
+    "INVALID_ID": "Ese identificador no es válido.",
+    "SELF_EVOLUTION": "Un Stand no puede evolucionar de sí mismo.",
+    "PICTURE_REQUIRED": "Se necesita una foto.",
+    "UNSUPPORTED_PICTURE_TYPE": "Ese tipo de foto no está soportado.",
+    "INVALID_IMAGE": "No se ha podido procesar esa imagen.",
+    "EMAIL_NOT_VERIFIED": "Tu correo de Google no está verificado.",
+    "CONSTRAINT_VIOLATION": "Ese cambio no está permitido.",
+    "UNAUTHENTICATED": "Tienes que iniciar sesión de nuevo.",
+    "FORBIDDEN": "No tienes permiso para hacer eso.",
+    "PICTURE_TOO_LARGE": "Esa foto es demasiado grande.",
+    "RATE_LIMITED": "Demasiadas peticiones. Inténtalo de nuevo en un momento.",
+    "PICTURE_QUEUE_FULL": "El procesado de fotos está ocupado ahora mismo. Inténtalo de nuevo en un momento.",
+    "INTERNAL": "Algo ha ido mal por nuestra parte."
+  }
+}

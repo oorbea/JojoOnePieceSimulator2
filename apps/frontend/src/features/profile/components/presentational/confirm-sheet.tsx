@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next'
 import { Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -39,6 +41,9 @@ export function ConfirmSheet({
   onConfirm,
   onCancel,
 }: ConfirmSheetProps) {
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
+
   return (
     <Modal
       visible={visible}
@@ -52,6 +57,8 @@ export function ConfirmSheet({
         items="center"
         justify="center"
         p="$4"
+        pt={insets.top + 16}
+        pb={insets.bottom + 16}
         bg="rgba(10,12,20,0.45)"
         onPress={isConfirming ? undefined : onCancel}
         {...a11yProps(title, 'alert')}
@@ -80,16 +87,16 @@ export function ConfirmSheet({
               onPress={onConfirm}
               accessibilityLabel={confirmLabel}
             >
-              {isConfirming ? 'Working…' : confirmLabel}
+              {isConfirming ? t('common.working') : confirmLabel}
             </GlossButton>
             <GlossButton
               tone="glass"
               btnSize="md"
               disabled={isConfirming}
               onPress={onCancel}
-              accessibilityLabel="Cancel"
+              accessibilityLabel={t('common.cancel')}
             >
-              Cancel
+              {t('common.cancel')}
             </GlossButton>
           </YStack>
         </GlassPanel>

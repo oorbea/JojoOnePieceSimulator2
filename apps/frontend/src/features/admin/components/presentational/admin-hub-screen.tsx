@@ -1,4 +1,5 @@
 import { Apple, Sparkles } from '@tamagui/lucide-icons-2'
+import { useTranslation } from 'react-i18next'
 import { XStack } from 'tamagui'
 
 import { ChannelTile } from '@/shared/components/presentational/channel-tile'
@@ -13,18 +14,19 @@ type Props = {
 // Same Wii channel-selection recipe as HomeScreen — the admin hub is a
 // second, smaller "pick a channel" grid, one tile per manageable domain.
 export function AdminHubScreen({ onOpenStands, onOpenDevilFruits }: Props) {
+  const { t } = useTranslation()
   return (
-    <PageShell align="top" navPadding scroll maxWidth={720}>
+    <PageShell align="top" scroll maxWidth={720}>
       <GlowText level="title" align="center">
-        Admin Panel
+        {t('admin.title')}
       </GlowText>
       <GlowText level="heading" align="center">
-        Pick a channel to manage
+        {t('admin.pickChannel')}
       </GlowText>
 
       <XStack flexWrap="wrap" gap="$4" justify="center">
-        <ChannelTile label="Stands" tone="grape" icon={Sparkles} onPress={onOpenStands} />
-        <ChannelTile label="Devil Fruits" tone="red" icon={Apple} onPress={onOpenDevilFruits} />
+        <ChannelTile label={t('admin.stands')} tone="grape" icon={Sparkles} onPress={onOpenStands} />
+        <ChannelTile label={t('admin.devilFruits')} tone="red" icon={Apple} onPress={onOpenDevilFruits} />
       </XStack>
     </PageShell>
   )

@@ -17,15 +17,16 @@ import (
 // and writes the response body, logging anything that maps to a 500 so the
 // real cause isn't lost behind a generic message.
 func handleError(w http.ResponseWriter, err error) {
+	code := errorCode(err)
 	var validationErr *dto.ValidationError
 	switch {
 	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound), errors.Is(err, ports.ErrDevilFruitNotFound):
-		writeError(w, http.StatusNotFound, err.Error())
+		writeError(w, http.StatusNotFound, code, err.Error())
 	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists),
 		errors.Is(err, services.ErrLastAdmin):
-		writeError(w, http.StatusConflict, err.Error())
+		writeError(w, http.StatusConflict, code, err.Error())
 	case errors.As(err, &validationErr):
-		writeError(w, http.StatusBadRequest, "validation failed", validationErr.Errors...)
+		writeError(w, http.StatusBadRequest, code, "validation failed", validationErr.Errors...)
 	case errors.Is(err, enums.ErrInvalidRarity),
 		errors.Is(err, enums.ErrInvalidStandStat),
 		errors.Is(err, enums.ErrInvalidFruitType),
@@ -38,19 +39,19 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, ports.ErrInvalidImage),
 		errors.Is(err, ports.ErrEmailNotVerified),
 		errors.Is(err, ports.ErrConstraintViolation):
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeError(w, http.StatusBadRequest, code, err.Error())
 	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken):
-		writeError(w, http.StatusUnauthorized, "unauthenticated")
+		writeError(w, http.StatusUnauthorized, code, "unauthenticated")
 	case errors.Is(err, ports.ErrForbidden):
-		writeError(w, http.StatusForbidden, "forbidden")
+		writeError(w, http.StatusForbidden, code, "forbidden")
 	case errors.Is(err, services.ErrPictureTooLarge):
-		writeError(w, http.StatusRequestEntityTooLarge, err.Error())
+		writeError(w, http.StatusRequestEntityTooLarge, code, err.Error())
 	case errors.Is(err, ports.ErrRateLimited):
-		writeError(w, http.StatusTooManyRequests, "too many requests")
+		writeError(w, http.StatusTooManyRequests, code, "too many requests")
 	case errors.Is(err, services.ErrPictureQueueFull):
-		writeError(w, http.StatusServiceUnavailable, err.Error())
+		writeError(w, http.StatusServiceUnavailable, code, err.Error())
 	default:
 		log.Printf("internal error: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		writeError(w, http.StatusInternalServerError, code, "internal server error")
 	}
 }

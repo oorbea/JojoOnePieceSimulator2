@@ -35,6 +35,10 @@ export const WiiCard = styled(YStack, {
   name: 'WiiCard',
   position: 'relative',
   overflow: 'hidden',
+  // Cards pass a fixed `width` (e.g. 280) for their intended layout, but on
+  // a narrower viewport than that width, this keeps them from overflowing
+  // their column instead of forcing horizontal scroll.
+  maxW: '100%',
   bg: '$plasticFill',
   rounded: '$card',
   borderWidth: 1.5,

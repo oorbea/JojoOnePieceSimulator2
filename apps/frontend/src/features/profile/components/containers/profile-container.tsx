@@ -2,20 +2,24 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { useForm, useController } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 import { ProfileScreen } from '@/features/profile/components/presentational/profile-screen'
 import { useAvatarPicker } from '@/features/profile/hooks/use-avatar-picker'
 import {
   useDeleteAccount,
   useDeleteAvatar,
+  useUpdateLanguage,
   useUpdateUsername,
   useUploadAvatar,
 } from '@/features/profile/hooks/use-profile-mutations'
 import { useProfile } from '@/features/profile/hooks/use-profile'
 import { usernameFormSchema, type UsernameFormValues } from '@/features/profile/types/profile.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
+import type { Locale } from '@/shared/lib/zod'
 
 export function ProfileContainer() {
+  const { t } = useTranslation()
   const router = useRouter()
   const { data: profile, isLoading } = useProfile()
 
@@ -42,6 +46,7 @@ export function ProfileContainer() {
   }, [profile?.username, isDirty])
 
   const updateUsernameMutation = useUpdateUsername()
+  const updateLanguageMutation = useUpdateLanguage()
   const uploadAvatarMutation = useUploadAvatar()
   const deleteAvatarMutation = useDeleteAvatar()
   const deleteAccountMutation = useDeleteAccount()
@@ -60,6 +65,14 @@ export function ProfileContainer() {
       onSuccess: () => reset({ username: values.username }),
     })
   })
+
+  // Always sends profile.username (the last saved value), never the dirty
+  // form field - a language change must never carry along an unsaved
+  // username edit, since the backend's PATCH /users/me requires username on
+  // every request (see dto.UpdateProfileRequest).
+  const onChangeLanguage = (language: Locale) => {
+    updateLanguageMutation.mutate({ username: profile.username, language })
+  }
 
   const onPickAvatar = async () => {
     const asset = await pickAvatar()
@@ -86,10 +99,12 @@ export function ProfileContainer() {
       isAvatarBusy={uploadAvatarMutation.isPending || profile.avatarStatus === 'PENDING'}
       username={username}
       onUsernameChange={onUsernameChange}
-      usernameError={errors.username?.message}
+      usernameError={errors.username?.message && t(errors.username.message)}
       onSaveUsername={() => void onSaveUsername()}
       isSavingUsername={updateUsernameMutation.isPending}
       canSaveUsername={isDirty && !errors.username}
+      onChangeLanguage={onChangeLanguage}
+      isSavingLanguage={updateLanguageMutation.isPending}
       onRequestRemoveAvatar={() => setIsRemoveAvatarOpen(true)}
       onRequestDeleteAccount={() => setIsDeleteAccountOpen(true)}
       removeAvatarConfirm={{
