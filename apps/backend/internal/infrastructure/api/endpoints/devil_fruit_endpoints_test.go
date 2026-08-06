@@ -231,6 +231,11 @@ func TestGetDevilFruit_NotFound(t *testing.T) {
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
 	}
+	var body map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if body["code"] != "DEVIL_FRUIT_NOT_FOUND" {
+		t.Errorf("code = %v, want DEVIL_FRUIT_NOT_FOUND", body["code"])
+	}
 }
 
 func TestGetDevilFruit_InvalidID(t *testing.T) {
