@@ -51,7 +51,7 @@ type Props = {
 export function StandsScreen({ stands, isLoading, onCreateNew, onEdit, onDelete, form, deleteConfirm }: Props) {
   return (
     <YStack flex={1} position="relative">
-      <PageShell align="top" navPadding scroll maxWidth={960}>
+      <PageShell align="top" scroll maxWidth={960}>
         <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$3">
           <GlowText level="title">Stands</GlowText>
           <GlossButton tone="green" btnSize="md" onPress={onCreateNew} accessibilityLabel="New Stand">

@@ -69,3 +69,24 @@ describe('ChannelBar docking', () => {
     expect(host).toBeUndefined()
   })
 })
+
+// The pill used to have a fixed `height: 64` with no wrap — content that
+// didn't fit one row (long labels, a shrunk viewport) got visually clipped
+// or overlapped by its own children instead of the bar growing to fit it.
+describe('ChannelBar sizing', () => {
+  it('grows to fit its content instead of clipping it', async () => {
+    const { toJSON } = await renderWithProviders(
+      <ChannelBar testID="pill">
+        <Text>Item</Text>
+      </ChannelBar>
+    )
+
+    const nodes = flatten(toJSON() as JsonNode)
+    const pill = nodes.find((n) => n.props?.testID === 'pill')
+    const pillStyle = styleOf(pill!)
+
+    expect(pillStyle.height).toBeUndefined()
+    expect(pillStyle.minHeight).toBe(64)
+    expect(pillStyle.flexWrap).toBe('wrap')
+  })
+})
