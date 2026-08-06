@@ -143,7 +143,6 @@ export function ProfileScreen({
               error={usernameError}
               autoCapitalize="none"
               autoCorrect={false}
-              accessibilityLabel="Username"
             />
             <GlossButton
               tone="blue"

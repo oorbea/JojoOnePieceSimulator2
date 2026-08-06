@@ -26,7 +26,7 @@ export const GlassField = forwardRef<React.ElementRef<typeof Input>, GlassFieldP
           <Input
             ref={ref}
             {...rest}
-            nativeID={id}
+            id={id}
             bg="$plasticFill"
             borderWidth={1.5}
             borderColor={error ? '$strawHatRedDeep' : '$glassEdge'}
