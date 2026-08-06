@@ -12,11 +12,12 @@ import (
 
 // DevilFruitInput carries every field needed to create or update a
 // DevilFruit, so CreateDevilFruit/UpdateDevilFruit take one argument instead
-// of a long positional list.
+// of a long positional list. Translations must always include enums.EnGB -
+// callers validate this before it reaches the service (see
+// dto.DevilFruitRequest.Validate).
 type DevilFruitInput struct {
-	Skills        *[]string
 	Name          string
-	Description   string
+	Translations  ports.PowerTranslations
 	Picture       string
 	PictureThumb  string
 	Rarity        enums.PowerRarity
@@ -60,7 +61,7 @@ func (s *DevilFruitService) CreateDevilFruit(ctx context.Context, input DevilFru
 // fields and persists it, keeping its original id and its picture (set
 // separately via SetDevilFruitPicture, not through this JSON body).
 func (s *DevilFruitService) UpdateDevilFruit(ctx context.Context, id powers.PowerID, input DevilFruitInput) (*powers.DevilFruit, error) {
-	existing, err := s.repo.FindByID(ctx, id)
+	existing, err := s.repo.FindByID(ctx, id, enums.EnGB)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +72,9 @@ func (s *DevilFruitService) UpdateDevilFruit(ctx context.Context, id powers.Powe
 }
 
 func (s *DevilFruitService) saveDevilFruit(ctx context.Context, id powers.PowerID, input DevilFruitInput) (*powers.DevilFruit, error) {
-	power, err := powers.NewPower(id, input.Name, input.Description, input.Rarity, input.Skills, input.Picture)
+	primary := input.Translations[enums.EnGB]
+	skills := primary.Skills
+	power, err := powers.NewPower(id, input.Name, primary.Description, input.Rarity, &skills, input.Picture)
 	if err != nil {
 		return nil, err
 	}
@@ -82,25 +85,34 @@ func (s *DevilFruitService) saveDevilFruit(ctx context.Context, id powers.PowerI
 		return nil, err
 	}
 
-	if err := s.repo.Save(ctx, fruit); err != nil {
+	if err := s.repo.Save(ctx, fruit, input.Translations); err != nil {
 		return nil, err
 	}
 	return fruit, nil
 }
 
-// GetDevilFruit returns the devil fruit identified by id.
-func (s *DevilFruitService) GetDevilFruit(ctx context.Context, id powers.PowerID) (*powers.DevilFruit, error) {
-	return s.repo.FindByID(ctx, id)
+// GetDevilFruit returns the devil fruit identified by id, description/skills
+// resolved for locale.
+func (s *DevilFruitService) GetDevilFruit(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.DevilFruit, error) {
+	return s.repo.FindByID(ctx, id, locale)
 }
 
-// ListDevilFruits returns every devil fruit.
-func (s *DevilFruitService) ListDevilFruits(ctx context.Context) ([]*powers.DevilFruit, error) {
-	return s.repo.GetAll(ctx)
+// ListDevilFruits returns every devil fruit, description/skills resolved for
+// locale.
+func (s *DevilFruitService) ListDevilFruits(ctx context.Context, locale enums.Locale) ([]*powers.DevilFruit, error) {
+	return s.repo.GetAll(ctx, locale)
 }
 
-// FilterDevilFruits returns every devil fruit matching the given filters.
-func (s *DevilFruitService) FilterDevilFruits(ctx context.Context, filters ports.DevilFruitFilters) ([]*powers.DevilFruit, error) {
-	return s.repo.Filter(ctx, filters)
+// FilterDevilFruits returns every devil fruit matching the given filters,
+// description/skills resolved for locale.
+func (s *DevilFruitService) FilterDevilFruits(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
+	return s.repo.Filter(ctx, filters, locale)
+}
+
+// DevilFruitTranslations returns every locale's content for id, for the
+// admin edit form.
+func (s *DevilFruitService) DevilFruitTranslations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	return s.repo.Translations(ctx, id)
 }
 
 // DeleteDevilFruit removes the devil fruit identified by id.
@@ -114,7 +126,7 @@ func (s *DevilFruitService) DeleteDevilFruit(ctx context.Context, id powers.Powe
 // DevilFruit still carries the previous picture/thumbnail keys (or none, on
 // a first upload) - the worker publishes the new ones once it finishes.
 func (s *DevilFruitService) SetDevilFruitPicture(ctx context.Context, id powers.PowerID, pic ports.Picture) (*powers.DevilFruit, error) {
-	fruit, err := s.repo.FindByID(ctx, id)
+	fruit, err := s.repo.FindByID(ctx, id, enums.EnGB)
 	if err != nil {
 		return nil, err
 	}

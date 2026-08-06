@@ -52,12 +52,12 @@ func (p PicturePolicy) allows(contentType string) bool {
 
 // StandInput carries every field needed to create or update a Stand, so
 // CreateStand/UpdateStand take one argument instead of a long positional
-// list.
+// list. Translations must always include enums.EnGB - callers validate this
+// before it reaches the service (see dto.StandRequest.Validate).
 type StandInput struct {
-	Skills        *[]string
 	EvolvesFrom   *powers.PowerID
 	Name          string
-	Description   string
+	Translations  ports.PowerTranslations
 	Picture       string
 	PictureThumb  string
 	Rarity        enums.PowerRarity
@@ -103,7 +103,7 @@ func (s *StandService) CreateStand(ctx context.Context, input StandInput) (*powe
 // persists it, keeping its original id and its picture (set separately via
 // SetStandPicture, not through this JSON body).
 func (s *StandService) UpdateStand(ctx context.Context, id powers.PowerID, input StandInput) (*powers.Stand, error) {
-	existing, err := s.standRepo.FindByID(ctx, id)
+	existing, err := s.standRepo.FindByID(ctx, id, enums.EnGB)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,9 @@ func (s *StandService) UpdateStand(ctx context.Context, id powers.PowerID, input
 }
 
 func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input StandInput) (*powers.Stand, error) {
-	power, err := powers.NewPower(id, input.Name, input.Description, input.Rarity, input.Skills, input.Picture)
+	primary := input.Translations[enums.EnGB]
+	skills := primary.Skills
+	power, err := powers.NewPower(id, input.Name, primary.Description, input.Rarity, &skills, input.Picture)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +127,7 @@ func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input S
 
 	var evolvesFromStand *powers.Stand
 	if input.EvolvesFrom != nil {
-		evolvesFromStand, err = s.standRepo.FindByID(ctx, *input.EvolvesFrom)
+		evolvesFromStand, err = s.standRepo.FindByID(ctx, *input.EvolvesFrom, enums.EnGB)
 		if err != nil {
 			return nil, err
 		}
@@ -136,25 +138,33 @@ func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input S
 		return nil, err
 	}
 
-	if err := s.standRepo.Save(ctx, stand); err != nil {
+	if err := s.standRepo.Save(ctx, stand, input.Translations); err != nil {
 		return nil, err
 	}
 	return stand, nil
 }
 
-// GetStand returns the stand identified by id.
-func (s *StandService) GetStand(ctx context.Context, id powers.PowerID) (*powers.Stand, error) {
-	return s.standRepo.FindByID(ctx, id)
+// GetStand returns the stand identified by id, description/skills resolved
+// for locale.
+func (s *StandService) GetStand(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.Stand, error) {
+	return s.standRepo.FindByID(ctx, id, locale)
 }
 
-// ListStands returns every stand.
-func (s *StandService) ListStands(ctx context.Context) ([]*powers.Stand, error) {
-	return s.standRepo.GetAll(ctx)
+// ListStands returns every stand, description/skills resolved for locale.
+func (s *StandService) ListStands(ctx context.Context, locale enums.Locale) ([]*powers.Stand, error) {
+	return s.standRepo.GetAll(ctx, locale)
 }
 
-// FilterStands returns every stand matching the given filters.
-func (s *StandService) FilterStands(ctx context.Context, filters ports.StandFilters) ([]*powers.Stand, error) {
-	return s.standRepo.Filter(ctx, filters)
+// FilterStands returns every stand matching the given filters,
+// description/skills resolved for locale.
+func (s *StandService) FilterStands(ctx context.Context, filters ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
+	return s.standRepo.Filter(ctx, filters, locale)
+}
+
+// StandTranslations returns every locale's content for id, for the admin
+// edit form.
+func (s *StandService) StandTranslations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	return s.standRepo.Translations(ctx, id)
 }
 
 // DeleteStand removes the stand identified by id.
@@ -168,7 +178,7 @@ func (s *StandService) DeleteStand(ctx context.Context, id powers.PowerID) error
 // Stand still carries the previous picture/thumbnail keys (or none, on a
 // first upload) - the worker publishes the new ones once it finishes.
 func (s *StandService) SetStandPicture(ctx context.Context, id powers.PowerID, pic ports.Picture) (*powers.Stand, error) {
-	stand, err := s.standRepo.FindByID(ctx, id)
+	stand, err := s.standRepo.FindByID(ctx, id, enums.EnGB)
 	if err != nil {
 		return nil, err
 	}

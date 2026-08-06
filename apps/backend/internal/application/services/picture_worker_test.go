@@ -23,22 +23,27 @@ import (
 // test file rather than sharing them across packages.
 
 type fakeStandRepository struct {
-	mu     sync.Mutex
-	stands map[powers.PowerID]*powers.Stand
+	mu           sync.Mutex
+	stands       map[powers.PowerID]*powers.Stand
+	translations map[powers.PowerID]ports.PowerTranslations
 }
 
 func newFakeStandRepository() *fakeStandRepository {
-	return &fakeStandRepository{stands: make(map[powers.PowerID]*powers.Stand)}
+	return &fakeStandRepository{
+		stands:       make(map[powers.PowerID]*powers.Stand),
+		translations: make(map[powers.PowerID]ports.PowerTranslations),
+	}
 }
 
-func (f *fakeStandRepository) Save(_ context.Context, stand *powers.Stand) error {
+func (f *fakeStandRepository) Save(_ context.Context, stand *powers.Stand, translations ports.PowerTranslations) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.stands[stand.ID()] = stand
+	f.translations[stand.ID()] = translations
 	return nil
 }
 
-func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.Stand, error) {
+func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	stand, ok := f.stands[id]
@@ -49,7 +54,7 @@ func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*p
 	return &cp, nil
 }
 
-func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*powers.Stand, error) {
+func (f *fakeStandRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, stand := range f.stands {
@@ -60,7 +65,7 @@ func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*power
 	return nil, ports.ErrStandNotFound
 }
 
-func (f *fakeStandRepository) GetAll(_ context.Context) ([]*powers.Stand, error) {
+func (f *fakeStandRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	all := make([]*powers.Stand, 0, len(f.stands))
@@ -70,8 +75,18 @@ func (f *fakeStandRepository) GetAll(_ context.Context) ([]*powers.Stand, error)
 	return all, nil
 }
 
-func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters) ([]*powers.Stand, error) {
-	return f.GetAll(context.Background())
+func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
+	return f.GetAll(context.Background(), locale)
+}
+
+func (f *fakeStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.translations[id]
+	if !ok {
+		return nil, ports.ErrStandNotFound
+	}
+	return t, nil
 }
 
 func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -198,7 +213,8 @@ func newWorkerTestStand(t *testing.T, repo *fakeStandRepository, idGen *fakeStan
 	if err != nil {
 		t.Fatalf("building stand: %v", err)
 	}
-	if err := repo.Save(context.Background(), stand); err != nil {
+	translations := ports.PowerTranslations{enums.EnGB: {Description: "description", Skills: []string{"skill"}}}
+	if err := repo.Save(context.Background(), stand, translations); err != nil {
 		t.Fatalf("saving stand: %v", err)
 	}
 	return stand
@@ -234,7 +250,7 @@ func TestProcess_Success_PublishesKeysAndDeletesOld(t *testing.T) {
 
 	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
 
-	updated, err := repo.FindByID(context.Background(), stand.ID())
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -282,7 +298,7 @@ func TestProcess_TranscodeFailure_MarksFailedKeepsOldPicture(t *testing.T) {
 
 	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
 
-	updated, err := repo.FindByID(context.Background(), stand.ID())
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -313,7 +329,7 @@ func TestProcess_UploadThumbFailure_DeletesPartialUploadAndMarksFailed(t *testin
 
 	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
 
-	updated, err := repo.FindByID(context.Background(), stand.ID())
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -363,7 +379,7 @@ func TestShutdown_WaitsForInFlightJobs(t *testing.T) {
 		t.Fatalf("Shutdown: %v", err)
 	}
 
-	updated, err := repo.FindByID(context.Background(), stand.ID())
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -393,22 +409,27 @@ func TestEnqueue_FullQueueReturnsErrPictureQueueFull(t *testing.T) {
 // - a local copy following this file's own duplication convention - used to
 // exercise the worker's per-Kind routing.
 type fakeDevilFruitRepository struct {
-	mu     sync.Mutex
-	fruits map[powers.PowerID]*powers.DevilFruit
+	mu           sync.Mutex
+	fruits       map[powers.PowerID]*powers.DevilFruit
+	translations map[powers.PowerID]ports.PowerTranslations
 }
 
 func newFakeDevilFruitRepository() *fakeDevilFruitRepository {
-	return &fakeDevilFruitRepository{fruits: make(map[powers.PowerID]*powers.DevilFruit)}
+	return &fakeDevilFruitRepository{
+		fruits:       make(map[powers.PowerID]*powers.DevilFruit),
+		translations: make(map[powers.PowerID]ports.PowerTranslations),
+	}
 }
 
-func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit) error {
+func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit, translations ports.PowerTranslations) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.fruits[fruit.ID()] = fruit
+	f.translations[fruit.ID()] = translations
 	return nil
 }
 
-func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	fruit, ok := f.fruits[id]
@@ -419,7 +440,7 @@ func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID
 	return &cp, nil
 }
 
-func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string) (*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, fruit := range f.fruits {
@@ -430,7 +451,7 @@ func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string) (*
 	return nil, ports.ErrDevilFruitNotFound
 }
 
-func (f *fakeDevilFruitRepository) GetAll(_ context.Context) ([]*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	all := make([]*powers.DevilFruit, 0, len(f.fruits))
@@ -440,8 +461,18 @@ func (f *fakeDevilFruitRepository) GetAll(_ context.Context) ([]*powers.DevilFru
 	return all, nil
 }
 
-func (f *fakeDevilFruitRepository) Filter(_ context.Context, _ ports.DevilFruitFilters) ([]*powers.DevilFruit, error) {
-	return f.GetAll(context.Background())
+func (f *fakeDevilFruitRepository) Filter(_ context.Context, _ ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
+	return f.GetAll(context.Background(), locale)
+}
+
+func (f *fakeDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.translations[id]
+	if !ok {
+		return nil, ports.ErrDevilFruitNotFound
+	}
+	return t, nil
 }
 
 func (f *fakeDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -485,7 +516,8 @@ func newWorkerTestDevilFruit(t *testing.T, repo *fakeDevilFruitRepository, idGen
 	if err != nil {
 		t.Fatalf("building devil fruit: %v", err)
 	}
-	if err := repo.Save(context.Background(), fruit); err != nil {
+	translations := ports.PowerTranslations{enums.EnGB: {Description: "description", Skills: []string{"skill"}}}
+	if err := repo.Save(context.Background(), fruit, translations); err != nil {
 		t.Fatalf("saving devil fruit: %v", err)
 	}
 	return fruit
@@ -510,7 +542,7 @@ func TestProcess_DevilFruitKind_PublishesUnderDevilFruitsPrefix(t *testing.T) {
 
 	worker.process(ports.PictureJob{SubjectID: fruit.ID().String(), Kind: enums.DevilFruitSubject, Content: []byte("data"), ContentType: "image/png"})
 
-	updated, err := fruitRepo.FindByID(context.Background(), fruit.ID())
+	updated, err := fruitRepo.FindByID(context.Background(), fruit.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -536,7 +568,7 @@ func TestProcess_UnknownKind_TouchesNothing(t *testing.T) {
 
 	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.PictureSubjectKind(99), Content: []byte("data"), ContentType: "image/png"})
 
-	updated, err := repo.FindByID(context.Background(), stand.ID())
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}

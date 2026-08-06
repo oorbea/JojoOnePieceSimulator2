@@ -31,14 +31,14 @@ func newCountingStandRepository() *countingStandRepository {
 	return &countingStandRepository{stands: make(map[powers.PowerID]*powers.Stand), notFoundErr: ports.ErrStandNotFound}
 }
 
-func (r *countingStandRepository) Save(_ context.Context, stand *powers.Stand) error {
+func (r *countingStandRepository) Save(_ context.Context, stand *powers.Stand, _ ports.PowerTranslations) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.stands[stand.ID()] = stand
 	return nil
 }
 
-func (r *countingStandRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.Stand, error) {
+func (r *countingStandRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.Stand, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.findByIDCalls++
@@ -49,7 +49,7 @@ func (r *countingStandRepository) FindByID(_ context.Context, id powers.PowerID)
 	return s, nil
 }
 
-func (r *countingStandRepository) FindByName(_ context.Context, name string) (*powers.Stand, error) {
+func (r *countingStandRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.Stand, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.findByNameCalls++
@@ -61,7 +61,7 @@ func (r *countingStandRepository) FindByName(_ context.Context, name string) (*p
 	return nil, ports.ErrStandNotFound
 }
 
-func (r *countingStandRepository) GetAll(_ context.Context) ([]*powers.Stand, error) {
+func (r *countingStandRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.Stand, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.getAllCalls++
@@ -72,7 +72,7 @@ func (r *countingStandRepository) GetAll(_ context.Context) ([]*powers.Stand, er
 	return all, nil
 }
 
-func (r *countingStandRepository) Filter(_ context.Context, filters ports.StandFilters) ([]*powers.Stand, error) {
+func (r *countingStandRepository) Filter(_ context.Context, filters ports.StandFilters, _ enums.Locale) ([]*powers.Stand, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.filterCalls++
@@ -84,6 +84,16 @@ func (r *countingStandRepository) Filter(_ context.Context, filters ports.StandF
 		results = append(results, s)
 	}
 	return results, nil
+}
+
+func (r *countingStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s, ok := r.stands[id]
+	if !ok {
+		return nil, r.notFoundErr
+	}
+	return ports.PowerTranslations{enums.EnGB: {Description: s.Description(), Skills: s.Skills()}}, nil
 }
 
 func (r *countingStandRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -133,15 +143,15 @@ func newTestStand(t *testing.T, name string) *powers.Stand {
 func TestStandRepository_FindByID_CachesOnMiss(t *testing.T) {
 	next := newCountingStandRepository()
 	stand := newTestStand(t, "Star Platinum")
-	_ = next.Save(context.Background(), stand)
+	_ = next.Save(context.Background(), stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}})
 
 	repo := infracache.NewStandRepository(next, newFakeCache(), time.Minute, time.Second)
 	ctx := context.Background()
 
-	if _, err := repo.FindByID(ctx, stand.ID()); err != nil {
+	if _, err := repo.FindByID(ctx, stand.ID(), enums.EnGB); err != nil {
 		t.Fatalf("first FindByID: %v", err)
 	}
-	if _, err := repo.FindByID(ctx, stand.ID()); err != nil {
+	if _, err := repo.FindByID(ctx, stand.ID(), enums.EnGB); err != nil {
 		t.Fatalf("second FindByID: %v", err)
 	}
 
@@ -158,11 +168,11 @@ func TestStandRepository_FindByID_NotFoundIsCachedAsTombstone(t *testing.T) {
 	var missing powers.PowerID
 	missing[15] = 99
 
-	_, err := repo.FindByID(ctx, missing)
+	_, err := repo.FindByID(ctx, missing, enums.EnGB)
 	if !errors.Is(err, ports.ErrStandNotFound) {
 		t.Fatalf("first FindByID err = %v, want ErrStandNotFound", err)
 	}
-	_, err = repo.FindByID(ctx, missing)
+	_, err = repo.FindByID(ctx, missing, enums.EnGB)
 	if !errors.Is(err, ports.ErrStandNotFound) {
 		t.Fatalf("second FindByID err = %v, want ErrStandNotFound", err)
 	}
@@ -175,15 +185,15 @@ func TestStandRepository_FindByID_NotFoundIsCachedAsTombstone(t *testing.T) {
 func TestStandRepository_Save_InvalidatesCache(t *testing.T) {
 	next := newCountingStandRepository()
 	stand := newTestStand(t, "Silver Chariot")
-	_ = next.Save(context.Background(), stand)
+	_ = next.Save(context.Background(), stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}})
 
 	repo := infracache.NewStandRepository(next, newFakeCache(), time.Minute, time.Second)
 	ctx := context.Background()
 
-	if _, err := repo.GetAll(ctx); err != nil {
+	if _, err := repo.GetAll(ctx, enums.EnGB); err != nil {
 		t.Fatalf("first GetAll: %v", err)
 	}
-	if _, err := repo.GetAll(ctx); err != nil {
+	if _, err := repo.GetAll(ctx, enums.EnGB); err != nil {
 		t.Fatalf("second GetAll: %v", err)
 	}
 	if next.getAllCalls != 1 {
@@ -191,11 +201,11 @@ func TestStandRepository_Save_InvalidatesCache(t *testing.T) {
 	}
 
 	other := newTestStand(t, "Star Platinum")
-	if err := repo.Save(ctx, other); err != nil {
+	if err := repo.Save(ctx, other, ports.PowerTranslations{enums.EnGB: {Description: other.Description(), Skills: other.Skills()}}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
-	if _, err := repo.GetAll(ctx); err != nil {
+	if _, err := repo.GetAll(ctx, enums.EnGB); err != nil {
 		t.Fatalf("GetAll after Save: %v", err)
 	}
 	if next.getAllCalls != 2 {
@@ -206,12 +216,12 @@ func TestStandRepository_Save_InvalidatesCache(t *testing.T) {
 func TestStandRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	next := newCountingStandRepository()
 	stand := newTestStand(t, "Crazy Diamond")
-	_ = next.Save(context.Background(), stand)
+	_ = next.Save(context.Background(), stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}})
 
 	repo := infracache.NewStandRepository(next, newFakeCache(), time.Minute, time.Second)
 	ctx := context.Background()
 
-	if _, err := repo.FindByID(ctx, stand.ID()); err != nil {
+	if _, err := repo.FindByID(ctx, stand.ID(), enums.EnGB); err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
 
@@ -220,7 +230,7 @@ func TestStandRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 
-	got, err := repo.FindByID(ctx, stand.ID())
+	got, err := repo.FindByID(ctx, stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID after UpdatePicture: %v", err)
 	}
@@ -242,11 +252,47 @@ func TestStandRepository_Save_ErrorDoesNotInvalidate(t *testing.T) {
 	ctx := context.Background()
 
 	stand := newTestStand(t, "Gold Experience")
-	if err := repo.Save(ctx, stand); err == nil {
+	if err := repo.Save(ctx, stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}}); err == nil {
 		t.Fatal("Save over a failing repository: err = nil, want an error")
 	}
 	if c.gen["stands"] != 0 {
 		t.Errorf("stands generation = %d, want 0 (a failed Save must not invalidate)", c.gen["stands"])
+	}
+}
+
+// TestStandRepository_FindByID_NeverCrossesLocales proves the cache key
+// includes locale: caching a stand's es-ES content must never answer a
+// later en-GB (or any other locale) request from that same cache slot -
+// exactly the bug the locale dimension in keys.go exists to prevent. See
+// TestDevilFruitRepository_FindByID_NeverCrossesLocales for the same
+// assertion on the DevilFruit side.
+func TestStandRepository_FindByID_NeverCrossesLocales(t *testing.T) {
+	next := newCountingStandRepository()
+	stand := newTestStand(t, "Multilingual Stand")
+	_ = next.Save(context.Background(), stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}})
+
+	repo := infracache.NewStandRepository(next, newFakeCache(), time.Minute, time.Second)
+	ctx := context.Background()
+
+	if _, err := repo.FindByID(ctx, stand.ID(), enums.EsES); err != nil {
+		t.Fatalf("FindByID es-ES: %v", err)
+	}
+	if _, err := repo.FindByID(ctx, stand.ID(), enums.CaES); err != nil {
+		t.Fatalf("FindByID ca-ES: %v", err)
+	}
+	if _, err := repo.FindByID(ctx, stand.ID(), enums.EnGB); err != nil {
+		t.Fatalf("FindByID en-GB: %v", err)
+	}
+
+	if next.findByIDCalls != 3 {
+		t.Errorf("underlying FindByID calls = %d, want 3 (each locale is a distinct cache entry, none shared)", next.findByIDCalls)
+	}
+
+	if _, err := repo.FindByID(ctx, stand.ID(), enums.EsES); err != nil {
+		t.Fatalf("FindByID es-ES (again): %v", err)
+	}
+	if next.findByIDCalls != 3 {
+		t.Errorf("underlying FindByID calls = %d, want 3 (re-requesting es-ES should hit its own cache entry)", next.findByIDCalls)
 	}
 }
 
@@ -256,6 +302,6 @@ type failingSaveRepository struct {
 	*countingStandRepository
 }
 
-func (f *failingSaveRepository) Save(context.Context, *powers.Stand) error {
+func (f *failingSaveRepository) Save(context.Context, *powers.Stand, ports.PowerTranslations) error {
 	return errors.New("save failed")
 }

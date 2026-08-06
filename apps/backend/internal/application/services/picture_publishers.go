@@ -50,7 +50,7 @@ func (p *standPicturePublisher) PictureKeys(ctx context.Context, id string) (str
 	if err != nil {
 		return "", "", err
 	}
-	stand, err := p.repo.FindByID(ctx, powerID)
+	stand, err := p.repo.FindByID(ctx, powerID, enums.EnGB)
 	if err != nil {
 		return "", "", err
 	}
@@ -83,7 +83,7 @@ func (p *devilFruitPicturePublisher) PictureKeys(ctx context.Context, id string)
 	if err != nil {
 		return "", "", err
 	}
-	fruit, err := p.repo.FindByID(ctx, powerID)
+	fruit, err := p.repo.FindByID(ctx, powerID, enums.EnGB)
 	if err != nil {
 		return "", "", err
 	}

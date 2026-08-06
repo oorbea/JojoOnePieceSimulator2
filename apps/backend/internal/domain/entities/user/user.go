@@ -17,6 +17,7 @@ type User struct {
 	id             UserID
 	role           enums.UserRole
 	avatarStatus   enums.PictureStatus
+	language       enums.Locale
 }
 
 // NewUser builds a User from the fields synced from Google. avatar* fields
@@ -57,6 +58,7 @@ func NewUser(
 		googlePicture: googlePicture,
 		role:          role,
 		avatarStatus:  enums.PictureNone,
+		language:      enums.EnGB,
 	}, nil
 }
 
@@ -100,6 +102,23 @@ func (u *User) AvatarStatus() enums.PictureStatus {
 
 func (u *User) Role() enums.UserRole {
 	return u.role
+}
+
+// Language returns the user's preferred locale, defaulting to en-GB for
+// users created before this field existed.
+func (u *User) Language() enums.Locale {
+	return u.language
+}
+
+// ChangeLanguage updates the user's preferred locale, validating it first.
+// Also used by the repository to hydrate a User from an already-valid DB
+// row.
+func (u *User) ChangeLanguage(language enums.Locale) error {
+	if !language.IsValid() {
+		return enums.ErrInvalidLocale
+	}
+	u.language = language
+	return nil
 }
 
 func (u *User) IsAdmin() bool {

@@ -1,9 +1,8 @@
 -- name: UpsertPower :one
-INSERT INTO powers (id, kind, name, description, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'STAND', $2, $3, $4, $5, $6, $7)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
+VALUES ($1, 'STAND', $2, $3, $4, $5, $6)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
-        description    = EXCLUDED.description,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
@@ -11,12 +10,27 @@ ON CONFLICT (id) DO UPDATE
         updated_at     = now()
 RETURNING id;
 
--- name: DeletePowerSkills :exec
-DELETE FROM power_skills WHERE power_id = $1;
+-- Upserts a single locale's description/skills for a power. Callers write
+-- one row per locale present in the request (en-GB is mandatory, es-ES and
+-- ca-ES optional), never touching the other locales' rows.
+-- name: UpsertPowerTranslation :exec
+INSERT INTO power_translations (power_id, locale, description, skills)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (power_id, locale) DO UPDATE
+    SET description = EXCLUDED.description,
+        skills       = EXCLUDED.skills;
 
--- name: InsertPowerSkill :exec
-INSERT INTO power_skills (power_id, position, skill)
-VALUES ($1, $2, $3);
+-- Deletes translation rows for locales no longer present in an update
+-- request (en-GB can never be deleted this way - callers must not pass it).
+-- name: DeletePowerTranslations :exec
+DELETE FROM power_translations WHERE power_id = $1 AND locale::text = ANY (sqlc.arg('locales')::text[]);
+
+-- Every translation row for a power, for admin read/write forms that need
+-- all locales at once instead of one resolved locale.
+-- name: GetPowerTranslations :many
+SELECT power_id, locale, description, skills
+FROM power_translations
+WHERE power_id = $1;
 
 -- name: UpsertStand :exec
 INSERT INTO stands (id, attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
@@ -56,10 +70,13 @@ WHERE id = sqlc.arg('id');
 -- Returns the stand matching `name` (matched = true) plus its full ancestor
 -- chain (matched = false), so the caller can hydrate Stand.EvolvesFrom(...)
 -- without extra round trips, then discard everything but the matched row.
+-- `locales` is the requested locale's fallback chain, most specific first
+-- (e.g. ['ca-ES','es-ES','en-GB']); the LATERAL join below picks the first
+-- translation row that exists in that order, so unmatched locales fall
+-- back all the way to en-GB without any COALESCE juggling in Go.
 -- name: GetStandRowsByName :many
 WITH RECURSIVE chain AS (SELECT p.id,
                                  p.name,
-                                 p.description,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
@@ -78,7 +95,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                           UNION
                           SELECT p2.id,
                                  p2.name,
-                                 p2.description,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
@@ -96,7 +112,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                    JOIN chain c ON c.evolves_from_id = s2.id),
      dedup AS (SELECT id,
                       name,
-                      description,
                       rarity,
                       picture,
                       picture_thumb,
@@ -110,11 +125,11 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
                         attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
-       d.description,
+       COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
@@ -127,18 +142,21 @@ SELECT d.id,
        d.potential,
        d.evolves_from_id,
        d.matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM dedup d
-         LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
-         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY d.name;
 
 -- Same shape as GetStandRowsByName, keyed by id instead of name.
 -- name: GetStandRowsByID :many
 WITH RECURSIVE chain AS (SELECT p.id,
                                  p.name,
-                                 p.description,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
@@ -157,7 +175,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                           UNION
                           SELECT p2.id,
                                  p2.name,
-                                 p2.description,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
@@ -175,7 +192,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                    JOIN chain c ON c.evolves_from_id = s2.id),
      dedup AS (SELECT id,
                       name,
-                      description,
                       rarity,
                       picture,
                       picture_thumb,
@@ -189,11 +205,11 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
                         attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
-       d.description,
+       COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
@@ -206,11 +222,15 @@ SELECT d.id,
        d.potential,
        d.evolves_from_id,
        d.matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM dedup d
-         LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
-         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY d.name;
 
 -- Returns every stand (matched = true always, no filter applied). Kept in
@@ -219,7 +239,7 @@ ORDER BY d.name;
 -- name: ListStandRows :many
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
@@ -231,13 +251,17 @@ SELECT p.id,
        s."precision",
        s.potential,
        s.evolves_from_id,
-       true                                                                                            AS matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       true                       AS matched,
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM stands s
          JOIN powers p ON p.id = s.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, s.attack_power,
-         s.speed, s.attack_range, s.endurance, s."precision", s.potential, s.evolves_from_id
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY p.name;
 
 -- Returns every stand matching the (all-optional) filters, marked
@@ -247,7 +271,6 @@ ORDER BY p.name;
 -- name: FilterStandRows :many
 WITH RECURSIVE base AS (SELECT p.id,
                                 p.name,
-                                p.description,
                                 p.rarity,
                                 p.picture,
                                 p.picture_thumb,
@@ -283,7 +306,6 @@ WITH RECURSIVE base AS (SELECT p.id,
                UNION
                SELECT p2.id,
                       p2.name,
-                      p2.description,
                       p2.rarity,
                       p2.picture,
                       p2.picture_thumb,
@@ -301,7 +323,6 @@ WITH RECURSIVE base AS (SELECT p.id,
                         JOIN chain c ON c.evolves_from_id = s2.id),
      dedup AS (SELECT id,
                       name,
-                      description,
                       rarity,
                       picture,
                       picture_thumb,
@@ -315,11 +336,11 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
                         attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
-       d.description,
+       COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
@@ -332,9 +353,13 @@ SELECT d.id,
        d.potential,
        d.evolves_from_id,
        d.matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM dedup d
-         LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
-         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY d.name;

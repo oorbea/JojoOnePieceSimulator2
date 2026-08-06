@@ -7,22 +7,40 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 )
 
-// UpdateProfileRequest is the JSON body accepted by PATCH /users/me. It
-// deliberately has exactly one field: email, role, and completeName are
-// Google-owned/admin-owned and must never be settable here. decode() rejects
-// unknown fields, so sending any of those is a 400, not a silent no-op.
+// UpdateProfileRequest is the JSON body accepted by PATCH /users/me.
+// Username is mandatory; Language is optional (nil means "leave unchanged").
+// email, role, and completeName are Google-owned/admin-owned and must never
+// be settable here. decode() rejects unknown fields, so sending any of those
+// is a 400, not a silent no-op.
 type UpdateProfileRequest struct {
-	Username string `json:"username"`
+	Username string  `json:"username"`
+	Language *string `json:"language,omitempty"`
 }
 
-// Validate checks Username against the same rule ChangeUsername enforces,
-// so a bad value surfaces as a 400 with a clear message instead of a 500
-// from the domain constructor.
-func (r UpdateProfileRequest) Validate() error {
+// Validate checks Username against the same rule ChangeUsername enforces
+// and, if Language is present, parses it into an enums.Locale, so a bad
+// value surfaces as a 400 with a clear message instead of a 500 from the
+// domain constructor. The returned bool reports whether Language was
+// present at all - the zero enums.Locale (en-GB) is a valid choice, so the
+// caller can't tell "unset" from "set to en-GB" any other way.
+func (r UpdateProfileRequest) Validate() (language enums.Locale, hasLanguage bool, err error) {
+	var errs []string
 	if err := user.ValidateUsername(r.Username); err != nil {
-		return &ValidationError{Errors: []string{fmt.Sprintf("username: %v", err)}}
+		errs = append(errs, fmt.Sprintf("username: %v", err))
 	}
-	return nil
+	if r.Language != nil {
+		hasLanguage = true
+		parsed, err := enums.ParseLocale(*r.Language)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("language: %v", err))
+		} else {
+			language = parsed
+		}
+	}
+	if len(errs) > 0 {
+		return 0, false, &ValidationError{Errors: errs}
+	}
+	return language, hasLanguage, nil
 }
 
 // AdminUpdateUserRequest is the JSON body accepted by admin-only

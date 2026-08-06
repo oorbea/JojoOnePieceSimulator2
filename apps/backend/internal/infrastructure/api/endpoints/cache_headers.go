@@ -51,10 +51,12 @@ func (w *bufferingResponseWriter) flush() {
 // resending the body. Only GET + status 200 are touched; every other
 // response (errors, 202/204/etc.) passes through untouched.
 //
-// Cache-Control is deliberately "private" and paired with Vary: Authorization
-// - these are Bearer-authenticated, per-caller responses (RequireAuth sits in
-// front of every route this is mounted on) that must never be stored by a
-// shared proxy or CDN.
+// Cache-Control is deliberately "private" and paired with
+// Vary: Authorization, Accept-Language - these are Bearer-authenticated,
+// per-caller, per-locale responses (RequireAuth sits in front of every route
+// this is mounted on) that must never be stored by a shared proxy or CDN,
+// and a private cache that does respect Vary (e.g. the browser's own HTTP
+// cache) must not reuse a stored body across a locale change.
 func cacheHeaders(cfg CacheConfig) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +77,7 @@ func cacheHeaders(cfg CacheConfig) func(http.Handler) http.Handler {
 			etag := `"` + hex.EncodeToString(sum[:]) + `"`
 
 			w.Header().Set("ETag", etag)
-			w.Header().Set("Vary", "Authorization")
+			w.Header().Set("Vary", "Authorization, Accept-Language")
 			if cfg.HTTPMaxAge > 0 {
 				w.Header().Set("Cache-Control", "private, max-age="+strconv.Itoa(cfg.HTTPMaxAge))
 			} else {

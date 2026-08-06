@@ -13,13 +13,23 @@ type DevilFruitFilters struct {
 }
 
 type IDevilFruitRepository interface {
-	Save(ctx context.Context, fruit *powers.DevilFruit) error
-	FindByID(ctx context.Context, id powers.PowerID) (*powers.DevilFruit, error)
-	FindByName(ctx context.Context, name string) (*powers.DevilFruit, error)
-	GetAll(ctx context.Context) ([]*powers.DevilFruit, error)
-	Filter(ctx context.Context, filters DevilFruitFilters) ([]*powers.DevilFruit, error)
+	// Save upserts the given fruit's powers/devil_fruits rows, then replaces
+	// its power_translations rows with translations (en-GB mandatory,
+	// es-ES/ca-ES optional) - any locale missing from translations is
+	// deleted.
+	Save(ctx context.Context, fruit *powers.DevilFruit, translations PowerTranslations) error
+	// FindByID/FindByName/GetAll/Filter resolve description/skills for
+	// locale, falling back through enums.FallbackChain(locale) down to
+	// en-GB.
+	FindByID(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.DevilFruit, error)
+	FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.DevilFruit, error)
+	GetAll(ctx context.Context, locale enums.Locale) ([]*powers.DevilFruit, error)
+	Filter(ctx context.Context, filters DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error)
 	Delete(ctx context.Context, id powers.PowerID) error
 	// UpdatePicture updates only a devil fruit's picture renditions and
 	// pipeline status. A nil main or thumb leaves that column untouched.
 	UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error
+	// Translations returns every locale's content for id, for admin edit
+	// forms that need all locales at once instead of one resolved locale.
+	Translations(ctx context.Context, id powers.PowerID) (PowerTranslations, error)
 }

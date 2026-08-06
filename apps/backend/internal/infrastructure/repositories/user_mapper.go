@@ -18,6 +18,7 @@ type userRow struct {
 	CompleteName   string
 	GooglePicture  string
 	Role           string
+	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
 	AvatarStatus   string
@@ -26,7 +27,7 @@ type userRow struct {
 func userRowFromGetByID(r db.GetUserByIDRow) userRow {
 	return userRow{
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
-		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role,
+		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarStatus: r.AvatarStatus,
 	}
 }
@@ -34,7 +35,7 @@ func userRowFromGetByID(r db.GetUserByIDRow) userRow {
 func userRowFromGetByGoogleSub(r db.GetUserByGoogleSubRow) userRow {
 	return userRow{
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
-		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role,
+		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarStatus: r.AvatarStatus,
 	}
 }
@@ -42,7 +43,7 @@ func userRowFromGetByGoogleSub(r db.GetUserByGoogleSubRow) userRow {
 func userRowFromGetByEmail(r db.GetUserByEmailRow) userRow {
 	return userRow{
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
-		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role,
+		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarStatus: r.AvatarStatus,
 	}
 }
@@ -50,7 +51,7 @@ func userRowFromGetByEmail(r db.GetUserByEmailRow) userRow {
 func userRowFromGetByUsername(r db.GetUserByUsernameRow) userRow {
 	return userRow{
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
-		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role,
+		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarStatus: r.AvatarStatus,
 	}
 }
@@ -58,7 +59,7 @@ func userRowFromGetByUsername(r db.GetUserByUsernameRow) userRow {
 func userRowFromListUsers(r db.ListUsersRow) userRow {
 	return userRow{
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
-		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role,
+		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarStatus: r.AvatarStatus,
 	}
 }
@@ -77,6 +78,10 @@ func buildUser(row userRow) (*user.User, error) {
 	if err != nil {
 		return nil, err
 	}
+	language, err := enums.ParseLocale(row.Language)
+	if err != nil {
+		return nil, err
+	}
 	u, err := user.NewUser(
 		user.UserID(row.ID.Bytes),
 		row.GoogleSub,
@@ -90,5 +95,8 @@ func buildUser(row userRow) (*user.User, error) {
 		return nil, err
 	}
 	u.SetAvatarRenditions(row.AvatarKey, row.AvatarThumbKey, avatarStatus)
+	if err := u.ChangeLanguage(language); err != nil {
+		return nil, err
+	}
 	return u, nil
 }
