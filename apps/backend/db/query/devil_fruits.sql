@@ -1,9 +1,8 @@
 -- name: UpsertDevilFruitPower :one
-INSERT INTO powers (id, kind, name, description, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
+VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
-        description    = EXCLUDED.description,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
@@ -20,74 +19,95 @@ ON CONFLICT (id) DO UPDATE
 -- name: DeleteDevilFruitByID :execrows
 DELETE FROM powers WHERE id = $1 AND kind = 'DEVIL_FRUIT';
 
--- Returns the devil fruit matching `id`, along with its ordered skills.
--- Unlike stands, devil fruits have no evolves_from chain to hydrate, so a
--- single flat row (no WITH RECURSIVE, no `matched` column) is enough.
+-- Returns the devil fruit matching `id`, along with its resolved
+-- description/skills. `locales` is the requested locale's fallback chain,
+-- most specific first (e.g. ['ca-ES','es-ES','en-GB']) - see
+-- GetStandRowsByID in stands.sql for the same LATERAL-join pattern.
 -- name: GetDevilFruitRowByID :one
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
-WHERE p.id = $1
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type;
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE p.id = $1;
 
 -- Same shape as GetDevilFruitRowByID, keyed by name instead of id.
 -- name: GetDevilFruitRowByName :one
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
-WHERE p.name = $1
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type;
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE p.name = $1;
 
 -- Returns every devil fruit in the system.
 -- name: ListDevilFruitRows :many
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY p.name;
 
 -- Returns every devil fruit matching the (all-optional) filters.
 -- name: FilterDevilFruitRows :many
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity')::power_rarity)
   AND (sqlc.narg('fruit_type')::fruit_type IS NULL OR d.fruit_type = sqlc.narg('fruit_type')::fruit_type)
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type
 ORDER BY p.name;

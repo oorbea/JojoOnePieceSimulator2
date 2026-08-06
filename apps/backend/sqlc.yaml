@@ -24,3 +24,5 @@ sql:
             go_type: "string"
           - db_type: "fruit_type"
             go_type: "string"
+          - db_type: "locale"
+            go_type: "string"

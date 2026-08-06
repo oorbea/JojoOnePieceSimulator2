@@ -11,12 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deletePowerSkills = `-- name: DeletePowerSkills :exec
-DELETE FROM power_skills WHERE power_id = $1
+const deletePowerTranslations = `-- name: DeletePowerTranslations :exec
+DELETE FROM power_translations WHERE power_id = $1 AND locale::text = ANY ($2::text[])
 `
 
-func (q *Queries) DeletePowerSkills(ctx context.Context, powerID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deletePowerSkills, powerID)
+type DeletePowerTranslationsParams struct {
+	PowerID pgtype.UUID
+	Locales []string
+}
+
+// Deletes translation rows for locales no longer present in an update
+// request (en-GB can never be deleted this way - callers must not pass it).
+func (q *Queries) DeletePowerTranslations(ctx context.Context, arg DeletePowerTranslationsParams) error {
+	_, err := q.db.Exec(ctx, deletePowerTranslations, arg.PowerID, arg.Locales)
 	return err
 }
 
@@ -35,7 +42,6 @@ func (q *Queries) DeleteStandByID(ctx context.Context, id pgtype.UUID) (int64, e
 const filterStandRows = `-- name: FilterStandRows :many
 WITH RECURSIVE base AS (SELECT p.id,
                                 p.name,
-                                p.description,
                                 p.rarity,
                                 p.picture,
                                 p.picture_thumb,
@@ -52,26 +58,25 @@ WITH RECURSIVE base AS (SELECT p.id,
                                   JOIN powers p ON p.id = s.id
                                   LEFT JOIN stands ef ON ef.id = s.evolves_from_id
                                   LEFT JOIN powers efp ON efp.id = ef.id
-                         WHERE ($1::power_rarity IS NULL OR p.rarity = $1::power_rarity)
-                           AND ($2::stand_stat IS NULL OR
-                                s.attack_power = $2::stand_stat)
-                           AND ($3::stand_stat IS NULL OR s.speed = $3::stand_stat)
-                           AND ($4::stand_stat IS NULL OR
-                                s.attack_range = $4::stand_stat)
+                         WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
+                           AND ($3::stand_stat IS NULL OR
+                                s.attack_power = $3::stand_stat)
+                           AND ($4::stand_stat IS NULL OR s.speed = $4::stand_stat)
                            AND ($5::stand_stat IS NULL OR
-                                s.endurance = $5::stand_stat)
+                                s.attack_range = $5::stand_stat)
                            AND ($6::stand_stat IS NULL OR
-                                s."precision" = $6::stand_stat)
+                                s.endurance = $6::stand_stat)
                            AND ($7::stand_stat IS NULL OR
-                                s.potential = $7::stand_stat)
-                           AND ($8::text IS NULL OR
-                                efp.name = $8::text)),
-     chain AS (SELECT id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
+                                s."precision" = $7::stand_stat)
+                           AND ($8::stand_stat IS NULL OR
+                                s.potential = $8::stand_stat)
+                           AND ($9::text IS NULL OR
+                                efp.name = $9::text)),
+     chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
                FROM base
                UNION
                SELECT p2.id,
                       p2.name,
-                      p2.description,
                       p2.rarity,
                       p2.picture,
                       p2.picture_thumb,
@@ -89,7 +94,6 @@ WITH RECURSIVE base AS (SELECT p.id,
                         JOIN chain c ON c.evolves_from_id = s2.id),
      dedup AS (SELECT id,
                       name,
-                      description,
                       rarity,
                       picture,
                       picture_thumb,
@@ -103,11 +107,11 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
                         attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
-       d.description,
+       COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
@@ -120,15 +124,20 @@ SELECT d.id,
        d.potential,
        d.evolves_from_id,
        d.matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM dedup d
-         LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
-         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY d.name
 `
 
 type FilterStandRowsParams struct {
+	Locales         []string
 	Rarity          *PowerRarity
 	AttackPower     *StandStat
 	Speed           *StandStat
@@ -164,6 +173,7 @@ type FilterStandRowsRow struct {
 // from the final result set.
 func (q *Queries) FilterStandRows(ctx context.Context, arg FilterStandRowsParams) ([]FilterStandRowsRow, error) {
 	rows, err := q.db.Query(ctx, filterStandRows,
+		arg.Locales,
 		arg.Rarity,
 		arg.AttackPower,
 		arg.Speed,
@@ -208,6 +218,39 @@ func (q *Queries) FilterStandRows(ctx context.Context, arg FilterStandRowsParams
 	return items, nil
 }
 
+const getPowerTranslations = `-- name: GetPowerTranslations :many
+SELECT power_id, locale, description, skills
+FROM power_translations
+WHERE power_id = $1
+`
+
+// Every translation row for a power, for admin read/write forms that need
+// all locales at once instead of one resolved locale.
+func (q *Queries) GetPowerTranslations(ctx context.Context, powerID pgtype.UUID) ([]PowerTranslation, error) {
+	rows, err := q.db.Query(ctx, getPowerTranslations, powerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PowerTranslation{}
+	for rows.Next() {
+		var i PowerTranslation
+		if err := rows.Scan(
+			&i.PowerID,
+			&i.Locale,
+			&i.Description,
+			&i.Skills,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getStandIDByName = `-- name: GetStandIDByName :one
 SELECT p.id
 FROM powers p
@@ -225,7 +268,6 @@ func (q *Queries) GetStandIDByName(ctx context.Context, name string) (pgtype.UUI
 const getStandRowsByID = `-- name: GetStandRowsByID :many
 WITH RECURSIVE chain AS (SELECT p.id,
                                  p.name,
-                                 p.description,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
@@ -244,7 +286,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                           UNION
                           SELECT p2.id,
                                  p2.name,
-                                 p2.description,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
@@ -262,7 +303,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                    JOIN chain c ON c.evolves_from_id = s2.id),
      dedup AS (SELECT id,
                       name,
-                      description,
                       rarity,
                       picture,
                       picture_thumb,
@@ -276,11 +316,11 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
                         attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
-       d.description,
+       COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
@@ -293,13 +333,22 @@ SELECT d.id,
        d.potential,
        d.evolves_from_id,
        d.matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM dedup d
-         LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
-         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY ($2::text[])
+    ORDER BY array_position($2::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY d.name
 `
+
+type GetStandRowsByIDParams struct {
+	ID      pgtype.UUID
+	Locales []string
+}
 
 type GetStandRowsByIDRow struct {
 	ID            pgtype.UUID
@@ -321,8 +370,8 @@ type GetStandRowsByIDRow struct {
 }
 
 // Same shape as GetStandRowsByName, keyed by id instead of name.
-func (q *Queries) GetStandRowsByID(ctx context.Context, id pgtype.UUID) ([]GetStandRowsByIDRow, error) {
-	rows, err := q.db.Query(ctx, getStandRowsByID, id)
+func (q *Queries) GetStandRowsByID(ctx context.Context, arg GetStandRowsByIDParams) ([]GetStandRowsByIDRow, error) {
+	rows, err := q.db.Query(ctx, getStandRowsByID, arg.ID, arg.Locales)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +410,6 @@ func (q *Queries) GetStandRowsByID(ctx context.Context, id pgtype.UUID) ([]GetSt
 const getStandRowsByName = `-- name: GetStandRowsByName :many
 WITH RECURSIVE chain AS (SELECT p.id,
                                  p.name,
-                                 p.description,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
@@ -380,7 +428,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                           UNION
                           SELECT p2.id,
                                  p2.name,
-                                 p2.description,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
@@ -398,7 +445,6 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                    JOIN chain c ON c.evolves_from_id = s2.id),
      dedup AS (SELECT id,
                       name,
-                      description,
                       rarity,
                       picture,
                       picture_thumb,
@@ -412,11 +458,11 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, description, rarity, picture, picture_thumb, picture_status, attack_power, speed,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
                         attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
-       d.description,
+       COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
@@ -429,13 +475,22 @@ SELECT d.id,
        d.potential,
        d.evolves_from_id,
        d.matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM dedup d
-         LEFT JOIN power_skills ps ON ps.power_id = d.id
-GROUP BY d.id, d.name, d.description, d.rarity, d.picture, d.picture_thumb, d.picture_status, d.attack_power, d.speed,
-         d.attack_range, d.endurance, d."precision", d.potential, d.evolves_from_id, d.matched
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY ($2::text[])
+    ORDER BY array_position($2::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY d.name
 `
+
+type GetStandRowsByNameParams struct {
+	Name    string
+	Locales []string
+}
 
 type GetStandRowsByNameRow struct {
 	ID            pgtype.UUID
@@ -459,8 +514,12 @@ type GetStandRowsByNameRow struct {
 // Returns the stand matching `name` (matched = true) plus its full ancestor
 // chain (matched = false), so the caller can hydrate Stand.EvolvesFrom(...)
 // without extra round trips, then discard everything but the matched row.
-func (q *Queries) GetStandRowsByName(ctx context.Context, name string) ([]GetStandRowsByNameRow, error) {
-	rows, err := q.db.Query(ctx, getStandRowsByName, name)
+// `locales` is the requested locale's fallback chain, most specific first
+// (e.g. ['ca-ES','es-ES','en-GB']); the LATERAL join below picks the first
+// translation row that exists in that order, so unmatched locales fall
+// back all the way to en-GB without any COALESCE juggling in Go.
+func (q *Queries) GetStandRowsByName(ctx context.Context, arg GetStandRowsByNameParams) ([]GetStandRowsByNameRow, error) {
+	rows, err := q.db.Query(ctx, getStandRowsByName, arg.Name, arg.Locales)
 	if err != nil {
 		return nil, err
 	}
@@ -496,26 +555,10 @@ func (q *Queries) GetStandRowsByName(ctx context.Context, name string) ([]GetSta
 	return items, nil
 }
 
-const insertPowerSkill = `-- name: InsertPowerSkill :exec
-INSERT INTO power_skills (power_id, position, skill)
-VALUES ($1, $2, $3)
-`
-
-type InsertPowerSkillParams struct {
-	PowerID  pgtype.UUID
-	Position int32
-	Skill    string
-}
-
-func (q *Queries) InsertPowerSkill(ctx context.Context, arg InsertPowerSkillParams) error {
-	_, err := q.db.Exec(ctx, insertPowerSkill, arg.PowerID, arg.Position, arg.Skill)
-	return err
-}
-
 const listStandRows = `-- name: ListStandRows :many
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
@@ -527,13 +570,17 @@ SELECT p.id,
        s."precision",
        s.potential,
        s.evolves_from_id,
-       true                                                                                            AS matched,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       true                       AS matched,
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM stands s
          JOIN powers p ON p.id = s.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, s.attack_power,
-         s.speed, s.attack_range, s.endurance, s."precision", s.potential, s.evolves_from_id
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY p.name
 `
 
@@ -559,8 +606,8 @@ type ListStandRowsRow struct {
 // Returns every stand (matched = true always, no filter applied). Kept in
 // the same shape as GetStandRowsByName/FilterStandRows so all three share
 // one mapper.
-func (q *Queries) ListStandRows(ctx context.Context) ([]ListStandRowsRow, error) {
-	rows, err := q.db.Query(ctx, listStandRows)
+func (q *Queries) ListStandRows(ctx context.Context, locales []string) ([]ListStandRowsRow, error) {
+	rows, err := q.db.Query(ctx, listStandRows, locales)
 	if err != nil {
 		return nil, err
 	}
@@ -629,11 +676,10 @@ func (q *Queries) UpdatePowerPicture(ctx context.Context, arg UpdatePowerPicture
 }
 
 const upsertPower = `-- name: UpsertPower :one
-INSERT INTO powers (id, kind, name, description, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'STAND', $2, $3, $4, $5, $6, $7)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
+VALUES ($1, 'STAND', $2, $3, $4, $5, $6)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
-        description    = EXCLUDED.description,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
@@ -645,7 +691,6 @@ RETURNING id
 type UpsertPowerParams struct {
 	ID            pgtype.UUID
 	Name          string
-	Description   string
 	Rarity        string
 	Picture       string
 	PictureThumb  string
@@ -656,7 +701,6 @@ func (q *Queries) UpsertPower(ctx context.Context, arg UpsertPowerParams) (pgtyp
 	row := q.db.QueryRow(ctx, upsertPower,
 		arg.ID,
 		arg.Name,
-		arg.Description,
 		arg.Rarity,
 		arg.Picture,
 		arg.PictureThumb,
@@ -665,6 +709,34 @@ func (q *Queries) UpsertPower(ctx context.Context, arg UpsertPowerParams) (pgtyp
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const upsertPowerTranslation = `-- name: UpsertPowerTranslation :exec
+INSERT INTO power_translations (power_id, locale, description, skills)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (power_id, locale) DO UPDATE
+    SET description = EXCLUDED.description,
+        skills       = EXCLUDED.skills
+`
+
+type UpsertPowerTranslationParams struct {
+	PowerID     pgtype.UUID
+	Locale      string
+	Description string
+	Skills      []string
+}
+
+// Upserts a single locale's description/skills for a power. Callers write
+// one row per locale present in the request (en-GB is mandatory, es-ES and
+// ca-ES optional), never touching the other locales' rows.
+func (q *Queries) UpsertPowerTranslation(ctx context.Context, arg UpsertPowerTranslationParams) error {
+	_, err := q.db.Exec(ctx, upsertPowerTranslation,
+		arg.PowerID,
+		arg.Locale,
+		arg.Description,
+		arg.Skills,
+	)
+	return err
 }
 
 const upsertStand = `-- name: UpsertStand :exec

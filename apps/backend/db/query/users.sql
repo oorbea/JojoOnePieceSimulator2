@@ -11,25 +11,25 @@ ON CONFLICT (id) DO UPDATE
 RETURNING id;
 
 -- name: GetUserByID :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE id = $1;
 
 -- name: GetUserByGoogleSub :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE google_sub = $1;
 
 -- name: GetUserByEmail :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE email = $1;
 
 -- name: GetUserByUsername :one
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 WHERE username = $1;
@@ -37,6 +37,12 @@ WHERE username = $1;
 -- name: UpdateUsername :exec
 UPDATE users
 SET username   = $1,
+    updated_at = now()
+WHERE id = $2;
+
+-- name: UpdateUserLanguage :exec
+UPDATE users
+SET language   = $1,
     updated_at = now()
 WHERE id = $2;
 
@@ -74,7 +80,7 @@ FROM users
 WHERE role = 'ADMIN';
 
 -- name: ListUsers :many
-SELECT id, google_sub, email, username, complete_name, google_picture, role,
+SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
        avatar_key, avatar_thumb_key, avatar_status
 FROM users
 ORDER BY created_at, id

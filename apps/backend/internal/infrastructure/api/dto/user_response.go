@@ -17,6 +17,7 @@ type UserResponse struct {
 	AvatarThumb  string `json:"avatarThumb"`
 	AvatarStatus string `json:"avatarStatus"`
 	Role         string `json:"role"`
+	Language     string `json:"language"`
 }
 
 // resolveAvatar picks the avatar to show: the user's own uploaded avatar
@@ -58,5 +59,6 @@ func NewUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolv
 		AvatarThumb:  avatarThumb,
 		AvatarStatus: u.AvatarStatus().String(),
 		Role:         u.Role().String(),
+		Language:     u.Language().String(),
 	}, nil
 }

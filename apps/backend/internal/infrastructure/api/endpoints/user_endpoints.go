@@ -121,12 +121,19 @@ func (e *UserEndpoints) updateMe(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	if err := req.Validate(); err != nil {
+	language, hasLanguage, err := req.Validate()
+	if err != nil {
 		return err
 	}
 	u, err := e.svc.ChangeUsername(r.Context(), id, req.Username)
 	if err != nil {
 		return err
+	}
+	if hasLanguage {
+		u, err = e.svc.ChangeLanguage(r.Context(), id, language)
+		if err != nil {
+			return err
+		}
 	}
 	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
 	if err != nil {

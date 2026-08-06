@@ -76,8 +76,8 @@ func TestGetStand_CacheControl_Present(t *testing.T) {
 	if !strings.Contains(cc, "private") {
 		t.Errorf("Cache-Control = %q, want it to contain %q", cc, "private")
 	}
-	if got := rec.Header().Get("Vary"); got != "Authorization" {
-		t.Errorf("Vary = %q, want %q", got, "Authorization")
+	if got := rec.Header().Get("Vary"); got != "Authorization, Accept-Language" {
+		t.Errorf("Vary = %q, want %q", got, "Authorization, Accept-Language")
 	}
 }
 

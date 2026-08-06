@@ -29,10 +29,11 @@ func NewDevilFruitRepository(pool *pgxpool.Pool) *DevilFruitRepository {
 	return &DevilFruitRepository{pool: pool, queries: db.New(pool)}
 }
 
-// Save upserts fruit by name: the underlying powers/devil_fruits rows, and
-// its skills, are fully replaced. It is safe to call repeatedly for the same
-// devil fruit (e.g. re-running seed data).
-func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFruit) error {
+// Save upserts fruit by name: the underlying powers/devil_fruits row is
+// fully replaced. translations replaces power_translations wholesale, same
+// as StandRepository.Save. It is safe to call repeatedly for the same devil
+// fruit (e.g. re-running seed data).
+func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFruit, translations ports.PowerTranslations) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
@@ -48,7 +49,6 @@ func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFrui
 	id, err := q.UpsertDevilFruitPower(ctx, db.UpsertDevilFruitPowerParams{
 		ID:            pgtype.UUID{Bytes: fruit.ID(), Valid: true},
 		Name:          fruit.Name(),
-		Description:   fruit.Description(),
 		Rarity:        fruit.Rarity().String(),
 		Picture:       fruit.Picture(),
 		PictureThumb:  fruit.PictureThumb(),
@@ -58,17 +58,8 @@ func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFrui
 		return fmt.Errorf("upserting power %q: %w", fruit.Name(), wrapPgError(err, ports.ErrDevilFruitAlreadyExists))
 	}
 
-	if err := q.DeletePowerSkills(ctx, id); err != nil {
-		return fmt.Errorf("clearing skills for %q: %w", fruit.Name(), wrapPgError(err, ports.ErrDevilFruitAlreadyExists))
-	}
-	for position, skill := range fruit.Skills() {
-		if err := q.InsertPowerSkill(ctx, db.InsertPowerSkillParams{
-			PowerID:  id,
-			Position: int32(position),
-			Skill:    skill,
-		}); err != nil {
-			return fmt.Errorf("inserting skill %q for %q: %w", skill, fruit.Name(), wrapPgError(err, ports.ErrDevilFruitAlreadyExists))
-		}
+	if err := saveTranslations(ctx, q, id, translations); err != nil {
+		return fmt.Errorf("saving translations for %q: %w", fruit.Name(), err)
 	}
 
 	if err := q.UpsertDevilFruit(ctx, db.UpsertDevilFruitParams{
@@ -84,9 +75,13 @@ func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFrui
 	return nil
 }
 
-// FindByID loads the devil fruit with the given id.
-func (r *DevilFruitRepository) FindByID(ctx context.Context, id powers.PowerID) (*powers.DevilFruit, error) {
-	row, err := r.queries.GetDevilFruitRowByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+// FindByID loads the devil fruit with the given id, description/skills
+// resolved for locale.
+func (r *DevilFruitRepository) FindByID(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.DevilFruit, error) {
+	row, err := r.queries.GetDevilFruitRowByID(ctx, db.GetDevilFruitRowByIDParams{
+		ID:      pgtype.UUID{Bytes: id, Valid: true},
+		Locales: fallbackStrings(locale),
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: %s", ports.ErrDevilFruitNotFound, id)
@@ -96,9 +91,13 @@ func (r *DevilFruitRepository) FindByID(ctx context.Context, id powers.PowerID) 
 	return buildDevilFruit(devilFruitRowFromGetByID(row))
 }
 
-// FindByName loads the devil fruit with the given name.
-func (r *DevilFruitRepository) FindByName(ctx context.Context, name string) (*powers.DevilFruit, error) {
-	row, err := r.queries.GetDevilFruitRowByName(ctx, name)
+// FindByName loads the devil fruit with the given name, description/skills
+// resolved for locale.
+func (r *DevilFruitRepository) FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.DevilFruit, error) {
+	row, err := r.queries.GetDevilFruitRowByName(ctx, db.GetDevilFruitRowByNameParams{
+		Name:    name,
+		Locales: fallbackStrings(locale),
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: %q", ports.ErrDevilFruitNotFound, name)
@@ -108,20 +107,23 @@ func (r *DevilFruitRepository) FindByName(ctx context.Context, name string) (*po
 	return buildDevilFruit(devilFruitRowFromGetByName(row))
 }
 
-// GetAll loads every devil fruit in the system.
-func (r *DevilFruitRepository) GetAll(ctx context.Context) ([]*powers.DevilFruit, error) {
-	rows, err := r.queries.ListDevilFruitRows(ctx)
+// GetAll loads every devil fruit in the system, description/skills resolved
+// for locale.
+func (r *DevilFruitRepository) GetAll(ctx context.Context, locale enums.Locale) ([]*powers.DevilFruit, error) {
+	rows, err := r.queries.ListDevilFruitRows(ctx, fallbackStrings(locale))
 	if err != nil {
 		return nil, fmt.Errorf("listing devil fruits: %w", err)
 	}
 	return buildDevilFruits(devilFruitRowsFromList(rows))
 }
 
-// Filter loads every devil fruit matching the given (all-optional) filters.
-func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFruitFilters) ([]*powers.DevilFruit, error) {
+// Filter loads every devil fruit matching the given (all-optional) filters,
+// description/skills resolved for locale.
+func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
 	rows, err := r.queries.FilterDevilFruitRows(ctx, db.FilterDevilFruitRowsParams{
 		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
 		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Locales:   fallbackStrings(locale),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("filtering devil fruits: %w", err)
@@ -145,8 +147,8 @@ func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.Powe
 	return nil
 }
 
-// Delete removes the devil fruit (and its power/skills rows) with the given
-// id.
+// Delete removes the devil fruit (and its power/translations rows) with the
+// given id.
 func (r *DevilFruitRepository) Delete(ctx context.Context, id powers.PowerID) error {
 	rowsAffected, err := r.queries.DeleteDevilFruitByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
@@ -156,4 +158,13 @@ func (r *DevilFruitRepository) Delete(ctx context.Context, id powers.PowerID) er
 		return fmt.Errorf("%w: %s", ports.ErrDevilFruitNotFound, id)
 	}
 	return nil
+}
+
+// Translations returns every locale's content for id, for admin edit forms.
+func (r *DevilFruitRepository) Translations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	rows, err := r.queries.GetPowerTranslations(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("querying translations for devil fruit %s: %w", id, err)
+	}
+	return translationsFromRows(rows)
 }

@@ -43,6 +43,7 @@ func (e *DevilFruitEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConf
 		r.Put("/{id}", Wrap(e.update))
 		r.Patch("/{id}/picture", Wrap(e.patchPicture))
 		r.Delete("/{id}", Wrap(e.delete))
+		r.Get("/{id}/translations", Wrap(e.translations))
 	})
 	return r
 }
@@ -70,11 +71,12 @@ func (e *DevilFruitEndpoints) list(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 
+	locale := LocaleFromRequest(r)
 	var fruits []*powers.DevilFruit
 	if hasFilters {
-		fruits, err = e.svc.FilterDevilFruits(r.Context(), filters)
+		fruits, err = e.svc.FilterDevilFruits(r.Context(), filters, locale)
 	} else {
-		fruits, err = e.svc.ListDevilFruits(r.Context())
+		fruits, err = e.svc.ListDevilFruits(r.Context(), locale)
 	}
 	if err != nil {
 		return err
@@ -151,7 +153,7 @@ func (e *DevilFruitEndpoints) get(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 
-	fruit, err := e.svc.GetDevilFruit(r.Context(), id)
+	fruit, err := e.svc.GetDevilFruit(r.Context(), id, LocaleFromRequest(r))
 	if err != nil {
 		return err
 	}
@@ -283,6 +285,35 @@ func (e *DevilFruitEndpoints) patchPicture(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 	writeJSON(w, http.StatusAccepted, resp)
+	return nil
+}
+
+// translations godoc
+//
+//	@Summary		Get every locale's translation for a devil fruit
+//	@Description	Admin only. Unlike GET /devil-fruits/{id}, always returns
+//	@Description	every locale's description/skills at once, for an edit form.
+//	@Tags			devil-fruits
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string	true	"Devil fruit id (UUID)"
+//	@Success		200	{object}	dto.PowerTranslationsResponse
+//	@Failure		400	{object}	dto.ErrorResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/devil-fruits/{id}/translations [get]
+func (e *DevilFruitEndpoints) translations(w http.ResponseWriter, r *http.Request) error {
+	id, err := parsePowerID(r)
+	if err != nil {
+		return err
+	}
+	translations, err := e.svc.DevilFruitTranslations(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.NewPowerTranslationsResponse(translations))
 	return nil
 }
 

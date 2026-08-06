@@ -20,15 +20,19 @@ import (
 // package's own copy of the fake following the repo's convention of
 // duplicating small fakes per test file/package.
 type fakeDevilFruitRepository struct {
-	mu     sync.Mutex
-	fruits map[powers.PowerID]*powers.DevilFruit
+	mu           sync.Mutex
+	fruits       map[powers.PowerID]*powers.DevilFruit
+	translations map[powers.PowerID]ports.PowerTranslations
 }
 
 func newFakeDevilFruitRepository() *fakeDevilFruitRepository {
-	return &fakeDevilFruitRepository{fruits: make(map[powers.PowerID]*powers.DevilFruit)}
+	return &fakeDevilFruitRepository{
+		fruits:       make(map[powers.PowerID]*powers.DevilFruit),
+		translations: make(map[powers.PowerID]ports.PowerTranslations),
+	}
 }
 
-func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit) error {
+func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit, translations ports.PowerTranslations) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for id, existing := range f.fruits {
@@ -37,10 +41,11 @@ func (f *fakeDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFr
 		}
 	}
 	f.fruits[fruit.ID()] = fruit
+	f.translations[fruit.ID()] = translations
 	return nil
 }
 
-func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	fruit, ok := f.fruits[id]
@@ -51,7 +56,7 @@ func (f *fakeDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID
 	return &cp, nil
 }
 
-func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string) (*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, fruit := range f.fruits {
@@ -62,7 +67,7 @@ func (f *fakeDevilFruitRepository) FindByName(_ context.Context, name string) (*
 	return nil, ports.ErrDevilFruitNotFound
 }
 
-func (f *fakeDevilFruitRepository) GetAll(_ context.Context) ([]*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	all := make([]*powers.DevilFruit, 0, len(f.fruits))
@@ -72,7 +77,7 @@ func (f *fakeDevilFruitRepository) GetAll(_ context.Context) ([]*powers.DevilFru
 	return all, nil
 }
 
-func (f *fakeDevilFruitRepository) Filter(_ context.Context, filters ports.DevilFruitFilters) ([]*powers.DevilFruit, error) {
+func (f *fakeDevilFruitRepository) Filter(_ context.Context, filters ports.DevilFruitFilters, _ enums.Locale) ([]*powers.DevilFruit, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var results []*powers.DevilFruit
@@ -86,6 +91,16 @@ func (f *fakeDevilFruitRepository) Filter(_ context.Context, filters ports.Devil
 		results = append(results, fruit)
 	}
 	return results, nil
+}
+
+func (f *fakeDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.translations[id]
+	if !ok {
+		return nil, ports.ErrDevilFruitNotFound
+	}
+	return t, nil
 }
 
 func (f *fakeDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -120,11 +135,15 @@ var _ ports.IDevilFruitRepository = (*fakeDevilFruitRepository)(nil)
 
 func validDevilFruitBody(name string) map[string]any {
 	return map[string]any{
-		"name":        name,
-		"description": name + " description",
-		"rarity":      "LEGENDARY",
-		"skills":      []string{"Gear Second"},
-		"fruitType":   "MYTHICAL_ZOAN",
+		"name": name,
+		"translations": map[string]any{
+			"en-GB": map[string]any{
+				"description": name + " description",
+				"skills":      []string{"Gear Second"},
+			},
+		},
+		"rarity":    "LEGENDARY",
+		"fruitType": "MYTHICAL_ZOAN",
 	}
 }
 

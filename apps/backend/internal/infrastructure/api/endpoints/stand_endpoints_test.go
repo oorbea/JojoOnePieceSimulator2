@@ -28,15 +28,19 @@ import (
 // has no mock library - these endpoint tests instead exercise the real
 // StandService against a handwritten fake, with no DB involved.
 type fakeStandRepository struct {
-	mu     sync.Mutex
-	stands map[powers.PowerID]*powers.Stand
+	mu           sync.Mutex
+	stands       map[powers.PowerID]*powers.Stand
+	translations map[powers.PowerID]ports.PowerTranslations
 }
 
 func newFakeStandRepository() *fakeStandRepository {
-	return &fakeStandRepository{stands: make(map[powers.PowerID]*powers.Stand)}
+	return &fakeStandRepository{
+		stands:       make(map[powers.PowerID]*powers.Stand),
+		translations: make(map[powers.PowerID]ports.PowerTranslations),
+	}
 }
 
-func (f *fakeStandRepository) Save(_ context.Context, stand *powers.Stand) error {
+func (f *fakeStandRepository) Save(_ context.Context, stand *powers.Stand, translations ports.PowerTranslations) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for id, existing := range f.stands {
@@ -45,10 +49,11 @@ func (f *fakeStandRepository) Save(_ context.Context, stand *powers.Stand) error
 		}
 	}
 	f.stands[stand.ID()] = stand
+	f.translations[stand.ID()] = translations
 	return nil
 }
 
-func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.Stand, error) {
+func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	stand, ok := f.stands[id]
@@ -63,7 +68,7 @@ func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*p
 	return &cp, nil
 }
 
-func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*powers.Stand, error) {
+func (f *fakeStandRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, stand := range f.stands {
@@ -74,7 +79,7 @@ func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*power
 	return nil, ports.ErrStandNotFound
 }
 
-func (f *fakeStandRepository) GetAll(_ context.Context) ([]*powers.Stand, error) {
+func (f *fakeStandRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	all := make([]*powers.Stand, 0, len(f.stands))
@@ -84,7 +89,7 @@ func (f *fakeStandRepository) GetAll(_ context.Context) ([]*powers.Stand, error)
 	return all, nil
 }
 
-func (f *fakeStandRepository) Filter(_ context.Context, filters ports.StandFilters) ([]*powers.Stand, error) {
+func (f *fakeStandRepository) Filter(_ context.Context, filters ports.StandFilters, _ enums.Locale) ([]*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var results []*powers.Stand
@@ -101,6 +106,16 @@ func (f *fakeStandRepository) Filter(_ context.Context, filters ports.StandFilte
 		results = append(results, stand)
 	}
 	return results, nil
+}
+
+func (f *fakeStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.translations[id]
+	if !ok {
+		return nil, ports.ErrStandNotFound
+	}
+	return t, nil
 }
 
 func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -311,10 +326,14 @@ func newTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fakePict
 
 func validStandBody(name string) map[string]any {
 	return map[string]any{
-		"name":        name,
-		"description": name + " description",
+		"name": name,
+		"translations": map[string]any{
+			"en-GB": map[string]any{
+				"description": name + " description",
+				"skills":      []string{"punch", "dash"},
+			},
+		},
 		"rarity":      "RARE",
-		"skills":      []string{"punch", "dash"},
 		"attackPower": "A",
 		"speed":       "B",
 		"attackRange": "C",
@@ -793,7 +812,7 @@ func TestUpdateStand(t *testing.T) {
 	id := created["id"].(string)
 
 	updateBody := validStandBody("Silver Chariot")
-	updateBody["description"] = "updated description"
+	updateBody["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "updated description"
 	rec := doRequest(t, h, http.MethodPut, "/api/v1/stands/"+id, updateBody)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())

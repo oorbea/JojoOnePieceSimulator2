@@ -12,17 +12,16 @@ import (
 // fields are plain strings so an invalid value becomes a 400 with a clear
 // message instead of a JSON decode error.
 type StandRequest struct {
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Rarity        string   `json:"rarity"`
-	Skills        []string `json:"skills"`
-	AttackPower   string   `json:"attackPower"`
-	Speed         string   `json:"speed"`
-	AttackRange   string   `json:"attackRange"`
-	Endurance     string   `json:"endurance"`
-	Precision     string   `json:"precision"`
-	Potential     string   `json:"potential"`
-	EvolvesFromID *string  `json:"evolvesFromId,omitempty"`
+	Name          string                        `json:"name"`
+	Translations  map[string]TranslationRequest `json:"translations"`
+	Rarity        string                        `json:"rarity"`
+	AttackPower   string                        `json:"attackPower"`
+	Speed         string                        `json:"speed"`
+	AttackRange   string                        `json:"attackRange"`
+	Endurance     string                        `json:"endurance"`
+	Precision     string                        `json:"precision"`
+	Potential     string                        `json:"potential"`
+	EvolvesFromID *string                       `json:"evolvesFromId,omitempty"`
 }
 
 // ValidationError collects every field error found while validating a
@@ -44,12 +43,8 @@ func (r StandRequest) Validate() (services.StandInput, error) {
 	if r.Name == "" {
 		errs = append(errs, "name is required")
 	}
-	if r.Description == "" {
-		errs = append(errs, "description is required")
-	}
-	if len(r.Skills) == 0 {
-		errs = append(errs, "skills are required")
-	}
+	translations, translationErrs := validateTranslations(r.Translations)
+	errs = append(errs, translationErrs...)
 
 	rarity, err := enums.ParsePowerRarity(r.Rarity)
 	if err != nil {
@@ -95,18 +90,16 @@ func (r StandRequest) Validate() (services.StandInput, error) {
 		return services.StandInput{}, &ValidationError{Errors: errs}
 	}
 
-	skills := append([]string(nil), r.Skills...)
 	return services.StandInput{
-		Name:        r.Name,
-		Description: r.Description,
-		Rarity:      rarity,
-		Skills:      &skills,
-		AttackPower: attackPower,
-		Speed:       speed,
-		AttackRange: attackRange,
-		Endurance:   endurance,
-		Precision:   precision,
-		Potential:   potential,
-		EvolvesFrom: evolvesFrom,
+		Name:         r.Name,
+		Translations: translations,
+		Rarity:       rarity,
+		AttackPower:  attackPower,
+		Speed:        speed,
+		AttackRange:  attackRange,
+		Endurance:    endurance,
+		Precision:    precision,
+		Potential:    potential,
+		EvolvesFrom:  evolvesFrom,
 	}, nil
 }
