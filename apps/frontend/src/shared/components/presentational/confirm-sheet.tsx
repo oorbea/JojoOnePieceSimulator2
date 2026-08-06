@@ -1,4 +1,5 @@
 import { Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { YStack } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
@@ -32,6 +33,8 @@ export function ConfirmSheet({
   onConfirm,
   onCancel,
 }: ConfirmSheetProps) {
+  const insets = useSafeAreaInsets()
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
       <YStack
@@ -39,6 +42,8 @@ export function ConfirmSheet({
         items="center"
         justify="center"
         p="$4"
+        pt={insets.top + 16}
+        pb={insets.bottom + 16}
         bg="rgba(10,12,20,0.45)"
         onPress={isConfirming ? undefined : onCancel}
         {...a11yProps(title, 'alert')}

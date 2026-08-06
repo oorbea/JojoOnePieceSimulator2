@@ -1,6 +1,7 @@
 import { ChevronDown, X } from '@tamagui/lucide-icons-2'
 import { useMemo, useState } from 'react'
 import { Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScrollView, XStack, YStack } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
@@ -43,6 +44,7 @@ export function GlassSelect({
   searchable = false,
   clearable = false,
 }: GlassSelectProps) {
+  const insets = useSafeAreaInsets()
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -126,6 +128,8 @@ export function GlassSelect({
           items="center"
           justify="center"
           p="$4"
+          pt={insets.top + 16}
+          pb={insets.bottom + 16}
           bg="rgba(10,12,20,0.45)"
           onPress={() => setIsOpen(false)}
           {...a11yProps(label, 'none')}
