@@ -1,5 +1,6 @@
 import { Plus, X } from '@tamagui/lucide-icons-2'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
@@ -28,6 +29,7 @@ type SkillsFieldProps = {
  * (react-hook-form via useController) is the single source of truth.
  */
 export function SkillsField({ label, skills, onAdd, onRemove, error }: SkillsFieldProps) {
+  const { t } = useTranslation()
   const [draft, setDraft] = useState('')
 
   const commit = () => {
@@ -48,7 +50,7 @@ export function SkillsField({ label, skills, onAdd, onRemove, error }: SkillsFie
                 <XStack
                   onPress={() => onRemove(index)}
                   p="$0.5"
-                  {...a11yProps(`Remove ${skill}`, 'button')}
+                  {...a11yProps(t('skillsField.removeA11y', { skill }), 'button')}
                 >
                   <X size={14} color="$panelTextSoft" />
                 </XStack>
@@ -64,12 +66,18 @@ export function SkillsField({ label, skills, onAdd, onRemove, error }: SkillsFie
             label={label}
             value={draft}
             onChangeText={setDraft}
-            placeholder="Add a skill…"
+            placeholder={t('skillsField.addPlaceholder')}
             onSubmitEditing={commit}
             returnKeyType="done"
           />
         </YStack>
-        <GlossButton tone="green" btnSize="md" shape="circle" onPress={commit} accessibilityLabel="Add skill">
+        <GlossButton
+          tone="green"
+          btnSize="md"
+          shape="circle"
+          onPress={commit}
+          accessibilityLabel={t('skillsField.addA11y')}
+        >
           <Plus size={20} color="white" />
         </GlossButton>
       </XStack>

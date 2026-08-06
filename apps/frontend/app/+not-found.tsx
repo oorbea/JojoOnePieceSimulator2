@@ -1,5 +1,6 @@
 import { Compass } from '@tamagui/lucide-icons-2'
 import { Link } from 'expo-router'
+import { useTranslation } from 'react-i18next'
 
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
@@ -10,6 +11,7 @@ import { WiiCard } from '@/shared/components/presentational/wii-card'
 // Outside the (app) group, so this has no nav shell — PageShell supplies
 // its own animated backdrop.
 export default function NotFoundScreen() {
+  const { t } = useTranslation()
   return (
     <PageShell align="center">
       <WiiCard tone="glass" aspect="square" width={88} items="center" justify="center">
@@ -17,12 +19,12 @@ export default function NotFoundScreen() {
       </WiiCard>
       <SpeechBubble tailSide="bottom" tone="strong">
         <GlowText level="title" align="center">
-          This screen doesn&apos;t exist.
+          {t('notFound.title')}
         </GlowText>
       </SpeechBubble>
       <Link href="/" asChild>
         <GlossButton tone="blue" btnSize="lg" flare>
-          Go to home
+          {t('notFound.goHome')}
         </GlossButton>
       </Link>
     </PageShell>

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 import {
   deleteAccount,
@@ -37,6 +38,7 @@ function useSyncSessionOnSuccess() {
 }
 
 export function useUpdateUsername() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const syncSession = useSyncSessionOnSuccess()
 
@@ -45,7 +47,7 @@ export function useUpdateUsername() {
     onSuccess: (user) => {
       queryClient.setQueryData(profileKeys.me, user)
       syncSession(user)
-      showSuccessToast('Username updated')
+      showSuccessToast(t('toasts.usernameUpdated'))
     },
   })
 }
@@ -68,6 +70,7 @@ export function useUpdateLanguage() {
 }
 
 export function useUploadAvatar() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const syncSession = useSyncSessionOnSuccess()
 
@@ -76,12 +79,13 @@ export function useUploadAvatar() {
     onSuccess: (user) => {
       queryClient.setQueryData(profileKeys.me, user)
       syncSession(user)
-      showSuccessToast('Uploading your picture. This takes a moment.')
+      showSuccessToast(t('toasts.avatarUploading'))
     },
   })
 }
 
 export function useDeleteAvatar() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const syncSession = useSyncSessionOnSuccess()
 
@@ -90,12 +94,13 @@ export function useDeleteAvatar() {
     onSuccess: (user) => {
       queryClient.setQueryData(profileKeys.me, user)
       syncSession(user)
-      showSuccessToast('Avatar removed')
+      showSuccessToast(t('toasts.avatarRemoved'))
     },
   })
 }
 
 export function useDeleteAccount() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const clearSession = useSessionStore((state) => state.clearSession)
 
@@ -104,7 +109,7 @@ export function useDeleteAccount() {
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: profileKeys.me })
       await clearSession()
-      showSuccessToast('Account deleted')
+      showSuccessToast(t('toasts.accountDeleted'))
     },
   })
 }

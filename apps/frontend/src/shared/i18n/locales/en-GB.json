@@ -3,14 +3,25 @@
     "loading": "Loading",
     "cancel": "Cancel",
     "save": "Save",
+    "saving": "Saving…",
     "delete": "Delete",
-    "tryAgain": "Try again"
+    "tryAgain": "Try again",
+    "somethingWentWrong": "Something went wrong",
+    "working": "Working…",
+    "select": "Select…",
+    "none": "None",
+    "search": "Search",
+    "typeToFilter": "Type to filter…",
+    "noMatches": "No matches",
+    "clearLabel": "Clear {{label}}"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",
     "signInPrompt": "Continue with your Google account to pick a channel.",
     "signingIn": "Signing in…",
-    "continueWithGoogle": "Continue with Google"
+    "continueWithGoogle": "Continue with Google",
+    "googleSignInError": "Something went wrong signing in with Google. Try again.",
+    "googleNoIdToken": "Google did not return an ID token"
   },
   "errorFallback": {
     "title": "Something broke.",
@@ -21,5 +32,190 @@
     "system": "Match system theme",
     "light": "Light theme",
     "dark": "Dark theme"
+  },
+  "nav": {
+    "home": "Home",
+    "profile": "Profile",
+    "admin": "Admin",
+    "logOut": "Log out"
+  },
+  "home": {
+    "pickChannel": "Pick a channel",
+    "channels": {
+      "profile": "Profile",
+      "stands": "Stands",
+      "devilFruits": "Devil Fruits",
+      "powers": "Powers"
+    }
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "pickChannel": "Pick a channel to manage",
+    "stands": "Stands",
+    "devilFruits": "Devil Fruits"
+  },
+  "profile": {
+    "avatarProcessing": "Processing your new picture…",
+    "avatarFailed": "We couldn't use that picture. Try another one.",
+    "avatarTapHint": "Tap the camera to change your picture",
+    "changePicture": "Change profile picture",
+    "username": "Username",
+    "saveUsername": "Save username",
+    "language": "Language",
+    "languageSaving": "Language (saving…)",
+    "accountDetails": "Account details",
+    "fullName": "Full name",
+    "fromGoogleAccount": "From your Google account",
+    "email": "Email",
+    "role": "Role",
+    "setByAdmin": "Set by an administrator",
+    "dangerZone": "Danger zone",
+    "removeAvatar": "Remove avatar",
+    "deleteAccount": "Delete account",
+    "removeAvatarConfirmTitle": "Remove avatar?",
+    "removeAvatarConfirmMessage": "Your picture will revert to the one from your Google account.",
+    "deleteAccountConfirmTitle": "Delete account?",
+    "deleteAccountConfirmMessage": "This permanently deletes your account and everything in it. This can't be undone."
+  },
+  "stands": {
+    "title": "Stands",
+    "newStand": "New Stand",
+    "emptyTitle": "No Stands yet. Create the first one.",
+    "editTitle": "Edit Stand",
+    "changePicture": "Change Stand picture",
+    "name": "Name",
+    "description": "Description",
+    "rarity": "Rarity",
+    "skills": "Skills",
+    "evolvesFrom": "Evolves From",
+    "evolvesFromPlaceholder": "Doesn't evolve from another Stand",
+    "evolvesFromBadge": "From: {{name}}",
+    "editA11y": "Edit {{name}}",
+    "deleteA11y": "Delete {{name}}",
+    "saveA11y": "Save Stand",
+    "deleteConfirmTitle": "Delete Stand?",
+    "deleteConfirmButton": "Delete Stand",
+    "deleteConfirmMessage": "\"{{name}}\" will be permanently deleted. This can't be undone.",
+    "stats": {
+      "attackPower": "Attack Power",
+      "speed": "Speed",
+      "attackRange": "Range",
+      "endurance": "Endurance",
+      "precision": "Precision",
+      "potential": "Potential"
+    }
+  },
+  "devilFruits": {
+    "title": "Devil Fruits",
+    "newDevilFruit": "New Devil Fruit",
+    "emptyTitle": "No Devil Fruits yet. Create the first one.",
+    "editTitle": "Edit Devil Fruit",
+    "changePicture": "Change Devil Fruit picture",
+    "name": "Name",
+    "description": "Description",
+    "rarity": "Rarity",
+    "skills": "Skills",
+    "fruitType": "Fruit Type",
+    "editA11y": "Edit {{name}}",
+    "deleteA11y": "Delete {{name}}",
+    "saveA11y": "Save Devil Fruit",
+    "deleteConfirmTitle": "Delete Devil Fruit?",
+    "deleteConfirmButton": "Delete Devil Fruit",
+    "deleteConfirmMessage": "\"{{name}}\" will be permanently deleted. This can't be undone."
+  },
+  "locale": {
+    "required": "required",
+    "hasError": "has an error"
+  },
+  "skillsField": {
+    "addPlaceholder": "Add a skill…",
+    "addA11y": "Add skill",
+    "removeA11y": "Remove {{skill}}"
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "nameTooLong": "Name is too long",
+    "descriptionRequired": "Description is required",
+    "descriptionTooLong": "Description is too long",
+    "skillsRequired": "At least one skill is required",
+    "translationIncomplete": "Fill in both description and skills for this language, or leave it blank",
+    "usernameMinLength": "Username must be at least 3 characters",
+    "usernameMaxLength": "Username must be at most 32 characters",
+    "usernameFormat": "Only lowercase letters, numbers, and underscores"
+  },
+  "toasts": {
+    "standCreated": "Stand created",
+    "standUpdated": "Stand updated",
+    "standDeleted": "Stand deleted",
+    "standPictureUploading": "Uploading picture. This takes a moment.",
+    "devilFruitCreated": "Devil Fruit created",
+    "devilFruitUpdated": "Devil Fruit updated",
+    "devilFruitDeleted": "Devil Fruit deleted",
+    "devilFruitPictureUploading": "Uploading picture. This takes a moment.",
+    "usernameUpdated": "Username updated",
+    "avatarUploading": "Uploading your picture. This takes a moment.",
+    "avatarRemoved": "Avatar removed",
+    "accountDeleted": "Account deleted"
+  },
+  "notFound": {
+    "title": "This screen doesn't exist.",
+    "goHome": "Go to home"
+  },
+  "enums": {
+    "rarity": {
+      "COMMON": "Common",
+      "RARE": "Rare",
+      "EPIC": "Epic",
+      "LEGENDARY": "Legendary"
+    },
+    "standStat": {
+      "E": "E",
+      "D": "D",
+      "C": "C",
+      "B": "B",
+      "A": "A",
+      "INFINITE": "Infinite",
+      "NULL": "None"
+    },
+    "fruitType": {
+      "PARAMECIA": "Paramecia",
+      "ZOAN": "Zoan",
+      "LOGIA": "Logia",
+      "SPECIAL_PARAMECIA": "Special Paramecia",
+      "ANCIENT_ZOAN": "Ancient Zoan",
+      "MYTHICAL_ZOAN": "Mythical Zoan"
+    },
+    "role": {
+      "REGULAR": "User",
+      "ADMIN": "Admin"
+    }
+  },
+  "errors": {
+    "STAND_NOT_FOUND": "This Stand couldn't be found.",
+    "USER_NOT_FOUND": "This user couldn't be found.",
+    "DEVIL_FRUIT_NOT_FOUND": "This Devil Fruit couldn't be found.",
+    "STAND_ALREADY_EXISTS": "A Stand with that name already exists.",
+    "USER_ALREADY_EXISTS": "A user with that email already exists.",
+    "DEVIL_FRUIT_ALREADY_EXISTS": "A Devil Fruit with that name already exists.",
+    "LAST_ADMIN": "You can't remove the last administrator.",
+    "VALIDATION_FAILED": "Check the highlighted fields and try again.",
+    "INVALID_RARITY": "That rarity isn't valid.",
+    "INVALID_STAND_STAT": "That stat isn't valid.",
+    "INVALID_FRUIT_TYPE": "That fruit type isn't valid.",
+    "INVALID_USER_ROLE": "That role isn't valid.",
+    "INVALID_USERNAME": "That username isn't valid.",
+    "INVALID_ID": "That id isn't valid.",
+    "SELF_EVOLUTION": "A Stand can't evolve from itself.",
+    "PICTURE_REQUIRED": "A picture is required.",
+    "UNSUPPORTED_PICTURE_TYPE": "That picture type isn't supported.",
+    "INVALID_IMAGE": "That image couldn't be processed.",
+    "EMAIL_NOT_VERIFIED": "Your Google email isn't verified.",
+    "CONSTRAINT_VIOLATION": "That change isn't allowed.",
+    "UNAUTHENTICATED": "You need to sign in again.",
+    "FORBIDDEN": "You don't have permission to do that.",
+    "PICTURE_TOO_LARGE": "That picture is too large.",
+    "RATE_LIMITED": "Too many requests. Try again in a moment.",
+    "PICTURE_QUEUE_FULL": "Picture processing is busy right now. Try again in a moment.",
+    "INTERNAL": "Something went wrong on our end."
   }
 }

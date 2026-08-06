@@ -1,4 +1,5 @@
 import { Apple, Home as HomeIcon, Sparkles, Zap } from '@tamagui/lucide-icons-2'
+import { useTranslation } from 'react-i18next'
 import { Image } from 'react-native'
 import { Paragraph, XStack, YStack } from 'tamagui'
 
@@ -18,18 +19,20 @@ type Props = {
 // The domains behind the empty channel slots aren't built yet — showing
 // them locked and honest beats faking navigation to routes that don't
 // exist (typedRoutes would refuse to compile a fake href anyway). Profile
-// is the one reserved slot that's actually wired up.
+// is the one reserved slot that's actually wired up. Labels come from
+// useTranslation() in the component below - this only pins the i18n key.
 const CHANNELS = [
-  { key: 'profile', label: 'Profile', tone: 'blue' as const, icon: HomeIcon, locked: false },
-  { key: 'stands', label: 'Stands', tone: 'grape' as const, icon: Sparkles, locked: true },
-  { key: 'fruits', label: 'Devil Fruits', tone: 'red' as const, icon: Apple, locked: true },
-  { key: 'powers', label: 'Powers', tone: 'yellow' as const, icon: Zap, locked: true },
+  { key: 'profile', labelKey: 'home.channels.profile', tone: 'blue' as const, icon: HomeIcon, locked: false },
+  { key: 'stands', labelKey: 'home.channels.stands', tone: 'grape' as const, icon: Sparkles, locked: true },
+  { key: 'fruits', labelKey: 'home.channels.devilFruits', tone: 'red' as const, icon: Apple, locked: true },
+  { key: 'powers', labelKey: 'home.channels.powers', tone: 'yellow' as const, icon: Zap, locked: true },
 ]
 
 // Pure UI — lives inside the authenticated app shell, so it doesn't carry
 // its own backdrop or logout button; AppShell already provides both (a
 // second logout here would just duplicate the one in the top bar).
 export function HomeScreen({ user, onOpenProfile }: Props) {
+  const { t } = useTranslation()
   return (
     <PageShell align="top" scroll maxWidth={720}>
       <GlassPanel
@@ -65,21 +68,21 @@ export function HomeScreen({ user, onOpenProfile }: Props) {
               <GlowText level="label">{user.email}</GlowText>
             </GlassPanel>
             <GlassPanel tone="plastic" px="$3" py="$1.5" rounded="$pill" elevate={0}>
-              <GlowText level="label">{user.role}</GlowText>
+              <GlowText level="label">{t(`enums.role.${user.role}`)}</GlowText>
             </GlassPanel>
           </XStack>
         </YStack>
       </GlassPanel>
 
       <GlowText level="heading" align="center">
-        Pick a channel
+        {t('home.pickChannel')}
       </GlowText>
 
       <XStack flexWrap="wrap" gap="$4" justify="center">
         {CHANNELS.map((channel) => (
           <ChannelTile
             key={channel.key}
-            label={channel.label}
+            label={t(channel.labelKey)}
             tone={channel.tone}
             icon={channel.icon}
             locked={channel.locked}

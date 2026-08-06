@@ -1,4 +1,5 @@
 import { fireEvent, renderWithProviders, screen } from '@/test/render'
+import enGB from '@/shared/i18n/locales/en-GB.json'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 
 import { DevilFruitCard } from '../devil-fruit-card'
@@ -23,8 +24,8 @@ describe('DevilFruitCard', () => {
     await renderWithProviders(<DevilFruitCard devilFruit={baseFruit()} onEdit={jest.fn()} onDelete={jest.fn()} />)
 
     expect(screen.getByText('Gomu Gomu no Mi')).toBeTruthy()
-    expect(screen.getByText('EPIC')).toBeTruthy()
-    expect(screen.getByText('PARAMECIA')).toBeTruthy()
+    expect(screen.getByText(enGB.enums.rarity.EPIC)).toBeTruthy()
+    expect(screen.getByText(enGB.enums.fruitType.PARAMECIA)).toBeTruthy()
   })
 
   it('fires onEdit and onDelete from their own buttons', async () => {

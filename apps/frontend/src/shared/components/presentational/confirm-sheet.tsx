@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Modal } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { YStack } from 'tamagui'
@@ -33,6 +34,7 @@ export function ConfirmSheet({
   onConfirm,
   onCancel,
 }: ConfirmSheetProps) {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
 
   return (
@@ -72,16 +74,16 @@ export function ConfirmSheet({
               onPress={onConfirm}
               accessibilityLabel={confirmLabel}
             >
-              {isConfirming ? 'Working…' : confirmLabel}
+              {isConfirming ? t('common.working') : confirmLabel}
             </GlossButton>
             <GlossButton
               tone="glass"
               btnSize="md"
               disabled={isConfirming}
               onPress={onCancel}
-              accessibilityLabel="Cancel"
+              accessibilityLabel={t('common.cancel')}
             >
-              Cancel
+              {t('common.cancel')}
             </GlossButton>
           </YStack>
         </GlassPanel>

@@ -1,8 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, type RenderOptions } from '@testing-library/react-native'
 import { useState, type ReactElement, type ReactNode } from 'react'
+import { I18nextProvider } from 'react-i18next'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { TamaguiProvider } from 'tamagui'
+
+import i18n from '@/shared/i18n'
 
 import tamaguiConfig from '../../tamagui.config'
 
@@ -12,6 +15,10 @@ import tamaguiConfig from '../../tamagui.config'
 // screens/containers assume exist somewhere above them. Mutations/queries
 // never retry here: a broken mock should fail the test immediately, not
 // after a retry backoff nobody's waiting for.
+// I18nextProvider (not just relying on the module-level singleton some
+// unrelated import might have initialized) makes every test independent of
+// import order - any component using useTranslation() gets the real en-GB
+// catalog whether or not it happens to import shared/i18n itself.
 function AllProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -24,11 +31,13 @@ function AllProviders({ children }: { children: ReactNode }) {
   )
 
   return (
-    <SafeAreaProvider>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-      </TamaguiProvider>
-    </SafeAreaProvider>
+    <I18nextProvider i18n={i18n}>
+      <SafeAreaProvider>
+        <TamaguiProvider config={tamaguiConfig} defaultTheme="light">
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        </TamaguiProvider>
+      </SafeAreaProvider>
+    </I18nextProvider>
   )
 }
 

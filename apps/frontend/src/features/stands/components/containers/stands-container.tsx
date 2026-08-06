@@ -1,7 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+import { getStandTranslations } from '@/features/stands/api/stands.api'
+import { standKeys } from '@/features/stands/api/stands.keys'
 import { StandsScreen } from '@/features/stands/components/presentational/stands-screen'
 import { useStands } from '@/features/stands/hooks/use-stands'
 import {
@@ -13,39 +16,31 @@ import {
 import { standFormSchema, type StandFormValues, type StandInput, type StandResponse } from '@/features/stands/types/stands.types'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import { usePicturePicker } from '@/shared/hooks/use-picture-picker'
+import { DEFAULT_LOCALE } from '@/shared/i18n'
+import { createEmptyTranslationsForm, fromTranslationsResponse, toTranslationsPayload } from '@/shared/lib/power-translations'
+import type { Locale } from '@/shared/lib/zod'
 
-const DEFAULT_VALUES: StandFormValues = {
-  name: '',
-  description: '',
-  rarity: 'COMMON',
-  skills: [],
-  attackPower: 'NULL',
-  speed: 'NULL',
-  attackRange: 'NULL',
-  endurance: 'NULL',
-  precision: 'NULL',
-  potential: 'NULL',
-  evolvesFromId: null,
-}
-
-function toFormValues(stand: StandResponse): StandFormValues {
+// A function, not a constant object: reset()/useForm's defaultValues become
+// this form's live nested state, so every "create" open needs its own
+// fresh translations tree instead of sharing one mutable object across opens.
+function createDefaultValues(): StandFormValues {
   return {
-    name: stand.name,
-    description: stand.description,
-    rarity: stand.rarity,
-    skills: stand.skills,
-    attackPower: stand.attackPower,
-    speed: stand.speed,
-    attackRange: stand.attackRange,
-    endurance: stand.endurance,
-    precision: stand.precision,
-    potential: stand.potential,
-    evolvesFromId: stand.evolvesFrom?.id ?? null,
+    name: '',
+    translations: createEmptyTranslationsForm(),
+    rarity: 'COMMON',
+    attackPower: 'NULL',
+    speed: 'NULL',
+    attackRange: 'NULL',
+    endurance: 'NULL',
+    precision: 'NULL',
+    potential: 'NULL',
+    evolvesFromId: null,
   }
 }
 
 function toInput(values: StandFormValues): StandInput {
-  return { ...values }
+  const { translations, ...rest } = values
+  return { ...rest, translations: toTranslationsPayload(translations) }
 }
 
 export function StandsContainer() {
@@ -55,6 +50,7 @@ export function StandsContainer() {
   const deleteMutation = useDeleteStand()
   const uploadPictureMutation = useUploadStandPicture()
   const { pickPicture } = usePicturePicker()
+  const queryClient = useQueryClient()
 
   const [modalState, setModalState] = useState<{
     visible: boolean
@@ -62,8 +58,10 @@ export function StandsContainer() {
     editingStand: StandResponse | null
   }>({ visible: false, mode: 'create', editingStand: null })
 
+  const [activeLocale, setActiveLocale] = useState<Locale>(DEFAULT_LOCALE)
   const [pendingPicture, setPendingPicture] = useState<PickedPicture | null>(null)
   const [standToDelete, setStandToDelete] = useState<StandResponse | null>(null)
+  const [openingEditId, setOpeningEditId] = useState<string | null>(null)
 
   const {
     control,
@@ -72,7 +70,7 @@ export function StandsContainer() {
     formState: { errors },
   } = useForm<StandFormValues>({
     resolver: zodResolver(standFormSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: createDefaultValues(),
   })
 
   const evolvesFromOptions = useMemo(() => {
@@ -84,15 +82,42 @@ export function StandsContainer() {
   }, [stands, modalState.editingStand])
 
   const openCreate = () => {
-    reset(DEFAULT_VALUES)
+    reset(createDefaultValues())
     setPendingPicture(null)
+    setActiveLocale(DEFAULT_LOCALE)
     setModalState({ visible: true, mode: 'create', editingStand: null })
   }
 
-  const openEdit = (stand: StandResponse) => {
-    reset(toFormValues(stand))
-    setPendingPicture(null)
-    setModalState({ visible: true, mode: 'edit', editingStand: stand })
+  // Waits for GET .../translations before opening the modal - a half-filled
+  // form (public fields ready, translations still empty) would flicker
+  // every locale's tab as blank for a beat, then jump non-en-GB tabs to
+  // whatever they actually contain. Fetching first avoids that entirely,
+  // no useEffect needed.
+  const openEdit = async (stand: StandResponse) => {
+    setOpeningEditId(stand.id)
+    try {
+      const translations = await queryClient.fetchQuery({
+        queryKey: standKeys.translations(stand.id),
+        queryFn: () => getStandTranslations(stand.id),
+      })
+      reset({
+        name: stand.name,
+        translations: fromTranslationsResponse(translations),
+        rarity: stand.rarity,
+        attackPower: stand.attackPower,
+        speed: stand.speed,
+        attackRange: stand.attackRange,
+        endurance: stand.endurance,
+        precision: stand.precision,
+        potential: stand.potential,
+        evolvesFromId: stand.evolvesFrom?.id ?? null,
+      })
+      setPendingPicture(null)
+      setActiveLocale(DEFAULT_LOCALE)
+      setModalState({ visible: true, mode: 'edit', editingStand: stand })
+    } finally {
+      setOpeningEditId(null)
+    }
   }
 
   const closeModal = () => setModalState((prev) => ({ ...prev, visible: false }))
@@ -127,7 +152,7 @@ export function StandsContainer() {
         },
       }
     )
-  })
+  }, jumpToFirstErroredLocale)
 
   const onConfirmDelete = () => {
     if (!standToDelete) return
@@ -136,13 +161,28 @@ export function StandsContainer() {
 
   const pictureUri = pendingPicture?.uri ?? modalState.editingStand?.pictureThumb ?? null
 
+  // A translations.<locale> error is invisible if that locale's tab isn't
+  // the active one - jump to the first one with an error on a failed
+  // submit instead of leaving the user staring at a form that looks fine.
+  function jumpToFirstErroredLocale(formErrors: typeof errors) {
+    const erroredLocale = (['en-GB', 'es-ES', 'ca-ES'] as const).find(
+      (locale) => formErrors.translations?.[locale]
+    )
+    if (erroredLocale) setActiveLocale(erroredLocale)
+  }
+
+  const erroredLocales = (['en-GB', 'es-ES', 'ca-ES'] as const).filter(
+    (locale) => errors.translations?.[locale]
+  )
+
   return (
     <StandsScreen
       stands={stands ?? []}
       isLoading={isLoading}
       onCreateNew={openCreate}
-      onEdit={openEdit}
+      onEdit={(stand) => void openEdit(stand)}
       onDelete={setStandToDelete}
+      openingEditId={openingEditId}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,
@@ -155,6 +195,9 @@ export function StandsContainer() {
         pictureUri,
         onPickPicture: () => void onPickPicture(),
         isPictureBusy: uploadPictureMutation.isPending,
+        activeLocale,
+        onLocaleChange: setActiveLocale,
+        erroredLocales,
       }}
       deleteConfirm={{
         visible: standToDelete !== null,

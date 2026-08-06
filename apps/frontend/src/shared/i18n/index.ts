@@ -12,10 +12,26 @@ import type { Locale } from '@/shared/lib/zod'
 export const SUPPORTED_LOCALES: Locale[] = ['en-GB', 'es-ES', 'ca-ES']
 export const DEFAULT_LOCALE: Locale = 'en-GB'
 
+// Language names stay in their own language regardless of the active UI
+// locale (endonyms) - the standard convention for a language picker, so a
+// Catalan speaker who ended up on the English UI still recognizes "Català"
+// at a glance instead of hunting for "Catalan". Shared by the profile
+// language picker and the admin forms' LocaleTabs.
+export const LOCALE_ENDONYMS: Record<Locale, string> = {
+  'en-GB': 'English (UK)',
+  'es-ES': 'Español (España)',
+  'ca-ES': 'Català (Catalunya)',
+}
+
+// i18next resources must be namespaced ({ [lng]: { [ns]: {...} } }), not the
+// flat per-locale catalog directly - without the `translation` wrapper (the
+// default namespace `t()` reads from), every lookup misses and t() returns
+// the raw key back, which is exactly what silently happened here until a
+// test actually exercised useTranslation().
 const resources = {
-  'en-GB': enGB,
-  'es-ES': esES,
-  'ca-ES': caES,
+  'en-GB': { translation: enGB },
+  'es-ES': { translation: esES },
+  'ca-ES': { translation: caES },
 }
 
 // detectDeviceLocale maps the device's language tags onto a supported

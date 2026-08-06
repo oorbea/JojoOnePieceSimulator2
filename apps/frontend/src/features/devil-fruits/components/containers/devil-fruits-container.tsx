@@ -1,7 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
+import { getDevilFruitTranslations } from '@/features/devil-fruits/api/devil-fruits.api'
+import { devilFruitKeys } from '@/features/devil-fruits/api/devil-fruits.keys'
 import { DevilFruitsScreen } from '@/features/devil-fruits/components/presentational/devil-fruits-screen'
 import { useDevilFruits } from '@/features/devil-fruits/hooks/use-devil-fruits'
 import {
@@ -18,27 +21,24 @@ import {
 } from '@/features/devil-fruits/types/devil-fruits.types'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import { usePicturePicker } from '@/shared/hooks/use-picture-picker'
+import { DEFAULT_LOCALE } from '@/shared/i18n'
+import { createEmptyTranslationsForm, fromTranslationsResponse, toTranslationsPayload } from '@/shared/lib/power-translations'
+import type { Locale } from '@/shared/lib/zod'
 
-const DEFAULT_VALUES: DevilFruitFormValues = {
-  name: '',
-  description: '',
-  rarity: 'COMMON',
-  skills: [],
-  fruitType: 'PARAMECIA',
-}
-
-function toFormValues(devilFruit: DevilFruitResponse): DevilFruitFormValues {
+// A function, not a constant object - see stands-container.tsx's
+// createDefaultValues for why.
+function createDefaultValues(): DevilFruitFormValues {
   return {
-    name: devilFruit.name,
-    description: devilFruit.description,
-    rarity: devilFruit.rarity,
-    skills: devilFruit.skills,
-    fruitType: devilFruit.fruitType,
+    name: '',
+    translations: createEmptyTranslationsForm(),
+    rarity: 'COMMON',
+    fruitType: 'PARAMECIA',
   }
 }
 
 function toInput(values: DevilFruitFormValues): DevilFruitInput {
-  return { ...values }
+  const { translations, ...rest } = values
+  return { ...rest, translations: toTranslationsPayload(translations) }
 }
 
 export function DevilFruitsContainer() {
@@ -48,6 +48,7 @@ export function DevilFruitsContainer() {
   const deleteMutation = useDeleteDevilFruit()
   const uploadPictureMutation = useUploadDevilFruitPicture()
   const { pickPicture } = usePicturePicker()
+  const queryClient = useQueryClient()
 
   const [modalState, setModalState] = useState<{
     visible: boolean
@@ -55,8 +56,10 @@ export function DevilFruitsContainer() {
     editingFruit: DevilFruitResponse | null
   }>({ visible: false, mode: 'create', editingFruit: null })
 
+  const [activeLocale, setActiveLocale] = useState<Locale>(DEFAULT_LOCALE)
   const [pendingPicture, setPendingPicture] = useState<PickedPicture | null>(null)
   const [fruitToDelete, setFruitToDelete] = useState<DevilFruitResponse | null>(null)
+  const [openingEditId, setOpeningEditId] = useState<string | null>(null)
 
   const {
     control,
@@ -65,19 +68,37 @@ export function DevilFruitsContainer() {
     formState: { errors },
   } = useForm<DevilFruitFormValues>({
     resolver: zodResolver(devilFruitFormSchema),
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: createDefaultValues(),
   })
 
   const openCreate = () => {
-    reset(DEFAULT_VALUES)
+    reset(createDefaultValues())
     setPendingPicture(null)
+    setActiveLocale(DEFAULT_LOCALE)
     setModalState({ visible: true, mode: 'create', editingFruit: null })
   }
 
-  const openEdit = (devilFruit: DevilFruitResponse) => {
-    reset(toFormValues(devilFruit))
-    setPendingPicture(null)
-    setModalState({ visible: true, mode: 'edit', editingFruit: devilFruit })
+  // See stands-container.tsx's openEdit for why this awaits the
+  // translations fetch before opening the modal.
+  const openEdit = async (devilFruit: DevilFruitResponse) => {
+    setOpeningEditId(devilFruit.id)
+    try {
+      const translations = await queryClient.fetchQuery({
+        queryKey: devilFruitKeys.translations(devilFruit.id),
+        queryFn: () => getDevilFruitTranslations(devilFruit.id),
+      })
+      reset({
+        name: devilFruit.name,
+        translations: fromTranslationsResponse(translations),
+        rarity: devilFruit.rarity,
+        fruitType: devilFruit.fruitType,
+      })
+      setPendingPicture(null)
+      setActiveLocale(DEFAULT_LOCALE)
+      setModalState({ visible: true, mode: 'edit', editingFruit: devilFruit })
+    } finally {
+      setOpeningEditId(null)
+    }
   }
 
   const closeModal = () => setModalState((prev) => ({ ...prev, visible: false }))
@@ -112,7 +133,7 @@ export function DevilFruitsContainer() {
         },
       }
     )
-  })
+  }, jumpToFirstErroredLocale)
 
   const onConfirmDelete = () => {
     if (!fruitToDelete) return
@@ -121,13 +142,25 @@ export function DevilFruitsContainer() {
 
   const pictureUri = pendingPicture?.uri ?? modalState.editingFruit?.pictureThumb ?? null
 
+  function jumpToFirstErroredLocale(formErrors: typeof errors) {
+    const erroredLocale = (['en-GB', 'es-ES', 'ca-ES'] as const).find(
+      (locale) => formErrors.translations?.[locale]
+    )
+    if (erroredLocale) setActiveLocale(erroredLocale)
+  }
+
+  const erroredLocales = (['en-GB', 'es-ES', 'ca-ES'] as const).filter(
+    (locale) => errors.translations?.[locale]
+  )
+
   return (
     <DevilFruitsScreen
       devilFruits={devilFruits ?? []}
       isLoading={isLoading}
       onCreateNew={openCreate}
-      onEdit={openEdit}
+      onEdit={(devilFruit) => void openEdit(devilFruit)}
       onDelete={setFruitToDelete}
+      openingEditId={openingEditId}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,
@@ -139,6 +172,9 @@ export function DevilFruitsContainer() {
         pictureUri,
         onPickPicture: () => void onPickPicture(),
         isPictureBusy: uploadPictureMutation.isPending,
+        activeLocale,
+        onLocaleChange: setActiveLocale,
+        erroredLocales,
       }}
       deleteConfirm={{
         visible: fruitToDelete !== null,

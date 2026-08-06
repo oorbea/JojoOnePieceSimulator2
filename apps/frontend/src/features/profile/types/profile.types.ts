@@ -28,12 +28,14 @@ export type UpdateLanguageInput = {
 
 // Mirrors the backend's username sanitizer client-side, so a typo surfaces
 // as an inline field error instead of a round-trip 400.
+// Messages are i18n keys, not display strings - see power-translations.ts's
+// zod decision. Resolve with t(errors.username?.message) at the render site.
 export const usernameFormSchema = z.object({
   username: z
     .string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(32, 'Username must be at most 32 characters')
-    .regex(/^[a-z0-9_]+$/, 'Only lowercase letters, numbers, and underscores'),
+    .min(3, 'validation.usernameMinLength')
+    .max(32, 'validation.usernameMaxLength')
+    .regex(/^[a-z0-9_]+$/, 'validation.usernameFormat'),
 })
 
 export type UsernameFormValues = z.infer<typeof usernameFormSchema>

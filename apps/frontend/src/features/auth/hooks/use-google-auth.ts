@@ -1,6 +1,7 @@
 import * as Google from 'expo-auth-session/providers/google'
 import * as WebBrowser from 'expo-web-browser'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Platform } from 'react-native'
 
 import { postGoogleAuth } from '@/features/auth/api/auth.api'
@@ -46,6 +47,7 @@ function decodeJwtPayload(idToken: string): Record<string, unknown> {
 }
 
 export function useGoogleAuth() {
+  const { t } = useTranslation()
   const setSession = useSessionStore((state) => state.setSession)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<AppError | null>(null)
@@ -110,13 +112,13 @@ export function useGoogleAuth() {
       // user's point of view, so they get the same message; the technical
       // detail stays in the thrown Error, not on screen.
       if (!expectedState || returnedState !== expectedState) {
-        setError(toAppError(new Error('Something went wrong signing in with Google. Try again.')))
+        setError(toAppError(new Error(t('auth.googleSignInError'))))
         return
       }
 
       const nonce = decodeJwtPayload(idToken).nonce
       if (!expectedNonce || nonce !== expectedNonce) {
-        setError(toAppError(new Error('Something went wrong signing in with Google. Try again.')))
+        setError(toAppError(new Error(t('auth.googleSignInError'))))
         return
       }
 
@@ -135,7 +137,7 @@ export function useGoogleAuth() {
     void (async () => {
       const idToken = response.authentication?.idToken
       if (!idToken) {
-        setError(toAppError(new Error('Google did not return an ID token')))
+        setError(toAppError(new Error(t('auth.googleNoIdToken'))))
         return
       }
       await completeSignIn(idToken)
