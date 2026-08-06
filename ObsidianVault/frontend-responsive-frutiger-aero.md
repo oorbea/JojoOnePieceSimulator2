@@ -90,3 +90,38 @@ las pantallas — arreglarlas ahí corrigió las tres pantallas de golpe:
   `GlowText level="hero"` — a petición del owner, sin frase de relleno.
 
 Related: [[a11y-web-leak]] si se vuelve a tocar `a11yProps`.
+
+## Media queries eran max-width, no min-width (2026-08-06) — el bug real detrás del "responsive resuelto"
+
+El pase de 2026-08-04 arregló los síntomas visibles pero no la causa: `@tamagui/config/v4`'s
+`defaultConfig.media` define `md`/`lg`/`xl` como **max-width** (`md: {maxWidth:1020}`, verificado en
+`node_modules/.pnpm/@tamagui+config@2.6.2*/node_modules/@tamagui/config/dist/esm/media.mjs`), pero
+`tamagui.config.ts` hacía `...defaultConfig` sin redefinir `media`, y **todo el código escribía `$md`
+como si fuera mobile-first min-width**. El comentario de la línea 27 de esta nota ("v4's
+`mediaQueryDefaultActive` is mobile-first") describía solo el *default de activación*, no la dirección
+real de la query — engañoso, y probablemente la razón de que nadie lo pillara antes.
+
+Consecuencia real: la fila de nav links con label de `AppShell` (pensada para desktop) se mostraba en
+móvil dentro de un `ChannelBar` de `height:64` fijo sin wrap → logo + "JOPS" + 3 items + theme toggle +
+logout se recortaban unos sobre otros. El dock inferior (pensado para móvil) solo existía en
+`>1020px`. `PageShell`'s `columnMaxWidth` a 390px matcheaba `md`+`lg`+`xl` a la vez y ganaba el último
+(`base*1.8`) en vez del primero.
+
+Fix: `tamagui.config.ts` ahora define su propio `media` (min-width real: `sm:640 md:900 lg:1200
+xl:1500`, más un alias `maxSm:{maxWidth:639}` para lo que de verdad es "solo móvil") y su propio
+`mediaQueryDefaultActive` (todo `false` salvo `maxSm:true` — mobile-first de verdad). Test de guardia en
+`src/shared/lib/__tests__/media.test.ts`: cualquier clave que no empiece por `max` debe ser
+`minWidth`, y las tiers crecientes deben declararse en orden ascendente.
+
+Segundo cambio del mismo pase — la reserva de espacio para las barras flotantes dejó de ser una
+constante (`NAV_BAR_HEIGHT=64`) que cada pantalla pedía a mano vía `PageShell navPadding`: `AppShell`
+ahora mide la altura real de ambas barras con `onLayout` y la publica por
+`src/shared/lib/nav-insets.tsx` (`NavInsetsProvider`/`useNavInsets`); `PageShell` la lee del contexto en
+vez de recibir un prop. Una barra que crece (wrap de contenido) ya no puede quedar tapando la página
+porque la reserva crece con ella. `layout.ts`'s `topClearance`/`bottomClearance`/
+`desktopBottomClearance` (booleanas) se sustituyeron por `navTopInset`/`navBottomInset` (altura medida o
+`null` si la barra no existe en ese tier).
+
+También: la fila de links y el dock pasaron de dos `display`/`$md` independientes a un solo booleano
+(`showTopLinks = media.md`) en `AppShell` — estructuralmente imposible que coexistan o que falten los
+dos a la vez.
