@@ -1,4 +1,5 @@
 import { fireEvent, renderWithProviders, screen } from '@/test/render'
+import enGB from '@/shared/i18n/locales/en-GB.json'
 import type { SessionUser } from '@/shared/stores/session.store'
 
 import { HomeScreen } from '../home-screen'
@@ -25,7 +26,7 @@ describe('HomeScreen', () => {
     await renderWithProviders(<HomeScreen user={USER} onOpenProfile={jest.fn()} />)
 
     expect(screen.getByText(USER.email)).toBeTruthy()
-    expect(screen.getByText(USER.role)).toBeTruthy()
+    expect(screen.getByText(enGB.enums.role[USER.role])).toBeTruthy()
   })
 
   // AppShell's top bar already has a logout button on every authenticated

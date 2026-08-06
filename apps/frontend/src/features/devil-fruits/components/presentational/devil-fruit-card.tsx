@@ -1,6 +1,7 @@
 import { Apple, Pencil, Trash2 } from '@tamagui/lucide-icons-2'
+import { useTranslation } from 'react-i18next'
 import { Image } from 'react-native'
-import { XStack, YStack } from 'tamagui'
+import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -12,9 +13,11 @@ type Props = {
   devilFruit: DevilFruitResponse
   onEdit: () => void
   onDelete: () => void
+  isEditBusy?: boolean
 }
 
-export function DevilFruitCard({ devilFruit, onEdit, onDelete }: Props) {
+export function DevilFruitCard({ devilFruit, onEdit, onDelete, isEditBusy }: Props) {
+  const { t } = useTranslation()
   return (
     <WiiCard padded width={280} gap="$3">
       <YStack width="100%" height={140} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
@@ -34,10 +37,10 @@ export function DevilFruitCard({ devilFruit, onEdit, onDelete }: Props) {
         </GlowText>
         <XStack gap="$2" flexWrap="wrap">
           <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-            <GlowText level="label">{devilFruit.rarity}</GlowText>
+            <GlowText level="label">{t(`enums.rarity.${devilFruit.rarity}`)}</GlowText>
           </GlassPanel>
           <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-            <GlowText level="label">{devilFruit.fruitType}</GlowText>
+            <GlowText level="label">{t(`enums.fruitType.${devilFruit.fruitType}`)}</GlowText>
           </GlassPanel>
         </XStack>
       </YStack>
@@ -48,16 +51,17 @@ export function DevilFruitCard({ devilFruit, onEdit, onDelete }: Props) {
           btnSize="sm"
           shape="circle"
           onPress={onEdit}
-          accessibilityLabel={`Edit ${devilFruit.name}`}
+          disabled={isEditBusy}
+          accessibilityLabel={t('devilFruits.editA11y', { name: devilFruit.name })}
         >
-          <Pencil size={16} color="white" />
+          {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
         </GlossButton>
         <GlossButton
           tone="red"
           btnSize="sm"
           shape="circle"
           onPress={onDelete}
-          accessibilityLabel={`Delete ${devilFruit.name}`}
+          accessibilityLabel={t('devilFruits.deleteA11y', { name: devilFruit.name })}
         >
           <Trash2 size={16} color="white" />
         </GlossButton>

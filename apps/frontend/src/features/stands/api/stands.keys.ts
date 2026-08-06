@@ -15,4 +15,8 @@ export const standKeys = {
   all: () => [...standKeys.allLocales, useLanguageStore.getState().locale] as const,
   list: (filters?: StandFilters) => [...standKeys.all(), 'list', filters ?? {}] as const,
   detail: (id: string) => [...standKeys.all(), 'detail', id] as const,
+  // Admin edit form only - carries every locale at once, so it hangs off
+  // allLocales (not all()) and must not be branched by the active UI
+  // locale. Mutations already invalidate allLocales, which drops this too.
+  translations: (id: string) => [...standKeys.allLocales, 'translations', id] as const,
 }

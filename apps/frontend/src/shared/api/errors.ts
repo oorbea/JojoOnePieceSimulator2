@@ -4,12 +4,14 @@ import { errorResponseSchema } from '@/shared/lib/zod'
 // failures) into one type every feature can catch and render consistently.
 export class AppError extends Error {
   readonly status?: number
+  readonly code?: string
   readonly details?: string[]
 
-  constructor(message: string, options?: { status?: number; details?: string[] }) {
+  constructor(message: string, options?: { status?: number; code?: string; details?: string[] }) {
     super(message)
     this.name = 'AppError'
     this.status = options?.status
+    this.code = options?.code
     this.details = options?.details
   }
 }
@@ -30,6 +32,7 @@ export function toAppError(error: unknown): AppError {
     if (parsed.success) {
       return new AppError(parsed.data.error, {
         status: axiosError.response?.status,
+        code: parsed.data.code,
         details: parsed.data.details,
       })
     }

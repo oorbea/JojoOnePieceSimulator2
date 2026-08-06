@@ -1,5 +1,6 @@
 import { Plus, Sparkles } from '@tamagui/lucide-icons-2'
 import type { Control, FieldErrors } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
@@ -8,6 +9,7 @@ import type { GlassSelectOption } from '@/shared/components/presentational/glass
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
+import type { Locale } from '@/shared/lib/zod'
 import type { StandFormValues, StandResponse } from '@/features/stands/types/stands.types'
 
 import { StandCard } from './stand-card'
@@ -33,6 +35,9 @@ type FormState = {
   pictureUri: string | null
   onPickPicture: () => void
   isPictureBusy: boolean
+  activeLocale: Locale
+  onLocaleChange: (locale: Locale) => void
+  erroredLocales: Locale[]
 }
 
 type Props = {
@@ -41,6 +46,7 @@ type Props = {
   onCreateNew: () => void
   onEdit: (stand: StandResponse) => void
   onDelete: (stand: StandResponse) => void
+  openingEditId: string | null
   form: FormState
   deleteConfirm: ConfirmState
 }
@@ -48,14 +54,24 @@ type Props = {
 // Pure UI — a card grid of Stands plus the create/edit modal and the delete
 // confirmation. All data fetching, form state, and mutation wiring live in
 // StandsContainer.
-export function StandsScreen({ stands, isLoading, onCreateNew, onEdit, onDelete, form, deleteConfirm }: Props) {
+export function StandsScreen({
+  stands,
+  isLoading,
+  onCreateNew,
+  onEdit,
+  onDelete,
+  openingEditId,
+  form,
+  deleteConfirm,
+}: Props) {
+  const { t } = useTranslation()
   return (
     <YStack flex={1} position="relative">
       <PageShell align="top" scroll maxWidth={960}>
         <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$3">
-          <GlowText level="title">Stands</GlowText>
-          <GlossButton tone="green" btnSize="md" onPress={onCreateNew} accessibilityLabel="New Stand">
-            <Plus size={18} color="white" /> New Stand
+          <GlowText level="title">{t('stands.title')}</GlowText>
+          <GlossButton tone="green" btnSize="md" onPress={onCreateNew} accessibilityLabel={t('stands.newStand')}>
+            <Plus size={18} color="white" /> {t('stands.newStand')}
           </GlossButton>
         </XStack>
 
@@ -67,10 +83,10 @@ export function StandsScreen({ stands, isLoading, onCreateNew, onEdit, onDelete,
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
             <Sparkles size={28} color="$standPurple" />
             <GlowText level="label" align="center">
-              No Stands yet. Create the first one.
+              {t('stands.emptyTitle')}
             </GlowText>
-            <GlossButton tone="green" btnSize="sm" onPress={onCreateNew} accessibilityLabel="New Stand">
-              New Stand
+            <GlossButton tone="green" btnSize="sm" onPress={onCreateNew} accessibilityLabel={t('stands.newStand')}>
+              {t('stands.newStand')}
             </GlossButton>
           </GlassPanel>
         ) : (
@@ -81,6 +97,7 @@ export function StandsScreen({ stands, isLoading, onCreateNew, onEdit, onDelete,
                 stand={stand}
                 onEdit={() => onEdit(stand)}
                 onDelete={() => onDelete(stand)}
+                isEditBusy={openingEditId === stand.id}
               />
             ))}
           </XStack>
@@ -99,13 +116,16 @@ export function StandsScreen({ stands, isLoading, onCreateNew, onEdit, onDelete,
         pictureUri={form.pictureUri}
         onPickPicture={form.onPickPicture}
         isPictureBusy={form.isPictureBusy}
+        activeLocale={form.activeLocale}
+        onLocaleChange={form.onLocaleChange}
+        erroredLocales={form.erroredLocales}
       />
 
       <ConfirmSheet
         visible={deleteConfirm.visible}
-        title="Delete Stand?"
-        message={`"${deleteConfirm.standName ?? ''}" will be permanently deleted. This can't be undone.`}
-        confirmLabel="Delete Stand"
+        title={t('stands.deleteConfirmTitle')}
+        message={t('stands.deleteConfirmMessage', { name: deleteConfirm.standName ?? '' })}
+        confirmLabel={t('stands.deleteConfirmButton')}
         isConfirming={deleteConfirm.isConfirming}
         onConfirm={deleteConfirm.onConfirm}
         onCancel={deleteConfirm.onCancel}

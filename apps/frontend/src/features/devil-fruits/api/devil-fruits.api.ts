@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
+import type { TranslationFormValues } from '@/shared/lib/power-translations'
 import type {
   DevilFruitFilters,
   DevilFruitInput,
@@ -16,6 +17,17 @@ export async function getDevilFruits(filters?: DevilFruitFilters): Promise<Devil
 export async function getDevilFruit(id: string): Promise<DevilFruitResponse> {
   const response = await apiClient.get<DevilFruitResponse>(`/devil-fruits/${id}`)
   return response.data
+}
+
+// Admin-only: every locale's content at once, for the edit form's
+// LocaleTabs. Mirrors dto.PowerTranslationsResponse.
+export async function getDevilFruitTranslations(
+  id: string
+): Promise<Partial<Record<string, TranslationFormValues>>> {
+  const response = await apiClient.get<{ translations: Partial<Record<string, TranslationFormValues>> }>(
+    `/devil-fruits/${id}/translations`
+  )
+  return response.data.translations
 }
 
 export async function createDevilFruit(input: DevilFruitInput): Promise<DevilFruitResponse> {

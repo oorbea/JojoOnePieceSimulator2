@@ -1,5 +1,6 @@
 import { Apple, Plus } from '@tamagui/lucide-icons-2'
 import type { Control, FieldErrors } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
@@ -7,6 +8,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
+import type { Locale } from '@/shared/lib/zod'
 import type { DevilFruitFormValues, DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 
 import { DevilFruitCard } from './devil-fruit-card'
@@ -31,6 +33,9 @@ type FormState = {
   pictureUri: string | null
   onPickPicture: () => void
   isPictureBusy: boolean
+  activeLocale: Locale
+  onLocaleChange: (locale: Locale) => void
+  erroredLocales: Locale[]
 }
 
 type Props = {
@@ -39,6 +44,7 @@ type Props = {
   onCreateNew: () => void
   onEdit: (devilFruit: DevilFruitResponse) => void
   onDelete: (devilFruit: DevilFruitResponse) => void
+  openingEditId: string | null
   form: FormState
   deleteConfirm: ConfirmState
 }
@@ -49,16 +55,23 @@ export function DevilFruitsScreen({
   onCreateNew,
   onEdit,
   onDelete,
+  openingEditId,
   form,
   deleteConfirm,
 }: Props) {
+  const { t } = useTranslation()
   return (
     <YStack flex={1} position="relative">
       <PageShell align="top" scroll maxWidth={960}>
         <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$3">
-          <GlowText level="title">Devil Fruits</GlowText>
-          <GlossButton tone="green" btnSize="md" onPress={onCreateNew} accessibilityLabel="New Devil Fruit">
-            <Plus size={18} color="white" /> New Devil Fruit
+          <GlowText level="title">{t('devilFruits.title')}</GlowText>
+          <GlossButton
+            tone="green"
+            btnSize="md"
+            onPress={onCreateNew}
+            accessibilityLabel={t('devilFruits.newDevilFruit')}
+          >
+            <Plus size={18} color="white" /> {t('devilFruits.newDevilFruit')}
           </GlossButton>
         </XStack>
 
@@ -70,10 +83,15 @@ export function DevilFruitsScreen({
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
             <Apple size={28} color="$strawHatRed" />
             <GlowText level="label" align="center">
-              No Devil Fruits yet. Create the first one.
+              {t('devilFruits.emptyTitle')}
             </GlowText>
-            <GlossButton tone="green" btnSize="sm" onPress={onCreateNew} accessibilityLabel="New Devil Fruit">
-              New Devil Fruit
+            <GlossButton
+              tone="green"
+              btnSize="sm"
+              onPress={onCreateNew}
+              accessibilityLabel={t('devilFruits.newDevilFruit')}
+            >
+              {t('devilFruits.newDevilFruit')}
             </GlossButton>
           </GlassPanel>
         ) : (
@@ -84,6 +102,7 @@ export function DevilFruitsScreen({
                 devilFruit={devilFruit}
                 onEdit={() => onEdit(devilFruit)}
                 onDelete={() => onDelete(devilFruit)}
+                isEditBusy={openingEditId === devilFruit.id}
               />
             ))}
           </XStack>
@@ -101,13 +120,16 @@ export function DevilFruitsScreen({
         pictureUri={form.pictureUri}
         onPickPicture={form.onPickPicture}
         isPictureBusy={form.isPictureBusy}
+        activeLocale={form.activeLocale}
+        onLocaleChange={form.onLocaleChange}
+        erroredLocales={form.erroredLocales}
       />
 
       <ConfirmSheet
         visible={deleteConfirm.visible}
-        title="Delete Devil Fruit?"
-        message={`"${deleteConfirm.fruitName ?? ''}" will be permanently deleted. This can't be undone.`}
-        confirmLabel="Delete Devil Fruit"
+        title={t('devilFruits.deleteConfirmTitle')}
+        message={t('devilFruits.deleteConfirmMessage', { name: deleteConfirm.fruitName ?? '' })}
+        confirmLabel={t('devilFruits.deleteConfirmButton')}
         isConfirming={deleteConfirm.isConfirming}
         onConfirm={deleteConfirm.onConfirm}
         onCancel={deleteConfirm.onCancel}

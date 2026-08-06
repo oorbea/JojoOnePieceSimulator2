@@ -2,6 +2,7 @@ import { LogOut } from '@tamagui/lucide-icons-2'
 import { useState } from 'react'
 import type { LayoutChangeEvent } from 'react-native'
 import { Image } from 'react-native'
+import { useTranslation } from 'react-i18next'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMedia, XStack, YStack } from 'tamagui'
 
@@ -51,6 +52,7 @@ export function AppShell({
   themeMode,
   onCycleTheme,
 }: AppShellProps) {
+  const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const media = useMedia()
   const showTopLinks = media.md
@@ -114,7 +116,7 @@ export function AppShell({
         <ChannelBarItem
           iconOnly
           onPress={onLogout}
-          {...a11yProps('Log out', 'button')}
+          {...a11yProps(t('nav.logOut'), 'button')}
           hitSlop={8}
         >
           <LogOut size={20} color="$panelText" strokeWidth={2.5} />

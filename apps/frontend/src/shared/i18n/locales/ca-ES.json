@@ -1,16 +1,27 @@
 {
   "common": {
     "loading": "Carregant",
-    "cancel": "Cancella",
+    "cancel": "Cancel·la",
     "save": "Desa",
+    "saving": "Desant…",
     "delete": "Elimina",
-    "tryAgain": "Torna a provar"
+    "tryAgain": "Torna a provar",
+    "somethingWentWrong": "Alguna cosa ha anat malament",
+    "working": "Processant…",
+    "select": "Selecciona…",
+    "none": "Cap",
+    "search": "Cerca",
+    "typeToFilter": "Escriu per filtrar…",
+    "noMatches": "Sense resultats",
+    "clearLabel": "Esborra {{label}}"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",
     "signInPrompt": "Continua amb el teu compte de Google per triar un canal.",
     "signingIn": "Iniciant sessió…",
-    "continueWithGoogle": "Continua amb Google"
+    "continueWithGoogle": "Continua amb Google",
+    "googleSignInError": "Alguna cosa ha anat malament en iniciar sessió amb Google. Torna-ho a provar.",
+    "googleNoIdToken": "Google no ha retornat cap ID token"
   },
   "errorFallback": {
     "title": "Alguna cosa s'ha trencat.",
@@ -21,5 +32,190 @@
     "system": "Segueix el tema del sistema",
     "light": "Tema clar",
     "dark": "Tema fosc"
+  },
+  "nav": {
+    "home": "Inici",
+    "profile": "Perfil",
+    "admin": "Admin",
+    "logOut": "Tanca la sessió"
+  },
+  "home": {
+    "pickChannel": "Tria un canal",
+    "channels": {
+      "profile": "Perfil",
+      "stands": "Stands",
+      "devilFruits": "Fruites del Diable",
+      "powers": "Poders"
+    }
+  },
+  "admin": {
+    "title": "Panell d'administració",
+    "pickChannel": "Tria un canal per gestionar",
+    "stands": "Stands",
+    "devilFruits": "Fruites del Diable"
+  },
+  "profile": {
+    "avatarProcessing": "Processant la teva nova foto…",
+    "avatarFailed": "No hem pogut usar aquesta foto. Prova'n una altra.",
+    "avatarTapHint": "Toca la càmera per canviar la teva foto",
+    "changePicture": "Canvia la foto de perfil",
+    "username": "Nom d'usuari",
+    "saveUsername": "Desa el nom d'usuari",
+    "language": "Idioma",
+    "languageSaving": "Idioma (desant…)",
+    "accountDetails": "Detalls del compte",
+    "fullName": "Nom complet",
+    "fromGoogleAccount": "Del teu compte de Google",
+    "email": "Correu electrònic",
+    "role": "Rol",
+    "setByAdmin": "Establert per un administrador",
+    "dangerZone": "Zona de perill",
+    "removeAvatar": "Treu la foto de perfil",
+    "deleteAccount": "Elimina el compte",
+    "removeAvatarConfirmTitle": "Vols treure la foto de perfil?",
+    "removeAvatarConfirmMessage": "La teva foto tornarà a ser la del teu compte de Google.",
+    "deleteAccountConfirmTitle": "Vols eliminar el compte?",
+    "deleteAccountConfirmMessage": "Això elimina el teu compte i tot el seu contingut de manera permanent. No es pot desfer."
+  },
+  "stands": {
+    "title": "Stands",
+    "newStand": "Nou Stand",
+    "emptyTitle": "Encara no hi ha cap Stand. Crea'n el primer.",
+    "editTitle": "Edita l'Stand",
+    "changePicture": "Canvia la foto de l'Stand",
+    "name": "Nom",
+    "description": "Descripció",
+    "rarity": "Raresa",
+    "skills": "Habilitats",
+    "evolvesFrom": "Evoluciona de",
+    "evolvesFromPlaceholder": "No evoluciona d'un altre Stand",
+    "evolvesFromBadge": "De: {{name}}",
+    "editA11y": "Edita {{name}}",
+    "deleteA11y": "Elimina {{name}}",
+    "saveA11y": "Desa l'Stand",
+    "deleteConfirmTitle": "Vols eliminar l'Stand?",
+    "deleteConfirmButton": "Elimina l'Stand",
+    "deleteConfirmMessage": "\"{{name}}\" s'eliminarà de manera permanent. No es pot desfer.",
+    "stats": {
+      "attackPower": "Atac",
+      "speed": "Velocitat",
+      "attackRange": "Abast",
+      "endurance": "Resistència",
+      "precision": "Precisió",
+      "potential": "Potencial"
+    }
+  },
+  "devilFruits": {
+    "title": "Fruites del Diable",
+    "newDevilFruit": "Nova Fruita del Diable",
+    "emptyTitle": "Encara no hi ha cap Fruita del Diable. Crea'n la primera.",
+    "editTitle": "Edita la Fruita del Diable",
+    "changePicture": "Canvia la foto de la Fruita del Diable",
+    "name": "Nom",
+    "description": "Descripció",
+    "rarity": "Raresa",
+    "skills": "Habilitats",
+    "fruitType": "Tipus de fruita",
+    "editA11y": "Edita {{name}}",
+    "deleteA11y": "Elimina {{name}}",
+    "saveA11y": "Desa la Fruita del Diable",
+    "deleteConfirmTitle": "Vols eliminar la Fruita del Diable?",
+    "deleteConfirmButton": "Elimina la Fruita del Diable",
+    "deleteConfirmMessage": "\"{{name}}\" s'eliminarà de manera permanent. No es pot desfer."
+  },
+  "locale": {
+    "required": "obligatori",
+    "hasError": "té un error"
+  },
+  "skillsField": {
+    "addPlaceholder": "Afegeix una habilitat…",
+    "addA11y": "Afegeix habilitat",
+    "removeA11y": "Treu {{skill}}"
+  },
+  "validation": {
+    "nameRequired": "El nom és obligatori",
+    "nameTooLong": "El nom és massa llarg",
+    "descriptionRequired": "La descripció és obligatòria",
+    "descriptionTooLong": "La descripció és massa llarga",
+    "skillsRequired": "Cal com a mínim una habilitat",
+    "translationIncomplete": "Omple la descripció i les habilitats per a aquest idioma, o deixa-ho en blanc",
+    "usernameMinLength": "El nom d'usuari ha de tenir com a mínim 3 caràcters",
+    "usernameMaxLength": "El nom d'usuari ha de tenir com a màxim 32 caràcters",
+    "usernameFormat": "Només lletres minúscules, números i guions baixos"
+  },
+  "toasts": {
+    "standCreated": "Stand creat",
+    "standUpdated": "Stand actualitzat",
+    "standDeleted": "Stand eliminat",
+    "standPictureUploading": "Pujant la foto. Això triga una mica.",
+    "devilFruitCreated": "Fruita del Diable creada",
+    "devilFruitUpdated": "Fruita del Diable actualitzada",
+    "devilFruitDeleted": "Fruita del Diable eliminada",
+    "devilFruitPictureUploading": "Pujant la foto. Això triga una mica.",
+    "usernameUpdated": "Nom d'usuari actualitzat",
+    "avatarUploading": "Pujant la teva foto. Això triga una mica.",
+    "avatarRemoved": "Foto de perfil eliminada",
+    "accountDeleted": "Compte eliminat"
+  },
+  "notFound": {
+    "title": "Aquesta pantalla no existeix.",
+    "goHome": "Vés a l'inici"
+  },
+  "enums": {
+    "rarity": {
+      "COMMON": "Comuna",
+      "RARE": "Rara",
+      "EPIC": "Èpica",
+      "LEGENDARY": "Llegendària"
+    },
+    "standStat": {
+      "E": "E",
+      "D": "D",
+      "C": "C",
+      "B": "B",
+      "A": "A",
+      "INFINITE": "Infinit",
+      "NULL": "Cap"
+    },
+    "fruitType": {
+      "PARAMECIA": "Paramecia",
+      "ZOAN": "Zoan",
+      "LOGIA": "Logia",
+      "SPECIAL_PARAMECIA": "Paramecia Especial",
+      "ANCIENT_ZOAN": "Zoan Antic",
+      "MYTHICAL_ZOAN": "Zoan Mític"
+    },
+    "role": {
+      "REGULAR": "Usuari",
+      "ADMIN": "Admin"
+    }
+  },
+  "errors": {
+    "STAND_NOT_FOUND": "No s'ha trobat aquest Stand.",
+    "USER_NOT_FOUND": "No s'ha trobat aquest usuari.",
+    "DEVIL_FRUIT_NOT_FOUND": "No s'ha trobat aquesta Fruita del Diable.",
+    "STAND_ALREADY_EXISTS": "Ja existeix un Stand amb aquest nom.",
+    "USER_ALREADY_EXISTS": "Ja existeix un usuari amb aquest correu.",
+    "DEVIL_FRUIT_ALREADY_EXISTS": "Ja existeix una Fruita del Diable amb aquest nom.",
+    "LAST_ADMIN": "No pots eliminar l'últim administrador.",
+    "VALIDATION_FAILED": "Revisa els camps marcats i torna-ho a provar.",
+    "INVALID_RARITY": "Aquesta raresa no és vàlida.",
+    "INVALID_STAND_STAT": "Aquesta estadística no és vàlida.",
+    "INVALID_FRUIT_TYPE": "Aquest tipus de fruita no és vàlid.",
+    "INVALID_USER_ROLE": "Aquest rol no és vàlid.",
+    "INVALID_USERNAME": "Aquest nom d'usuari no és vàlid.",
+    "INVALID_ID": "Aquest identificador no és vàlid.",
+    "SELF_EVOLUTION": "Un Stand no pot evolucionar d'ell mateix.",
+    "PICTURE_REQUIRED": "Cal una foto.",
+    "UNSUPPORTED_PICTURE_TYPE": "Aquest tipus de foto no és compatible.",
+    "INVALID_IMAGE": "No s'ha pogut processar aquesta imatge.",
+    "EMAIL_NOT_VERIFIED": "El teu correu de Google no està verificat.",
+    "CONSTRAINT_VIOLATION": "Aquest canvi no està permès.",
+    "UNAUTHENTICATED": "Has de tornar a iniciar sessió.",
+    "FORBIDDEN": "No tens permís per fer això.",
+    "PICTURE_TOO_LARGE": "Aquesta foto és massa gran.",
+    "RATE_LIMITED": "Massa peticions. Torna-ho a provar d'aquí un moment.",
+    "PICTURE_QUEUE_FULL": "El processament de fotos està ocupat ara mateix. Torna-ho a provar d'aquí un moment.",
+    "INTERNAL": "Alguna cosa ha anat malament per la nostra part."
   }
 }

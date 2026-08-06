@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { useForm, useController } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 import { ProfileScreen } from '@/features/profile/components/presentational/profile-screen'
 import { useAvatarPicker } from '@/features/profile/hooks/use-avatar-picker'
@@ -18,6 +19,7 @@ import { LoadingScreen } from '@/shared/components/presentational/loading-screen
 import type { Locale } from '@/shared/lib/zod'
 
 export function ProfileContainer() {
+  const { t } = useTranslation()
   const router = useRouter()
   const { data: profile, isLoading } = useProfile()
 
@@ -97,7 +99,7 @@ export function ProfileContainer() {
       isAvatarBusy={uploadAvatarMutation.isPending || profile.avatarStatus === 'PENDING'}
       username={username}
       onUsernameChange={onUsernameChange}
-      usernameError={errors.username?.message}
+      usernameError={errors.username?.message && t(errors.username.message)}
       onSaveUsername={() => void onSaveUsername()}
       isSavingUsername={updateUsernameMutation.isPending}
       canSaveUsername={isDirty && !errors.username}

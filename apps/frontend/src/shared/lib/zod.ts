@@ -20,6 +20,7 @@ export const localeSchema = z.enum(['en-GB', 'es-ES', 'ca-ES'])
 
 export const errorResponseSchema = z.object({
   error: z.string(),
+  code: z.string().optional(),
   details: z.array(z.string()).optional(),
 })
 

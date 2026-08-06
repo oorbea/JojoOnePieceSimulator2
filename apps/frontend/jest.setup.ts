@@ -117,3 +117,13 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn().mockResolvedValue(undefined),
   deleteItemAsync: jest.fn().mockResolvedValue(undefined),
 }))
+
+// expo-localization pulls in expo-modules-core's native Platform.select
+// bridge, which only exists under jest-expo's native preset - the `logic`
+// project (jest-expo/web, jsdom) has no native module registry at all, so
+// anything importing shared/i18n (directly or via power-translations.ts /
+// language.store.ts) throws "Cannot read properties of undefined (reading
+// 'select')" the moment the module loads, in both projects alike.
+jest.mock('expo-localization', () => ({
+  getLocales: () => [{ languageTag: 'en-GB', languageCode: 'en' }],
+}))

@@ -9,4 +9,6 @@ export const devilFruitKeys = {
   list: (filters?: DevilFruitFilters) =>
     [...devilFruitKeys.all(), 'list', filters ?? {}] as const,
   detail: (id: string) => [...devilFruitKeys.all(), 'detail', id] as const,
+  // Admin edit form only - same reasoning as standKeys.translations.
+  translations: (id: string) => [...devilFruitKeys.allLocales, 'translations', id] as const,
 }
