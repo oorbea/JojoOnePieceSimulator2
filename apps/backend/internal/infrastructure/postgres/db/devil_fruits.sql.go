@@ -26,23 +26,29 @@ func (q *Queries) DeleteDevilFruitByID(ctx context.Context, id pgtype.UUID) (int
 const filterDevilFruitRows = `-- name: FilterDevilFruitRows :many
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
-WHERE ($1::power_rarity IS NULL OR p.rarity = $1::power_rarity)
-  AND ($2::fruit_type IS NULL OR d.fruit_type = $2::fruit_type)
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
+  AND ($3::fruit_type IS NULL OR d.fruit_type = $3::fruit_type)
 ORDER BY p.name
 `
 
 type FilterDevilFruitRowsParams struct {
+	Locales   []string
 	Rarity    *PowerRarity
 	FruitType *FruitType
 }
@@ -61,7 +67,7 @@ type FilterDevilFruitRowsRow struct {
 
 // Returns every devil fruit matching the (all-optional) filters.
 func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruitRowsParams) ([]FilterDevilFruitRowsRow, error) {
-	rows, err := q.db.Query(ctx, filterDevilFruitRows, arg.Rarity, arg.FruitType)
+	rows, err := q.db.Query(ctx, filterDevilFruitRows, arg.Locales, arg.Rarity, arg.FruitType)
 	if err != nil {
 		return nil, err
 	}
@@ -93,19 +99,29 @@ func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruit
 const getDevilFruitRowByID = `-- name: GetDevilFruitRowByID :one
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($2::text[])
+    ORDER BY array_position($2::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 WHERE p.id = $1
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type
 `
+
+type GetDevilFruitRowByIDParams struct {
+	ID      pgtype.UUID
+	Locales []string
+}
 
 type GetDevilFruitRowByIDRow struct {
 	ID            pgtype.UUID
@@ -119,11 +135,12 @@ type GetDevilFruitRowByIDRow struct {
 	Skills        []string
 }
 
-// Returns the devil fruit matching `id`, along with its ordered skills.
-// Unlike stands, devil fruits have no evolves_from chain to hydrate, so a
-// single flat row (no WITH RECURSIVE, no `matched` column) is enough.
-func (q *Queries) GetDevilFruitRowByID(ctx context.Context, id pgtype.UUID) (GetDevilFruitRowByIDRow, error) {
-	row := q.db.QueryRow(ctx, getDevilFruitRowByID, id)
+// Returns the devil fruit matching `id`, along with its resolved
+// description/skills. `locales` is the requested locale's fallback chain,
+// most specific first (e.g. ['ca-ES','es-ES','en-GB']) - see
+// GetStandRowsByID in stands.sql for the same LATERAL-join pattern.
+func (q *Queries) GetDevilFruitRowByID(ctx context.Context, arg GetDevilFruitRowByIDParams) (GetDevilFruitRowByIDRow, error) {
+	row := q.db.QueryRow(ctx, getDevilFruitRowByID, arg.ID, arg.Locales)
 	var i GetDevilFruitRowByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -142,19 +159,29 @@ func (q *Queries) GetDevilFruitRowByID(ctx context.Context, id pgtype.UUID) (Get
 const getDevilFruitRowByName = `-- name: GetDevilFruitRowByName :one
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($2::text[])
+    ORDER BY array_position($2::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 WHERE p.name = $1
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type
 `
+
+type GetDevilFruitRowByNameParams struct {
+	Name    string
+	Locales []string
+}
 
 type GetDevilFruitRowByNameRow struct {
 	ID            pgtype.UUID
@@ -169,8 +196,8 @@ type GetDevilFruitRowByNameRow struct {
 }
 
 // Same shape as GetDevilFruitRowByID, keyed by name instead of id.
-func (q *Queries) GetDevilFruitRowByName(ctx context.Context, name string) (GetDevilFruitRowByNameRow, error) {
-	row := q.db.QueryRow(ctx, getDevilFruitRowByName, name)
+func (q *Queries) GetDevilFruitRowByName(ctx context.Context, arg GetDevilFruitRowByNameParams) (GetDevilFruitRowByNameRow, error) {
+	row := q.db.QueryRow(ctx, getDevilFruitRowByName, arg.Name, arg.Locales)
 	var i GetDevilFruitRowByNameRow
 	err := row.Scan(
 		&i.ID,
@@ -189,17 +216,22 @@ func (q *Queries) GetDevilFruitRowByName(ctx context.Context, name string) (GetD
 const listDevilFruitRows = `-- name: ListDevilFruitRows :many
 SELECT p.id,
        p.name,
-       p.description,
+       COALESCE(tr.description, '') AS description,
        p.rarity,
        p.picture,
        p.picture_thumb,
        p.picture_status,
        d.fruit_type,
-       COALESCE(array_agg(ps.skill ORDER BY ps.position) FILTER (WHERE ps.skill IS NOT NULL), '{}')::text[] AS skills
+       COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
          JOIN powers p ON p.id = d.id
-         LEFT JOIN power_skills ps ON ps.power_id = p.id
-GROUP BY p.id, p.name, p.description, p.rarity, p.picture, p.picture_thumb, p.picture_status, d.fruit_type
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
 ORDER BY p.name
 `
 
@@ -216,8 +248,8 @@ type ListDevilFruitRowsRow struct {
 }
 
 // Returns every devil fruit in the system.
-func (q *Queries) ListDevilFruitRows(ctx context.Context) ([]ListDevilFruitRowsRow, error) {
-	rows, err := q.db.Query(ctx, listDevilFruitRows)
+func (q *Queries) ListDevilFruitRows(ctx context.Context, locales []string) ([]ListDevilFruitRowsRow, error) {
+	rows, err := q.db.Query(ctx, listDevilFruitRows, locales)
 	if err != nil {
 		return nil, err
 	}
@@ -264,11 +296,10 @@ func (q *Queries) UpsertDevilFruit(ctx context.Context, arg UpsertDevilFruitPara
 }
 
 const upsertDevilFruitPower = `-- name: UpsertDevilFruitPower :one
-INSERT INTO powers (id, kind, name, description, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
+VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
-        description    = EXCLUDED.description,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
@@ -280,7 +311,6 @@ RETURNING id
 type UpsertDevilFruitPowerParams struct {
 	ID            pgtype.UUID
 	Name          string
-	Description   string
 	Rarity        string
 	Picture       string
 	PictureThumb  string
@@ -291,7 +321,6 @@ func (q *Queries) UpsertDevilFruitPower(ctx context.Context, arg UpsertDevilFrui
 	row := q.db.QueryRow(ctx, upsertDevilFruitPower,
 		arg.ID,
 		arg.Name,
-		arg.Description,
 		arg.Rarity,
 		arg.Picture,
 		arg.PictureThumb,

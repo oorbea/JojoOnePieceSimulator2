@@ -31,10 +31,10 @@ func NewDevilFruitRepository(next ports.IDevilFruitRepository, c ports.ICache, f
 	return &DevilFruitRepository{next: next, cache: c, fruitTTL: fruitTTL, notFoundTTL: notFoundTTL}
 }
 
-// Save delegates, then invalidates the whole devil fruits namespace on
-// success.
-func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFruit) error {
-	if err := r.next.Save(ctx, fruit); err != nil {
+// Save delegates, then invalidates the whole devil fruits namespace (every
+// locale's entries) on success.
+func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFruit, translations ports.PowerTranslations) error {
+	if err := r.next.Save(ctx, fruit, translations); err != nil {
 		return err
 	}
 	r.invalidate(ctx)
@@ -42,9 +42,9 @@ func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFrui
 }
 
 // FindByID is read-through: a hit avoids next entirely, including a cached
-// ports.ErrDevilFruitNotFound tombstone.
-func (r *DevilFruitRepository) FindByID(ctx context.Context, id powers.PowerID) (*powers.DevilFruit, error) {
-	key := idKey(id)
+// ports.ErrDevilFruitNotFound tombstone. Cached per locale - see keys.go.
+func (r *DevilFruitRepository) FindByID(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.DevilFruit, error) {
+	key := idKey(id, locale)
 	if data, ok := r.cache.Get(ctx, devilFruitsNamespace, key); ok {
 		if isTombstone(data) {
 			return nil, ports.ErrDevilFruitNotFound
@@ -54,7 +54,7 @@ func (r *DevilFruitRepository) FindByID(ctx context.Context, id powers.PowerID) 
 		}
 	}
 
-	fruit, err := r.next.FindByID(ctx, id)
+	fruit, err := r.next.FindByID(ctx, id, locale)
 	if err != nil {
 		if errors.Is(err, ports.ErrDevilFruitNotFound) {
 			r.cache.Set(ctx, devilFruitsNamespace, key, notFoundTombstone, r.notFoundTTL)
@@ -69,8 +69,8 @@ func (r *DevilFruitRepository) FindByID(ctx context.Context, id powers.PowerID) 
 }
 
 // FindByName is read-through, same shape as FindByID.
-func (r *DevilFruitRepository) FindByName(ctx context.Context, name string) (*powers.DevilFruit, error) {
-	key := nameKey(name)
+func (r *DevilFruitRepository) FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.DevilFruit, error) {
+	key := nameKey(name, locale)
 	if data, ok := r.cache.Get(ctx, devilFruitsNamespace, key); ok {
 		if isTombstone(data) {
 			return nil, ports.ErrDevilFruitNotFound
@@ -80,7 +80,7 @@ func (r *DevilFruitRepository) FindByName(ctx context.Context, name string) (*po
 		}
 	}
 
-	fruit, err := r.next.FindByName(ctx, name)
+	fruit, err := r.next.FindByName(ctx, name, locale)
 	if err != nil {
 		if errors.Is(err, ports.ErrDevilFruitNotFound) {
 			r.cache.Set(ctx, devilFruitsNamespace, key, notFoundTombstone, r.notFoundTTL)
@@ -94,36 +94,16 @@ func (r *DevilFruitRepository) FindByName(ctx context.Context, name string) (*po
 	return fruit, nil
 }
 
-// GetAll is read-through, cached as a single entry.
-func (r *DevilFruitRepository) GetAll(ctx context.Context) ([]*powers.DevilFruit, error) {
-	if data, ok := r.cache.Get(ctx, devilFruitsNamespace, allKey); ok {
-		if fruits, err := unmarshalDevilFruits(data); err == nil {
-			return fruits, nil
-		}
-	}
-
-	fruits, err := r.next.GetAll(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if data, err := marshalDevilFruits(fruits); err == nil {
-		r.cache.Set(ctx, devilFruitsNamespace, allKey, data, r.fruitTTL)
-	}
-	return fruits, nil
-}
-
-// Filter is read-through, keyed by a canonical rendering of filters so query
-// param order doesn't fragment the cache.
-func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFruitFilters) ([]*powers.DevilFruit, error) {
-	key := devilFruitFilterKey(filters)
+// GetAll is read-through, cached as a single entry per locale.
+func (r *DevilFruitRepository) GetAll(ctx context.Context, locale enums.Locale) ([]*powers.DevilFruit, error) {
+	key := allKey(locale)
 	if data, ok := r.cache.Get(ctx, devilFruitsNamespace, key); ok {
 		if fruits, err := unmarshalDevilFruits(data); err == nil {
 			return fruits, nil
 		}
 	}
 
-	fruits, err := r.next.Filter(ctx, filters)
+	fruits, err := r.next.GetAll(ctx, locale)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +112,34 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 		r.cache.Set(ctx, devilFruitsNamespace, key, data, r.fruitTTL)
 	}
 	return fruits, nil
+}
+
+// Filter is read-through, keyed by a canonical rendering of filters (plus
+// locale) so query param order doesn't fragment the cache.
+func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
+	key := devilFruitFilterKey(filters, locale)
+	if data, ok := r.cache.Get(ctx, devilFruitsNamespace, key); ok {
+		if fruits, err := unmarshalDevilFruits(data); err == nil {
+			return fruits, nil
+		}
+	}
+
+	fruits, err := r.next.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, err
+	}
+
+	if data, err := marshalDevilFruits(fruits); err == nil {
+		r.cache.Set(ctx, devilFruitsNamespace, key, data, r.fruitTTL)
+	}
+	return fruits, nil
+}
+
+// Translations bypasses the cache: admin edit forms need a fresh read of
+// every locale's content, and this path is not part of the hot,
+// high-traffic read surface the cache exists for.
+func (r *DevilFruitRepository) Translations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	return r.next.Translations(ctx, id)
 }
 
 // Delete delegates, then invalidates the whole devil fruits namespace on

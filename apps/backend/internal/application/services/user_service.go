@@ -56,6 +56,21 @@ func (s *UserService) ChangeUsername(ctx context.Context, id user.UserID, userna
 	return u, nil
 }
 
+// ChangeLanguage validates and persists a new preferred locale for id.
+func (s *UserService) ChangeLanguage(ctx context.Context, id user.UserID, language enums.Locale) (*user.User, error) {
+	u, err := s.users.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := u.ChangeLanguage(language); err != nil {
+		return nil, err
+	}
+	if err := s.users.UpdateLanguage(ctx, id, language); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
 // SetAvatar validates an uploaded picture and hands it to the background
 // compression worker, moving id's avatar pipeline to PENDING without
 // touching the currently-served renditions. Mirrors

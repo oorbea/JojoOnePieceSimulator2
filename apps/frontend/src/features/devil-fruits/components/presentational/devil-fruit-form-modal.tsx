@@ -1,5 +1,8 @@
 import { Apple, Camera } from '@tamagui/lucide-icons-2'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Image, Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Controller, type Control, type FieldErrors } from 'react-hook-form'
 import { ScrollView, Spinner, XStack, YStack } from 'tamagui'
 
@@ -8,14 +11,13 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlassSelect, type GlassSelectOption } from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { SkillsField } from '@/shared/components/presentational/skills-field'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import { fruitTypeSchema, raritySchema } from '@/shared/lib/zod'
+import { DEFAULT_LOCALE } from '@/shared/i18n'
+import { fruitTypeSchema, raritySchema, type Locale } from '@/shared/lib/zod'
 import type { DevilFruitFormValues } from '@/features/devil-fruits/types/devil-fruits.types'
-
-const RARITY_OPTIONS: GlassSelectOption[] = raritySchema.options.map((v) => ({ value: v, label: v }))
-const FRUIT_TYPE_OPTIONS: GlassSelectOption[] = fruitTypeSchema.options.map((v) => ({ value: v, label: v }))
 
 type Props = {
   visible: boolean
@@ -28,6 +30,9 @@ type Props = {
   pictureUri: string | null
   onPickPicture: () => void
   isPictureBusy: boolean
+  activeLocale: Locale
+  onLocaleChange: (locale: Locale) => void
+  erroredLocales: Locale[]
 }
 
 export function DevilFruitFormModal({
@@ -41,10 +46,33 @@ export function DevilFruitFormModal({
   pictureUri,
   onPickPicture,
   isPictureBusy,
+  activeLocale,
+  onLocaleChange,
+  erroredLocales,
 }: Props) {
+  const { t } = useTranslation()
+  const insets = useSafeAreaInsets()
+
+  const RARITY_OPTIONS: GlassSelectOption[] = useMemo(
+    () => raritySchema.options.map((v) => ({ value: v, label: t(`enums.rarity.${v}`) })),
+    [t]
+  )
+  const FRUIT_TYPE_OPTIONS: GlassSelectOption[] = useMemo(
+    () => fruitTypeSchema.options.map((v) => ({ value: v, label: t(`enums.fruitType.${v}`) })),
+    [t]
+  )
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
-      <YStack flex={1} items="center" justify="center" p="$4" bg="rgba(10,12,20,0.45)">
+      <YStack
+        flex={1}
+        items="center"
+        justify="center"
+        p="$4"
+        pt={insets.top + 16}
+        pb={insets.bottom + 16}
+        bg="rgba(10,12,20,0.45)"
+      >
         <GlassPanel
           tone="strong"
           radiusSize="panel"
@@ -56,10 +84,10 @@ export function DevilFruitFormModal({
           gap="$4"
         >
           <GlowText level="heading" align="center">
-            {mode === 'create' ? 'New Devil Fruit' : 'Edit Devil Fruit'}
+            {mode === 'create' ? t('devilFruits.newDevilFruit') : t('devilFruits.editTitle')}
           </GlowText>
 
-          <ScrollView keyboardShouldPersistTaps="handled">
+          <ScrollView flex={1} minH={0} keyboardShouldPersistTaps="handled">
             <YStack gap="$4" pb="$2">
               <YStack items="center" gap="$2">
                 <YStack
@@ -71,7 +99,7 @@ export function DevilFruitFormModal({
                   bg="$plasticEdge"
                   onPress={onPickPicture}
                   cursor="pointer"
-                  {...a11yProps('Change Devil Fruit picture', 'button', { disabled: isPictureBusy })}
+                  {...a11yProps(t('devilFruits.changePicture'), 'button', { disabled: isPictureBusy })}
                 >
                   <InsetRing rounded="$card" />
                   {pictureUri ? (
@@ -118,26 +146,57 @@ export function DevilFruitFormModal({
                 name="name"
                 render={({ field }) => (
                   <GlassField
-                    label="Name"
+                    label={t('devilFruits.name')}
                     value={field.value}
                     onChangeText={field.onChange}
-                    error={errors.name?.message}
+                    error={errors.name?.message && t(errors.name.message)}
+                  />
+                )}
+              />
+
+              <LocaleTabs
+                value={activeLocale}
+                onChange={onLocaleChange}
+                requiredLocale={DEFAULT_LOCALE}
+                localesWithErrors={erroredLocales}
+                requiredLabel={t('locale.required')}
+                errorLabel={t('locale.hasError')}
+              />
+
+              <Controller
+                key={`translations.${activeLocale}.description`}
+                control={control}
+                name={`translations.${activeLocale}.description`}
+                render={({ field }) => (
+                  <GlassField
+                    label={t('devilFruits.description')}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={
+                      errors.translations?.[activeLocale]?.description?.message &&
+                      t(errors.translations[activeLocale].description.message)
+                    }
+                    multiline
+                    numberOfLines={3}
+                    height={90}
                   />
                 )}
               />
 
               <Controller
+                key={`translations.${activeLocale}.skills`}
                 control={control}
-                name="description"
+                name={`translations.${activeLocale}.skills`}
                 render={({ field }) => (
-                  <GlassField
-                    label="Description"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={errors.description?.message}
-                    multiline
-                    numberOfLines={3}
-                    height={90}
+                  <SkillsField
+                    label={t('devilFruits.skills')}
+                    skills={field.value}
+                    onAdd={(skill) => field.onChange([...field.value, skill])}
+                    onRemove={(index) => field.onChange(field.value.filter((_, i) => i !== index))}
+                    error={
+                      errors.translations?.[activeLocale]?.skills?.message &&
+                      t(errors.translations[activeLocale].skills.message)
+                    }
                   />
                 )}
               />
@@ -147,7 +206,7 @@ export function DevilFruitFormModal({
                 name="rarity"
                 render={({ field }) => (
                   <GlassSelect
-                    label="Rarity"
+                    label={t('devilFruits.rarity')}
                     options={RARITY_OPTIONS}
                     value={field.value}
                     onChange={(v) => field.onChange(v)}
@@ -161,7 +220,7 @@ export function DevilFruitFormModal({
                 name="fruitType"
                 render={({ field }) => (
                   <GlassSelect
-                    label="Fruit Type"
+                    label={t('devilFruits.fruitType')}
                     options={FRUIT_TYPE_OPTIONS}
                     value={field.value}
                     onChange={(v) => field.onChange(v)}
@@ -170,26 +229,13 @@ export function DevilFruitFormModal({
                 )}
               />
 
-              <Controller
-                control={control}
-                name="skills"
-                render={({ field }) => (
-                  <SkillsField
-                    label="Skills"
-                    skills={field.value}
-                    onAdd={(skill) => field.onChange([...field.value, skill])}
-                    onRemove={(index) => field.onChange(field.value.filter((_, i) => i !== index))}
-                    error={errors.skills?.message}
-                  />
-                )}
-              />
             </YStack>
           </ScrollView>
 
           <XStack gap="$2">
             <YStack flex={1}>
-              <GlossButton tone="glass" btnSize="md" disabled={isSaving} onPress={onCancel} accessibilityLabel="Cancel">
-                Cancel
+              <GlossButton tone="glass" btnSize="md" disabled={isSaving} onPress={onCancel} accessibilityLabel={t('common.cancel')}>
+                {t('common.cancel')}
               </GlossButton>
             </YStack>
             <YStack flex={1}>
@@ -198,9 +244,9 @@ export function DevilFruitFormModal({
                 btnSize="md"
                 disabled={isSaving}
                 onPress={onSubmit}
-                accessibilityLabel="Save Devil Fruit"
+                accessibilityLabel={t('devilFruits.saveA11y')}
               >
-                {isSaving ? 'Saving…' : 'Save'}
+                {isSaving ? t('common.saving') : t('common.save')}
               </GlossButton>
             </YStack>
           </XStack>

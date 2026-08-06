@@ -39,8 +39,8 @@ func TestRateLimit_GlobalPerIP_Returns429(t *testing.T) {
 	if rec.Code != http.StatusTooManyRequests {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
 	}
-	if got := rec.Body.String(); got != `{"error":"too many requests"}`+"\n" {
-		t.Errorf("body = %q, want %q", got, `{"error":"too many requests"}`+"\n")
+	if got := rec.Body.String(); got != `{"error":"too many requests","code":"RATE_LIMITED"}`+"\n" {
+		t.Errorf("body = %q, want %q", got, `{"error":"too many requests","code":"RATE_LIMITED"}`+"\n")
 	}
 	if rec.Header().Get("Retry-After") == "" {
 		t.Error("Retry-After header not set")

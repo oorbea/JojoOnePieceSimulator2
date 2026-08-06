@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
@@ -26,21 +27,28 @@ const devilFruitsNamespace = "devil_fruits"
 // individually (on Delete) or simply expire.
 const presignNamespace = "presign"
 
-func idKey(id fmt.Stringer) string {
-	return "id:" + id.String()
+// Every key below is prefixed with locale so a write's whole-namespace
+// Invalidate still clears every locale's entries together, while reads for
+// different locales never collide - a stand fetched in es-ES must never
+// answer a ca-ES or en-GB request from the same cache slot.
+
+func idKey(id fmt.Stringer, locale enums.Locale) string {
+	return "id:" + locale.String() + ":" + id.String()
 }
 
-func nameKey(name string) string {
-	return "name:" + hashString(name)
+func nameKey(name string, locale enums.Locale) string {
+	return "name:" + locale.String() + ":" + hashString(name)
 }
 
-const allKey = "all"
+func allKey(locale enums.Locale) string {
+	return "all:" + locale.String()
+}
 
 // standFilterKey renders filters in a fixed field order (rarity,
 // attackPower, speed, attackRange, endurance, precision, potential,
 // evolvesFrom) so two requests differing only in query-param order share one
 // cache entry, then hashes the result to bound key length.
-func standFilterKey(filters ports.StandFilters) string {
+func standFilterKey(filters ports.StandFilters, locale enums.Locale) string {
 	canonical := stringifyStat(filters.Rarity) + "|" +
 		stringifyStat(filters.AttackPower) + "|" +
 		stringifyStat(filters.Speed) + "|" +
@@ -49,14 +57,14 @@ func standFilterKey(filters ports.StandFilters) string {
 		stringifyStat(filters.Precision) + "|" +
 		stringifyStat(filters.Potential) + "|" +
 		derefString(filters.EvolvesFrom)
-	return "filter:" + hashString(canonical)
+	return "filter:" + locale.String() + ":" + hashString(canonical)
 }
 
 // devilFruitFilterKey mirrors standFilterKey for ports.DevilFruitFilters
 // (rarity, fruitType).
-func devilFruitFilterKey(filters ports.DevilFruitFilters) string {
+func devilFruitFilterKey(filters ports.DevilFruitFilters, locale enums.Locale) string {
 	canonical := stringifyStat(filters.Rarity) + "|" + stringifyStat(filters.FruitType)
-	return "filter:" + hashString(canonical)
+	return "filter:" + locale.String() + ":" + hashString(canonical)
 }
 
 // stringifyStat renders an optional fmt.Stringer enum field as its String()

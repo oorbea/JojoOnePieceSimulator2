@@ -1,4 +1,5 @@
 import { LogIn } from '@tamagui/lucide-icons-2'
+import { useTranslation } from 'react-i18next'
 import { Image } from 'react-native'
 import { Spinner } from 'tamagui'
 
@@ -21,6 +22,7 @@ type Props = {
 // Pure UI — Wii Party channel-menu energy dressed in Aero glass. No
 // data/session logic lives here.
 export function LoginScreen({ onSignIn, isLoading, isReady, error }: Props) {
+  const { t } = useTranslation()
   return (
     <PageShell align="center" maxWidth={440}>
       <GlassPanel
@@ -43,10 +45,10 @@ export function LoginScreen({ onSignIn, isLoading, isReady, error }: Props) {
         </WiiCard>
 
         <GlowText level="title" align="center">
-          JoJo x One Piece Simulator
+          {t('auth.appName')}
         </GlowText>
         <GlowText level="label" align="center">
-          Continue with your Google account to pick a channel.
+          {t('auth.signInPrompt')}
         </GlowText>
 
         <GlossButton
@@ -60,9 +62,9 @@ export function LoginScreen({ onSignIn, isLoading, isReady, error }: Props) {
             isLoading ? () => <Spinner color="white" /> : () => <LogIn size={20} color="white" />
           }
           onPress={onSignIn}
-          accessibilityLabel="Continue with Google"
+          accessibilityLabel={t('auth.continueWithGoogle')}
         >
-          {isLoading ? 'Signing in…' : 'Continue with Google'}
+          {isLoading ? t('auth.signingIn') : t('auth.continueWithGoogle')}
         </GlossButton>
 
         {error ? (

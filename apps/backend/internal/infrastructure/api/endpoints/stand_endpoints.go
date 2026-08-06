@@ -91,6 +91,7 @@ func (e *StandEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConfig) c
 		r.Put("/{id}", Wrap(e.update))
 		r.Patch("/{id}/picture", Wrap(e.patchPicture))
 		r.Delete("/{id}", Wrap(e.delete))
+		r.Get("/{id}/translations", Wrap(e.translations))
 	})
 	return r
 }
@@ -124,11 +125,12 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	locale := LocaleFromRequest(r)
 	var stands []*powers.Stand
 	if hasFilters {
-		stands, err = e.svc.FilterStands(r.Context(), filters)
+		stands, err = e.svc.FilterStands(r.Context(), filters, locale)
 	} else {
-		stands, err = e.svc.ListStands(r.Context())
+		stands, err = e.svc.ListStands(r.Context(), locale)
 	}
 	if err != nil {
 		return err
@@ -205,7 +207,7 @@ func (e *StandEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	stand, err := e.svc.GetStand(r.Context(), id)
+	stand, err := e.svc.GetStand(r.Context(), id, LocaleFromRequest(r))
 	if err != nil {
 		return err
 	}
@@ -373,6 +375,35 @@ func (e *StandEndpoints) delete(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	writeJSON(w, http.StatusNoContent, nil)
+	return nil
+}
+
+// translations godoc
+//
+//	@Summary		Get every locale's translation for a stand
+//	@Description	Admin only. Unlike GET /stands/{id}, always returns every
+//	@Description	locale's description/skills at once, for an edit form.
+//	@Tags			stands
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string	true	"Stand id (UUID)"
+//	@Success		200	{object}	dto.PowerTranslationsResponse
+//	@Failure		400	{object}	dto.ErrorResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/stands/{id}/translations [get]
+func (e *StandEndpoints) translations(w http.ResponseWriter, r *http.Request) error {
+	id, err := parsePowerID(r)
+	if err != nil {
+		return err
+	}
+	translations, err := e.svc.StandTranslations(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.NewPowerTranslationsResponse(translations))
 	return nil
 }
 

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
-import { fruitTypeSchema, raritySchema, type FruitType, type PictureStatus, type Rarity } from '@/shared/lib/zod'
+import { powerTranslationsFormSchema, type TranslationFormValues } from '@/shared/lib/power-translations'
+import { fruitTypeSchema, raritySchema, type FruitType, type Locale, type PictureStatus, type Rarity } from '@/shared/lib/zod'
 
 // Mirrors the backend's dto.DevilFruitResponse.
 export type DevilFruitResponse = {
@@ -15,20 +16,20 @@ export type DevilFruitResponse = {
   fruitType: FruitType
 }
 
-// Mirrors dto.DevilFruitRequest — same body for create (POST) and update (PUT).
+// Mirrors dto.DevilFruitRequest — same body for create (POST) and update
+// (PUT). Translations replaced the old flat description/skills - see
+// stands.types.ts's StandInput for the identical reasoning.
 export type DevilFruitInput = {
   name: string
-  description: string
+  translations: Partial<Record<Locale, TranslationFormValues>>
   rarity: Rarity
-  skills: string[]
   fruitType: FruitType
 }
 
 export const devilFruitFormSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
-  description: z.string().min(1, 'Description is required').max(1000, 'Description is too long'),
+  name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
+  translations: powerTranslationsFormSchema,
   rarity: raritySchema,
-  skills: z.array(z.string().min(1)).min(1, 'At least one skill is required'),
   fruitType: fruitTypeSchema,
 })
 

@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
+import type { TranslationFormValues } from '@/shared/lib/power-translations'
 import type { StandFilters, StandInput, StandResponse } from '@/features/stands/types/stands.types'
 
 export async function getStands(filters?: StandFilters): Promise<StandResponse[]> {
@@ -12,6 +13,17 @@ export async function getStands(filters?: StandFilters): Promise<StandResponse[]
 export async function getStand(id: string): Promise<StandResponse> {
   const response = await apiClient.get<StandResponse>(`/stands/${id}`)
   return response.data
+}
+
+// Admin-only: every locale's content at once, for the edit form's
+// LocaleTabs. Mirrors dto.PowerTranslationsResponse.
+export async function getStandTranslations(
+  id: string
+): Promise<Partial<Record<string, TranslationFormValues>>> {
+  const response = await apiClient.get<{ translations: Partial<Record<string, TranslationFormValues>> }>(
+    `/stands/${id}/translations`
+  )
+  return response.data.translations
 }
 
 export async function createStand(input: StandInput): Promise<StandResponse> {

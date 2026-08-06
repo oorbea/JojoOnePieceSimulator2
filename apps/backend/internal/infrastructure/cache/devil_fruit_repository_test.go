@@ -30,14 +30,14 @@ func newCountingDevilFruitRepository() *countingDevilFruitRepository {
 	return &countingDevilFruitRepository{fruits: make(map[powers.PowerID]*powers.DevilFruit), notFoundErr: ports.ErrDevilFruitNotFound}
 }
 
-func (r *countingDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit) error {
+func (r *countingDevilFruitRepository) Save(_ context.Context, fruit *powers.DevilFruit, _ ports.PowerTranslations) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.fruits[fruit.ID()] = fruit
 	return nil
 }
 
-func (r *countingDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.DevilFruit, error) {
+func (r *countingDevilFruitRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.DevilFruit, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.findByIDCalls++
@@ -48,7 +48,7 @@ func (r *countingDevilFruitRepository) FindByID(_ context.Context, id powers.Pow
 	return f, nil
 }
 
-func (r *countingDevilFruitRepository) FindByName(_ context.Context, name string) (*powers.DevilFruit, error) {
+func (r *countingDevilFruitRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.DevilFruit, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.findByNameCalls++
@@ -60,7 +60,7 @@ func (r *countingDevilFruitRepository) FindByName(_ context.Context, name string
 	return nil, ports.ErrDevilFruitNotFound
 }
 
-func (r *countingDevilFruitRepository) GetAll(_ context.Context) ([]*powers.DevilFruit, error) {
+func (r *countingDevilFruitRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.DevilFruit, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.getAllCalls++
@@ -71,7 +71,7 @@ func (r *countingDevilFruitRepository) GetAll(_ context.Context) ([]*powers.Devi
 	return all, nil
 }
 
-func (r *countingDevilFruitRepository) Filter(_ context.Context, filters ports.DevilFruitFilters) ([]*powers.DevilFruit, error) {
+func (r *countingDevilFruitRepository) Filter(_ context.Context, filters ports.DevilFruitFilters, _ enums.Locale) ([]*powers.DevilFruit, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.filterCalls++
@@ -83,6 +83,16 @@ func (r *countingDevilFruitRepository) Filter(_ context.Context, filters ports.D
 		results = append(results, f)
 	}
 	return results, nil
+}
+
+func (r *countingDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	f, ok := r.fruits[id]
+	if !ok {
+		return nil, r.notFoundErr
+	}
+	return ports.PowerTranslations{enums.EnGB: {Description: f.Description(), Skills: f.Skills()}}, nil
 }
 
 func (r *countingDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -132,15 +142,15 @@ func newTestDevilFruit(t *testing.T, name string) *powers.DevilFruit {
 func TestDevilFruitRepository_FindByID_CachesOnMiss(t *testing.T) {
 	next := newCountingDevilFruitRepository()
 	fruit := newTestDevilFruit(t, "Zoan Fruit")
-	_ = next.Save(context.Background(), fruit)
+	_ = next.Save(context.Background(), fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}})
 
 	repo := infracache.NewDevilFruitRepository(next, newFakeCache(), time.Minute, time.Second)
 	ctx := context.Background()
 
-	if _, err := repo.FindByID(ctx, fruit.ID()); err != nil {
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.EnGB); err != nil {
 		t.Fatalf("first FindByID: %v", err)
 	}
-	if _, err := repo.FindByID(ctx, fruit.ID()); err != nil {
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.EnGB); err != nil {
 		t.Fatalf("second FindByID: %v", err)
 	}
 
@@ -157,11 +167,11 @@ func TestDevilFruitRepository_FindByID_NotFoundIsCachedAsTombstone(t *testing.T)
 	var missing powers.PowerID
 	missing[15] = 99
 
-	_, err := repo.FindByID(ctx, missing)
+	_, err := repo.FindByID(ctx, missing, enums.EnGB)
 	if !errors.Is(err, ports.ErrDevilFruitNotFound) {
 		t.Fatalf("first FindByID err = %v, want ErrDevilFruitNotFound", err)
 	}
-	_, err = repo.FindByID(ctx, missing)
+	_, err = repo.FindByID(ctx, missing, enums.EnGB)
 	if !errors.Is(err, ports.ErrDevilFruitNotFound) {
 		t.Fatalf("second FindByID err = %v, want ErrDevilFruitNotFound", err)
 	}
@@ -174,15 +184,15 @@ func TestDevilFruitRepository_FindByID_NotFoundIsCachedAsTombstone(t *testing.T)
 func TestDevilFruitRepository_Save_InvalidatesCache(t *testing.T) {
 	next := newCountingDevilFruitRepository()
 	fruit := newTestDevilFruit(t, "Paramecia Fruit")
-	_ = next.Save(context.Background(), fruit)
+	_ = next.Save(context.Background(), fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}})
 
 	repo := infracache.NewDevilFruitRepository(next, newFakeCache(), time.Minute, time.Second)
 	ctx := context.Background()
 
-	if _, err := repo.GetAll(ctx); err != nil {
+	if _, err := repo.GetAll(ctx, enums.EnGB); err != nil {
 		t.Fatalf("first GetAll: %v", err)
 	}
-	if _, err := repo.GetAll(ctx); err != nil {
+	if _, err := repo.GetAll(ctx, enums.EnGB); err != nil {
 		t.Fatalf("second GetAll: %v", err)
 	}
 	if next.getAllCalls != 1 {
@@ -190,11 +200,11 @@ func TestDevilFruitRepository_Save_InvalidatesCache(t *testing.T) {
 	}
 
 	other := newTestDevilFruit(t, "Logia Fruit")
-	if err := repo.Save(ctx, other); err != nil {
+	if err := repo.Save(ctx, other, ports.PowerTranslations{enums.EnGB: {Description: other.Description(), Skills: other.Skills()}}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
-	if _, err := repo.GetAll(ctx); err != nil {
+	if _, err := repo.GetAll(ctx, enums.EnGB); err != nil {
 		t.Fatalf("GetAll after Save: %v", err)
 	}
 	if next.getAllCalls != 2 {
@@ -205,12 +215,12 @@ func TestDevilFruitRepository_Save_InvalidatesCache(t *testing.T) {
 func TestDevilFruitRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	next := newCountingDevilFruitRepository()
 	fruit := newTestDevilFruit(t, "Ancient Zoan Fruit")
-	_ = next.Save(context.Background(), fruit)
+	_ = next.Save(context.Background(), fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}})
 
 	repo := infracache.NewDevilFruitRepository(next, newFakeCache(), time.Minute, time.Second)
 	ctx := context.Background()
 
-	if _, err := repo.FindByID(ctx, fruit.ID()); err != nil {
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.EnGB); err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
 
@@ -219,7 +229,7 @@ func TestDevilFruitRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 
-	got, err := repo.FindByID(ctx, fruit.ID())
+	got, err := repo.FindByID(ctx, fruit.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID after UpdatePicture: %v", err)
 	}
@@ -242,11 +252,48 @@ func TestDevilFruitRepository_Save_ErrorDoesNotInvalidate(t *testing.T) {
 	ctx := context.Background()
 
 	fruit := newTestDevilFruit(t, "Special Paramecia Fruit")
-	if err := repo.Save(ctx, fruit); err == nil {
+	if err := repo.Save(ctx, fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}}); err == nil {
 		t.Fatal("Save over a failing repository: err = nil, want an error")
 	}
 	if c.gen["devil_fruits"] != 0 {
 		t.Errorf("devil_fruits generation = %d, want 0 (a failed Save must not invalidate)", c.gen["devil_fruits"])
+	}
+}
+
+// TestDevilFruitRepository_FindByID_NeverCrossesLocales proves the cache key
+// includes locale: caching a fruit's es-ES content must never answer a
+// later en-GB (or any other locale) request from that same cache slot -
+// exactly the bug the locale dimension in keys.go exists to prevent.
+func TestDevilFruitRepository_FindByID_NeverCrossesLocales(t *testing.T) {
+	next := newCountingDevilFruitRepository()
+	fruit := newTestDevilFruit(t, "Multilingual Fruit")
+	_ = next.Save(context.Background(), fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}})
+
+	repo := infracache.NewDevilFruitRepository(next, newFakeCache(), time.Minute, time.Second)
+	ctx := context.Background()
+
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.EsES); err != nil {
+		t.Fatalf("FindByID es-ES: %v", err)
+	}
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.CaES); err != nil {
+		t.Fatalf("FindByID ca-ES: %v", err)
+	}
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.EnGB); err != nil {
+		t.Fatalf("FindByID en-GB: %v", err)
+	}
+
+	if next.findByIDCalls != 3 {
+		t.Errorf("underlying FindByID calls = %d, want 3 (each locale is a distinct cache entry, none shared)", next.findByIDCalls)
+	}
+
+	// Re-requesting the first locale must now hit the cache again, not fall
+	// through - proving the earlier calls actually populated three separate
+	// entries rather than just missing every time.
+	if _, err := repo.FindByID(ctx, fruit.ID(), enums.EsES); err != nil {
+		t.Fatalf("FindByID es-ES (again): %v", err)
+	}
+	if next.findByIDCalls != 3 {
+		t.Errorf("underlying FindByID calls = %d, want 3 (re-requesting es-ES should hit its own cache entry)", next.findByIDCalls)
 	}
 }
 
@@ -256,6 +303,6 @@ type failingSaveDevilFruitRepository struct {
 	*countingDevilFruitRepository
 }
 
-func (f *failingSaveDevilFruitRepository) Save(context.Context, *powers.DevilFruit) error {
+func (f *failingSaveDevilFruitRepository) Save(context.Context, *powers.DevilFruit, ports.PowerTranslations) error {
 	return errors.New("save failed")
 }

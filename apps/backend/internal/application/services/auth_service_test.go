@@ -91,6 +91,16 @@ func (f *fakeUserRepository) UpdateUsername(_ context.Context, id user.UserID, u
 	return u.ChangeUsername(username)
 }
 
+func (f *fakeUserRepository) UpdateLanguage(_ context.Context, id user.UserID, language enums.Locale) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	return u.ChangeLanguage(language)
+}
+
 func (f *fakeUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

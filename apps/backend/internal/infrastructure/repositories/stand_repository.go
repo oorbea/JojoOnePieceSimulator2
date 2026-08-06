@@ -29,10 +29,12 @@ func NewStandRepository(pool *pgxpool.Pool) *StandRepository {
 	return &StandRepository{pool: pool, queries: db.New(pool)}
 }
 
-// Save upserts stand by name: the underlying powers/stands rows, and its
-// skills, are fully replaced. It is safe to call repeatedly for the same
-// stand (e.g. re-running seed data).
-func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
+// Save upserts stand by name: the underlying powers/stands row is fully
+// replaced. translations replaces power_translations wholesale: every
+// locale present is upserted, every locale absent (except en-GB, which
+// callers must always include) is deleted. It is safe to call repeatedly
+// for the same stand (e.g. re-running seed data).
+func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand, translations ports.PowerTranslations) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
@@ -53,7 +55,6 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 	id, err := q.UpsertPower(ctx, db.UpsertPowerParams{
 		ID:            pgtype.UUID{Bytes: stand.ID(), Valid: true},
 		Name:          stand.Name(),
-		Description:   stand.Description(),
 		Rarity:        stand.Rarity().String(),
 		Picture:       stand.Picture(),
 		PictureThumb:  stand.PictureThumb(),
@@ -63,17 +64,8 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 		return fmt.Errorf("upserting power %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
 	}
 
-	if err := q.DeletePowerSkills(ctx, id); err != nil {
-		return fmt.Errorf("clearing skills for %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
-	}
-	for position, skill := range stand.Skills() {
-		if err := q.InsertPowerSkill(ctx, db.InsertPowerSkillParams{
-			PowerID:  id,
-			Position: int32(position),
-			Skill:    skill,
-		}); err != nil {
-			return fmt.Errorf("inserting skill %q for %q: %w", skill, stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
-		}
+	if err := saveTranslations(ctx, q, id, translations); err != nil {
+		return fmt.Errorf("saving translations for %q: %w", stand.Name(), err)
 	}
 
 	if err := q.UpsertStand(ctx, db.UpsertStandParams{
@@ -96,9 +88,13 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 }
 
 // FindByID loads the stand with the given id, along with its full
-// evolves_from ancestor chain, in a single round trip.
-func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*powers.Stand, error) {
-	rows, err := r.queries.GetStandRowsByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+// evolves_from ancestor chain, in a single round trip. description/skills
+// are resolved for locale, falling back through enums.FallbackChain(locale).
+func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.Stand, error) {
+	rows, err := r.queries.GetStandRowsByID(ctx, db.GetStandRowsByIDParams{
+		ID:      pgtype.UUID{Bytes: id, Valid: true},
+		Locales: fallbackStrings(locale),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("querying stand %s: %w", id, err)
 	}
@@ -138,8 +134,8 @@ func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, 
 	return nil
 }
 
-// Delete removes the stand (and its power/skills rows) with the given id.
-// Any descendant stand's evolves_from is cleared automatically by the
+// Delete removes the stand (and its power/translations rows) with the given
+// id. Any descendant stand's evolves_from is cleared automatically by the
 // schema's ON DELETE SET NULL.
 func (r *StandRepository) Delete(ctx context.Context, id powers.PowerID) error {
 	rowsAffected, err := r.queries.DeleteStandByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
@@ -153,9 +149,13 @@ func (r *StandRepository) Delete(ctx context.Context, id powers.PowerID) error {
 }
 
 // FindByName loads the stand with the given name, along with its full
-// evolves_from ancestor chain, in a single round trip.
-func (r *StandRepository) FindByName(ctx context.Context, name string) (*powers.Stand, error) {
-	rows, err := r.queries.GetStandRowsByName(ctx, name)
+// evolves_from ancestor chain, in a single round trip. description/skills
+// are resolved for locale, falling back through enums.FallbackChain(locale).
+func (r *StandRepository) FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.Stand, error) {
+	rows, err := r.queries.GetStandRowsByName(ctx, db.GetStandRowsByNameParams{
+		Name:    name,
+		Locales: fallbackStrings(locale),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("querying stand %q: %w", name, err)
 	}
@@ -176,17 +176,19 @@ func (r *StandRepository) FindByName(ctx context.Context, name string) (*powers.
 	return stands[0], nil
 }
 
-// GetAll loads every stand in the system.
-func (r *StandRepository) GetAll(ctx context.Context) ([]*powers.Stand, error) {
-	rows, err := r.queries.ListStandRows(ctx)
+// GetAll loads every stand in the system, description/skills resolved for
+// locale.
+func (r *StandRepository) GetAll(ctx context.Context, locale enums.Locale) ([]*powers.Stand, error) {
+	rows, err := r.queries.ListStandRows(ctx, fallbackStrings(locale))
 	if err != nil {
 		return nil, fmt.Errorf("listing stands: %w", err)
 	}
 	return buildStands(standRowsFromList(rows))
 }
 
-// Filter loads every stand matching the given (all-optional) filters.
-func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters) ([]*powers.Stand, error) {
+// Filter loads every stand matching the given (all-optional) filters,
+// description/skills resolved for locale.
+func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
 	rows, err := r.queries.FilterStandRows(ctx, db.FilterStandRowsParams{
 		Rarity:          enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
 		AttackPower:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackPower),
@@ -196,11 +198,21 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 		Precision:       enumStrPtr[enums.StandStat, db.StandStat](filters.Precision),
 		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
 		EvolvesFromName: filters.EvolvesFrom,
+		Locales:         fallbackStrings(locale),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("filtering stands: %w", err)
 	}
 	return buildStands(standRowsFromFilter(rows))
+}
+
+// Translations returns every locale's content for id, for admin edit forms.
+func (r *StandRepository) Translations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	rows, err := r.queries.GetPowerTranslations(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("querying translations for stand %s: %w", id, err)
+	}
+	return translationsFromRows(rows)
 }
 
 // enumStrPtr converts an optional domain enum (which knows how to render

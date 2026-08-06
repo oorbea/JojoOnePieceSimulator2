@@ -52,7 +52,7 @@ func newTestStand(t *testing.T, name string, evolvesFrom *powers.Stand) *powers.
 // name but a fresh id would otherwise hit the unique name constraint.
 func saveStand(t *testing.T, repo *repositories.StandRepository, ctx context.Context, stand *powers.Stand) {
 	t.Helper()
-	if err := repo.Save(ctx, stand); err != nil {
+	if err := repo.Save(ctx, stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 	t.Cleanup(func() {
@@ -70,7 +70,7 @@ func TestStandRepository_SaveAndFindByName(t *testing.T) {
 	stand := newTestStand(t, name, nil)
 	saveStand(t, repo, ctx, stand)
 
-	got, err := repo.FindByName(ctx, name)
+	got, err := repo.FindByName(ctx, name, enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByName: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestStandRepository_EvolutionChain(t *testing.T) {
 	child := newTestStand(t, childName, parent)
 	saveStand(t, repo, ctx, child)
 
-	got, err := repo.FindByName(ctx, childName)
+	got, err := repo.FindByName(ctx, childName, enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByName: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestStandRepository_SaveIsIdempotentByName(t *testing.T) {
 	name := uniqueName(t, "Star Platinum")
 	stand := newTestStand(t, name, nil)
 
-	if err := repo.Save(ctx, stand); err != nil {
+	if err := repo.Save(ctx, stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}}); err != nil {
 		t.Fatalf("Save (1st): %v", err)
 	}
 	t.Cleanup(func() {
@@ -127,11 +127,11 @@ func TestStandRepository_SaveIsIdempotentByName(t *testing.T) {
 			t.Errorf("cleanup Delete(%s): %v", stand.Name(), err)
 		}
 	})
-	if err := repo.Save(ctx, stand); err != nil {
+	if err := repo.Save(ctx, stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}}); err != nil {
 		t.Fatalf("Save (2nd): %v", err)
 	}
 
-	all, err := repo.GetAll(ctx)
+	all, err := repo.GetAll(ctx, enums.EnGB)
 	if err != nil {
 		t.Fatalf("GetAll: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestStandRepository_FindByName_NotFound(t *testing.T) {
 	repo := newTestRepo(t)
 	ctx := context.Background()
 
-	_, err := repo.FindByName(ctx, uniqueName(t, "Nonexistent Stand"))
+	_, err := repo.FindByName(ctx, uniqueName(t, "Nonexistent Stand"), enums.EnGB)
 	if !errors.Is(err, ports.ErrStandNotFound) {
 		t.Errorf("err = %v, want ports.ErrStandNotFound", err)
 	}
@@ -165,7 +165,7 @@ func TestStandRepository_Filter(t *testing.T) {
 	saveStand(t, repo, ctx, stand)
 
 	attackPower := enums.A
-	results, err := repo.Filter(ctx, ports.StandFilters{AttackPower: &attackPower})
+	results, err := repo.Filter(ctx, ports.StandFilters{AttackPower: &attackPower}, enums.EnGB)
 	if err != nil {
 		t.Fatalf("Filter: %v", err)
 	}
@@ -180,7 +180,7 @@ func TestStandRepository_Filter(t *testing.T) {
 	}
 
 	speed := enums.Null
-	results, err = repo.Filter(ctx, ports.StandFilters{Speed: &speed})
+	results, err = repo.Filter(ctx, ports.StandFilters{Speed: &speed}, enums.EnGB)
 	if err != nil {
 		t.Fatalf("Filter: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestStandRepository_FindByID(t *testing.T) {
 	stand := newTestStand(t, name, nil)
 	saveStand(t, repo, ctx, stand)
 
-	got, err := repo.FindByID(ctx, stand.ID())
+	got, err := repo.FindByID(ctx, stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestStandRepository_FindByID_NotFound(t *testing.T) {
 	repo := newTestRepo(t)
 	ctx := context.Background()
 
-	_, err := repo.FindByID(ctx, testIDGen.NewID())
+	_, err := repo.FindByID(ctx, testIDGen.NewID(), enums.EnGB)
 	if !errors.Is(err, ports.ErrStandNotFound) {
 		t.Errorf("err = %v, want ports.ErrStandNotFound", err)
 	}
@@ -227,7 +227,7 @@ func TestStandRepository_Delete(t *testing.T) {
 
 	parentName := uniqueName(t, "Silver Chariot")
 	parent := newTestStand(t, parentName, nil)
-	if err := repo.Save(ctx, parent); err != nil {
+	if err := repo.Save(ctx, parent, ports.PowerTranslations{enums.EnGB: {Description: parent.Description(), Skills: parent.Skills()}}); err != nil {
 		t.Fatalf("Save parent: %v", err)
 	}
 	// Deleted explicitly below rather than via saveStand's cleanup - no
@@ -241,11 +241,11 @@ func TestStandRepository_Delete(t *testing.T) {
 		t.Fatalf("Delete: %v", err)
 	}
 
-	if _, err := repo.FindByID(ctx, parent.ID()); !errors.Is(err, ports.ErrStandNotFound) {
+	if _, err := repo.FindByID(ctx, parent.ID(), enums.EnGB); !errors.Is(err, ports.ErrStandNotFound) {
 		t.Errorf("FindByID(parent) after delete: err = %v, want ports.ErrStandNotFound", err)
 	}
 
-	got, err := repo.FindByName(ctx, childName)
+	got, err := repo.FindByName(ctx, childName, enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByName(child): %v", err)
 	}
@@ -285,7 +285,7 @@ func TestStandRepository_Save_RejectsSelfEvolution(t *testing.T) {
 		t.Fatalf("NewStand: %v", err)
 	}
 
-	err = repo.Save(ctx, stand)
+	err = repo.Save(ctx, stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}})
 	if !errors.Is(err, ports.ErrConstraintViolation) {
 		t.Fatalf("err = %v, want ports.ErrConstraintViolation", err)
 	}
@@ -300,6 +300,59 @@ func TestStandRepository_Delete_NotFound(t *testing.T) {
 	err := repo.Delete(ctx, testIDGen.NewID())
 	if !errors.Is(err, ports.ErrStandNotFound) {
 		t.Errorf("err = %v, want ports.ErrStandNotFound", err)
+	}
+}
+
+// TestStandRepository_Locale_ResolvesAndFallsBack proves the SQL fallback
+// chain (see the LATERAL join in db/query/stands.sql): a locale with its own
+// translation gets it; a locale without one falls through
+// enums.FallbackChain all the way to en-GB, never an empty description.
+func TestStandRepository_Locale_ResolvesAndFallsBack(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	name := uniqueName(t, "Hierophant Green")
+	stand := newTestStand(t, name, nil)
+	translations := ports.PowerTranslations{
+		enums.EnGB: {Description: "an emerald splendor stand", Skills: []string{"punch"}},
+		enums.EsES: {Description: "un stand esplendor esmeralda", Skills: []string{"puno"}},
+	}
+	if err := repo.Save(ctx, stand, translations); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := repo.Delete(context.Background(), stand.ID()); err != nil && !errors.Is(err, ports.ErrStandNotFound) {
+			t.Errorf("cleanup Delete(%s): %v", stand.Name(), err)
+		}
+	})
+
+	// es-ES has its own translation - must get exactly that, not en-GB.
+	got, err := repo.FindByID(ctx, stand.ID(), enums.EsES)
+	if err != nil {
+		t.Fatalf("FindByID es-ES: %v", err)
+	}
+	if got.Description() != "un stand esplendor esmeralda" {
+		t.Errorf("es-ES Description() = %q, want the es-ES translation", got.Description())
+	}
+
+	// ca-ES has no translation of its own - must fall back through es-ES to
+	// ... no, ca-ES's chain is [ca-ES, es-ES, en-GB], so it should land on
+	// es-ES's translation (the first one that exists in the chain).
+	got, err = repo.FindByID(ctx, stand.ID(), enums.CaES)
+	if err != nil {
+		t.Fatalf("FindByID ca-ES: %v", err)
+	}
+	if got.Description() != "un stand esplendor esmeralda" {
+		t.Errorf("ca-ES Description() = %q, want the es-ES fallback (ca-ES has no translation of its own)", got.Description())
+	}
+
+	// en-GB is the mandatory final link - always resolves, never empty.
+	got, err = repo.FindByID(ctx, stand.ID(), enums.EnGB)
+	if err != nil {
+		t.Fatalf("FindByID en-GB: %v", err)
+	}
+	if got.Description() != "an emerald splendor stand" {
+		t.Errorf("en-GB Description() = %q, want the en-GB translation", got.Description())
 	}
 }
 

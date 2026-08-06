@@ -17,22 +17,27 @@ import (
 // local to this package (the endpoints package has its own, richer, fake
 // used for HTTP-level tests).
 type fakeStandRepository struct {
-	mu     sync.Mutex
-	stands map[powers.PowerID]*powers.Stand
+	mu           sync.Mutex
+	stands       map[powers.PowerID]*powers.Stand
+	translations map[powers.PowerID]ports.PowerTranslations
 }
 
 func newFakeStandRepository() *fakeStandRepository {
-	return &fakeStandRepository{stands: make(map[powers.PowerID]*powers.Stand)}
+	return &fakeStandRepository{
+		stands:       make(map[powers.PowerID]*powers.Stand),
+		translations: make(map[powers.PowerID]ports.PowerTranslations),
+	}
 }
 
-func (f *fakeStandRepository) Save(_ context.Context, stand *powers.Stand) error {
+func (f *fakeStandRepository) Save(_ context.Context, stand *powers.Stand, translations ports.PowerTranslations) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.stands[stand.ID()] = stand
+	f.translations[stand.ID()] = translations
 	return nil
 }
 
-func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*powers.Stand, error) {
+func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID, _ enums.Locale) (*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	stand, ok := f.stands[id]
@@ -47,7 +52,7 @@ func (f *fakeStandRepository) FindByID(_ context.Context, id powers.PowerID) (*p
 	return &cp, nil
 }
 
-func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*powers.Stand, error) {
+func (f *fakeStandRepository) FindByName(_ context.Context, name string, _ enums.Locale) (*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, stand := range f.stands {
@@ -58,7 +63,7 @@ func (f *fakeStandRepository) FindByName(_ context.Context, name string) (*power
 	return nil, ports.ErrStandNotFound
 }
 
-func (f *fakeStandRepository) GetAll(_ context.Context) ([]*powers.Stand, error) {
+func (f *fakeStandRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powers.Stand, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	all := make([]*powers.Stand, 0, len(f.stands))
@@ -68,8 +73,18 @@ func (f *fakeStandRepository) GetAll(_ context.Context) ([]*powers.Stand, error)
 	return all, nil
 }
 
-func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters) ([]*powers.Stand, error) {
-	return f.GetAll(context.Background())
+func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
+	return f.GetAll(context.Background(), locale)
+}
+
+func (f *fakeStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.translations[id]
+	if !ok {
+		return nil, ports.ErrStandNotFound
+	}
+	return t, nil
 }
 
 func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error {
@@ -225,7 +240,8 @@ func newTestStand(t *testing.T, repo *fakeStandRepository, idGen *fakeStandIDGen
 	if err != nil {
 		t.Fatalf("building stand: %v", err)
 	}
-	if err := repo.Save(context.Background(), stand); err != nil {
+	translations := ports.PowerTranslations{enums.EnGB: {Description: name + " description", Skills: []string{"skill"}}}
+	if err := repo.Save(context.Background(), stand, translations); err != nil {
 		t.Fatalf("saving stand: %v", err)
 	}
 	return stand
@@ -353,7 +369,7 @@ func TestSetStandPicture_Success_MarksPendingAndEnqueues(t *testing.T) {
 		t.Errorf("unexpected job: %+v", job)
 	}
 
-	persisted, err := repo.FindByID(context.Background(), stand.ID())
+	persisted, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -379,7 +395,7 @@ func TestSetStandPicture_QueueFull_RevertsStatus(t *testing.T) {
 		t.Fatalf("err = %v, want ErrPictureQueueFull", err)
 	}
 
-	persisted, err := repo.FindByID(context.Background(), stand.ID())
+	persisted, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID: %v", err)
 	}
@@ -401,10 +417,9 @@ func TestUpdateStand_PreservesExistingPicture(t *testing.T) {
 	}
 
 	updated, err := svc.UpdateStand(context.Background(), stand.ID(), services.StandInput{
-		Name:        "Gold Experience",
-		Description: "updated description",
-		Rarity:      enums.Rare,
-		Skills:      &[]string{"skill"},
+		Name:         "Gold Experience",
+		Translations: ports.PowerTranslations{enums.EnGB: {Description: "updated description", Skills: []string{"skill"}}},
+		Rarity:       enums.Rare,
 		AttackPower: enums.A,
 		Speed:       enums.B,
 		AttackRange: enums.C,

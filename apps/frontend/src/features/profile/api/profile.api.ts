@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
+import type { Locale } from '@/shared/lib/zod'
 
 export async function getMe(): Promise<ProfileUser> {
   const response = await apiClient.get<ProfileUser>('/users/me')
@@ -10,6 +11,14 @@ export async function getMe(): Promise<ProfileUser> {
 
 export async function updateUsername(username: string): Promise<ProfileUser> {
   const response = await apiClient.patch<ProfileUser>('/users/me', { username })
+  return response.data
+}
+
+// language is optional in the backend's PATCH /users/me body, but username
+// is always mandatory there (see dto.UpdateProfileRequest), so a language-only
+// change still has to resend the caller's current username.
+export async function updateLanguage(username: string, language: Locale): Promise<ProfileUser> {
+  const response = await apiClient.patch<ProfileUser>('/users/me', { username, language })
   return response.data
 }
 

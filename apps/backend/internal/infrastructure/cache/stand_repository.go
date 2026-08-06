@@ -38,9 +38,10 @@ func NewStandRepository(next ports.IStandRepository, c ports.ICache, standTTL, n
 	return &StandRepository{next: next, cache: c, standTTL: standTTL, notFoundTTL: notFoundTTL}
 }
 
-// Save delegates, then invalidates the whole stands namespace on success.
-func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
-	if err := r.next.Save(ctx, stand); err != nil {
+// Save delegates, then invalidates the whole stands namespace (every
+// locale's entries) on success.
+func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand, translations ports.PowerTranslations) error {
+	if err := r.next.Save(ctx, stand, translations); err != nil {
 		return err
 	}
 	r.invalidate(ctx)
@@ -48,9 +49,9 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand) error {
 }
 
 // FindByID is read-through: a hit avoids next entirely, including a cached
-// ports.ErrStandNotFound tombstone.
-func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*powers.Stand, error) {
-	key := idKey(id)
+// ports.ErrStandNotFound tombstone. Cached per locale - see keys.go.
+func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID, locale enums.Locale) (*powers.Stand, error) {
+	key := idKey(id, locale)
 	if data, ok := r.cache.Get(ctx, standsNamespace, key); ok {
 		if isTombstone(data) {
 			return nil, ports.ErrStandNotFound
@@ -62,7 +63,7 @@ func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*pow
 		// than failing the request.
 	}
 
-	stand, err := r.next.FindByID(ctx, id)
+	stand, err := r.next.FindByID(ctx, id, locale)
 	if err != nil {
 		if errors.Is(err, ports.ErrStandNotFound) {
 			r.cache.Set(ctx, standsNamespace, key, notFoundTombstone, r.notFoundTTL)
@@ -77,8 +78,8 @@ func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID) (*pow
 }
 
 // FindByName is read-through, same shape as FindByID.
-func (r *StandRepository) FindByName(ctx context.Context, name string) (*powers.Stand, error) {
-	key := nameKey(name)
+func (r *StandRepository) FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.Stand, error) {
+	key := nameKey(name, locale)
 	if data, ok := r.cache.Get(ctx, standsNamespace, key); ok {
 		if isTombstone(data) {
 			return nil, ports.ErrStandNotFound
@@ -88,7 +89,7 @@ func (r *StandRepository) FindByName(ctx context.Context, name string) (*powers.
 		}
 	}
 
-	stand, err := r.next.FindByName(ctx, name)
+	stand, err := r.next.FindByName(ctx, name, locale)
 	if err != nil {
 		if errors.Is(err, ports.ErrStandNotFound) {
 			r.cache.Set(ctx, standsNamespace, key, notFoundTombstone, r.notFoundTTL)
@@ -102,36 +103,16 @@ func (r *StandRepository) FindByName(ctx context.Context, name string) (*powers.
 	return stand, nil
 }
 
-// GetAll is read-through, cached as a single entry.
-func (r *StandRepository) GetAll(ctx context.Context) ([]*powers.Stand, error) {
-	if data, ok := r.cache.Get(ctx, standsNamespace, allKey); ok {
-		if stands, err := unmarshalStands(data); err == nil {
-			return stands, nil
-		}
-	}
-
-	stands, err := r.next.GetAll(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if data, err := marshalStands(stands); err == nil {
-		r.cache.Set(ctx, standsNamespace, allKey, data, r.standTTL)
-	}
-	return stands, nil
-}
-
-// Filter is read-through, keyed by a canonical rendering of filters so query
-// param order doesn't fragment the cache.
-func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters) ([]*powers.Stand, error) {
-	key := standFilterKey(filters)
+// GetAll is read-through, cached as a single entry per locale.
+func (r *StandRepository) GetAll(ctx context.Context, locale enums.Locale) ([]*powers.Stand, error) {
+	key := allKey(locale)
 	if data, ok := r.cache.Get(ctx, standsNamespace, key); ok {
 		if stands, err := unmarshalStands(data); err == nil {
 			return stands, nil
 		}
 	}
 
-	stands, err := r.next.Filter(ctx, filters)
+	stands, err := r.next.GetAll(ctx, locale)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +121,34 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 		r.cache.Set(ctx, standsNamespace, key, data, r.standTTL)
 	}
 	return stands, nil
+}
+
+// Filter is read-through, keyed by a canonical rendering of filters (plus
+// locale) so query param order doesn't fragment the cache.
+func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
+	key := standFilterKey(filters, locale)
+	if data, ok := r.cache.Get(ctx, standsNamespace, key); ok {
+		if stands, err := unmarshalStands(data); err == nil {
+			return stands, nil
+		}
+	}
+
+	stands, err := r.next.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, err
+	}
+
+	if data, err := marshalStands(stands); err == nil {
+		r.cache.Set(ctx, standsNamespace, key, data, r.standTTL)
+	}
+	return stands, nil
+}
+
+// Translations bypasses the cache: admin edit forms need a fresh read of
+// every locale's content, and this path is not part of the hot,
+// high-traffic read surface the cache exists for.
+func (r *StandRepository) Translations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	return r.next.Translations(ctx, id)
 }
 
 // Delete delegates, then invalidates the whole stands namespace on success.

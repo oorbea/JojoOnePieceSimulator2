@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
-import { raritySchema, standStatSchema, type PictureStatus, type Rarity, type StandStat } from '@/shared/lib/zod'
+import { powerTranslationsFormSchema, type TranslationFormValues } from '@/shared/lib/power-translations'
+import { raritySchema, standStatSchema, type Locale, type PictureStatus, type Rarity, type StandStat } from '@/shared/lib/zod'
 
 // Mirrors the backend's dto.StandResponse (apps/backend .../dto/stand_response.go).
 // `evolvesFrom` nests recursively — the backend returns the full parent
@@ -24,12 +25,12 @@ export type StandResponse = {
 }
 
 // Mirrors dto.StandRequest — same body shape for both create (POST) and
-// update (PUT).
+// update (PUT). Translations replaced the old flat description/skills once
+// power_translations landed - see the vault's i18n-multi-language.md.
 export type StandInput = {
   name: string
-  description: string
+  translations: Partial<Record<Locale, TranslationFormValues>>
   rarity: Rarity
-  skills: string[]
   attackPower: StandStat
   speed: StandStat
   attackRange: StandStat
@@ -40,10 +41,9 @@ export type StandInput = {
 }
 
 export const standFormSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
-  description: z.string().min(1, 'Description is required').max(1000, 'Description is too long'),
+  name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
+  translations: powerTranslationsFormSchema,
   rarity: raritySchema,
-  skills: z.array(z.string().min(1)).min(1, 'At least one skill is required'),
   attackPower: standStatSchema,
   speed: standStatSchema,
   attackRange: standStatSchema,

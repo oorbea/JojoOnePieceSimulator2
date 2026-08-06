@@ -15,7 +15,13 @@ function listSourceFiles(dir: string, out: string[] = []) {
     const stats = statSync(full)
     if (stats.isDirectory()) {
       listSourceFiles(full, out)
-    } else if (/\.(ts|tsx)$/.test(entry) && !/\.test\.[tj]sx?$/.test(entry)) {
+    } else if (
+      (/\.(ts|tsx)$/.test(entry) && !/\.test\.[tj]sx?$/.test(entry)) ||
+      // i18n locale catalogs (shared/i18n/locales/*.json) carry the same
+      // user-visible copy as the rest of src/, just outside .ts/.tsx - they
+      // must follow the same em/en dash rule.
+      /\.json$/.test(entry)
+    ) {
       out.push(full)
     }
   }

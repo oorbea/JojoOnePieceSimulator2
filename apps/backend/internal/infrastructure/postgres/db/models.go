@@ -57,6 +57,49 @@ func (ns NullFruitType) Value() (driver.Value, error) {
 	return string(ns.FruitType), nil
 }
 
+type Locale string
+
+const (
+	LocaleEnGB Locale = "en-GB"
+	LocaleEsES Locale = "es-ES"
+	LocaleCaES Locale = "ca-ES"
+)
+
+func (e *Locale) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Locale(s)
+	case string:
+		*e = Locale(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Locale: %T", src)
+	}
+	return nil
+}
+
+type NullLocale struct {
+	Locale Locale
+	Valid  bool // Valid is true if Locale is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLocale) Scan(value interface{}) error {
+	if value == nil {
+		ns.Locale, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Locale.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLocale) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Locale), nil
+}
+
 type PictureStatus string
 
 const (
@@ -286,7 +329,6 @@ type Power struct {
 	ID            pgtype.UUID
 	Kind          string
 	Name          string
-	Description   string
 	Rarity        string
 	Picture       string
 	CreatedAt     pgtype.Timestamptz
@@ -295,10 +337,11 @@ type Power struct {
 	PictureStatus string
 }
 
-type PowerSkill struct {
-	PowerID  pgtype.UUID
-	Position int32
-	Skill    string
+type PowerTranslation struct {
+	PowerID     pgtype.UUID
+	Locale      string
+	Description string
+	Skills      []string
 }
 
 type Stand struct {
@@ -314,13 +357,17 @@ type Stand struct {
 }
 
 type User struct {
-	ID           pgtype.UUID
-	GoogleSub    string
-	Email        string
-	Username     string
-	CompleteName string
-	Picture      string
-	Role         string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	ID             pgtype.UUID
+	GoogleSub      string
+	Email          string
+	Username       string
+	CompleteName   string
+	GooglePicture  string
+	Role           string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	AvatarKey      string
+	AvatarThumbKey string
+	AvatarStatus   string
+	Language       string
 }

@@ -7,6 +7,7 @@ const USER = {
   completeName: 'Jotaro Kujo',
   picture: null as string | null,
   role: 'REGULAR' as const,
+  language: 'en-GB' as const,
 }
 
 const SESSION = {
