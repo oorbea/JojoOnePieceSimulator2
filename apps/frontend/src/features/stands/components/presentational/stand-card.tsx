@@ -5,8 +5,7 @@ import { XStack, YStack } from 'tamagui'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { InsetRing } from '@/shared/components/presentational/wii-card'
-import { WiiCard } from '@/shared/components/presentational/wii-card'
+import { InsetRing, WiiCard } from '@/shared/components/presentational/wii-card'
 import type { StandResponse } from '@/features/stands/types/stands.types'
 
 type Props = {
