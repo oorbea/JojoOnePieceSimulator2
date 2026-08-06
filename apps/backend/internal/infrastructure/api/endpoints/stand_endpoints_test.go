@@ -713,6 +713,11 @@ func TestCreateStand_InvalidEnum(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusBadRequest, rec.Body.String())
 	}
+	var respBody map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &respBody)
+	if respBody["code"] != "VALIDATION_FAILED" {
+		t.Errorf("code = %v, want VALIDATION_FAILED", respBody["code"])
+	}
 }
 
 func TestCreateStand_DuplicateName(t *testing.T) {
@@ -764,6 +769,11 @@ func TestGetStand_NotFound(t *testing.T) {
 	rec := doRequest(t, h, http.MethodGet, "/api/v1/stands/00000000-0000-0000-0000-000000000000", nil)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusNotFound, rec.Body.String())
+	}
+	var body map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if body["code"] != "STAND_NOT_FOUND" {
+		t.Errorf("code = %v, want STAND_NOT_FOUND", body["code"])
 	}
 }
 
