@@ -50,8 +50,40 @@ const jojoColors = {
   plasticEdge: '#C9DDE9',
 }
 
+// @tamagui/config/v4's defaultConfig ships `media` as max-width breakpoints
+// (`md: { maxWidth: 1020 }`, ...) — every `$md`/`$lg`/`$xl` in this codebase
+// was written assuming mobile-first min-width semantics instead, which
+// silently inverted every responsive rule (desktop-only nav links rendering
+// on mobile, etc). This app defines its own min-width scale so those props
+// mean what their authors intended. See ObsidianVault/frontend-responsive-
+// frutiger-aero.md for the incident writeup.
+//
+// Declared low-to-high on purpose: Tamagui applies matching media styles in
+// declaration order, so the widest one that matches wins — that's what lets
+// `$md`/`$lg`/`$xl` stack as a growing scale instead of fighting each other.
+const media = {
+  sm: { minWidth: 640 },
+  md: { minWidth: 900 },
+  lg: { minWidth: 1200 },
+  xl: { minWidth: 1500 },
+  // Explicit max-width alias for the rare "mobile only" rule.
+  maxSm: { maxWidth: 639 },
+} as const
+
+// Mobile-first default: assume the smallest tier until a real measurement
+// (native, or the first web layout pass) proves otherwise.
+const mediaQueryDefaultActive = {
+  sm: false,
+  md: false,
+  lg: false,
+  xl: false,
+  maxSm: true,
+}
+
 const config = createTamagui({
   ...defaultConfig,
+  media,
+  mediaQueryDefaultActive,
   fonts: {
     ...defaultConfig.fonts,
     // Display face: Fredoka, used with restraint (titles, channel labels).
