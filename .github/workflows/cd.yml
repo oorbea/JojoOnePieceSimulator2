@@ -143,4 +143,14 @@ jobs:
             echo "Waiting for backend to be healthy..."
             timeout 90 bash -c 'until [ "$(docker inspect -f "{{.State.Health.Status}}" jojo-one-piece-simulator-backend 2>/dev/null)" = "healthy" ]; do sleep 2; done'
 
+            # backend/frontend just got new container IPs on public-net; the
+            # reverse proxy resolves upstream hostnames once and caches the
+            # result, so it keeps routing to the old (now-dead) IP until its
+            # nginx config is reloaded - reload it here so it re-resolves.
+            if docker inspect nginx-proxy-manager-app-1 >/dev/null 2>&1; then
+              docker exec nginx-proxy-manager-app-1 nginx -s reload
+            else
+              echo "WARNING: nginx-proxy-manager-app-1 not found, skipping reverse proxy reload."
+            fi
+
             docker image prune -f
