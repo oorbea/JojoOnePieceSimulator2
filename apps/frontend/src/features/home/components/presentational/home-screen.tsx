@@ -31,7 +31,7 @@ const CHANNELS = [
 // second logout here would just duplicate the one in the top bar).
 export function HomeScreen({ user, onOpenProfile }: Props) {
   return (
-    <PageShell align="top" navPadding scroll maxWidth={720}>
+    <PageShell align="top" scroll maxWidth={720}>
       <GlassPanel
         glossy
         elevate={2}

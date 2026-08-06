@@ -1,50 +1,36 @@
 import {
-  bottomClearance,
   columnMaxWidth,
-  desktopBottomClearance,
   DOCK_BAR_BOTTOM_OFFSET,
   DOCK_BAR_CLEARANCE,
-  DOCK_BAR_HEIGHT,
   NAV_BAR_CLEARANCE,
-  NAV_BAR_HEIGHT,
   NAV_BAR_TOP_OFFSET,
-  topClearance,
+  navBottomInset,
+  navTopInset,
 } from '../layout'
 
 const ZERO_INSETS = { top: 0, bottom: 0 }
 
-describe('topClearance / bottomClearance', () => {
-  it('reserves exactly the nav bar height + offset + clearance when docked', () => {
-    expect(topClearance(ZERO_INSETS, true)).toBe(
-      NAV_BAR_TOP_OFFSET + NAV_BAR_HEIGHT + NAV_BAR_CLEARANCE
-    )
-    expect(bottomClearance(ZERO_INSETS, true)).toBe(
-      DOCK_BAR_BOTTOM_OFFSET + DOCK_BAR_HEIGHT + DOCK_BAR_CLEARANCE
-    )
+describe('navTopInset / navBottomInset', () => {
+  it('reserves the bar\'s real measured height + offset + clearance', () => {
+    expect(navTopInset(ZERO_INSETS, 80)).toBe(NAV_BAR_TOP_OFFSET + 80 + NAV_BAR_CLEARANCE)
+    expect(navBottomInset(ZERO_INSETS, 96)).toBe(DOCK_BAR_BOTTOM_OFFSET + 96 + DOCK_BAR_CLEARANCE)
   })
 
-  it('falls back to plain breathing room when not docked', () => {
-    expect(topClearance(ZERO_INSETS, false)).toBe(16)
-    expect(bottomClearance(ZERO_INSETS, false)).toBe(16)
+  it('tracks a bar that grew past its nominal height (e.g. it wrapped)', () => {
+    // The whole point of measuring instead of assuming a fixed constant:
+    // a taller-than-usual bar must reserve more, not the same, space.
+    expect(navTopInset(ZERO_INSETS, 128)).toBeGreaterThan(navTopInset(ZERO_INSETS, 64))
+  })
+
+  it('falls back to plain breathing room when the bar is not rendered at all', () => {
+    expect(navTopInset(ZERO_INSETS, null)).toBe(NAV_BAR_CLEARANCE)
+    expect(navBottomInset(ZERO_INSETS, null)).toBe(DOCK_BAR_CLEARANCE)
   })
 
   it('adds device safe-area insets on top of the bar reservation', () => {
     const insets = { top: 44, bottom: 34 }
-    expect(topClearance(insets, true)).toBe(
-      44 + NAV_BAR_TOP_OFFSET + NAV_BAR_HEIGHT + NAV_BAR_CLEARANCE
-    )
-    expect(bottomClearance(insets, true)).toBe(
-      34 + DOCK_BAR_BOTTOM_OFFSET + DOCK_BAR_HEIGHT + DOCK_BAR_CLEARANCE
-    )
-  })
-})
-
-describe('desktopBottomClearance', () => {
-  // The bottom dock is display:none from $md up (channel-bar.tsx /
-  // app-shell.tsx) — desktop pages must not carry the mobile dock's ~96px
-  // reservation as dead space once it's not actually rendered.
-  it('is independent of the dock height', () => {
-    expect(desktopBottomClearance(ZERO_INSETS)).toBeLessThan(bottomClearance(ZERO_INSETS, true))
+    expect(navTopInset(insets, 64)).toBe(44 + NAV_BAR_TOP_OFFSET + 64 + NAV_BAR_CLEARANCE)
+    expect(navBottomInset(insets, 64)).toBe(34 + DOCK_BAR_BOTTOM_OFFSET + 64 + DOCK_BAR_CLEARANCE)
   })
 })
 

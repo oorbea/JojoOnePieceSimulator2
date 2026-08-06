@@ -14,7 +14,7 @@ type Props = {
 // second, smaller "pick a channel" grid, one tile per manageable domain.
 export function AdminHubScreen({ onOpenStands, onOpenDevilFruits }: Props) {
   return (
-    <PageShell align="top" navPadding scroll maxWidth={720}>
+    <PageShell align="top" scroll maxWidth={720}>
       <GlowText level="title" align="center">
         Admin Panel
       </GlowText>

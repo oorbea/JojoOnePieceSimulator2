@@ -18,27 +18,22 @@ export const DOCK_BAR_CLEARANCE = 24
 type Insets = { top: number; bottom: number }
 
 /** Top padding a page needs to clear the floating top ChannelBar without
- * overlapping it. `hasNav` mirrors PageShell's `navPadding` prop. */
-export function topClearance(insets: Insets, hasNav: boolean) {
-  return hasNav
-    ? insets.top + NAV_BAR_TOP_OFFSET + NAV_BAR_HEIGHT + NAV_BAR_CLEARANCE
-    : insets.top + 16
+ * overlapping it. `barHeight` is the bar's real measured height (from
+ * AppShell's onLayout) — pass `null` when the bar isn't rendered at all, or
+ * `NAV_BAR_HEIGHT` as a first-render fallback before layout has fired. */
+export function navTopInset(insets: Insets, barHeight: number | null) {
+  if (barHeight === null) return insets.top + NAV_BAR_CLEARANCE
+  return insets.top + NAV_BAR_TOP_OFFSET + barHeight + NAV_BAR_CLEARANCE
 }
 
-/** Bottom padding for the mobile layout, where the floating bottom dock is
- * actually rendered (it's `display:none` from `$md` up — see
- * `desktopBottomClearance` for that tier). */
-export function bottomClearance(insets: Insets, hasNav: boolean) {
-  return hasNav
-    ? insets.bottom + DOCK_BAR_BOTTOM_OFFSET + DOCK_BAR_HEIGHT + DOCK_BAR_CLEARANCE
-    : insets.bottom + 16
-}
-
-/** Bottom padding once the dock is hidden (`$md` and up) — plain breathing
- * room, not sized to a bar that isn't on screen. Without this, desktop pages
- * kept the mobile dock's ~96px reservation as dead space at the bottom. */
-export function desktopBottomClearance(insets: Insets) {
-  return insets.bottom + 24
+/** Bottom padding to clear the floating bottom dock. `dockHeight` is the
+ * dock's real measured height, or `null` when it isn't rendered (e.g. the
+ * desktop tier, where AppShell swaps the dock out for top nav links instead
+ * of just hiding it) — in that case this is plain breathing room, not sized
+ * to a bar that isn't on screen. */
+export function navBottomInset(insets: Insets, dockHeight: number | null) {
+  if (dockHeight === null) return insets.bottom + DOCK_BAR_CLEARANCE
+  return insets.bottom + DOCK_BAR_BOTTOM_OFFSET + dockHeight + DOCK_BAR_CLEARANCE
 }
 
 export type ColumnTier = 'base' | 'md' | 'lg' | 'xl'

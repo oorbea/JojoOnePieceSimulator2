@@ -60,7 +60,7 @@ export function ProfileScreen({
 
   return (
     <YStack flex={1} position="relative">
-      <PageShell align="top" navPadding scroll maxWidth={640}>
+      <PageShell align="top" scroll maxWidth={640}>
         <GlassPanel glossy elevate={2} width="100%" p="$6" gap="$5" items="center">
           <YStack position="relative" width={112} height={112}>
             <YStack

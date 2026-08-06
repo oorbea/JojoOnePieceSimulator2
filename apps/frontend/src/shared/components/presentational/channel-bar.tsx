@@ -8,10 +8,17 @@ const ChannelBarFrame = styled(XStack, {
   name: 'ChannelBar',
   bg: '$channelFill',
   rounded: '$pill',
-  height: 64,
+  minH: 64,
   items: 'center',
+  justify: 'center',
+  // Content that doesn't fit one row makes the pill grow instead of getting
+  // clipped/overlapping — see channel-bar.tsx's ChannelBar doc comment.
+  // AppShell measures the real rendered height via onLayout, so growth here
+  // never covers page content underneath.
+  flexWrap: 'wrap',
   gap: '$2',
   px: '$3',
+  py: '$2',
   borderWidth: 1.5,
   borderColor: '$glassEdge',
   shadowColor: '$hardShadow',
@@ -28,7 +35,7 @@ const ChannelBarFrame = styled(XStack, {
 
   variants: {
     density: {
-      compact: { height: 52 },
+      compact: { minH: 52 },
       regular: {},
     },
   } as const,

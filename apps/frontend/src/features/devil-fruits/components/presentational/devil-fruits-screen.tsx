@@ -54,7 +54,7 @@ export function DevilFruitsScreen({
 }: Props) {
   return (
     <YStack flex={1} position="relative">
-      <PageShell align="top" navPadding scroll maxWidth={960}>
+      <PageShell align="top" scroll maxWidth={960}>
         <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$3">
           <GlowText level="title">Devil Fruits</GlowText>
           <GlossButton tone="green" btnSize="md" onPress={onCreateNew} accessibilityLabel="New Devil Fruit">
