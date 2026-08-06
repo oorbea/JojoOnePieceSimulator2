@@ -7,13 +7,13 @@ import (
 )
 
 type Power struct {
-	id            PowerID
 	name          string
 	description   string
-	rarity        enums.PowerRarity
-	skills        []string
 	picture       string
 	pictureThumb  string
+	skills        []string
+	id            PowerID
+	rarity        enums.PowerRarity
 	pictureStatus enums.PictureStatus
 }
 

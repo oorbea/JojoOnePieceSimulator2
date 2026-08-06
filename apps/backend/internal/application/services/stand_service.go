@@ -54,12 +54,13 @@ func (p PicturePolicy) allows(contentType string) bool {
 // CreateStand/UpdateStand take one argument instead of a long positional
 // list.
 type StandInput struct {
+	Skills        *[]string
+	EvolvesFrom   *powers.PowerID
 	Name          string
 	Description   string
-	Rarity        enums.PowerRarity
-	Skills        *[]string
 	Picture       string
 	PictureThumb  string
+	Rarity        enums.PowerRarity
 	PictureStatus enums.PictureStatus
 	AttackPower   enums.StandStat
 	Speed         enums.StandStat
@@ -67,7 +68,6 @@ type StandInput struct {
 	Endurance     enums.StandStat
 	Precision     enums.StandStat
 	Potential     enums.StandStat
-	EvolvesFrom   *powers.PowerID
 }
 
 // StandService coordinates Stand use cases against the injected repository.

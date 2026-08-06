@@ -14,7 +14,6 @@ import (
 // ListStandRowsRow and FilterStandRowsRow, so all three can be hydrated by
 // the same builder below.
 type standRow struct {
-	ID            pgtype.UUID
 	Name          string
 	Description   string
 	Rarity        string
@@ -27,9 +26,10 @@ type standRow struct {
 	Endurance     string
 	Precision     string
 	Potential     string
+	Skills        []string
+	ID            pgtype.UUID
 	EvolvesFromID pgtype.UUID
 	Matched       bool
-	Skills        []string
 }
 
 func standRowsFromGetByName(rs []db.GetStandRowsByNameRow) []standRow {
