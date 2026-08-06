@@ -12,8 +12,8 @@ Go/chi backend, `apps/backend`. Base path `/api/v1`, port 8080 (`apps/backend/in
 
 ## Auth
 
-- `POST /api/v1/auth/google` `{idToken}` → `{accessToken, tokenType:"Bearer", expiresAt, user{id,email,username,completeName,avatar,avatarThumb,avatarStatus,role}}`
-  (2026-08-04: `picture` was replaced by `avatar`/`avatarThumb`/`avatarStatus` — see [[user-profile-feature]])
+- `POST /api/v1/auth/google` `{idToken}` → `{accessToken, tokenType:"Bearer", expiresAt, user{id,email,username,completeName,avatar,avatarThumb,avatarStatus,role,language}}`
+  (2026-08-04: `picture` was replaced by `avatar`/`avatarThumb`/`avatarStatus` — see [[user-profile-feature]]. 2026-08-06: `language` added — see [[i18n-multi-language]])
 - 201 first login, 200 returning.
 - **No refresh token, no cookies.** 24h JWT. 401 anywhere → force re-login, no silent refresh.
 - All other routes: `Authorization: Bearer <token>` required.
@@ -36,9 +36,13 @@ Verified with `go test -count=300 -run TestJWTIssuer ./internal/infrastructure/a
 
 ## Caching
 
-Read routes emit `ETag` + `Cache-Control: private` + `Vary: Authorization`, honor `If-None-Match` → `304`. (`apps/backend/internal/infrastructure/api/endpoints/cache_headers.go`)
+Read routes emit `ETag` + `Cache-Control: private` + `Vary: Authorization, Accept-Language` (Accept-Language added 2026-08-06, see [[i18n-multi-language]]), honor `If-None-Match` → `304`. (`apps/backend/internal/infrastructure/api/endpoints/cache_headers.go`)
 
-Backend also has a caching layer for Stand repo + picture storage (ETag/Cache-Control) and background image processing with `pictureStatus` tracking, returning `202 Accepted` on picture upload.
+Backend also has a caching layer for Stand repo + picture storage (ETag/Cache-Control) and background image processing with `pictureStatus` tracking, returning `202 Accepted` on picture upload. The Redis read-through decorator's cache keys include locale (`id:<locale>:<uuid>`, `all:<locale>`, ...) — a write still invalidates the whole namespace, correctly dropping every locale's entries together.
+
+## Locale (i18n)
+
+`GET /stands`, `GET /devil-fruits` (list + detail) resolve `description`/`skills` per `Accept-Language` (or `?lang=` override), falling back `ca-ES → es-ES → en-GB`. Response shape unchanged. Admin-only `GET .../{id}/translations` returns every locale at once; `POST`/`PUT` bodies take a `translations` map keyed by locale instead of flat `description`/`skills` fields (`en-GB` mandatory). `name` is never translated. See [[i18n-multi-language]] for the full decision record.
 
 ## JSON shape
 

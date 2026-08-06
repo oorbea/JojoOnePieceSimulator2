@@ -24,6 +24,7 @@ Solo hobby/learning project. CI/CD to prod set up 2026-08-02 (see [[cicd-deploym
 
 ## Decisions worth remembering
 - Solo project: docs are for the owner's own future reference, not team onboarding.
+- Multi-language support (en-GB/es-ES/ca-ES) added 2026-08-06, backend + frontend infra done and verified; UI copy migration partial. See [[i18n-multi-language]].
 
 ## Repo stats (indexed 2026-07-28)
 1601 nodes, 6484 edges. Languages: Go (104 files), TypeScript (21), YAML (7), SQL (7), JS (4).
