@@ -1,4 +1,5 @@
 import { Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -39,6 +40,8 @@ export function ConfirmSheet({
   onConfirm,
   onCancel,
 }: ConfirmSheetProps) {
+  const insets = useSafeAreaInsets()
+
   return (
     <Modal
       visible={visible}
@@ -52,6 +55,8 @@ export function ConfirmSheet({
         items="center"
         justify="center"
         p="$4"
+        pt={insets.top + 16}
+        pb={insets.bottom + 16}
         bg="rgba(10,12,20,0.45)"
         onPress={isConfirming ? undefined : onCancel}
         {...a11yProps(title, 'alert')}

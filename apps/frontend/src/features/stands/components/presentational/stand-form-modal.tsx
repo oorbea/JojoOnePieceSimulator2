@@ -1,5 +1,6 @@
 import { Camera, Sparkles } from '@tamagui/lucide-icons-2'
 import { Image, Modal } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Controller, type Control, type FieldErrors } from 'react-hook-form'
 import { ScrollView, Spinner, XStack, YStack } from 'tamagui'
 
@@ -57,9 +58,19 @@ export function StandFormModal({
   onPickPicture,
   isPictureBusy,
 }: Props) {
+  const insets = useSafeAreaInsets()
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
-      <YStack flex={1} items="center" justify="center" p="$4" bg="rgba(10,12,20,0.45)">
+      <YStack
+        flex={1}
+        items="center"
+        justify="center"
+        p="$4"
+        pt={insets.top + 16}
+        pb={insets.bottom + 16}
+        bg="rgba(10,12,20,0.45)"
+      >
         <GlassPanel
           tone="strong"
           radiusSize="panel"
@@ -74,7 +85,7 @@ export function StandFormModal({
             {mode === 'create' ? 'New Stand' : 'Edit Stand'}
           </GlowText>
 
-          <ScrollView keyboardShouldPersistTaps="handled">
+          <ScrollView flex={1} minH={0} keyboardShouldPersistTaps="handled">
             <YStack gap="$4" pb="$2">
               <YStack items="center" gap="$2">
                 <YStack
