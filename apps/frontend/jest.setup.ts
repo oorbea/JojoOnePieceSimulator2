@@ -6,6 +6,18 @@
 // matchers (toBeVisible, toHaveTextContent, ...) on import — no separate
 // jest-native setup import needed.
 
+// @react-native-async-storage/async-storage has no native module in either
+// jest-expo preset (unlike most Expo-owned modules, this is a community
+// package with no built-in test mock) - without this, anything importing it
+// transitively (theme.store.ts, language.store.ts, and now interceptors.ts
+// via language.store.ts for the Accept-Language header) throws
+// "NativeModule: AsyncStorage is null" the moment the module loads, in both
+// the jsdom and native projects. The package ships this exact in-memory mock
+// for tests.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+)
+
 // react-native-safe-area-context: fixed, controllable insets. A real device
 // would give the top ChannelBar/bottom dock clearance math (see
 // src/shared/lib/layout.ts) real safe-area values; tests use zero insets so

@@ -72,6 +72,7 @@ export function useGoogleAuth() {
           completeName: data.user.completeName,
           picture: data.user.avatar || null,
           role: data.user.role,
+          language: data.user.language,
         },
       })
     } catch (err) {

@@ -17,7 +17,7 @@ export function useCreateDevilFruit() {
   return useMutation({
     mutationFn: (input: DevilFruitInput) => createDevilFruit(input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.all })
+      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast('Devil Fruit created')
     },
   })
@@ -29,7 +29,7 @@ export function useUpdateDevilFruit() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: DevilFruitInput }) => updateDevilFruit(id, input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.all })
+      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast('Devil Fruit updated')
     },
   })
@@ -41,7 +41,7 @@ export function useUploadDevilFruitPicture() {
   return useMutation({
     mutationFn: ({ id, asset }: { id: string; asset: PickedPicture }) => uploadDevilFruitPicture(id, asset),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.all })
+      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast('Uploading picture. This takes a moment.')
     },
   })
@@ -53,7 +53,7 @@ export function useDeleteDevilFruit() {
   return useMutation({
     mutationFn: (id: string) => deleteDevilFruit(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.all })
+      void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast('Devil Fruit deleted')
     },
   })
