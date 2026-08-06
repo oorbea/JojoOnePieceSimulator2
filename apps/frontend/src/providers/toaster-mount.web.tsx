@@ -1,13 +1,15 @@
 import { Toaster } from 'burnt/web'
+import { useMedia } from 'tamagui'
 
 import { DOCK_BAR_BOTTOM_OFFSET, DOCK_BAR_CLEARANCE, DOCK_BAR_HEIGHT } from '@/shared/lib/layout'
 
-// Clears the floating bottom ChannelBar dock (mobile only — it's
-// display:none from $md up, see channel-bar.tsx / app-shell.tsx) so a toast
-// never lands underneath it. Sonner has no media-query-aware offset, so this
-// stays fixed even on desktop, where the dock is gone and the toast just
-// sits with a bit of extra breathing room instead.
-const BOTTOM_OFFSET = `${DOCK_BAR_BOTTOM_OFFSET + DOCK_BAR_HEIGHT + DOCK_BAR_CLEARANCE}px`
+// Clears the floating bottom ChannelBar dock — it only renders below the
+// `$md` tier (AppShell swaps it for top nav links from `$md` up, see
+// app-shell.tsx). ToasterMount is mounted above AppShell in app-providers.tsx
+// so it has no NavInsetsProvider to read from; `useMedia()` here is the
+// direct equivalent of the same check AppShell makes.
+const DOCK_OFFSET = `${DOCK_BAR_BOTTOM_OFFSET + DOCK_BAR_HEIGHT + DOCK_BAR_CLEARANCE}px`
+const PLAIN_OFFSET = '24px'
 
 // burnt's web backend (sonner) needs its <Toaster/> mounted once at the
 // app root, or every toast() call fails silently with a console warning —
@@ -29,5 +31,6 @@ const WebToaster = Toaster as unknown as (props: {
 }) => React.JSX.Element
 
 export function ToasterMount() {
-  return <WebToaster position="bottom-right" offset={BOTTOM_OFFSET} />
+  const media = useMedia()
+  return <WebToaster position="bottom-right" offset={media.md ? PLAIN_OFFSET : DOCK_OFFSET} />
 }

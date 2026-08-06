@@ -57,7 +57,7 @@ export function StandCard({ stand, onEdit, onDelete }: Props) {
 
       <XStack flexWrap="wrap" gap="$2">
         {STAT_LABELS.map(({ key, label }) => (
-          <YStack key={key} width={80} items="center" gap="$0.5">
+          <YStack key={key} flexBasis={72} grow={1} minW={72} items="center" gap="$0.5">
             <GlowText level="label" tone="soft" fontSize="$1">
               {label}
             </GlowText>
