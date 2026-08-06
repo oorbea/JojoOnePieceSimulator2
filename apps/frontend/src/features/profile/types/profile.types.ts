@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { PictureStatus, Role } from '@/shared/lib/zod'
+import type { Locale, PictureStatus, Role } from '@/shared/lib/zod'
 
 // Mirrors the backend's dto.UserResponse (apps/backend .../dto/user_response.go)
 // once the /users/me routes land. `avatar`/`avatarThumb` are presigned URLs
@@ -15,10 +15,15 @@ export type ProfileUser = {
   avatarThumb: string
   avatarStatus: PictureStatus
   role: Role
+  language: Locale
 }
 
 export type UpdateUsernameInput = {
   username: string
+}
+
+export type UpdateLanguageInput = {
+  language: Locale
 }
 
 // Mirrors the backend's username sanitizer client-side, so a typo surfaces

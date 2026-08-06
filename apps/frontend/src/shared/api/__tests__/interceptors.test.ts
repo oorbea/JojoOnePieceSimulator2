@@ -14,6 +14,7 @@ const SESSION = {
     completeName: 'Jotaro Kujo',
     picture: null,
     role: 'REGULAR' as const,
+    language: 'en-GB' as const,
   },
 }
 

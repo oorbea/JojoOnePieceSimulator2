@@ -1,0 +1,25 @@
+{
+  "common": {
+    "loading": "Carregant",
+    "cancel": "Cancella",
+    "save": "Desa",
+    "delete": "Elimina",
+    "tryAgain": "Torna a provar"
+  },
+  "auth": {
+    "appName": "JoJo x One Piece Simulator",
+    "signInPrompt": "Continua amb el teu compte de Google per triar un canal.",
+    "signingIn": "Iniciant sessió…",
+    "continueWithGoogle": "Continua amb Google"
+  },
+  "errorFallback": {
+    "title": "Alguna cosa s'ha trencat.",
+    "fallbackMessage": "Torna-ho a provar, o torna d'aquí una estona.",
+    "retry": "Torna a provar"
+  },
+  "theme": {
+    "system": "Segueix el tema del sistema",
+    "light": "Tema clar",
+    "dark": "Tema fosc"
+  }
+}

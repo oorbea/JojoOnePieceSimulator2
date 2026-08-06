@@ -4,15 +4,27 @@ import { Paragraph, Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
+import { GlassSelect } from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlossOverlay } from '@/shared/components/presentational/gloss-overlay'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
+import type { Locale } from '@/shared/lib/zod'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
 
 import { ConfirmSheet } from './confirm-sheet'
+
+// Language names stay in their own language regardless of the active UI
+// locale (endonyms) - the standard convention for a language picker, so a
+// Catalan speaker who ended up on the English UI still recognizes "Català"
+// at a glance instead of hunting for "Catalan".
+const LANGUAGE_OPTIONS: { value: Locale; label: string }[] = [
+  { value: 'en-GB', label: 'English (UK)' },
+  { value: 'es-ES', label: 'Español (España)' },
+  { value: 'ca-ES', label: 'Català (Catalunya)' },
+]
 
 type ConfirmState = {
   visible: boolean
@@ -35,6 +47,8 @@ type Props = {
   onRequestDeleteAccount: () => void
   removeAvatarConfirm: ConfirmState
   deleteAccountConfirm: ConfirmState
+  onChangeLanguage: (language: Locale) => void
+  isSavingLanguage: boolean
 }
 
 // Pure UI — an Aero glass account settings screen. All form state, mutation
@@ -54,6 +68,8 @@ export function ProfileScreen({
   onRequestDeleteAccount,
   removeAvatarConfirm,
   deleteAccountConfirm,
+  onChangeLanguage,
+  isSavingLanguage,
 }: Props) {
   const avatarUri = profile.avatar || null
   const hasCustomAvatar = profile.avatarStatus !== 'NONE'
@@ -153,6 +169,13 @@ export function ProfileScreen({
             >
               {isSavingUsername ? 'Saving…' : 'Save username'}
             </GlossButton>
+
+            <GlassSelect
+              label={isSavingLanguage ? 'Language (saving…)' : 'Language'}
+              options={LANGUAGE_OPTIONS}
+              value={profile.language}
+              onChange={(value) => value && onChangeLanguage(value as Locale)}
+            />
           </YStack>
         </GlassPanel>
 

@@ -16,7 +16,7 @@ export function useCreateStand() {
   return useMutation({
     mutationFn: (input: StandInput) => createStand(input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: standKeys.all })
+      void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast('Stand created')
     },
   })
@@ -28,7 +28,7 @@ export function useUpdateStand() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: StandInput }) => updateStand(id, input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: standKeys.all })
+      void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast('Stand updated')
     },
   })
@@ -40,7 +40,7 @@ export function useUploadStandPicture() {
   return useMutation({
     mutationFn: ({ id, asset }: { id: string; asset: PickedPicture }) => uploadStandPicture(id, asset),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: standKeys.all })
+      void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast('Uploading picture. This takes a moment.')
     },
   })
@@ -52,7 +52,7 @@ export function useDeleteStand() {
   return useMutation({
     mutationFn: (id: string) => deleteStand(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: standKeys.all })
+      void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast('Stand deleted')
     },
   })

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import { secureStorage } from '@/shared/lib/secure-storage'
-import type { Role } from '@/shared/lib/zod'
+import type { Locale, Role } from '@/shared/lib/zod'
 
 const SESSION_STORAGE_KEY = 'jops.session'
 
@@ -12,6 +12,7 @@ export type SessionUser = {
   completeName: string
   picture: string | null
   role: Role
+  language: Locale
 }
 
 type Session = {

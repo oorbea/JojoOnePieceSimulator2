@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { Platform, useColorScheme } from 'react-native'
 
 import { AppProviders } from '@/providers/app-providers'
+import { useLanguageStore } from '@/shared/stores/language.store'
 import { useSessionStore } from '@/shared/stores/session.store'
 import { useThemeStore } from '@/shared/stores/theme.store'
 
@@ -28,12 +29,26 @@ function ThemedStatusBar() {
 export default function RootLayout() {
   const hydrate = useSessionStore((state) => state.hydrate)
   const hydrateTheme = useThemeStore((state) => state.hydrate)
+  const hydrateLanguage = useLanguageStore((state) => state.hydrate)
+  const sessionLanguage = useSessionStore((state) => state.session?.user.language)
+  const storeLocale = useLanguageStore((state) => state.locale)
+  const setLocale = useLanguageStore((state) => state.setLocale)
 
   useEffect(() => {
     void hydrate()
     void hydrateTheme()
+    void hydrateLanguage()
     registerServiceWorker()
-  }, [hydrate, hydrateTheme])
+  }, [hydrate, hydrateTheme, hydrateLanguage])
+
+  // Once a session is known, the backend's users.language is the source of
+  // truth and overrides whatever was device-detected/stored pre-login - see
+  // language.store.ts.
+  useEffect(() => {
+    if (sessionLanguage && sessionLanguage !== storeLocale) {
+      void setLocale(sessionLanguage)
+    }
+  }, [sessionLanguage, storeLocale, setLocale])
 
   return (
     <AppProviders>

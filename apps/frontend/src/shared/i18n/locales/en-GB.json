@@ -1,0 +1,25 @@
+{
+  "common": {
+    "loading": "Loading",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "tryAgain": "Try again"
+  },
+  "auth": {
+    "appName": "JoJo x One Piece Simulator",
+    "signInPrompt": "Continue with your Google account to pick a channel.",
+    "signingIn": "Signing in…",
+    "continueWithGoogle": "Continue with Google"
+  },
+  "errorFallback": {
+    "title": "Something broke.",
+    "fallbackMessage": "Try again, or come back in a bit.",
+    "retry": "Try Again"
+  },
+  "theme": {
+    "system": "Match system theme",
+    "light": "Light theme",
+    "dark": "Dark theme"
+  }
+}

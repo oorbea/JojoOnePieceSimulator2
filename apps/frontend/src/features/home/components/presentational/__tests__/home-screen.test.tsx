@@ -10,6 +10,7 @@ const USER: SessionUser = {
   completeName: 'Jotaro Kujo',
   picture: null,
   role: 'REGULAR',
+  language: 'en-GB',
 }
 
 describe('HomeScreen', () => {

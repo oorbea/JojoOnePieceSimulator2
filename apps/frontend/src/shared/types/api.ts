@@ -1,6 +1,7 @@
 import type {
   ErrorResponse,
   FruitType,
+  Locale,
   PictureStatus,
   Rarity,
   Role,
@@ -10,7 +11,7 @@ import type {
 // Shared DTO primitives mirroring apps/backend/internal/infrastructure/api/dto.
 // Feature-specific response shapes (StandResponse, DevilFruitResponse, ...)
 // belong in each feature's own types/ folder and compose these.
-export type { ErrorResponse, FruitType, PictureStatus, Rarity, Role, StandStat }
+export type { ErrorResponse, FruitType, Locale, PictureStatus, Rarity, Role, StandStat }
 
 export type UserResponse = {
   id: string
@@ -21,4 +22,5 @@ export type UserResponse = {
   avatarThumb: string
   avatarStatus: PictureStatus
   role: Role
+  language: Locale
 }

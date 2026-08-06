@@ -15,6 +15,8 @@ export const fruitTypeSchema = z.enum([
 ])
 export const roleSchema = z.enum(['REGULAR', 'ADMIN'])
 export const pictureStatusSchema = z.enum(['NONE', 'PENDING', 'READY', 'FAILED'])
+// Mirrors the backend's enums.Locale (apps/backend .../domain/enums/locale.go).
+export const localeSchema = z.enum(['en-GB', 'es-ES', 'ca-ES'])
 
 export const errorResponseSchema = z.object({
   error: z.string(),
@@ -26,4 +28,5 @@ export type StandStat = z.infer<typeof standStatSchema>
 export type FruitType = z.infer<typeof fruitTypeSchema>
 export type Role = z.infer<typeof roleSchema>
 export type PictureStatus = z.infer<typeof pictureStatusSchema>
+export type Locale = z.infer<typeof localeSchema>
 export type ErrorResponse = z.infer<typeof errorResponseSchema>
