@@ -51,6 +51,23 @@ could serve each other's cached ETag despite the backend's own
   empty state and "couldn't load" state were previously indistinguishable, which is why this took
   investigation to tell apart from the SQL/cache-invalidation causes it was first suspected to be.
 
+## Follow-up bug found right after (fixed same day, unrelated cause)
+
+Once the list rendered correctly, creating a *second* Stand still showed an empty "evolves from"
+picker even though the first Stand was right there in the list. Cause was in
+`stands-container.tsx`'s `evolvesFromOptions`:
+
+```ts
+.filter((s) => s.id !== editingId && s.evolvesFrom?.id !== editingId)
+```
+
+On create, `editingId` is `undefined`, so the second clause becomes
+`s.evolvesFrom?.id !== undefined` — false for every Stand that has no `evolvesFrom` set (i.e. almost
+all of them, especially a freshly created one). It filtered out exactly the Stands you'd want to
+pick. Fixed by only applying that clause while editing:
+`editingId === undefined || s.evolvesFrom?.id !== editingId`. Devil Fruits have no `evolvesFrom`
+concept, so `devil-fruits-container.tsx` was never affected.
+
 ## Also considered and ruled out
 
 - `ListStandRows`/`ListDevilFruitRows` SQL: `LEFT JOIN LATERAL` on `power_translations`, not an
