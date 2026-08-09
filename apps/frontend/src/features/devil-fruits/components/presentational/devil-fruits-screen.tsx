@@ -1,4 +1,4 @@
-import { Apple, Plus } from '@tamagui/lucide-icons-2'
+import { Apple, Plus, TriangleAlert } from '@tamagui/lucide-icons-2'
 import type { Control, FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
@@ -41,6 +41,8 @@ type FormState = {
 type Props = {
   devilFruits: DevilFruitResponse[]
   isLoading: boolean
+  isError: boolean
+  onRetry: () => void
   onCreateNew: () => void
   onEdit: (devilFruit: DevilFruitResponse) => void
   onDelete: (devilFruit: DevilFruitResponse) => void
@@ -52,6 +54,8 @@ type Props = {
 export function DevilFruitsScreen({
   devilFruits,
   isLoading,
+  isError,
+  onRetry,
   onCreateNew,
   onEdit,
   onDelete,
@@ -79,6 +83,19 @@ export function DevilFruitsScreen({
           <YStack width="100%" items="center" p="$6">
             <Spinner size="large" />
           </YStack>
+        ) : isError ? (
+          // Distinct from the "no Devil Fruits yet" empty state below - see
+          // StandsScreen's identical branch for why this can't be collapsed
+          // into the empty state.
+          <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
+            <TriangleAlert size={28} color="$strawHatRed" />
+            <GlowText level="label" align="center">
+              {t('devilFruits.errorTitle')}
+            </GlowText>
+            <GlossButton tone="blue" btnSize="sm" onPress={onRetry} accessibilityLabel={t('devilFruits.retry')}>
+              {t('devilFruits.retry')}
+            </GlossButton>
+          </GlassPanel>
         ) : devilFruits.length === 0 ? (
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
             <Apple size={28} color="$strawHatRed" />

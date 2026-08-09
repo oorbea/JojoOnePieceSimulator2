@@ -44,7 +44,7 @@ function toInput(values: StandFormValues): StandInput {
 }
 
 export function StandsContainer() {
-  const { data: stands, isLoading } = useStands()
+  const { data: stands, isLoading, isError, refetch } = useStands()
   const createMutation = useCreateStand()
   const updateMutation = useUpdateStand()
   const deleteMutation = useDeleteStand()
@@ -179,6 +179,8 @@ export function StandsContainer() {
     <StandsScreen
       stands={stands ?? []}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
       onCreateNew={openCreate}
       onEdit={(stand) => void openEdit(stand)}
       onDelete={setStandToDelete}
