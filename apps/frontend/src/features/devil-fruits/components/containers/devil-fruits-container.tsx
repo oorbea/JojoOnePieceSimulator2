@@ -42,7 +42,7 @@ function toInput(values: DevilFruitFormValues): DevilFruitInput {
 }
 
 export function DevilFruitsContainer() {
-  const { data: devilFruits, isLoading } = useDevilFruits()
+  const { data: devilFruits, isLoading, isError, refetch } = useDevilFruits()
   const createMutation = useCreateDevilFruit()
   const updateMutation = useUpdateDevilFruit()
   const deleteMutation = useDeleteDevilFruit()
@@ -157,6 +157,8 @@ export function DevilFruitsContainer() {
     <DevilFruitsScreen
       devilFruits={devilFruits ?? []}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
       onCreateNew={openCreate}
       onEdit={(devilFruit) => void openEdit(devilFruit)}
       onDelete={setFruitToDelete}

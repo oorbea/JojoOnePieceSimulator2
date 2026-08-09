@@ -44,7 +44,7 @@ function toInput(values: StandFormValues): StandInput {
 }
 
 export function StandsContainer() {
-  const { data: stands, isLoading } = useStands()
+  const { data: stands, isLoading, isError, refetch } = useStands()
   const createMutation = useCreateStand()
   const updateMutation = useUpdateStand()
   const deleteMutation = useDeleteStand()
@@ -76,8 +76,13 @@ export function StandsContainer() {
   const evolvesFromOptions = useMemo(() => {
     if (!stands) return []
     const editingId = modalState.editingStand?.id
+    // On create, editingId is undefined - excluding "evolvesFrom === editingId"
+    // in that case would exclude every Stand with no evolvesFrom set (i.e.
+    // almost all of them), leaving the picker empty. Only apply that
+    // exclusion while editing, where it actually prevents a Stand from
+    // evolving from something that evolves from itself.
     return stands
-      .filter((s) => s.id !== editingId && s.evolvesFrom?.id !== editingId)
+      .filter((s) => s.id !== editingId && (editingId === undefined || s.evolvesFrom?.id !== editingId))
       .map((s) => ({ value: s.id, label: s.name }))
   }, [stands, modalState.editingStand])
 
@@ -179,6 +184,8 @@ export function StandsContainer() {
     <StandsScreen
       stands={stands ?? []}
       isLoading={isLoading}
+      isError={isError}
+      onRetry={() => void refetch()}
       onCreateNew={openCreate}
       onEdit={(stand) => void openEdit(stand)}
       onDelete={setStandToDelete}

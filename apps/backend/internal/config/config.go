@@ -62,7 +62,12 @@ const defaultPictureJobTimeout = 30 * time.Second
 const defaultCacheEnabled = true
 const defaultCacheStandTTL = 5 * time.Minute
 const defaultCacheNotFoundTTL = 30 * time.Second
-const defaultCacheHTTPMaxAge = 30 * time.Second
+// 0 disables Cache-Control's max-age (cacheHeaders then sends
+// "private, no-cache") - ETag/304 revalidation stays on regardless, but a
+// shared-proxy-free client can no longer serve a stale list body straight
+// from its own HTTP cache for up to HTTPMaxAge after a write, which briefly
+// hid freshly created Stands/DevilFruits from their own creator.
+const defaultCacheHTTPMaxAge = 0 * time.Second
 const defaultRedisDialTimeout = 2 * time.Second
 const defaultRedisOpTimeout = 200 * time.Millisecond
 
