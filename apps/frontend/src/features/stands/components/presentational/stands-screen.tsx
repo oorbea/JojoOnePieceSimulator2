@@ -1,4 +1,4 @@
-import { Plus, Sparkles } from '@tamagui/lucide-icons-2'
+import { Plus, Sparkles, TriangleAlert } from '@tamagui/lucide-icons-2'
 import type { Control, FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
@@ -43,6 +43,8 @@ type FormState = {
 type Props = {
   stands: StandResponse[]
   isLoading: boolean
+  isError: boolean
+  onRetry: () => void
   onCreateNew: () => void
   onEdit: (stand: StandResponse) => void
   onDelete: (stand: StandResponse) => void
@@ -57,6 +59,8 @@ type Props = {
 export function StandsScreen({
   stands,
   isLoading,
+  isError,
+  onRetry,
   onCreateNew,
   onEdit,
   onDelete,
@@ -79,6 +83,19 @@ export function StandsScreen({
           <YStack width="100%" items="center" p="$6">
             <Spinner size="large" />
           </YStack>
+        ) : isError ? (
+          // Distinct from the "no Stands yet" empty state below - a failed
+          // GET (e.g. the backend's 500 on a legacy row with empty skills,
+          // or a dropped response) must never look like an empty catalogue.
+          <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
+            <TriangleAlert size={28} color="$strawHatRed" />
+            <GlowText level="label" align="center">
+              {t('stands.errorTitle')}
+            </GlowText>
+            <GlossButton tone="blue" btnSize="sm" onPress={onRetry} accessibilityLabel={t('stands.retry')}>
+              {t('stands.retry')}
+            </GlossButton>
+          </GlassPanel>
         ) : stands.length === 0 ? (
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
             <Sparkles size={28} color="$standPurple" />

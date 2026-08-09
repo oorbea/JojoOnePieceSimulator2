@@ -35,6 +35,9 @@ const SIZE_STYLES: Record<GlossButtonSize, { height: number; px: string; fontSiz
 const SHAPE_STYLES: Record<GlossButtonShape, { rounded: string; aspectRatio?: number }> = {
   pill: { rounded: '$pill' },
   card: { rounded: '$card' },
+  // No `px` override here on purpose - `circle` zeroes it out explicitly at
+  // the call site below instead of relying on this table, since Record
+  // couldn't otherwise express "absent" vs "0" across the three shapes.
   circle: { rounded: '$circle', aspectRatio: 1 },
 }
 
@@ -77,10 +80,16 @@ export function GlossButton({
         overflow="hidden"
         position="relative"
         height={sizeStyle.height}
-        px={asToken(sizeStyle.px)}
+        // A circle must stay square with zero horizontal padding - the
+        // size table's `px` (meant for pill/card labels) otherwise squeezes
+        // an icon-only circle down to a sliver (it rendered as a tiny dot).
+        width={shape === 'circle' ? sizeStyle.height : undefined}
+        px={shape === 'circle' ? 0 : asToken(sizeStyle.px)}
         fontSize={asToken(sizeStyle.fontSize)}
         rounded={asToken(shapeStyle.rounded)}
         aspectRatio={shapeStyle.aspectRatio}
+        items="center"
+        justify="center"
         borderWidth={1.5}
         borderColor="$glassEdge"
         borderBottomWidth={5}

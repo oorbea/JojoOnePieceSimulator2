@@ -36,7 +36,7 @@ Verified with `go test -count=300 -run TestJWTIssuer ./internal/infrastructure/a
 
 ## Caching
 
-Read routes emit `ETag` + `Cache-Control: private` + `Vary: Authorization, Accept-Language` (Accept-Language added 2026-08-06, see [[i18n-multi-language]]), honor `If-None-Match` → `304`. (`apps/backend/internal/infrastructure/api/endpoints/cache_headers.go`)
+Read routes emit `ETag` + `Cache-Control: private` + `Vary: Authorization, Accept-Language` (Accept-Language added 2026-08-06, see [[i18n-multi-language]]), honor `If-None-Match` → `304`. (`apps/backend/internal/infrastructure/api/endpoints/cache_headers.go`) `max-age` defaults to `0` since 2026-08-09 (was `30s`) — see [[etag-304-body-loss]] for why.
 
 Backend also has a caching layer for Stand repo + picture storage (ETag/Cache-Control) and background image processing with `pictureStatus` tracking, returning `202 Accepted` on picture upload. The Redis read-through decorator's cache keys include locale (`id:<locale>:<uuid>`, `all:<locale>`, ...) — a write still invalidates the whole namespace, correctly dropping every locale's entries together.
 
