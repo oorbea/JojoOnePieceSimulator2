@@ -62,6 +62,61 @@ avoid guessing their URL shape wrong (unlike R2, whose endpoint is
 `https://<account>.r2.cloudflarestorage.com` and is built from
 `R2_ACCOUNT_ID` via `s3store.R2Endpoint`).
 
+## Test coverage (2026-08-09)
+
+Exhaustive pass across every layer, happy/bad/edge paths:
+
+- `config`: every `STORAGE_*`/`B2_*`/`SUPABASE_*` Load validation rule
+  (unknown/duplicate/empty provider, R2-must-be-first, threshold 1-100
+  bounds, negative reconcile interval, each B2/Supabase var individually
+  required only when listed, quota defaults).
+- `fallback`: construction errors (empty tiers, bad threshold, ledger.Usage
+  failure), exact quota-threshold boundary (fits at N%, rejected at N%+1
+  byte), zero-quota-is-unlimited, ledger.Record failure being genuinely
+  best-effort (upload still succeeds, usage counter deliberately NOT bumped
+  until the next reconciliation), unknown `PreferProvider` falling back to
+  chain order, non-seekable content shorter than declared `Size` erroring,
+  3-tier exhaustion joining all three Put errors, every `Delete`/
+  `PresignGetURL` error path (backend error, ledger.Get error, unknown
+  recorded provider, Forget failure swallowed but usage not decremented),
+  and a 50-goroutine concurrent-Upload test proving the atomic usage counter
+  never loses an update.
+- `s3store`: Put/Del/Walk error-wrapping and Walk pagination/early-stop
+  against a local `httptest` server (no real bucket needed), PresignGet's
+  URL/TTL correctness (pure local computation, no network).
+- `storage_reconciler`: Walk/Replace/Usage-refresh error propagation,
+  multiple backends reconciled independently, `Start`'s ticker loop actually
+  firing and stopping on context cancellation.
+- `storage_ledger` (new `//go:build integration` test, same pattern as
+  `user_repository_test.go`): Record/Get/Forget/Usage/Replace round-tripped
+  against a **real** throwaway Postgres container with the actual
+  migrations applied - upsert-on-conflict, not-found returns `ok=false` with
+  no error, `Replace` only touching its own provider's rows, empty-`Replace`
+  clearing a provider entirely. All green.
+
+**Gotcha, fixed 2026-08-09**: this dev machine's Windows Application Control
+blocks freshly built `go test` binaries essentially at random for anything
+importing `net/http/httptest` (opens a local listener) - confirmed by
+bisecting: the identical file compiles clean (`go vet` passes) but
+`go test` sometimes fails at process-start with "Una directiva de Control
+de aplicaciones bloqueó este archivo" before any test code runs. Not a code
+problem, and deliberately **not** fixed by loosening the OS policy - no
+idea whether it's Smart App Control, WDAC, or a third-party EDR on this
+machine, and blanket-disabling application control to unblock Go binaries
+would weaken the whole system's security for a Go-test-specific problem.
+Fixed properly instead by adding `deployments/docker-compose.test.yml` (a
+`backend-test` service on `golang:1.26-alpine3.22`, the same image
+`Dockerfile.backend`'s builder stage uses) plus three Makefile targets:
+`test-docker` (`go test ./...`), `test-vips-docker` (installs
+`build-base pkgconfig vips-dev` and runs `-tags vips`), and
+`test-integration-docker` (joins `public-net`, needs `db-up` first, runs
+`-tags integration` against the real compose Postgres/Redis by service
+name). Also sidesteps the app-control problem entirely (Linux container) and
+is a closer match to CI's `ubuntu-latest` than the bare host ever was. All
+three verified green against real Docker: unit, vips-tagged, and
+integration (after seeding the schema by briefly running the real `backend`
+service so its startup `goose up` applies).
+
 ## Deliberately not done
 
 - `ErrStorageExhausted` (all tiers full/erroring) is **not** mapped to an

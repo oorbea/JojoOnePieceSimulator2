@@ -1,0 +1,54 @@
+# Runs the backend's Go test suite (unit, -tags vips, and -tags integration)
+# inside a Linux container instead of on the host. This exists because a
+# Windows Application Control policy on some dev machines randomly blocks
+# freshly-built `go test` binaries before they even start (observed for
+# anything importing net/http/httptest, and intermittently for larger test
+# binaries in general) - see ObsidianVault/storage-fallback-chain.md. Running
+# inside the same golang:1.26-alpine3.22 image the prod Dockerfile.backend
+# builder stage uses sidesteps that entirely and matches CI's ubuntu-latest
+# environment more closely than the bare host ever did.
+#
+# Usage (from apps/backend, or prefix the -f paths accordingly):
+#   docker compose -f ../../deployments/docker-compose.yml \
+#                   -f ../../deployments/docker-compose.test.yml \
+#                   run --rm backend-test go test ./...
+# (apps/backend/Makefile's test-docker/test-vips-docker/test-integration-docker
+# targets wrap this.)
+#
+# Never started by a plain `docker compose up` - only ever invoked directly
+# via `run` with this file explicitly added to `-f`.
+
+services:
+  backend-test:
+    image: golang:1.26-alpine3.22
+    working_dir: /src
+    volumes:
+      - ../apps/backend:/src
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      GOTOOLCHAIN: auto
+      # -tags integration tests (see internal/infrastructure/repositories/
+      # *_test.go) need a real reachable Postgres/Redis - by service name,
+      # since this container joins the same compose network they're on.
+      # `db-up` must already be running for those; plain unit tests
+      # (go test ./...) never dial either, so these being set doesn't
+      # require db-up first.
+      DATABASE_URL: postgres://${POSTGRES_USER:-test}:${POSTGRES_PASSWORD:-test}@postgres:5432/${POSTGRES_DB:-test}?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      # config.Load requires these to be non-empty even for tests that never
+      # touch R2/Google/JWT for real - harmless placeholders unless a test
+      # explicitly overrides them via t.Setenv, same as the config package's
+      # own tests do.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-test-client-id}
+      JWT_SECRET: ${JWT_SECRET:-test-jwt-secret-needs-32-chars-min}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-test-account}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-test-key}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-test-secret}
+      R2_BUCKET: ${R2_BUCKET:-test-bucket}
+    networks:
+      - public-net
+
+volumes:
+  go-mod-cache:
+  go-build-cache:

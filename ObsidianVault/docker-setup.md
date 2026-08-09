@@ -66,4 +66,17 @@ Prod image built + run standalone: `docker run` + curl confirmed `/`, `/manifest
 
 Also added a `backend` healthcheck to the base file (`wget -qO- http://localhost:${PORT:-8080}/health`, busybox wget already in the alpine runtime image) — needed by the CD pipeline to know when the new container is actually ready, see [[cicd-deployment]].
 
+## Docker-based test runners (2026-08-09)
+
+`deployments/docker-compose.test.yml` adds a `backend-test` service
+(`golang:1.26-alpine3.22`) so `apps/backend/Makefile`'s `test-docker` /
+`test-vips-docker` / `test-integration-docker` targets can run the Go suite
+inside a Linux container instead of on the host - see
+[[storage-fallback-chain]] for why (a host-specific Windows Application
+Control gotcha, not a code issue). `test-integration-docker` needs `db-up`
+first, and needs the schema actually migrated on that Postgres (start the
+real `backend` service once - its startup `goose up` handles that - or run
+`goose` by hand); a freshly created `postgres-data` volume has no tables
+until something runs the migrations.
+
 Related: [[frontend-stack]], [[backend-contract]], [[cicd-deployment]]
