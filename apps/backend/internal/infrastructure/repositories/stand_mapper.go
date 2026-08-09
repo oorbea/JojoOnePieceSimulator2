@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -95,7 +96,24 @@ func standRowsFromFilter(rs []db.FilterStandRowsRow) []standRow {
 // to construct one is powers.NewStand, which takes the parent by value.
 // Only rows with Matched == true are returned, in their original (name)
 // order; ancestor-only rows are used purely to satisfy EvolvesFrom.
+//
+// Fails on the first invalid row - used by FindByID/FindByName, where the
+// single requested Stand really is broken and should error loudly. GetAll/
+// Filter use buildStandsLenient instead, so one corrupt legacy row can't 500
+// the entire admin catalogue.
 func buildStands(rows []standRow) ([]*powers.Stand, error) {
+	return buildStandsCollect(rows, true)
+}
+
+// buildStandsLenient is buildStands but skips (and logs) any Matched row
+// that fails validation - including one whose evolves_from chain runs
+// through a corrupt ancestor - instead of failing the whole list.
+func buildStandsLenient(rows []standRow) []*powers.Stand {
+	stands, _ := buildStandsCollect(rows, false)
+	return stands
+}
+
+func buildStandsCollect(rows []standRow, strict bool) ([]*powers.Stand, error) {
 	byID := make(map[powers.PowerID]standRow, len(rows))
 	order := make([]powers.PowerID, 0, len(rows))
 	for _, r := range rows {
@@ -188,7 +206,11 @@ func buildStands(rows []standRow) ([]*powers.Stand, error) {
 		}
 		stand, err := resolve(id)
 		if err != nil {
-			return nil, err
+			if strict {
+				return nil, err
+			}
+			log.Printf("stand %s: skipping corrupt row: %v", id, err)
+			continue
 		}
 		result = append(result, stand)
 	}
