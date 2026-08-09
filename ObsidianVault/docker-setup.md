@@ -30,6 +30,7 @@ tags:
 - `deployments/.env.example` is the ONLY env reference in the repo: superset of backend runtime vars + compose interpolation vars + frontend build-time vars, each line marked `[SECRET]` or `[CONFIG]`. Markers exist so wiring GitHub Actions later is mechanical — `[SECRET]` → repo/environment secrets, `[CONFIG]` → workflow env or repo vars. Compose reads `${VAR}` the same way whether it comes from a `.env` file or the CI runner's real environment, so no `.env` file is required in CI at all.
 - `CORS_ALLOWED_ORIGINS` and `REDIS_URL` are deliberately **absent** from `.env.example` (with a comment explaining why) — both are computed/overridden directly in `docker-compose.yml`'s backend `environment:` block, so putting them in `.env` would be silently ignored.
 - Backend `env_file` now points at `deployments/.env` (was `apps/backend/.env`) with `required: false`, so compose doesn't fail when no `.env` file exists (CI case — vars come from the runner's environment instead).
+- 2026-08-09: added the "Object Storage fallback chain" + per-provider (`R2_*`/`B2_*`/`SUPABASE_*`) sections for the storage tiers — see [[storage-fallback-chain]]. `B2_*`/`SUPABASE_*` are conditionally required: only when their name appears in `STORAGE_PROVIDERS` (default is `r2` only, so a fresh checkout needs none of them filled in).
 
 ## Backend image additions (2026-07-31)
 
