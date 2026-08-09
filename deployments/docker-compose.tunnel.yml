@@ -1,0 +1,10 @@
+name: JojoOnePieceSimulator
+
+# Administrative override for SSH/Tailscale access from tools like DBeaver.
+# This publishes Postgres only on the host loopback interface, so it is not
+# reachable from the network at large.
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"

@@ -10,6 +10,28 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 `docker-compose.dev.yml` is what publishes `backend`/`frontend` ports to the host -
 the base `docker-compose.yml` doesn't, on purpose (see its comments).
 
+## Administrative DB access
+
+If you need to connect to Postgres from DBeaver through SSH/Tailscale, use
+the dedicated override that binds Postgres only to `127.0.0.1` on the server.
+Run it from `deployments/`:
+
+```
+docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d postgres
+```
+
+Then point DBeaver's SSH tunnel at the server's Tailscale address and use:
+
+- Remote host: `127.0.0.1`
+- Remote port: `5432`
+- Database: `jojo_one_piece_simulator`
+- Username: `TrolloTron`
+- Password: `Tutankamon.18`
+- SSL mode: `disable`
+
+If `5432` is already taken on the server, change `POSTGRES_PORT` in
+`deployments/.env` and use that same value in DBeaver's remote port.
+
 ## Production
 
 Deployed automatically by `.github/workflows/cd.yml` on every push to `main`

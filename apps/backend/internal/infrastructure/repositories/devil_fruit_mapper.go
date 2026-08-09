@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -95,13 +96,17 @@ func buildDevilFruit(row devilFruitRow) (*powers.DevilFruit, error) {
 }
 
 // buildDevilFruits builds every row into a *powers.DevilFruit, in order,
-// failing on the first invalid row.
+// skipping (and logging) any row that fails validation instead of failing
+// the whole batch - used by GetAll/Filter, where one corrupt legacy row must
+// not 500 the entire admin catalogue. FindByID/FindByName go through
+// buildDevilFruit directly and still fail loudly for their one requested row.
 func buildDevilFruits(rows []devilFruitRow) ([]*powers.DevilFruit, error) {
 	result := make([]*powers.DevilFruit, 0, len(rows))
 	for _, row := range rows {
 		fruit, err := buildDevilFruit(row)
 		if err != nil {
-			return nil, err
+			log.Printf("devil fruit %s: skipping corrupt row: %v", powers.PowerID(row.ID.Bytes), err)
+			continue
 		}
 		result = append(result, fruit)
 	}
