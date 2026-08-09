@@ -183,7 +183,7 @@ func (r *StandRepository) GetAll(ctx context.Context, locale enums.Locale) ([]*p
 	if err != nil {
 		return nil, fmt.Errorf("listing stands: %w", err)
 	}
-	return buildStands(standRowsFromList(rows))
+	return buildStandsLenient(standRowsFromList(rows)), nil
 }
 
 // Filter loads every stand matching the given (all-optional) filters,
@@ -203,7 +203,7 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 	if err != nil {
 		return nil, fmt.Errorf("filtering stands: %w", err)
 	}
-	return buildStands(standRowsFromFilter(rows))
+	return buildStandsLenient(standRowsFromFilter(rows)), nil
 }
 
 // Translations returns every locale's content for id, for admin edit forms.
