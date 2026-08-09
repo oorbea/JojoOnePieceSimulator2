@@ -4,8 +4,9 @@
 # host: the runtime image is a minimal multi-stage build with only the
 # compiled binary, no Go toolchain or source, so tests can't run inside it.
 COMPOSE := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.dev.yml
+COMPOSE_TEST := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.test.yml
 
-.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down
+.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down test-docker test-vips-docker test-integration-docker
 
 sqlc:
 	sqlc generate
@@ -39,3 +40,18 @@ db-up:
 
 db-down:
 	$(COMPOSE) down
+
+# Docker-based test runners - see deployments/docker-compose.test.yml for why
+# these exist (some host machines' Windows Application Control policy
+# randomly blocks host-run `go test` binaries). Prefer these over the
+# host-based test/test-vips targets when in doubt.
+test-docker:
+	$(COMPOSE_TEST) run --rm backend-test go test ./...
+
+test-vips-docker:
+	$(COMPOSE_TEST) run --rm -e CGO_ENABLED=1 backend-test sh -c "apk add --no-cache build-base pkgconfig vips-dev >/dev/null && go test -tags vips ./..."
+
+# Requires `make db-up` first - integration tests dial real Postgres/Redis by
+# service name on the compose network.
+test-integration-docker:
+	$(COMPOSE_TEST) run --rm backend-test go test -tags integration ./...

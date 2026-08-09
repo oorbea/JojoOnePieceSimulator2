@@ -145,18 +145,18 @@ func newFakePictureStorage() *fakePictureStorage {
 	return &fakePictureStorage{objects: make(map[string][]byte)}
 }
 
-func (f *fakePictureStorage) Upload(_ context.Context, key string, pic ports.Picture) error {
+func (f *fakePictureStorage) Upload(_ context.Context, key string, pic ports.Picture) (ports.StoredPicture, error) {
 	if f.uploadErr != nil {
-		return f.uploadErr
+		return ports.StoredPicture{}, f.uploadErr
 	}
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(pic.Content); err != nil {
-		return err
+		return ports.StoredPicture{}, err
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.objects[key] = buf.Bytes()
-	return nil
+	return ports.StoredPicture{Provider: "r2", Key: key}, nil
 }
 
 func (f *fakePictureStorage) PresignGetURL(_ context.Context, key string) (string, error) {
@@ -350,10 +350,10 @@ type countingPictureStorage struct {
 	calls     int
 }
 
-func (c *countingPictureStorage) Upload(ctx context.Context, key string, pic ports.Picture) error {
+func (c *countingPictureStorage) Upload(ctx context.Context, key string, pic ports.Picture) (ports.StoredPicture, error) {
 	c.calls++
 	if c.calls > c.failAfter {
-		return errors.New("upload failed")
+		return ports.StoredPicture{}, errors.New("upload failed")
 	}
 	return c.fakePictureStorage.Upload(ctx, key, pic)
 }

@@ -38,6 +38,29 @@ const defaultRateLimitWritePerUser = 30
 // defaultR2PresignTTL is used when R2_PRESIGN_TTL is unset.
 const defaultR2PresignTTL = 15 * time.Minute
 
+// defaultR2QuotaBytes is R2's free-tier storage cap (10 GiB), used when
+// R2_QUOTA_BYTES is unset.
+const defaultR2QuotaBytes = 10 * 1024 * 1024 * 1024
+
+// defaultStorageProviders is the fallback chain order used when
+// STORAGE_PROVIDERS is unset: R2 only, i.e. today's behavior plus the
+// storage ledger.
+var defaultStorageProviders = []string{"r2"}
+
+// defaultStorageQuotaThresholdPct is used when STORAGE_QUOTA_THRESHOLD_PCT
+// is unset - an upload is only allowed onto a tier if it would stay under
+// this percentage of that tier's quota, leaving headroom for ledger drift
+// and for one oversized upload landing right at the edge.
+const defaultStorageQuotaThresholdPct = 95
+
+// defaultStorageReconcileInterval is used when STORAGE_RECONCILE_INTERVAL is
+// unset. 0 disables reconciliation.
+const defaultStorageReconcileInterval = 6 * time.Hour
+
+// knownStorageProviders is every provider name the fallback chain knows how
+// to build a backend for.
+var knownStorageProviders = map[string]bool{"r2": true, "b2": true, "supabase": true}
+
 // defaultPictureMaxBytes is used when PICTURE_MAX_BYTES is unset.
 const defaultPictureMaxBytes = 5 * 1024 * 1024
 
@@ -62,6 +85,7 @@ const defaultPictureJobTimeout = 30 * time.Second
 const defaultCacheEnabled = true
 const defaultCacheStandTTL = 5 * time.Minute
 const defaultCacheNotFoundTTL = 30 * time.Second
+
 // 0 disables Cache-Control's max-age (cacheHeaders then sends
 // "private, no-cache") - ETag/304 revalidation stays on regardless, but a
 // shared-proxy-free client can no longer serve a stale list body straight
@@ -78,10 +102,41 @@ type Config struct {
 	JWTSecret      string
 	JWTIssuer      string
 	// R2* configure the Cloudflare R2 bucket Stand pictures are stored in.
+	// R2 is always the first tier of the storage fallback chain (see
+	// Storage* below) and, unlike B2/Supabase, always required.
 	R2AccountID       string
 	R2AccessKeyID     string
 	R2SecretAccessKey string
 	R2Bucket          string
+	// R2QuotaBytes/B2QuotaBytes/SupabaseQuotaBytes are each provider's
+	// free-tier storage cap; 0 means unlimited (never falls through on
+	// quota, only on a runtime error).
+	R2QuotaBytes int64
+	// StorageProviders is the fallback chain order, e.g. []string{"r2",
+	// "b2", "supabase"}. A provider only needs its credentials/bucket/quota
+	// set if it's listed here.
+	StorageProviders []string
+	// StorageQuotaThresholdPct bounds how full (as a percentage of its
+	// quota) a tier may get before new uploads skip it in favor of the next
+	// tier.
+	StorageQuotaThresholdPct int
+	// StorageReconcileInterval is how often the storage reconciler re-walks
+	// every configured bucket to correct ledger drift. 0 disables it.
+	StorageReconcileInterval time.Duration
+	// B2* configure the optional Backblaze B2 tier.
+	B2Endpoint        string
+	B2Region          string
+	B2AccessKeyID     string
+	B2SecretAccessKey string
+	B2Bucket          string
+	B2QuotaBytes      int64
+	// Supabase* configure the optional Supabase Storage tier.
+	SupabaseEndpoint        string
+	SupabaseRegion          string
+	SupabaseAccessKeyID     string
+	SupabaseSecretAccessKey string
+	SupabaseBucket          string
+	SupabaseQuotaBytes      int64
 	// RedisURL is empty by default, which turns caching off entirely (no
 	// connection is ever attempted) - keeps `go run`/`make test` working
 	// with no Redis around. CacheEnabled is a separate kill switch on top of
@@ -161,6 +216,24 @@ func parsePositiveIntEnv(name string, def int) (int, error) {
 		return def, nil
 	}
 	parsed, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("parsing %s: %w", name, err)
+	}
+	if parsed < 0 {
+		return 0, fmt.Errorf("%s must not be negative", name)
+	}
+	return parsed, nil
+}
+
+// parseQuotaBytesEnv parses name as an int64 byte count, defaulting to def
+// when unset. A negative value is rejected; 0 is allowed and means
+// "unlimited" for storage quotas.
+func parseQuotaBytesEnv(name string, def int64) (int64, error) {
+	raw := os.Getenv(name)
+	if raw == "" {
+		return def, nil
+	}
+	parsed, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("parsing %s: %w", name, err)
 	}
@@ -323,6 +396,97 @@ func Load() (*Config, error) {
 			return nil, fmt.Errorf("parsing R2_PRESIGN_TTL: %w", err)
 		}
 		r2PresignTTL = parsed
+	}
+
+	r2QuotaBytes, err := parseQuotaBytesEnv("R2_QUOTA_BYTES", defaultR2QuotaBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	storageProviders := defaultStorageProviders
+	if raw := os.Getenv("STORAGE_PROVIDERS"); raw != "" {
+		storageProviders = splitCSV(raw)
+	}
+	if len(storageProviders) == 0 {
+		return nil, fmt.Errorf("STORAGE_PROVIDERS must list at least one provider")
+	}
+	seenProvider := make(map[string]bool, len(storageProviders))
+	for _, p := range storageProviders {
+		if !knownStorageProviders[p] {
+			return nil, fmt.Errorf("STORAGE_PROVIDERS: unknown provider %q", p)
+		}
+		if seenProvider[p] {
+			return nil, fmt.Errorf("STORAGE_PROVIDERS: %q listed more than once", p)
+		}
+		seenProvider[p] = true
+	}
+	if storageProviders[0] != "r2" {
+		return nil, fmt.Errorf("STORAGE_PROVIDERS: R2 must be the first tier")
+	}
+
+	storageQuotaThresholdPct, err := parsePositiveIntEnv("STORAGE_QUOTA_THRESHOLD_PCT", defaultStorageQuotaThresholdPct)
+	if err != nil {
+		return nil, err
+	}
+	if storageQuotaThresholdPct < 1 || storageQuotaThresholdPct > 100 {
+		return nil, fmt.Errorf("STORAGE_QUOTA_THRESHOLD_PCT must be between 1 and 100")
+	}
+
+	storageReconcileInterval := defaultStorageReconcileInterval
+	if raw := os.Getenv("STORAGE_RECONCILE_INTERVAL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing STORAGE_RECONCILE_INTERVAL: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("STORAGE_RECONCILE_INTERVAL must not be negative")
+		}
+		storageReconcileInterval = parsed
+	}
+
+	var b2Endpoint, b2Region, b2AccessKeyID, b2SecretAccessKey, b2Bucket string
+	var b2QuotaBytes int64
+	if seenProvider["b2"] {
+		b2Endpoint = os.Getenv("B2_ENDPOINT")
+		b2Region = os.Getenv("B2_REGION")
+		b2AccessKeyID = os.Getenv("B2_ACCESS_KEY_ID")
+		b2SecretAccessKey = os.Getenv("B2_SECRET_ACCESS_KEY")
+		b2Bucket = os.Getenv("B2_BUCKET")
+		for name, val := range map[string]string{
+			"B2_ENDPOINT": b2Endpoint, "B2_REGION": b2Region, "B2_ACCESS_KEY_ID": b2AccessKeyID,
+			"B2_SECRET_ACCESS_KEY": b2SecretAccessKey, "B2_BUCKET": b2Bucket,
+		} {
+			if val == "" {
+				return nil, fmt.Errorf("%s is required when STORAGE_PROVIDERS includes \"b2\"", name)
+			}
+		}
+		b2QuotaBytes, err = parseQuotaBytesEnv("B2_QUOTA_BYTES", 0)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var supabaseEndpoint, supabaseRegion, supabaseAccessKeyID, supabaseSecretAccessKey, supabaseBucket string
+	var supabaseQuotaBytes int64
+	if seenProvider["supabase"] {
+		supabaseEndpoint = os.Getenv("SUPABASE_S3_ENDPOINT")
+		supabaseRegion = os.Getenv("SUPABASE_S3_REGION")
+		supabaseAccessKeyID = os.Getenv("SUPABASE_S3_ACCESS_KEY_ID")
+		supabaseSecretAccessKey = os.Getenv("SUPABASE_S3_SECRET_ACCESS_KEY")
+		supabaseBucket = os.Getenv("SUPABASE_BUCKET")
+		for name, val := range map[string]string{
+			"SUPABASE_S3_ENDPOINT": supabaseEndpoint, "SUPABASE_S3_REGION": supabaseRegion,
+			"SUPABASE_S3_ACCESS_KEY_ID": supabaseAccessKeyID, "SUPABASE_S3_SECRET_ACCESS_KEY": supabaseSecretAccessKey,
+			"SUPABASE_BUCKET": supabaseBucket,
+		} {
+			if val == "" {
+				return nil, fmt.Errorf("%s is required when STORAGE_PROVIDERS includes \"supabase\"", name)
+			}
+		}
+		supabaseQuotaBytes, err = parseQuotaBytesEnv("SUPABASE_QUOTA_BYTES", 0)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	pictureMaxBytes := int64(defaultPictureMaxBytes)
@@ -506,6 +670,25 @@ func Load() (*Config, error) {
 		R2SecretAccessKey: r2SecretAccessKey,
 		R2Bucket:          r2Bucket,
 		R2PresignTTL:      r2PresignTTL,
+		R2QuotaBytes:      r2QuotaBytes,
+
+		StorageProviders:         storageProviders,
+		StorageQuotaThresholdPct: storageQuotaThresholdPct,
+		StorageReconcileInterval: storageReconcileInterval,
+
+		B2Endpoint:        b2Endpoint,
+		B2Region:          b2Region,
+		B2AccessKeyID:     b2AccessKeyID,
+		B2SecretAccessKey: b2SecretAccessKey,
+		B2Bucket:          b2Bucket,
+		B2QuotaBytes:      b2QuotaBytes,
+
+		SupabaseEndpoint:        supabaseEndpoint,
+		SupabaseRegion:          supabaseRegion,
+		SupabaseAccessKeyID:     supabaseAccessKeyID,
+		SupabaseSecretAccessKey: supabaseSecretAccessKey,
+		SupabaseBucket:          supabaseBucket,
+		SupabaseQuotaBytes:      supabaseQuotaBytes,
 
 		PictureMaxBytes:     pictureMaxBytes,
 		PictureAllowedTypes: pictureAllowedTypes,
