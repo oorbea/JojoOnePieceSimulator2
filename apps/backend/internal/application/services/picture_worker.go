@@ -137,15 +137,20 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	mainKey := fmt.Sprintf("%s/%s/%s.webp", target.KeyPrefix, job.SubjectID, uuid)
 	thumbKey := fmt.Sprintf("%s/%s/%s_thumb.webp", target.KeyPrefix, job.SubjectID, uuid)
 
-	if err := w.pictures.Upload(ctx, mainKey, ports.Picture{
+	mainStored, err := w.pictures.Upload(ctx, mainKey, ports.Picture{
 		Content: bytes.NewReader(main.Bytes), ContentType: main.ContentType, Size: int64(len(main.Bytes)),
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("uploading picture for %s %s: %v", job.Kind, job.SubjectID, err)
 		w.markFailed(ctx, target, job.SubjectID)
 		return
 	}
-	if err := w.pictures.Upload(ctx, thumbKey, ports.Picture{
+	// The thumbnail is pinned to whichever provider the main rendition
+	// landed on, so a Stand/DevilFruit/avatar's two renditions never end up
+	// split across two different storage providers.
+	if _, err := w.pictures.Upload(ctx, thumbKey, ports.Picture{
 		Content: bytes.NewReader(thumb.Bytes), ContentType: thumb.ContentType, Size: int64(len(thumb.Bytes)),
+		PreferProvider: mainStored.Provider,
 	}); err != nil {
 		log.Printf("uploading picture thumbnail for %s %s: %v", job.Kind, job.SubjectID, err)
 		w.deleteQuietly(ctx, mainKey)

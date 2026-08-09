@@ -30,6 +30,7 @@ tags:
 - `deployments/.env.example` is the ONLY env reference in the repo: superset of backend runtime vars + compose interpolation vars + frontend build-time vars, each line marked `[SECRET]` or `[CONFIG]`. Markers exist so wiring GitHub Actions later is mechanical — `[SECRET]` → repo/environment secrets, `[CONFIG]` → workflow env or repo vars. Compose reads `${VAR}` the same way whether it comes from a `.env` file or the CI runner's real environment, so no `.env` file is required in CI at all.
 - `CORS_ALLOWED_ORIGINS` and `REDIS_URL` are deliberately **absent** from `.env.example` (with a comment explaining why) — both are computed/overridden directly in `docker-compose.yml`'s backend `environment:` block, so putting them in `.env` would be silently ignored.
 - Backend `env_file` now points at `deployments/.env` (was `apps/backend/.env`) with `required: false`, so compose doesn't fail when no `.env` file exists (CI case — vars come from the runner's environment instead).
+- 2026-08-09: added the "Object Storage fallback chain" + per-provider (`R2_*`/`B2_*`/`SUPABASE_*`) sections for the storage tiers — see [[storage-fallback-chain]]. `B2_*`/`SUPABASE_*` are conditionally required: only when their name appears in `STORAGE_PROVIDERS` (default is `r2` only, so a fresh checkout needs none of them filled in).
 
 ## Backend image additions (2026-07-31)
 
@@ -64,5 +65,18 @@ Prod image built + run standalone: `docker run` + curl confirmed `/`, `/manifest
 **Gotcha discovered**: Compose *merges* `ports:` lists across `-f` files instead of replacing them — an override cannot un-publish a port the base file already publishes. That's why publishing had to move entirely out of the base file into `docker-compose.dev.yml`, rather than trying to have `docker-compose.prod.yml` "remove" it.
 
 Also added a `backend` healthcheck to the base file (`wget -qO- http://localhost:${PORT:-8080}/health`, busybox wget already in the alpine runtime image) — needed by the CD pipeline to know when the new container is actually ready, see [[cicd-deployment]].
+
+## Docker-based test runners (2026-08-09)
+
+`deployments/docker-compose.test.yml` adds a `backend-test` service
+(`golang:1.26-alpine3.22`) so `apps/backend/Makefile`'s `test-docker` /
+`test-vips-docker` / `test-integration-docker` targets can run the Go suite
+inside a Linux container instead of on the host - see
+[[storage-fallback-chain]] for why (a host-specific Windows Application
+Control gotcha, not a code issue). `test-integration-docker` needs `db-up`
+first, and needs the schema actually migrated on that Postgres (start the
+real `backend` service once - its startup `goose up` handles that - or run
+`goose` by hand); a freshly created `postgres-data` volume has no tables
+until something runs the migrations.
 
 Related: [[frontend-stack]], [[backend-contract]], [[cicd-deployment]]

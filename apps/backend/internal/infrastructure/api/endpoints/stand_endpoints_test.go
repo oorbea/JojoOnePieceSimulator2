@@ -208,18 +208,18 @@ func newFakePictureStorage() *fakePictureStorage {
 	return &fakePictureStorage{objects: make(map[string][]byte)}
 }
 
-func (f *fakePictureStorage) Upload(_ context.Context, key string, pic ports.Picture) error {
+func (f *fakePictureStorage) Upload(_ context.Context, key string, pic ports.Picture) (ports.StoredPicture, error) {
 	if f.uploadErr != nil {
-		return f.uploadErr
+		return ports.StoredPicture{}, f.uploadErr
 	}
 	content, err := io.ReadAll(pic.Content)
 	if err != nil {
-		return err
+		return ports.StoredPicture{}, err
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.objects[key] = content
-	return nil
+	return ports.StoredPicture{Provider: "r2", Key: key}, nil
 }
 
 func (f *fakePictureStorage) PresignGetURL(_ context.Context, key string) (string, error) {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os/signal"
@@ -23,7 +24,8 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
-	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/r2"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/s3store"
 )
 
 // @title JojoOnePieceSimulator2 API
@@ -53,13 +55,15 @@ func main() {
 	}
 	defer pool.Close()
 
-	pictureStorage, err := r2.NewPictureStorage(ctx, r2.Config{
-		AccountID:       cfg.R2AccountID,
-		AccessKeyID:     cfg.R2AccessKeyID,
-		SecretAccessKey: cfg.R2SecretAccessKey,
-		Bucket:          cfg.R2Bucket,
-		PresignTTL:      cfg.R2PresignTTL,
-	})
+	// storageBackends/storageTiers are built in cfg.StorageProviders order -
+	// R2 is always first (config.Load enforces this). Each provider speaks
+	// the same S3 API (s3store), so only endpoint/region/quota differ.
+	storageBackends, storageTiers, err := buildStorageTiers(ctx, cfg)
+	if err != nil {
+		log.Fatalf("configuring storage backends: %v", err)
+	}
+	storageLedger := repositories.NewStorageLedger(pool)
+	pictureStorage, err := fallback.New(ctx, storageTiers, storageLedger, cfg.StorageQuotaThresholdPct)
 	if err != nil {
 		log.Fatalf("configuring picture storage: %v", err)
 	}
@@ -121,6 +125,13 @@ func main() {
 			Quality:        cfg.PictureWebPQuality,
 		})
 	pictureWorker.Start()
+
+	// The reconciler walks every configured bucket to correct any drift
+	// between it and the ledger (Record/Forget on the fallback chain are
+	// best-effort). It shares ctx with the server, so it stops on the same
+	// shutdown signal - no separate teardown needed.
+	storageReconciler := services.NewStorageReconciler(storageBackends, storageLedger, pictureStorage, cfg.StorageReconcileInterval)
+	go storageReconciler.Start(ctx)
 
 	picturePolicy := services.PicturePolicy{
 		MaxBytes:     cfg.PictureMaxBytes,
@@ -202,4 +213,54 @@ func main() {
 		log.Printf("shutting down picture worker: %v", err)
 	}
 	closeImaging()
+}
+
+// buildStorageTiers constructs one s3store.Backend per provider listed in
+// cfg.StorageProviders, in that order, paired with each provider's quota
+// into fallback.Tier. It returns the backends both as the plain slice the
+// reconciler walks and as the Tier slice the fallback chain picks from.
+func buildStorageTiers(ctx context.Context, cfg *config.Config) ([]ports.IStorageBackend, []fallback.Tier, error) {
+	backends := make([]ports.IStorageBackend, 0, len(cfg.StorageProviders))
+	tiers := make([]fallback.Tier, 0, len(cfg.StorageProviders))
+
+	for _, name := range cfg.StorageProviders {
+		var s3Cfg s3store.Config
+		var quota int64
+
+		switch name {
+		case "r2":
+			s3Cfg = s3store.Config{
+				Name: "r2", Endpoint: s3store.R2Endpoint(cfg.R2AccountID), Region: "auto",
+				AccessKeyID: cfg.R2AccessKeyID, SecretAccessKey: cfg.R2SecretAccessKey,
+				Bucket: cfg.R2Bucket, PresignTTL: cfg.R2PresignTTL,
+			}
+			quota = cfg.R2QuotaBytes
+		case "b2":
+			s3Cfg = s3store.Config{
+				Name: "b2", Endpoint: cfg.B2Endpoint, Region: cfg.B2Region,
+				AccessKeyID: cfg.B2AccessKeyID, SecretAccessKey: cfg.B2SecretAccessKey,
+				Bucket: cfg.B2Bucket, PresignTTL: cfg.R2PresignTTL,
+			}
+			quota = cfg.B2QuotaBytes
+		case "supabase":
+			s3Cfg = s3store.Config{
+				Name: "supabase", Endpoint: cfg.SupabaseEndpoint, Region: cfg.SupabaseRegion,
+				AccessKeyID: cfg.SupabaseAccessKeyID, SecretAccessKey: cfg.SupabaseSecretAccessKey,
+				Bucket: cfg.SupabaseBucket, PresignTTL: cfg.R2PresignTTL,
+			}
+			quota = cfg.SupabaseQuotaBytes
+		default:
+			// Unreachable: config.Load already rejects unknown providers.
+			return nil, nil, fmt.Errorf("unknown storage provider %q", name)
+		}
+
+		backend, err := s3store.New(ctx, s3Cfg)
+		if err != nil {
+			return nil, nil, fmt.Errorf("configuring %s storage backend: %w", name, err)
+		}
+		backends = append(backends, backend)
+		tiers = append(tiers, fallback.Tier{Backend: backend, QuotaBytes: quota})
+	}
+
+	return backends, tiers, nil
 }

@@ -27,7 +27,7 @@ func NewPictureStorage(next ports.IPictureStorage, c ports.ICache, presignTTL ti
 }
 
 // Upload passes through untouched - caching only applies to reads.
-func (s *PictureStorage) Upload(ctx context.Context, key string, pic ports.Picture) error {
+func (s *PictureStorage) Upload(ctx context.Context, key string, pic ports.Picture) (ports.StoredPicture, error) {
 	return s.next.Upload(ctx, key, pic)
 }
 
