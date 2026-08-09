@@ -356,6 +356,13 @@ type Stand struct {
 	EvolvesFromID pgtype.UUID
 }
 
+type StorageObject struct {
+	Key       string
+	Provider  string
+	Bytes     int64
+	CreatedAt pgtype.Timestamptz
+}
+
 type User struct {
 	ID             pgtype.UUID
 	GoogleSub      string
