@@ -80,7 +80,7 @@ jobs:
             set -e
             cd ~/projects/JojoOnePieceSimulator2
 
-            COMPOSE="docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.prod.yml"
+            COMPOSE="docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.prod.yml -f deployments/docker-compose.tunnel.yml"
 
             # public-net must already exist on this host (shared with the
             # reverse proxy) - fail fast with a clear message if it doesn't.

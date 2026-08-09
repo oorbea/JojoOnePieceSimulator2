@@ -14,7 +14,8 @@ the base `docker-compose.yml` doesn't, on purpose (see its comments).
 
 If you need to connect to Postgres from DBeaver through SSH/Tailscale, use
 the dedicated override that binds Postgres only to `127.0.0.1` on the server.
-Run it from `deployments/`:
+The CD pipeline also applies this override automatically on every deploy.
+If you need to run it manually, do so from `deployments/`:
 
 ```
 docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d postgres
