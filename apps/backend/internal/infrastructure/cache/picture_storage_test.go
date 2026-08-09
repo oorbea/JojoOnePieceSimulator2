@@ -20,7 +20,9 @@ type countingPictureStorage struct {
 	deletedKeys  []string
 }
 
-func (s *countingPictureStorage) Upload(context.Context, string, ports.Picture) error { return nil }
+func (s *countingPictureStorage) Upload(_ context.Context, key string, _ ports.Picture) (ports.StoredPicture, error) {
+	return ports.StoredPicture{Provider: "r2", Key: key}, nil
+}
 
 func (s *countingPictureStorage) PresignGetURL(_ context.Context, key string) (string, error) {
 	s.mu.Lock()
