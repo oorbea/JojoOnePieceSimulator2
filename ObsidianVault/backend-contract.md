@@ -69,7 +69,10 @@ Deny-all unless `CORS_ALLOWED_ORIGINS` set explicitly (`config.go:230`). Fronten
 
 ## Websockets
 
-None exist. Do not build real-time features against this backend yet.
+None exist yet. The Gauntlet/Versus game domain ([[gameplay-game-modes]], [[gameplay-domain-design]],
+added 2026-08-10 as a domain-only pass) is designed assuming websockets for realtime voting/loadout
+assignment, backed by lobby state in Redis — that transport layer is the explicit next step, not
+built in that pass. Until it lands, still do not build real-time features against this backend.
 
 ## Domain entities seen in backend history
 

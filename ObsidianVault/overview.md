@@ -23,6 +23,7 @@ See:
 - [[admin-panel-crud-ux-fixes]] — admin Stands/Devil Fruits panel (2026-08-10): ETag clear-on-mutation, picture-status polling, description/skills field bugs
 - [[admin-crud-cache-stale-sw]] — admin CRUD still looked stale in prod (2026-08-10), root cause was the service worker/persisted RQ cache, not the data layer; rewrote sw.js to network-first navigations
 - [[picture-events-sse]] — picture-status polling replaced with SSE push (2026-08-10): in-process hub, admin-only `/api/v1/events`, web-only bridge, native keeps polling fallback; NPM needs manual `proxy_buffering off`
+- [[gameplay-game-modes]] / [[gameplay-domain-design]] — Gauntlet + Versus game modes (2026-08-10): domain layer only (State/Strategy/Template Method), rules fully specified, infra (Redis lobbies, websockets, stage catalog, weights, tiebreaker adapters) not built yet
 
 ## Status (2026-07-28)
 
