@@ -17,7 +17,7 @@ type GlassFieldProps = Omit<React.ComponentProps<typeof Input>, 'onChangeText'> 
 // inset ring every other surface uses, a visible focus ring, and an error
 // rendered directly under the field (never batched at the top of a form).
 export const GlassField = forwardRef<React.ElementRef<typeof Input>, GlassFieldProps>(
-  function GlassField({ label, error, id, ...rest }, ref) {
+  function GlassField({ label, error, id, height, multiline, ...rest }, ref) {
     return (
       <YStack width="100%" gap="$1.5">
         <GlowText level="label">{label}</GlowText>
@@ -25,19 +25,21 @@ export const GlassField = forwardRef<React.ElementRef<typeof Input>, GlassFieldP
           <InsetRing rounded="$card" />
           <Input
             ref={ref}
+            multiline={multiline}
             {...rest}
             id={id}
             bg="$plasticFill"
             borderWidth={1.5}
             borderColor={error ? '$strawHatRedDeep' : '$glassEdge'}
             rounded="$card"
-            height={52}
+            height={height ?? 52}
             px="$4"
             fontSize="$5"
             fontFamily="$body"
             color="$panelText"
             placeholderTextColor="$panelTextSoft"
             focusStyle={{ outlineColor: '$channelActive', outlineWidth: 3, outlineStyle: 'solid' }}
+            {...(multiline ? { textAlignVertical: 'top' as const, pt: '$2' } : {})}
             {...a11yProps(label)}
           />
         </YStack>

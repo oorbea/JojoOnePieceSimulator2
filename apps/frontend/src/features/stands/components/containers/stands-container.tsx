@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { toast } from 'burnt'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 import { getStandTranslations } from '@/features/stands/api/stands.api'
 import { standKeys } from '@/features/stands/api/stands.keys'
@@ -44,6 +46,7 @@ function toInput(values: StandFormValues): StandInput {
 }
 
 export function StandsContainer() {
+  const { t } = useTranslation()
   const { data: stands, isLoading, isError, refetch } = useStands()
   const createMutation = useCreateStand()
   const updateMutation = useUpdateStand()
@@ -164,7 +167,21 @@ export function StandsContainer() {
     deleteMutation.mutate(standToDelete.id, { onSuccess: () => setStandToDelete(null) })
   }
 
-  const pictureUri = pendingPicture?.uri ?? modalState.editingStand?.pictureThumb ?? null
+  const pictureUri = pendingPicture?.uri ?? (modalState.editingStand?.picture || null)
+
+  // The picture worker is fire-and-forget with no push notification (see
+  // ObsidianVault/backend-contract.md) - useStands' polling is what surfaces
+  // a PENDING -> FAILED transition, and this is the only place that sees it
+  // land, so it owns telling the user their upload didn't make it.
+  const previouslyPendingIds = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!stands) return
+    const failed = stands.filter(
+      (s) => s.pictureStatus === 'FAILED' && previouslyPendingIds.current.has(s.id)
+    )
+    failed.forEach(() => toast({ title: t('toasts.standPictureFailed'), preset: 'error' }))
+    previouslyPendingIds.current = new Set(stands.filter((s) => s.pictureStatus === 'PENDING').map((s) => s.id))
+  }, [stands, t])
 
   // A translations.<locale> error is invisible if that locale's tab isn't
   // the active one - jump to the first one with an error on a failed
