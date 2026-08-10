@@ -167,9 +167,31 @@ func (s *StandService) StandTranslations(ctx context.Context, id powers.PowerID)
 	return s.standRepo.Translations(ctx, id)
 }
 
-// DeleteStand removes the stand identified by id.
+// DeleteStand removes the stand identified by id, then best-effort deletes
+// its picture renditions from object storage - otherwise they'd orphan
+// there forever, silently eating into the storage cap. Mirrors
+// UserService.DeleteAvatar's delete-after-write, log-on-error pattern.
 func (s *StandService) DeleteStand(ctx context.Context, id powers.PowerID) error {
-	return s.standRepo.Delete(ctx, id)
+	stand, err := s.standRepo.FindByID(ctx, id, enums.EnGB)
+	if err != nil {
+		return err
+	}
+
+	if err := s.standRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	if key := stand.Picture(); key != "" {
+		if err := s.pictures.Delete(ctx, key); err != nil {
+			log.Printf("deleting picture %q for stand %s: %v", key, id, err)
+		}
+	}
+	if key := stand.PictureThumb(); key != "" {
+		if err := s.pictures.Delete(ctx, key); err != nil {
+			log.Printf("deleting picture thumbnail %q for stand %s: %v", key, id, err)
+		}
+	}
+	return nil
 }
 
 // SetStandPicture validates an uploaded picture and hands it to the
