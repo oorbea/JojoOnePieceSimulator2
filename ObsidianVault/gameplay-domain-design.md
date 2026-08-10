@@ -128,5 +128,9 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
   stats E..A→1..5, INFINITE→6, plus ability levels plus a rarity bonus) — reasonable enough to
   exercise `IGameMode`/`Game` in tests, not tuned for actual game balance.
 
-Related: [[gameplay-game-modes]], [[ADR]], [[backend-contract]], [[picture-events-sse]] (the
-existing pub/sub precedent this feature's domain events are designed to feed).
+The application layer that wires this domain up (game store, voting timer, event hub, the cheap
+adapters, and what's still stubbed) landed the same day — see [[gameplay-application-layer]].
+
+Related: [[gameplay-game-modes]], [[gameplay-application-layer]], [[ADR]], [[backend-contract]],
+[[picture-events-sse]] (the existing pub/sub precedent this feature's domain events are designed to
+feed).

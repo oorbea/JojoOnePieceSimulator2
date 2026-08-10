@@ -12,10 +12,11 @@ tags:
 
 ## Status
 
-Domain layer only. Redis lobby storage, websockets, application services, DTOs, routes, and every
-adapter (stage catalog, weights, tiebreaker, history, inventory) are **not built** — see
-[[gameplay-domain-design]] for the technical design and exactly what's stubbed. This note is the
-gameplay rulebook: what was agreed with the owner, precisely, so it never needs re-deriving.
+Domain + application layers are built (application landed 2026-08-10, right after the domain pass
+— see [[gameplay-application-layer]] for the technical design). Redis lobby storage, websockets,
+DTOs, and HTTP/WS routes are **not built yet** — the application layer runs today against an
+in-memory `IGameStore` and a hardcoded stage catalog stub, both explicitly temporary. This note is
+the gameplay rulebook: what was agreed with the owner, precisely, so it never needs re-deriving.
 
 ## Modes
 
@@ -133,12 +134,15 @@ Two submodes for how Versus draws abilities, selected per game:
 ## Deliberately not done here
 
 - Stage catalog content (which JoJo parts, which One Piece sagas exist, at what granularity — the
-  owner chose **sagas**, ~11 of them, not the finer ~31-arc breakdown) is admin-managed CRUD data
-  the domain never hardcodes. See `ports.IStageCatalog` in [[gameplay-domain-design]].
+  owner chose **sagas**, ~11 of them, not the finer ~31-arc breakdown) is meant to be admin-managed
+  CRUD data. There is still no schema/migration/admin CRUD for it — the application layer runs
+  today against a **hardcoded stub** (`infrastructure/game.StaticStageCatalog`) so the feature is
+  runnable end-to-end; see [[gameplay-application-layer]].
 - Run-based progression between Gauntlet rounds (leveling up a surviving squad) — there's a named,
   empty hook for it (`GauntletMode.afterRound`) but no behavior yet.
-- Redis lobby storage and websocket-driven realtime voting/assignment — this note is rules only:
-  see [[backend-contract]] for the current "no websockets" state, about to change for this feature.
+- Redis lobby storage and websocket-driven realtime voting/assignment — the application layer runs
+  today against an **in-memory** `ports.IGameStore` and exposes no transport at all (no HTTP/WS
+  routes). See [[gameplay-application-layer]] and [[backend-contract]] for the current state.
 
 Related: [[gameplay-domain-design]] (technical design, patterns, file map), [[backend-contract]],
 [[ADR]]
