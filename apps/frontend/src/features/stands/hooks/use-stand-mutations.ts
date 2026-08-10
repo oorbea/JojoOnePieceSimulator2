@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { createStand, deleteStand, updateStand, uploadStandPicture } from '@/features/stands/api/stands.api'
 import { standKeys } from '@/features/stands/api/stands.keys'
 import type { StandInput } from '@/features/stands/types/stands.types'
+import { clearEtags } from '@/shared/api/etag'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import { showSuccessToast } from '@/shared/lib/toast'
 
@@ -20,6 +21,7 @@ export function useCreateStand() {
   return useMutation({
     mutationFn: (input: StandInput) => createStand(input),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast(t('toasts.standCreated'))
     },
@@ -33,6 +35,7 @@ export function useUpdateStand() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: StandInput }) => updateStand(id, input),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast(t('toasts.standUpdated'))
     },
@@ -46,6 +49,7 @@ export function useUploadStandPicture() {
   return useMutation({
     mutationFn: ({ id, asset }: { id: string; asset: PickedPicture }) => uploadStandPicture(id, asset),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast(t('toasts.standPictureUploading'))
     },
@@ -59,6 +63,7 @@ export function useDeleteStand() {
   return useMutation({
     mutationFn: (id: string) => deleteStand(id),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       showSuccessToast(t('toasts.standDeleted'))
     },

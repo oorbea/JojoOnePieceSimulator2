@@ -1,7 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { toast } from 'burnt'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 import { getDevilFruitTranslations } from '@/features/devil-fruits/api/devil-fruits.api'
 import { devilFruitKeys } from '@/features/devil-fruits/api/devil-fruits.keys'
@@ -42,6 +44,7 @@ function toInput(values: DevilFruitFormValues): DevilFruitInput {
 }
 
 export function DevilFruitsContainer() {
+  const { t } = useTranslation()
   const { data: devilFruits, isLoading, isError, refetch } = useDevilFruits()
   const createMutation = useCreateDevilFruit()
   const updateMutation = useUpdateDevilFruit()
@@ -140,7 +143,21 @@ export function DevilFruitsContainer() {
     deleteMutation.mutate(fruitToDelete.id, { onSuccess: () => setFruitToDelete(null) })
   }
 
-  const pictureUri = pendingPicture?.uri ?? modalState.editingFruit?.pictureThumb ?? null
+  const pictureUri = pendingPicture?.uri ?? (modalState.editingFruit?.picture || null)
+
+  // See stands-container.tsx's failed-upload effect for why this owns
+  // surfacing a PENDING -> FAILED transition rather than the mutation hook.
+  const previouslyPendingIds = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    if (!devilFruits) return
+    const failed = devilFruits.filter(
+      (f) => f.pictureStatus === 'FAILED' && previouslyPendingIds.current.has(f.id)
+    )
+    failed.forEach(() => toast({ title: t('toasts.devilFruitPictureFailed'), preset: 'error' }))
+    previouslyPendingIds.current = new Set(
+      devilFruits.filter((f) => f.pictureStatus === 'PENDING').map((f) => f.id)
+    )
+  }, [devilFruits, t])
 
   function jumpToFirstErroredLocale(formErrors: typeof errors) {
     const erroredLocale = (['en-GB', 'es-ES', 'ca-ES'] as const).find(
