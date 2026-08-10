@@ -20,6 +20,7 @@ See:
 - [[docker-setup]] — dev/prod images, compose wiring
 - [[norma-diseno-ui-ux]] — norma: todo diseño de UI/UX pasa por las skills frontend-design + ui-ux-pro-max
 - [[user-profile-feature]] — user profile/admin panel (2026-08-04): self-service username+avatar, picture worker generalized beyond Powers
+- [[admin-panel-crud-ux-fixes]] — admin Stands/Devil Fruits panel (2026-08-10): ETag clear-on-mutation, picture-status polling, description/skills field bugs
 
 ## Status (2026-07-28)
 

@@ -42,11 +42,13 @@ export function SkillsField({ label, skills, onAdd, onRemove, error }: SkillsFie
   return (
     <YStack width="100%" gap="$2">
       {skills.length > 0 ? (
-        <XStack flexWrap="wrap" gap="$2">
+        <YStack gap="$2">
           {skills.map((skill, index) => (
-            <GlassPanel key={`${skill}-${index}`} tone="plastic" px="$3" py="$1.5" rounded="$pill" elevate={0}>
+            <GlassPanel key={`${skill}-${index}`} tone="plastic" px="$3" py="$2" rounded="$card" elevate={0}>
               <XStack items="center" gap="$2">
-                <GlowText level="label">{skill}</GlowText>
+                <GlowText level="label" flex={1}>
+                  {skill}
+                </GlowText>
                 <XStack
                   onPress={() => onRemove(index)}
                   p="$0.5"
@@ -57,7 +59,7 @@ export function SkillsField({ label, skills, onAdd, onRemove, error }: SkillsFie
               </XStack>
             </GlassPanel>
           ))}
-        </XStack>
+        </YStack>
       ) : null}
 
       <XStack gap="$2" items="flex-end">

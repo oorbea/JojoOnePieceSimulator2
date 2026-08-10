@@ -76,3 +76,10 @@ concept, so `devil-fruits-container.tsx` was never affected.
   (`cache/redis/cache.go`) before the request returns; correct.
 - React Query mutation `onSuccess`: invalidates the unlocalized `standKeys.allLocales` /
   `devilFruitKeys.allLocales` prefix, which prefix-matches every locale branch; correct.
+
+## Related bug, same map, later date
+
+`clearEtags()` was added here but never called from anywhere — a mutation's stale ETag could
+still cause a spurious 304 on the very next refetch. See [[admin-panel-crud-ux-fixes]] for the
+follow-up fix (calling `clearEtags()` in every mutation's `onSuccess`) and three unrelated modal
+bugs found in the same admin-panel pass.
