@@ -17,6 +17,7 @@ type Player struct {
 	observationHaki byte
 	conquerorHaki   byte
 	spin            byte
+	hamon           byte
 }
 
 func (p *Player) Stand() *powers.Stand {
@@ -87,5 +88,20 @@ func (p *Player) SpinToString() (string, error) {
 		return "Infinite", nil
 	default:
 		return "Unknown", errors.New(fmt.Sprintf("Unknown spin: %v", p.spin))
+	}
+}
+
+func (p *Player) HamonToString() (string, error) {
+	switch p.hamon {
+	case 0:
+		return "No hamon", nil
+	case 1:
+		return "Basic", nil
+	case 2:
+		return "Advanced", nil
+	case 3:
+		return "Perfect", nil
+	default:
+		return "Unknown", errors.New(fmt.Sprintf("Unknown hamon: %v", p.hamon))
 	}
 }
