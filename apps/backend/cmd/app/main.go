@@ -115,6 +115,11 @@ func main() {
 		enums.UserSubject:       {Publisher: services.NewUserPicturePublisher(userRepo), KeyPrefix: "users"},
 	}
 
+	// pictureHub fans out PENDING->READY/FAILED transitions to connected SSE
+	// clients (events_endpoints.go) - a single in-process pub/sub is enough
+	// since there's only ever one backend instance.
+	pictureHub := services.NewPictureEventHub()
+
 	pictureWorker := services.NewPictureWorker(imageProcessor, pictures, pictureTargets,
 		idgen.UUIDGenerator[powers.PowerID]{}, services.WorkerConfig{
 			Workers:        cfg.PictureWorkers,
@@ -123,7 +128,7 @@ func main() {
 			MaxDimension:   cfg.PictureMaxDimension,
 			ThumbDimension: cfg.PictureThumbDimension,
 			Quality:        cfg.PictureWebPQuality,
-		})
+		}, pictureHub)
 	pictureWorker.Start()
 
 	// The reconciler walks every configured bucket to correct any drift
@@ -162,6 +167,10 @@ func main() {
 	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
 	userEndpoints := endpoints.NewUserEndpoints(userService)
 
+	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit
+	// promptly on shutdown instead of blocking srv.Shutdown's grace window.
+	eventsEndpoints := endpoints.NewEventsEndpoints(pictureHub, tokenIssuer, ctx)
+
 	corsCfg := endpoints.CORSConfig{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
 		AllowedMethods:   cfg.CORSAllowedMethods,
@@ -187,7 +196,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

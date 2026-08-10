@@ -93,6 +93,7 @@ services:
         EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:${PORT:-8080}/api/v1}
         EXPO_PUBLIC_SOCKET_URL: ${EXPO_PUBLIC_SOCKET_URL:-}
         EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID:-}
+        EXPO_PUBLIC_BUILD_ID: ${EXPO_PUBLIC_BUILD_ID:-dev}
     # No `ports:` here either - see the backend service comment above.
     networks:
       - public-net

@@ -60,6 +60,15 @@ jobs:
                       f.write(f'{key}={dotenv_escape(str(value))}\n')
           "
 
+      # Distinct per deploy so the frontend's persisted React Query cache
+      # never rehydrates data shaped for a previous build (see
+      # src/providers/query-provider.tsx's `buster` and
+      # deployments/.env.example). Appended after the secrets/vars dump
+      # above so it always wins even if EXPO_PUBLIC_BUILD_ID were ever also
+      # set as a repo variable by mistake.
+      - name: Pin EXPO_PUBLIC_BUILD_ID to the deploy commit
+        run: echo "EXPO_PUBLIC_BUILD_ID=${{ github.sha }}" >> deployments/.env
+
       - name: Copy deployments/.env to server
         uses: appleboy/scp-action@v1.0.0
         with:

@@ -32,7 +32,13 @@ type CORSConfig struct {
 // tighter tiers (see rateCfg and ratelimit.go). cacheCfg configures the
 // ETag/Cache-Control layer applied to the Stand and DevilFruit read routes
 // (see cache_headers.go).
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
+//
+// middleware.Timeout(60s) is applied per-group rather than globally: every
+// normal route keeps that bound, but /api/v1/events (events_endpoints.go) is
+// a deliberately long-lived SSE stream and must not inherit it - it relies
+// instead on the client's own reconnect logic, a server-side heartbeat, and
+// the app's shutdown context.
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -49,25 +55,34 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 	r.Use(middleware.ClientIPFromRemoteAddr)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(globalRateLimit(rateCfg))
 	r.Use(resolveLocale)
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.Timeout(60 * time.Second))
+
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		})
+
+		r.Get("/swagger/*", httpSwagger.WrapHandler)
 	})
 
-	r.Get("/swagger/*", httpSwagger.WrapHandler)
-
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Mount("/auth", authEndpoints.Routes(rateCfg))
-
 		r.Group(func(r chi.Router) {
-			r.Use(RequireAuth(issuer))
-			r.Mount("/stands", standEndpoints.Routes(rateCfg, cacheCfg))
-			r.Mount("/devil-fruits", devilFruitEndpoints.Routes(rateCfg, cacheCfg))
-			r.Mount("/users", userEndpoints.Routes(rateCfg))
+			r.Use(middleware.Timeout(60 * time.Second))
+
+			r.Mount("/auth", authEndpoints.Routes(rateCfg))
+
+			r.Group(func(r chi.Router) {
+				r.Use(RequireAuth(issuer))
+				r.Mount("/stands", standEndpoints.Routes(rateCfg, cacheCfg))
+				r.Mount("/devil-fruits", devilFruitEndpoints.Routes(rateCfg, cacheCfg))
+				r.Mount("/users", userEndpoints.Routes(rateCfg))
+			})
 		})
+
+		r.Mount("/events", eventsEndpoints.Routes())
 	})
 
 	return r
