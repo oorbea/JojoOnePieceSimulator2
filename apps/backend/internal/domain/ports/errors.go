@@ -58,4 +58,12 @@ var (
 	// parsed as an image (corrupt, truncated, or a decompression-bomb sized
 	// header) by an IImageProcessor.
 	ErrInvalidImage = errors.New("invalid image")
+
+	// ErrGameNotFound is returned when an IGameStore lookup (by GameID or by
+	// join code) finds no matching Game.
+	ErrGameNotFound = errors.New("game not found")
+
+	// ErrGameCodeTaken is returned when IGameStore.Create is given a join
+	// code that already indexes a different Game.
+	ErrGameCodeTaken = errors.New("game code already in use")
 )
