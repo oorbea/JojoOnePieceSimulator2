@@ -216,7 +216,7 @@ func newUserTestServer(repo *fakeUserRepo) http.Handler {
 	}
 	worker := services.NewPictureWorker(processor, pictures, targets, &fakeIDGenerator{}, services.WorkerConfig{
 		Workers: 1, QueueSize: 1, JobTimeout: 5 * time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
-	})
+	}, nil)
 	svc := services.NewUserService(repo, pictures, processor, syncEnqueuer{worker},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
 	userEndpoints := endpoints.NewUserEndpoints(svc)
@@ -225,8 +225,9 @@ func newUserTestServer(repo *fakeUserRepo) http.Handler {
 		newFakeStandRepository(), &fakeIDGenerator{}, newFakePictureStorage(), &fakeImageProcessor{}, syncEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}}))
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
 
-	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), userEndpoints,
+	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), userEndpoints, eventsEndpoints,
 		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 }
 

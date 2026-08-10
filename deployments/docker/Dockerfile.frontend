@@ -21,9 +21,14 @@ RUN touch tamagui-web.css
 ARG EXPO_PUBLIC_API_URL
 ARG EXPO_PUBLIC_SOCKET_URL
 ARG EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+# Distinct per deploy (commit SHA in CD, "dev" locally) - used as the React
+# Query persister's buster (src/providers/query-provider.tsx) so a new build
+# never rehydrates a persisted cache shaped for an older one.
+ARG EXPO_PUBLIC_BUILD_ID=dev
 ENV EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL}
 ENV EXPO_PUBLIC_SOCKET_URL=${EXPO_PUBLIC_SOCKET_URL}
 ENV EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}
+ENV EXPO_PUBLIC_BUILD_ID=${EXPO_PUBLIC_BUILD_ID}
 RUN pnpm expo export -p web
 
 FROM nginx:alpine

@@ -37,6 +37,10 @@ worth the bookkeeping for an admin-only panel with a handful of list endpoints.
 
 ## 2. Picture upload never appeared without a manual page refresh
 
+**Superseded 2026-08-10** — see [[picture-events-sse]]: this polling had a
+counter bug (fixed same day) and was then replaced outright with SSE push on
+web; native keeps a corrected version of the polling below as its fallback.
+
 The picture pipeline (see [[user-profile-feature]]'s "picture worker
 generalized" section) is async: `PATCH .../picture` returns `202` with
 `pictureStatus: PENDING`, and a background worker flips it to `READY`/`FAILED`

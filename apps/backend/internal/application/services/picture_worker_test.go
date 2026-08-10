@@ -228,7 +228,7 @@ func newTestWorker(processor *fakeImageProcessor, pictures *fakePictureStorage, 
 		MaxDimension:   1024,
 		ThumbDimension: 256,
 		Quality:        80,
-	})
+	}, nil)
 }
 
 // newTestTargets builds the single-target (Stand only) registry most tests
@@ -286,13 +286,56 @@ func TestProcess_Success_PublishesKeysAndDeletesOld(t *testing.T) {
 	}
 }
 
+func TestProcess_Success_PublishesReadyEvent(t *testing.T) {
+	repo := newFakeStandRepository()
+	idGen := &fakeStandIDGenerator{}
+	pictures := newFakePictureStorage()
+	processor := newFakeImageProcessor()
+	hub := NewPictureEventHub()
+	events, unsubscribe := hub.Subscribe()
+	defer unsubscribe()
+
+	worker := NewPictureWorker(processor, pictures, newTestTargets(repo), idGen, WorkerConfig{
+		Workers:        1,
+		QueueSize:      1,
+		JobTimeout:     time.Second,
+		MaxDimension:   1024,
+		ThumbDimension: 256,
+		Quality:        80,
+	}, hub)
+
+	stand := newWorkerTestStand(t, repo, idGen, "stands/x/old.webp", "stands/x/old_thumb.webp", enums.PicturePending)
+
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
+
+	select {
+	case evt := <-events:
+		if evt.Kind != enums.StandSubject || evt.SubjectID != stand.ID().String() || evt.Status != enums.PictureReady {
+			t.Fatalf("event = %+v, want {StandSubject, %s, PictureReady}", evt, stand.ID().String())
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for READY event")
+	}
+}
+
 func TestProcess_TranscodeFailure_MarksFailedKeepsOldPicture(t *testing.T) {
 	repo := newFakeStandRepository()
 	idGen := &fakeStandIDGenerator{}
 	pictures := newFakePictureStorage()
 	processor := newFakeImageProcessor()
 	processor.transcodeErr = ports.ErrInvalidImage
-	worker := newTestWorker(processor, pictures, repo, idGen)
+	hub := NewPictureEventHub()
+	events, unsubscribe := hub.Subscribe()
+	defer unsubscribe()
+
+	worker := NewPictureWorker(processor, pictures, newTestTargets(repo), idGen, WorkerConfig{
+		Workers:        1,
+		QueueSize:      1,
+		JobTimeout:     time.Second,
+		MaxDimension:   1024,
+		ThumbDimension: 256,
+		Quality:        80,
+	}, hub)
 
 	stand := newWorkerTestStand(t, repo, idGen, "stands/x/old.webp", "stands/x/old_thumb.webp", enums.PicturePending)
 
@@ -310,6 +353,15 @@ func TestProcess_TranscodeFailure_MarksFailedKeepsOldPicture(t *testing.T) {
 	}
 	if len(pictures.objects) != 0 {
 		t.Errorf("nothing should have been uploaded, got %d objects", len(pictures.objects))
+	}
+
+	select {
+	case evt := <-events:
+		if evt.Kind != enums.StandSubject || evt.SubjectID != stand.ID().String() || evt.Status != enums.PictureFailed {
+			t.Fatalf("event = %+v, want {StandSubject, %s, PictureFailed}", evt, stand.ID().String())
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for FAILED event")
 	}
 }
 
@@ -395,7 +447,7 @@ func TestEnqueue_FullQueueReturnsErrPictureQueueFull(t *testing.T) {
 	processor := newFakeImageProcessor()
 	worker := NewPictureWorker(processor, pictures, newTestTargets(repo), idGen, WorkerConfig{
 		Workers: 0, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
-	})
+	}, nil)
 	// No Start(): nothing drains the queue, so the second Enqueue must see it full.
 	if err := worker.Enqueue(ports.PictureJob{SubjectID: powers.PowerID{1}.String(), Kind: enums.StandSubject}); err != nil {
 		t.Fatalf("first Enqueue: %v", err)
@@ -536,7 +588,7 @@ func TestProcess_DevilFruitKind_PublishesUnderDevilFruitsPrefix(t *testing.T) {
 	}
 	worker := NewPictureWorker(processor, pictures, targets, idGen, WorkerConfig{
 		Workers: 1, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
-	})
+	}, nil)
 
 	fruit := newWorkerTestDevilFruit(t, fruitRepo, idGen, "devil-fruits/x/old.webp", "devil-fruits/x/old_thumb.webp", enums.PicturePending)
 
