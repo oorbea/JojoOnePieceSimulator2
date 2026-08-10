@@ -37,6 +37,7 @@ type PictureWorker struct {
 	cfg       WorkerConfig
 	jobs      chan ports.PictureJob
 	wg        sync.WaitGroup
+	hub       *PictureEventHub
 }
 
 var _ ports.IPictureEnqueuer = (*PictureWorker)(nil)
@@ -47,6 +48,7 @@ func NewPictureWorker(
 	targets map[enums.PictureSubjectKind]PictureTarget,
 	idGen ports.IIdGenerator[powers.PowerID],
 	cfg WorkerConfig,
+	hub *PictureEventHub,
 ) *PictureWorker {
 	return &PictureWorker{
 		processor: processor,
@@ -55,6 +57,7 @@ func NewPictureWorker(
 		idGen:     idGen,
 		cfg:       cfg,
 		jobs:      make(chan ports.PictureJob, cfg.QueueSize),
+		hub:       hub,
 	}
 }
 
@@ -129,7 +132,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	})
 	if err != nil {
 		log.Printf("transcoding picture for %s %s: %v", job.Kind, job.SubjectID, err)
-		w.markFailed(ctx, target, job.SubjectID)
+		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 
@@ -142,7 +145,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	})
 	if err != nil {
 		log.Printf("uploading picture for %s %s: %v", job.Kind, job.SubjectID, err)
-		w.markFailed(ctx, target, job.SubjectID)
+		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 	// The thumbnail is pinned to whichever provider the main rendition
@@ -154,7 +157,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	}); err != nil {
 		log.Printf("uploading picture thumbnail for %s %s: %v", job.Kind, job.SubjectID, err)
 		w.deleteQuietly(ctx, mainKey)
-		w.markFailed(ctx, target, job.SubjectID)
+		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 
@@ -172,6 +175,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 		w.deleteQuietly(ctx, thumbKey)
 		return
 	}
+	w.publish(job.Kind, job.SubjectID, enums.PictureReady)
 
 	if oldKey != "" {
 		w.deleteQuietly(ctx, oldKey)
@@ -181,10 +185,22 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	}
 }
 
-func (w *PictureWorker) markFailed(ctx context.Context, target PictureTarget, id string) {
+func (w *PictureWorker) markFailed(ctx context.Context, target PictureTarget, kind enums.PictureSubjectKind, id string) {
 	if err := target.Publisher.UpdatePicture(ctx, id, nil, nil, enums.PictureFailed); err != nil {
 		log.Printf("marking picture failed for %s: %v", id, err)
+		return
 	}
+	w.publish(kind, id, enums.PictureFailed)
+}
+
+// publish notifies hub subscribers (the SSE endpoint) of a terminal
+// picture-status change. hub is nil in tests that construct PictureWorker
+// without one.
+func (w *PictureWorker) publish(kind enums.PictureSubjectKind, subjectID string, status enums.PictureStatus) {
+	if w.hub == nil {
+		return
+	}
+	w.hub.Publish(PictureEvent{Kind: kind, SubjectID: subjectID, Status: status})
 }
 
 func (w *PictureWorker) deleteQuietly(ctx context.Context, key string) {

@@ -203,7 +203,7 @@ export function StandFormModal({
                     }
                     multiline
                     numberOfLines={3}
-                    height={90}
+                    height={100}
                   />
                 )}
               />

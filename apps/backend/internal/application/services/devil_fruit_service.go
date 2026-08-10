@@ -115,9 +115,30 @@ func (s *DevilFruitService) DevilFruitTranslations(ctx context.Context, id power
 	return s.repo.Translations(ctx, id)
 }
 
-// DeleteDevilFruit removes the devil fruit identified by id.
+// DeleteDevilFruit removes the devil fruit identified by id, then
+// best-effort deletes its picture renditions from object storage - see
+// StandService.DeleteStand for why.
 func (s *DevilFruitService) DeleteDevilFruit(ctx context.Context, id powers.PowerID) error {
-	return s.repo.Delete(ctx, id)
+	fruit, err := s.repo.FindByID(ctx, id, enums.EnGB)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return err
+	}
+
+	if key := fruit.Picture(); key != "" {
+		if err := s.pictures.Delete(ctx, key); err != nil {
+			log.Printf("deleting picture %q for devil fruit %s: %v", key, id, err)
+		}
+	}
+	if key := fruit.PictureThumb(); key != "" {
+		if err := s.pictures.Delete(ctx, key); err != nil {
+			log.Printf("deleting picture thumbnail %q for devil fruit %s: %v", key, id, err)
+		}
+	}
+	return nil
 }
 
 // SetDevilFruitPicture validates an uploaded picture and hands it to the

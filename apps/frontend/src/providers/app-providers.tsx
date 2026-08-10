@@ -1,6 +1,7 @@
 import { I18nextProvider } from 'react-i18next'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
+import { PictureEventsBridge } from '@/providers/picture-events-bridge'
 import { QueryProvider } from '@/providers/query-provider'
 import { TamaguiProvider } from '@/providers/tamagui-provider'
 import { ToasterMount } from '@/providers/toaster-mount'
@@ -17,6 +18,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           <QueryProvider>
             <ErrorBoundary>{children}</ErrorBoundary>
             <ToasterMount />
+            <PictureEventsBridge />
           </QueryProvider>
         </TamaguiProvider>
       </SafeAreaProvider>

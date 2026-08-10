@@ -1,31 +1,48 @@
 import { useQuery, type Query } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { Platform } from 'react-native'
 
 import { getMe } from '@/features/profile/api/profile.api'
 import { profileKeys } from '@/features/profile/api/profile.keys'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
 import { useSessionStore } from '@/shared/stores/session.store'
 
-// The avatar transcode is a fire-and-forget background job on the backend
-// (no websocket exists in this project — see ObsidianVault/backend-contract.md)
-// so a PENDING avatar is only ever observed by polling this query. Backs off
-// 2s -> 4s -> 8s ... capped at 30s, and gives up after 8 attempts so a stuck
-// worker doesn't poll forever in the background.
+// On web, PictureEventsBridge (src/providers/picture-events-bridge.tsx)
+// pushes avatar-pipeline completion via SSE instead of this polling every
+// query - see use-stands.ts's useStands for the full reasoning. React
+// Native has no EventSource, so native keeps polling as its fallback: 2s ->
+// 4s -> 8s ... capped at 30s, giving up after 8 attempts so a stuck worker
+// doesn't poll forever in the background.
 const MAX_POLL_ATTEMPTS = 8
 const MAX_POLL_INTERVAL_MS = 30_000
 const BASE_POLL_INTERVAL_MS = 2_000
 
-function pollInterval(query: Query<ProfileUser>): number | false {
-  if (query.state.data?.avatarStatus !== 'PENDING') return false
-  if (query.state.dataUpdateCount >= MAX_POLL_ATTEMPTS) return false
-  return Math.min(BASE_POLL_INTERVAL_MS * 2 ** query.state.dataUpdateCount, MAX_POLL_INTERVAL_MS)
-}
-
 export function useProfile() {
+  // Attempt count must live outside query.state - see use-stands.ts's
+  // useStands for why `dataUpdateCount` (cumulative for this query key's
+  // whole lifetime, and persisted across reloads by
+  // PersistQueryClientProvider) silently disables polling forever once 8
+  // refetches have ever happened, for any reason. A ref scoped to this hook
+  // instance resets whenever the avatar isn't PENDING.
+  const pollAttempts = useRef(0)
+
   const query = useQuery({
     queryKey: profileKeys.me,
     queryFn: getMe,
-    refetchInterval: pollInterval,
+    refetchInterval:
+      Platform.OS === 'web'
+        ? undefined
+        : (query: Query<ProfileUser>) => {
+            if (query.state.data?.avatarStatus !== 'PENDING') {
+              pollAttempts.current = 0
+              return false
+            }
+            if (pollAttempts.current >= MAX_POLL_ATTEMPTS) return false
+            const interval = Math.min(BASE_POLL_INTERVAL_MS * 2 ** pollAttempts.current, MAX_POLL_INTERVAL_MS)
+            pollAttempts.current += 1
+            return interval
+          },
+    refetchIntervalInBackground: true,
   })
 
   const session = useSessionStore((state) => state.session)
