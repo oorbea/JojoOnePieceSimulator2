@@ -9,6 +9,7 @@ import {
 } from '@/features/devil-fruits/api/devil-fruits.api'
 import { devilFruitKeys } from '@/features/devil-fruits/api/devil-fruits.keys'
 import type { DevilFruitInput } from '@/features/devil-fruits/types/devil-fruits.types'
+import { clearEtags } from '@/shared/api/etag'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import { showSuccessToast } from '@/shared/lib/toast'
 
@@ -19,6 +20,7 @@ export function useCreateDevilFruit() {
   return useMutation({
     mutationFn: (input: DevilFruitInput) => createDevilFruit(input),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast(t('toasts.devilFruitCreated'))
     },
@@ -32,6 +34,7 @@ export function useUpdateDevilFruit() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: DevilFruitInput }) => updateDevilFruit(id, input),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast(t('toasts.devilFruitUpdated'))
     },
@@ -45,6 +48,7 @@ export function useUploadDevilFruitPicture() {
   return useMutation({
     mutationFn: ({ id, asset }: { id: string; asset: PickedPicture }) => uploadDevilFruitPicture(id, asset),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast(t('toasts.devilFruitPictureUploading'))
     },
@@ -58,6 +62,7 @@ export function useDeleteDevilFruit() {
   return useMutation({
     mutationFn: (id: string) => deleteDevilFruit(id),
     onSuccess: () => {
+      clearEtags()
       void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       showSuccessToast(t('toasts.devilFruitDeleted'))
     },
