@@ -12,6 +12,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -20,9 +21,12 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/auth"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache"
 	rediscache "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache/redis"
+	gameinfra "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/random"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/s3store"
@@ -166,6 +170,36 @@ func main() {
 
 	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
 	userEndpoints := endpoints.NewUserEndpoints(userService)
+
+	// Game (Gauntlet/Versus) application layer. Websockets + the routes
+	// that would expose this over HTTP are the next tanda (see
+	// ObsidianVault/ADR.md) - it is wired here, ready to be handed to a
+	// router, but nothing calls into it yet.
+	gameStore := gamestore.NewMemoryGameStore()
+	gameReaper := gamestore.NewReaper(gameStore, cfg.GameLobbyTTL, cfg.GameLobbyReapInterval)
+	go gameReaper.Start(ctx)
+
+	gameRNG := random.NewStdRandomGenerator[string]()
+	gameEventHub := services.NewGameEventHub()
+	gameService := services.NewGameService(
+		gameStore,
+		idgen.UUIDGenerator[game.GameID]{},
+		idgen.UUIDGenerator[game.ParticipantID]{},
+		idgen.UUIDGenerator[game.TeamID]{},
+		userRepo,
+		gameinfra.NewStaticStageCatalog(),
+		gameinfra.NewRepoPowerPool(standRepo, devilFruitRepo),
+		gameinfra.NewDefaultWeights(),
+		gameinfra.NewCoinFlipTiebreaker(gameRNG),
+		// No ports.IGameHistory adapter yet - finished/aborted games are
+		// simply dropped from the store once the match ends.
+		nil,
+		gameRNG,
+		gameEventHub,
+		services.NewSystemClock(),
+		services.VotingPolicy{Window: cfg.GameVotingWindow},
+	)
+	_ = gameService
 
 	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit
 	// promptly on shutdown instead of blocking srv.Shutdown's grace window.
