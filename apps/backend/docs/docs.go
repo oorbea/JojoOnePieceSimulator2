@@ -100,6 +100,12 @@ const docTemplate = `{
                         "description": "PARAMECIA, ZOAN, LOGIA, SPECIAL_PARAMECIA, ANCIENT_ZOAN, MYTHICAL_ZOAN",
                         "name": "fruitType",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "free-text search over name and description",
+                        "name": "q",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -828,19 +834,25 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lists every Stage, or only manga's if the query param is set. Description resolved for the request's locale.",
+                "description": "Lists every Stage, or filters them if any query param is set. Description resolved for the request's locale.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "stages"
                 ],
-                "summary": "List stages",
+                "summary": "List or filter stages",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "JOJO, ONE_PIECE",
                         "name": "manga",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "free-text search over name and description",
+                        "name": "q",
                         "in": "query"
                     }
                 ],
@@ -1348,6 +1360,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "name of the Stand this one evolves from",
                         "name": "evolvesFrom",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "free-text search over name and description",
+                        "name": "q",
                         "in": "query"
                     }
                 ],

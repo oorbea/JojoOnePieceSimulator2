@@ -502,6 +502,10 @@ paths:
         in: query
         name: fruitType
         type: string
+      - description: free-text search over name and description
+        in: query
+        name: q
+        type: string
       produces:
       - application/json
       responses:
@@ -983,12 +987,16 @@ paths:
       - games
   /stages:
     get:
-      description: Lists every Stage, or only manga's if the query param is set. Description
+      description: Lists every Stage, or filters them if any query param is set. Description
         resolved for the request's locale.
       parameters:
       - description: JOJO, ONE_PIECE
         in: query
         name: manga
+        type: string
+      - description: free-text search over name and description
+        in: query
+        name: q
         type: string
       produces:
       - application/json
@@ -1013,7 +1021,7 @@ paths:
             $ref: '#/definitions/dto.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: List stages
+      summary: List or filter stages
       tags:
       - stages
     post:
@@ -1326,6 +1334,10 @@ paths:
       - description: name of the Stand this one evolves from
         in: query
         name: evolvesFrom
+        type: string
+      - description: free-text search over name and description
+        in: query
+        name: q
         type: string
       produces:
       - application/json
