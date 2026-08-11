@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 
 import { devilFruitKeys } from '@/features/devil-fruits/api/devil-fruits.keys'
 import { profileKeys } from '@/features/profile/api/profile.keys'
+import { stageKeys } from '@/features/stages/api/stages.keys'
 import { standKeys } from '@/features/stands/api/stands.keys'
 import { clearEtags } from '@/shared/api/etag'
 import { env } from '@/shared/config/env'
@@ -16,7 +17,7 @@ const BASE_RECONNECT_MS = 2_000
 const MAX_RECONNECT_MS = 30_000
 
 type PictureEventDTO = {
-  kind: 'STAND' | 'DEVIL_FRUIT' | 'USER'
+  kind: 'STAND' | 'DEVIL_FRUIT' | 'USER' | 'STAGE'
   subjectId: string
   status: 'NONE' | 'PENDING' | 'READY' | 'FAILED'
 }
@@ -61,18 +62,31 @@ export function PictureEventsBridge() {
       clearEtags()
       void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
+      void queryClient.invalidateQueries({ queryKey: stageKeys.allLocales })
       void queryClient.invalidateQueries({ queryKey: profileKeys.me })
     }
 
+    // A switch with an explicit branch per kind, not an if/else-as-default -
+    // the previous else treated any kind other than STAND/DEVIL_FRUIT as a
+    // profile event, so a STAGE event (the backend has emitted kind:"STAGE"
+    // since game-stage-content.md landed) was silently invalidating
+    // profileKeys.me instead of the stage catalogue.
     const handlePictureEvent = (event: MessageEvent) => {
       const evt = JSON.parse(event.data) as PictureEventDTO
       clearEtags()
-      if (evt.kind === 'STAND') {
-        void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
-      } else if (evt.kind === 'DEVIL_FRUIT') {
-        void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
-      } else {
-        void queryClient.invalidateQueries({ queryKey: profileKeys.me })
+      switch (evt.kind) {
+        case 'STAND':
+          void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
+          break
+        case 'DEVIL_FRUIT':
+          void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
+          break
+        case 'STAGE':
+          void queryClient.invalidateQueries({ queryKey: stageKeys.allLocales })
+          break
+        case 'USER':
+          void queryClient.invalidateQueries({ queryKey: profileKeys.me })
+          break
       }
     }
 
