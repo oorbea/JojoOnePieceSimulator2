@@ -4,8 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
+import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
+import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
-import type { GlassSelectOption } from '@/shared/components/presentational/glass-select'
+import {
+  GlassSelect,
+  type GlassSelectOption,
+} from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
@@ -40,6 +45,18 @@ type FormState = {
   erroredLocales: Locale[]
 }
 
+export type StandStatFilterKey =
+  'attackPower' | 'speed' | 'attackRange' | 'endurance' | 'precision' | 'potential'
+
+const STAT_FILTER_ORDER: StandStatFilterKey[] = [
+  'attackPower',
+  'speed',
+  'attackRange',
+  'endurance',
+  'precision',
+  'potential',
+]
+
 type Props = {
   stands: StandResponse[]
   isLoading: boolean
@@ -49,13 +66,31 @@ type Props = {
   onEdit: (stand: StandResponse) => void
   onDelete: (stand: StandResponse) => void
   openingEditId: string | null
+  search: string
+  onSearchChange: (search: string) => void
+  rarityFilter: string | null
+  rarityFilterOptions: GlassSelectOption[]
+  onRarityFilterChange: (rarity: string | null) => void
+  statFilters: Record<StandStatFilterKey, string | null>
+  statFilterOptions: GlassSelectOption[]
+  onStatFilterChange: (key: StandStatFilterKey, value: string | null) => void
+  evolvesFromFilter: string | null
+  evolvesFromFilterOptions: GlassSelectOption[]
+  onEvolvesFromFilterChange: (id: string | null) => void
+  filtersExpanded: boolean
+  onToggleFilters: () => void
+  moreFiltersCount: number
+  onClearFilters: () => void
+  hasActiveFilters: boolean
   form: FormState
   deleteConfirm: ConfirmState
 }
 
 // Pure UI — a card grid of Stands plus the create/edit modal and the delete
 // confirmation. All data fetching, form state, and mutation wiring live in
-// StandsContainer.
+// StandsContainer. Search + rarity stay always visible; the six stat
+// filters and evolvesFrom live behind a FilterDisclosure so the always-on
+// row doesn't grow to nine controls.
 export function StandsScreen({
   stands,
   isLoading,
@@ -65,6 +100,22 @@ export function StandsScreen({
   onEdit,
   onDelete,
   openingEditId,
+  search,
+  onSearchChange,
+  rarityFilter,
+  rarityFilterOptions,
+  onRarityFilterChange,
+  statFilters,
+  statFilterOptions,
+  onStatFilterChange,
+  evolvesFromFilter,
+  evolvesFromFilterOptions,
+  onEvolvesFromFilterChange,
+  filtersExpanded,
+  onToggleFilters,
+  moreFiltersCount,
+  onClearFilters,
+  hasActiveFilters,
   form,
   deleteConfirm,
 }: Props) {
@@ -74,10 +125,66 @@ export function StandsScreen({
       <PageShell align="top" scroll maxWidth={960}>
         <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$3">
           <GlowText level="title">{t('stands.title')}</GlowText>
-          <GlossButton tone="green" btnSize="md" onPress={onCreateNew} accessibilityLabel={t('stands.newStand')}>
+          <GlossButton
+            tone="green"
+            btnSize="md"
+            onPress={onCreateNew}
+            accessibilityLabel={t('stands.newStand')}
+          >
             <Plus size={18} color="white" /> {t('stands.newStand')}
           </GlossButton>
         </XStack>
+
+        <XStack width="100%" flexWrap="wrap" gap="$3">
+          <YStack flexBasis={220} grow={1}>
+            <GlassField
+              label={t('common.search')}
+              value={search}
+              onChangeText={onSearchChange}
+              placeholder={t('stands.searchPlaceholder')}
+            />
+          </YStack>
+          <YStack flexBasis={200} grow={1}>
+            <GlassSelect
+              label={t('stands.filterRarity')}
+              options={rarityFilterOptions}
+              value={rarityFilter}
+              onChange={onRarityFilterChange}
+              clearable
+            />
+          </YStack>
+        </XStack>
+
+        <FilterDisclosure
+          label={t('stands.moreFilters')}
+          activeCount={moreFiltersCount}
+          expanded={filtersExpanded}
+          onToggle={onToggleFilters}
+          onClearAll={hasActiveFilters ? onClearFilters : undefined}
+          clearLabel={t('stands.clearFilters')}
+        >
+          {STAT_FILTER_ORDER.map((key) => (
+            <YStack key={key} flexBasis={200} grow={1}>
+              <GlassSelect
+                label={t(`stands.stats.${key}`)}
+                options={statFilterOptions}
+                value={statFilters[key]}
+                onChange={(value) => onStatFilterChange(key, value)}
+                clearable
+              />
+            </YStack>
+          ))}
+          <YStack flexBasis={200} grow={1}>
+            <GlassSelect
+              label={t('stands.filterEvolvesFrom')}
+              options={evolvesFromFilterOptions}
+              value={evolvesFromFilter}
+              onChange={onEvolvesFromFilterChange}
+              searchable
+              clearable
+            />
+          </YStack>
+        </FilterDisclosure>
 
         {isLoading ? (
           <YStack width="100%" items="center" p="$6">
@@ -92,7 +199,12 @@ export function StandsScreen({
             <GlowText level="label" align="center">
               {t('stands.errorTitle')}
             </GlowText>
-            <GlossButton tone="blue" btnSize="sm" onPress={onRetry} accessibilityLabel={t('stands.retry')}>
+            <GlossButton
+              tone="blue"
+              btnSize="sm"
+              onPress={onRetry}
+              accessibilityLabel={t('stands.retry')}
+            >
               {t('stands.retry')}
             </GlossButton>
           </GlassPanel>
@@ -100,11 +212,18 @@ export function StandsScreen({
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
             <Sparkles size={28} color="$standPurple" />
             <GlowText level="label" align="center">
-              {t('stands.emptyTitle')}
+              {t(hasActiveFilters ? 'stands.emptyFilteredTitle' : 'stands.emptyTitle')}
             </GlowText>
-            <GlossButton tone="green" btnSize="sm" onPress={onCreateNew} accessibilityLabel={t('stands.newStand')}>
-              {t('stands.newStand')}
-            </GlossButton>
+            {hasActiveFilters ? null : (
+              <GlossButton
+                tone="green"
+                btnSize="sm"
+                onPress={onCreateNew}
+                accessibilityLabel={t('stands.newStand')}
+              >
+                {t('stands.newStand')}
+              </GlossButton>
+            )}
           </GlassPanel>
         ) : (
           <XStack flexWrap="wrap" gap="$4" justify="center">
