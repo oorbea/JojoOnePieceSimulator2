@@ -26,3 +26,7 @@ sql:
             go_type: "string"
           - db_type: "locale"
             go_type: "string"
+          - db_type: "manga"
+            go_type: "string"
+          - db_type: "game_mode"
+            go_type: "string"
