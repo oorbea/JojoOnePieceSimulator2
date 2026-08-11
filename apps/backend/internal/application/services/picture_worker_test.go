@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
@@ -629,5 +630,172 @@ func TestProcess_UnknownKind_TouchesNothing(t *testing.T) {
 	}
 	if len(pictures.objects) != 0 {
 		t.Errorf("nothing should have been uploaded, got %d objects", len(pictures.objects))
+	}
+}
+
+// fakeStageRepository is a local copy of the one in stage_service_test.go
+// (package services_test, not visible from here) - see this file's header
+// comment for why fakes are duplicated per test file instead of shared.
+type fakeStageRepository struct {
+	mu           sync.Mutex
+	stages       map[game.StageID]*game.Stage
+	translations map[game.StageID]ports.StageTranslations
+}
+
+func newFakeStageRepository() *fakeStageRepository {
+	return &fakeStageRepository{
+		stages:       make(map[game.StageID]*game.Stage),
+		translations: make(map[game.StageID]ports.StageTranslations),
+	}
+}
+
+func (f *fakeStageRepository) List(_ context.Context, _ enums.Locale) ([]game.Stage, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	all := make([]game.Stage, 0, len(f.stages))
+	for _, s := range f.stages {
+		all = append(all, *s)
+	}
+	return all, nil
+}
+
+func (f *fakeStageRepository) ListByManga(_ context.Context, manga enums.Manga, _ enums.Locale) ([]game.Stage, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []game.Stage
+	for _, s := range f.stages {
+		if s.Manga() == manga {
+			out = append(out, *s)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeStageRepository) FindByID(_ context.Context, id game.StageID, _ enums.Locale) (game.Stage, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.stages[id]
+	if !ok {
+		return game.Stage{}, ports.ErrStageNotFound
+	}
+	return *s, nil
+}
+
+func (f *fakeStageRepository) Save(_ context.Context, s game.Stage, translations ports.StageTranslations) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cp := s
+	f.stages[s.ID()] = &cp
+	f.translations[s.ID()] = translations
+	return nil
+}
+
+func (f *fakeStageRepository) Delete(_ context.Context, id game.StageID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if _, ok := f.stages[id]; !ok {
+		return ports.ErrStageNotFound
+	}
+	delete(f.stages, id)
+	return nil
+}
+
+func (f *fakeStageRepository) Translations(_ context.Context, id game.StageID) (ports.StageTranslations, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	t, ok := f.translations[id]
+	if !ok {
+		return nil, ports.ErrStageNotFound
+	}
+	return t, nil
+}
+
+func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.stages[id]
+	if !ok {
+		return ports.ErrStageNotFound
+	}
+	newMain, newThumb := s.Picture(), s.PictureThumb()
+	if main != nil {
+		newMain = *main
+	}
+	if thumb != nil {
+		newThumb = *thumb
+	}
+	s.SetPictureRenditions(newMain, newThumb, status)
+	return nil
+}
+
+var _ ports.IStageRepository = (*fakeStageRepository)(nil)
+
+// fakeStageIDGenerator returns deterministic, incrementing game.StageIDs -
+// fakeStandIDGenerator can't be reused since it targets powers.PowerID.
+type fakeStageIDGenerator struct {
+	mu   sync.Mutex
+	next byte
+}
+
+func (g *fakeStageIDGenerator) NewID() game.StageID {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.next++
+	var id game.StageID
+	id[15] = g.next
+	return id
+}
+
+func newWorkerTestStage(t *testing.T, repo *fakeStageRepository, idGen *fakeStageIDGenerator, main, thumb string, status enums.PictureStatus) game.Stage {
+	t.Helper()
+	id := idGen.NewID()
+	st, err := game.NewStage(id, enums.Jojo, 0, "Worker Stage", "description", main)
+	if err != nil {
+		t.Fatalf("building stage: %v", err)
+	}
+	st.SetPictureRenditions(main, thumb, status)
+	translations := ports.StageTranslations{enums.EnGB: "description", enums.EsES: "descripcion", enums.CaES: "descripcio"}
+	if err := repo.Save(context.Background(), st, translations); err != nil {
+		t.Fatalf("saving stage: %v", err)
+	}
+	return st
+}
+
+func TestProcess_StageKind_PublishesUnderStagesPrefix(t *testing.T) {
+	standRepo := newFakeStandRepository()
+	stageRepo := newFakeStageRepository()
+	// The worker's idGen only mints the random uuid used to name the
+	// uploaded object key (see picture_worker.go) - it's always a
+	// powers.PowerID regardless of subject kind. Stage ids are minted
+	// separately by stageIDGen, below.
+	idGen := &fakeStandIDGenerator{}
+	stageIDGen := &fakeStageIDGenerator{}
+	pictures := newFakePictureStorage()
+	processor := newFakeImageProcessor()
+
+	targets := map[enums.PictureSubjectKind]PictureTarget{
+		enums.StandSubject: {Publisher: NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
+		enums.StageSubject: {Publisher: NewStagePicturePublisher(stageRepo), KeyPrefix: "stages"},
+	}
+	worker := NewPictureWorker(processor, pictures, targets, idGen, WorkerConfig{
+		Workers: 1, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
+	}, nil)
+
+	stage := newWorkerTestStage(t, stageRepo, stageIDGen, "stages/x/old.webp", "stages/x/old_thumb.webp", enums.PicturePending)
+
+	worker.process(ports.PictureJob{SubjectID: stage.ID().String(), Kind: enums.StageSubject, Content: []byte("data"), ContentType: "image/png"})
+
+	updated, err := stageRepo.FindByID(context.Background(), stage.ID(), enums.EnGB)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if updated.PictureStatus() != enums.PictureReady {
+		t.Fatalf("status = %v, want READY", updated.PictureStatus())
+	}
+	if !strings.HasPrefix(updated.Picture(), "stages/") {
+		t.Errorf("picture key = %q, want stages/ prefix", updated.Picture())
+	}
+	if len(standRepo.stands) != 0 {
+		t.Errorf("the stand repository should never have been touched, got %d entries", len(standRepo.stands))
 	}
 }
