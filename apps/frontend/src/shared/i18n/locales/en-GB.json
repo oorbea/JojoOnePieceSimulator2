@@ -52,7 +52,8 @@
     "title": "Admin Panel",
     "pickChannel": "Pick a channel to manage",
     "stands": "Stands",
-    "devilFruits": "Devil Fruits"
+    "devilFruits": "Devil Fruits",
+    "stages": "Stages"
   },
   "profile": {
     "avatarProcessing": "Processing your new picture…",
@@ -127,6 +128,28 @@
     "deleteConfirmButton": "Delete Devil Fruit",
     "deleteConfirmMessage": "\"{{name}}\" will be permanently deleted. This can't be undone."
   },
+  "stages": {
+    "title": "Stages",
+    "newStage": "New Stage",
+    "emptyTitle": "No Stages match. Try a different search or filter.",
+    "errorTitle": "Couldn't load Stages.",
+    "retry": "Retry",
+    "editTitle": "Edit Stage",
+    "changePicture": "Change Stage picture",
+    "name": "Name",
+    "manga": "Manga",
+    "order": "Order",
+    "orderBadge": "#{{order}}",
+    "description": "Description",
+    "searchPlaceholder": "Search by name or description…",
+    "filterManga": "Filter by manga",
+    "editA11y": "Edit {{name}}",
+    "deleteA11y": "Delete {{name}}",
+    "saveA11y": "Save Stage",
+    "deleteConfirmTitle": "Delete Stage?",
+    "deleteConfirmButton": "Delete Stage",
+    "deleteConfirmMessage": "\"{{name}}\" will be permanently deleted. This can't be undone."
+  },
   "locale": {
     "required": "required",
     "hasError": "has an error"
@@ -143,6 +166,7 @@
     "descriptionTooLong": "Description is too long",
     "skillsRequired": "At least one skill is required",
     "translationIncomplete": "Fill in both description and skills for this language, or leave it blank",
+    "orderNonNegative": "Order must be zero or greater",
     "usernameMinLength": "Username must be at least 3 characters",
     "usernameMaxLength": "Username must be at most 32 characters",
     "usernameFormat": "Only lowercase letters, numbers, and underscores"
@@ -161,7 +185,12 @@
     "usernameUpdated": "Username updated",
     "avatarUploading": "Uploading your picture. This takes a moment.",
     "avatarRemoved": "Avatar removed",
-    "accountDeleted": "Account deleted"
+    "accountDeleted": "Account deleted",
+    "stageCreated": "Stage created",
+    "stageUpdated": "Stage updated",
+    "stageDeleted": "Stage deleted",
+    "stagePictureUploading": "Uploading picture. This takes a moment.",
+    "stagePictureFailed": "Couldn't process the Stage's picture. Please try again."
   },
   "notFound": {
     "title": "This screen doesn't exist.",
