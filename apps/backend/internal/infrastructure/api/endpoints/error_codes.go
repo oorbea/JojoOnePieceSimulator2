@@ -127,6 +127,18 @@ func errorCode(err error) string {
 		return "INVALID_GAME_STATE"
 	case errors.Is(err, game.ErrInventoryNotSupported):
 		return "INVENTORY_NOT_SUPPORTED"
+	case errors.Is(err, ports.ErrStageNotFound):
+		return "STAGE_NOT_FOUND"
+	case errors.Is(err, ports.ErrStageAlreadyExists):
+		return "STAGE_ALREADY_EXISTS"
+	case errors.Is(err, game.ErrEmptyTeamName):
+		return "EMPTY_TEAM_NAME"
+	case errors.Is(err, enums.ErrInvalidParticipantKind):
+		return "INVALID_PARTICIPANT_KIND"
+	case errors.Is(err, enums.ErrInvalidSquadVerdict):
+		return "INVALID_SQUAD_VERDICT"
+	case errors.Is(err, errUnknownCommand):
+		return "UNKNOWN_COMMAND"
 	default:
 		return "INTERNAL"
 	}
