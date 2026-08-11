@@ -57,5 +57,6 @@ func (VersusMode) Outcome(g *Game) (GameResult, error) {
 		Winner:       winner,
 		RoundsPlayed: len(g.rounds),
 		Aborted:      g.state == enums.Aborted,
+		Participants: participantOutcomes(g),
 	}, nil
 }
