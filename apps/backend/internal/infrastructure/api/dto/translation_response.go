@@ -26,3 +26,25 @@ func NewPowerTranslationsResponse(t ports.PowerTranslations) PowerTranslationsRe
 	}
 	return PowerTranslationsResponse{Translations: out}
 }
+
+// StageTranslationResponse mirrors StageTranslationRequest, for reading back
+// every locale's description in an admin edit form.
+type StageTranslationResponse struct {
+	Description string `json:"description"`
+}
+
+// StageTranslationsResponse is the body of the admin-only
+// GET /stages/{id}/translations route: every locale's description for one
+// Stage, keyed by locale string - same shape as PowerTranslationsResponse,
+// without Skills.
+type StageTranslationsResponse struct {
+	Translations map[string]StageTranslationResponse `json:"translations"`
+}
+
+func NewStageTranslationsResponse(t ports.StageTranslations) StageTranslationsResponse {
+	out := make(map[string]StageTranslationResponse, len(t))
+	for locale, description := range t {
+		out[locale.String()] = StageTranslationResponse{Description: description}
+	}
+	return StageTranslationsResponse{Translations: out}
+}

@@ -12,9 +12,10 @@ import (
 // instead of a JSON decode error - same convention as every other catalogue
 // request DTO.
 type StageRequest struct {
-	Manga string `json:"manga"`
-	Order int    `json:"order"`
-	Name  string `json:"name"`
+	Manga        string                             `json:"manga"`
+	Order        int                                `json:"order"`
+	Name         string                             `json:"name"`
+	Translations map[string]StageTranslationRequest `json:"translations"`
 }
 
 // Validate converts the request into a services.StageInput, collecting all
@@ -32,10 +33,12 @@ func (r StageRequest) Validate() (services.StageInput, error) {
 	if r.Name == "" {
 		errs = append(errs, "name is required")
 	}
+	translations, translationErrs := validateStageTranslations(r.Translations)
+	errs = append(errs, translationErrs...)
 
 	if len(errs) > 0 {
 		return services.StageInput{}, &ValidationError{Errors: errs}
 	}
 
-	return services.StageInput{Manga: manga, Order: r.Order, Name: r.Name}, nil
+	return services.StageInput{Manga: manga, Order: r.Order, Name: r.Name, Translations: translations}, nil
 }

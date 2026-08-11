@@ -53,13 +53,29 @@ type GameParticipantResponse struct {
 	Loadout     *GameLoadoutResponse `json:"loadout,omitempty"`
 }
 
-// GameStageResponse mirrors game.Stage.
+// GameStageResponse mirrors game.Stage. Description is NOT read off the
+// domain Stage frozen into the Round - a live Game is one instance shared
+// by every participant, so a Stage snapshotted at round-assignment time can
+// only ever carry one baked-in locale. Instead, it's re-resolved per
+// viewer's own configured language at serialization time - see
+// StageTextResolver and NewGameStateResponse. Picture is locale-independent
+// and does come straight off the domain Stage.
 type GameStageResponse struct {
-	ID    string `json:"id"`
-	Manga string `json:"manga"`
-	Order int    `json:"order"`
-	Name  string `json:"name"`
+	ID            string `json:"id"`
+	Manga         string `json:"manga"`
+	Order         int    `json:"order"`
+	Name          string `json:"name"`
+	Description   string `json:"description"`
+	Picture       string `json:"picture"`
+	PictureThumb  string `json:"pictureThumb"`
+	PictureStatus string `json:"pictureStatus"`
 }
+
+// StageTextResolver resolves a Stage's description for a specific viewer
+// locale, bound by the caller (see endpoints.GameEndpoints.stageTextResolver)
+// to whichever locale that viewer has configured on their account -
+// unrelated to PictureURLResolver, which never depends on locale.
+type StageTextResolver func(ctx context.Context, id game.StageID) (string, error)
 
 // GameRoundResultResponse mirrors game.RoundResult.
 type GameRoundResultResponse struct {
@@ -132,7 +148,8 @@ func NewGameStateResponse(
 	g *game.Game,
 	code string,
 	self game.ParticipantID,
-	resolveStand, resolveFruit PictureURLResolver,
+	resolveStand, resolveFruit, resolveStagePicture PictureURLResolver,
+	resolveStageDescription StageTextResolver,
 ) (GameStateResponse, error) {
 	teams := make([]GameTeamResponse, 0, len(g.Teams()))
 	for _, t := range g.Teams() {
@@ -183,9 +200,13 @@ func NewGameStateResponse(
 		for _, o := range r.Ballot.Options() {
 			options = append(options, string(o))
 		}
+		stageResp, err := newGameStageResponse(ctx, r.Stage, resolveStagePicture, resolveStageDescription)
+		if err != nil {
+			return GameStateResponse{}, err
+		}
 		rr := GameRoundResponse{
 			Index:        r.Index,
-			Stage:        newGameStageResponse(r.Stage),
+			Stage:        stageResp,
 			Options:      options,
 			TiebreakUsed: r.TiebreakUsed,
 		}
@@ -249,8 +270,24 @@ func NewGameStateResponse(
 	}, nil
 }
 
-func newGameStageResponse(s game.Stage) GameStageResponse {
-	return GameStageResponse{ID: s.ID().String(), Manga: s.Manga().String(), Order: s.Order(), Name: s.Name()}
+func newGameStageResponse(ctx context.Context, s game.Stage, resolvePicture PictureURLResolver, resolveDescription StageTextResolver) (GameStageResponse, error) {
+	pictureURL, err := resolvePicture(ctx, s.Picture())
+	if err != nil {
+		return GameStageResponse{}, err
+	}
+	thumbURL, err := resolvePicture(ctx, s.PictureThumb())
+	if err != nil {
+		return GameStageResponse{}, err
+	}
+	description, err := resolveDescription(ctx, s.ID())
+	if err != nil {
+		return GameStageResponse{}, err
+	}
+	return GameStageResponse{
+		ID: s.ID().String(), Manga: s.Manga().String(), Order: s.Order(), Name: s.Name(),
+		Description: description, Picture: pictureURL, PictureThumb: thumbURL,
+		PictureStatus: s.PictureStatus().String(),
+	}, nil
 }
 
 func newGameLoadoutResponse(ctx context.Context, l *game.Loadout, resolveStand, resolveFruit PictureURLResolver) (GameLoadoutResponse, error) {
