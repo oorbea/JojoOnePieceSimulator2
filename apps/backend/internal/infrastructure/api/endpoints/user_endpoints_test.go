@@ -227,7 +227,7 @@ func newUserTestServer(repo *fakeUserRepo) http.Handler {
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
 
-	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
 	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints,

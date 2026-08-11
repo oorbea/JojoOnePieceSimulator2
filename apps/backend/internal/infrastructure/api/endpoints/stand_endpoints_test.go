@@ -322,7 +322,7 @@ func newTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fakePict
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{})
+	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{})
 }
 
 func validStandBody(name string) map[string]any {
@@ -547,7 +547,7 @@ func TestPatchStandPicture_Undecodable(t *testing.T) {
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 
 	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Undecodable"))
 	var created map[string]any
@@ -578,7 +578,7 @@ func TestPatchStandPicture_QueueFull(t *testing.T) {
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 
 	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Queue Full"))
 	var created map[string]any
@@ -640,7 +640,7 @@ func TestPatchStandPicture_TooLarge(t *testing.T) {
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 
 	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Gold Experience"))
 	var created map[string]any
