@@ -23,42 +23,126 @@ func (q *Queries) DeleteStageByID(ctx context.Context, id pgtype.UUID) (int64, e
 	return result.RowsAffected(), nil
 }
 
-const getStageByID = `-- name: GetStageByID :one
-SELECT id, manga, position, name FROM stages WHERE id = $1
+const deleteStageTranslations = `-- name: DeleteStageTranslations :exec
+DELETE FROM stage_translations WHERE stage_id = $1 AND locale::text = ANY ($2::text[])
 `
 
-type GetStageByIDRow struct {
-	ID       pgtype.UUID
-	Manga    string
-	Position int32
-	Name     string
+type DeleteStageTranslationsParams struct {
+	StageID pgtype.UUID
+	Locales []string
 }
 
-func (q *Queries) GetStageByID(ctx context.Context, id pgtype.UUID) (GetStageByIDRow, error) {
-	row := q.db.QueryRow(ctx, getStageByID, id)
+// Deletes translation rows for locales no longer present in an update
+// request - kept for symmetry with DeletePowerTranslations, even though in
+// practice every Stage write always includes all three locales.
+func (q *Queries) DeleteStageTranslations(ctx context.Context, arg DeleteStageTranslationsParams) error {
+	_, err := q.db.Exec(ctx, deleteStageTranslations, arg.StageID, arg.Locales)
+	return err
+}
+
+const getStageByID = `-- name: GetStageByID :one
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE s.id = $2
+`
+
+type GetStageByIDParams struct {
+	Locales []string
+	ID      pgtype.UUID
+}
+
+type GetStageByIDRow struct {
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
+	Description   string
+}
+
+func (q *Queries) GetStageByID(ctx context.Context, arg GetStageByIDParams) (GetStageByIDRow, error) {
+	row := q.db.QueryRow(ctx, getStageByID, arg.Locales, arg.ID)
 	var i GetStageByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Manga,
 		&i.Position,
 		&i.Name,
+		&i.Picture,
+		&i.PictureThumb,
+		&i.PictureStatus,
+		&i.Description,
 	)
 	return i, err
 }
 
+const getStageTranslations = `-- name: GetStageTranslations :many
+SELECT stage_id, locale, description
+FROM stage_translations
+WHERE stage_id = $1
+`
+
+// Every translation row for a stage, for the admin edit form that needs all
+// locales at once instead of one resolved locale.
+func (q *Queries) GetStageTranslations(ctx context.Context, stageID pgtype.UUID) ([]StageTranslation, error) {
+	rows, err := q.db.Query(ctx, getStageTranslations, stageID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []StageTranslation{}
+	for rows.Next() {
+		var i StageTranslation
+		if err := rows.Scan(&i.StageID, &i.Locale, &i.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStages = `-- name: ListStages :many
-SELECT id, manga, position, name FROM stages ORDER BY manga, position, name
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+ORDER BY s.manga, s.position, s.name
 `
 
 type ListStagesRow struct {
-	ID       pgtype.UUID
-	Manga    string
-	Position int32
-	Name     string
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
+	Description   string
 }
 
-func (q *Queries) ListStages(ctx context.Context) ([]ListStagesRow, error) {
-	rows, err := q.db.Query(ctx, listStages)
+// Returns every stage, description resolved for locale via the same
+// fallback-chain LATERAL join power_translations reads use (see stands.sql).
+func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStagesRow, error) {
+	rows, err := q.db.Query(ctx, listStages, locales)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +155,10 @@ func (q *Queries) ListStages(ctx context.Context) ([]ListStagesRow, error) {
 			&i.Manga,
 			&i.Position,
 			&i.Name,
+			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureStatus,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -83,18 +171,38 @@ func (q *Queries) ListStages(ctx context.Context) ([]ListStagesRow, error) {
 }
 
 const listStagesByManga = `-- name: ListStagesByManga :many
-SELECT id, manga, position, name FROM stages WHERE manga = $1 ORDER BY position, name
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE s.manga = $2
+ORDER BY s.position, s.name
 `
 
-type ListStagesByMangaRow struct {
-	ID       pgtype.UUID
-	Manga    string
-	Position int32
-	Name     string
+type ListStagesByMangaParams struct {
+	Locales []string
+	Manga   string
 }
 
-func (q *Queries) ListStagesByManga(ctx context.Context, manga string) ([]ListStagesByMangaRow, error) {
-	rows, err := q.db.Query(ctx, listStagesByManga, manga)
+type ListStagesByMangaRow struct {
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
+	Description   string
+}
+
+func (q *Queries) ListStagesByManga(ctx context.Context, arg ListStagesByMangaParams) ([]ListStagesByMangaRow, error) {
+	rows, err := q.db.Query(ctx, listStagesByManga, arg.Locales, arg.Manga)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +215,10 @@ func (q *Queries) ListStagesByManga(ctx context.Context, manga string) ([]ListSt
 			&i.Manga,
 			&i.Position,
 			&i.Name,
+			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureStatus,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -118,29 +230,67 @@ func (q *Queries) ListStagesByManga(ctx context.Context, manga string) ([]ListSt
 	return items, nil
 }
 
+const updateStagePicture = `-- name: UpdateStagePicture :exec
+UPDATE stages
+SET picture        = COALESCE($1::text, picture),
+    picture_thumb  = COALESCE($2::text, picture_thumb),
+    picture_status = $3::picture_status,
+    updated_at     = now()
+WHERE id = $4
+`
+
+type UpdateStagePictureParams struct {
+	Picture       *string
+	PictureThumb  *string
+	PictureStatus string
+	ID            pgtype.UUID
+}
+
+// Updates only a Stage's picture renditions and pipeline status, without
+// touching manga/position/name/translations - same shape as
+// UpdatePowerPicture (stands.sql).
+func (q *Queries) UpdateStagePicture(ctx context.Context, arg UpdateStagePictureParams) error {
+	_, err := q.db.Exec(ctx, updateStagePicture,
+		arg.Picture,
+		arg.PictureThumb,
+		arg.PictureStatus,
+		arg.ID,
+	)
+	return err
+}
+
 const upsertStage = `-- name: UpsertStage :one
-INSERT INTO stages (id, manga, position, name)
-VALUES ($1, $2, $3, $4)
+INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_status)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (id) DO UPDATE
-    SET manga      = EXCLUDED.manga,
-        position   = EXCLUDED.position,
-        name       = EXCLUDED.name,
-        updated_at = now()
-RETURNING id, manga, position, name
+    SET manga          = EXCLUDED.manga,
+        position       = EXCLUDED.position,
+        name           = EXCLUDED.name,
+        picture        = EXCLUDED.picture,
+        picture_thumb  = EXCLUDED.picture_thumb,
+        picture_status = EXCLUDED.picture_status,
+        updated_at     = now()
+RETURNING id, manga, position, name, picture, picture_thumb, picture_status
 `
 
 type UpsertStageParams struct {
-	ID       pgtype.UUID
-	Manga    string
-	Position int32
-	Name     string
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
 }
 
 type UpsertStageRow struct {
-	ID       pgtype.UUID
-	Manga    string
-	Position int32
-	Name     string
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
 }
 
 func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (UpsertStageRow, error) {
@@ -149,6 +299,9 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		arg.Manga,
 		arg.Position,
 		arg.Name,
+		arg.Picture,
+		arg.PictureThumb,
+		arg.PictureStatus,
 	)
 	var i UpsertStageRow
 	err := row.Scan(
@@ -156,6 +309,30 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		&i.Manga,
 		&i.Position,
 		&i.Name,
+		&i.Picture,
+		&i.PictureThumb,
+		&i.PictureStatus,
 	)
 	return i, err
+}
+
+const upsertStageTranslation = `-- name: UpsertStageTranslation :exec
+INSERT INTO stage_translations (stage_id, locale, description)
+VALUES ($1, $2, $3)
+ON CONFLICT (stage_id, locale) DO UPDATE
+    SET description = EXCLUDED.description
+`
+
+type UpsertStageTranslationParams struct {
+	StageID     pgtype.UUID
+	Locale      string
+	Description string
+}
+
+// Upserts a single locale's description for a stage. All three locales are
+// mandatory for a Stage (unlike powers, where only en-GB is) - enforced by
+// the application layer's request validation, not here.
+func (q *Queries) UpsertStageTranslation(ctx context.Context, arg UpsertStageTranslationParams) error {
+	_, err := q.db.Exec(ctx, upsertStageTranslation, arg.StageID, arg.Locale, arg.Description)
+	return err
 }

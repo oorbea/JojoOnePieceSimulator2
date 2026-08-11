@@ -447,12 +447,21 @@ type PowerTranslation struct {
 }
 
 type Stage struct {
-	ID        pgtype.UUID
-	Manga     string
-	Position  int32
-	Name      string
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
+}
+
+type StageTranslation struct {
+	StageID     pgtype.UUID
+	Locale      string
+	Description string
 }
 
 type Stand struct {
