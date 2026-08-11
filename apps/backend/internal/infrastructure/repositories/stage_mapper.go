@@ -12,13 +12,17 @@ import (
 
 // stageRow is the minimal shape every stages.sql.go row type shares -
 // ListStages/ListStagesByManga/GetStageByID/UpsertStage all return the same
-// four columns under different generated row types, so this lets a single
+// columns under different generated row types, so this lets a single
 // mapper function serve all of them via a small per-caller adapter.
 type stageRow struct {
-	ID       pgtype.UUID
-	Manga    string
-	Position int32
-	Name     string
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	Description   string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
 }
 
 func toStage(r stageRow) (game.Stage, error) {
@@ -26,21 +30,35 @@ func toStage(r stageRow) (game.Stage, error) {
 	if err != nil {
 		return game.Stage{}, fmt.Errorf("stage %q: %w", r.Name, err)
 	}
-	return game.NewStage(r.ID.Bytes, manga, int(r.Position), r.Name)
+	status, err := enums.ParsePictureStatus(r.PictureStatus)
+	if err != nil {
+		return game.Stage{}, fmt.Errorf("stage %q: picture_status: %w", r.Name, err)
+	}
+	st, err := game.NewStage(r.ID.Bytes, manga, int(r.Position), r.Name, r.Description, r.Picture)
+	if err != nil {
+		return game.Stage{}, err
+	}
+	st.SetPictureRenditions(r.Picture, r.PictureThumb, status)
+	return st, nil
 }
 
 func fromListStagesRow(r db.ListStagesRow) stageRow {
-	return stageRow{ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name}
+	return stageRow{
+		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+	}
 }
 
 func fromListStagesByMangaRow(r db.ListStagesByMangaRow) stageRow {
-	return stageRow{ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name}
+	return stageRow{
+		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+	}
 }
 
 func fromGetStageByIDRow(r db.GetStageByIDRow) stageRow {
-	return stageRow{ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name}
-}
-
-func fromUpsertStageRow(r db.UpsertStageRow) stageRow {
-	return stageRow{ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name}
+	return stageRow{
+		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+	}
 }
