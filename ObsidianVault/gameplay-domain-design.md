@@ -95,8 +95,17 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
   `SquadVerdict`, `PowerTrait` — every one follows `StandStat`'s shape (`byte` + `iota` +
   `String()`/`IsValid()`/`ParseX()` + a sentinel `ErrInvalidX`).
 - New ports in `internal/domain/ports/`: `IStageCatalog`, `IGamePowerPool`, `IAssignmentWeights`,
-  `ITiebreaker`, `IGameHistory`, `IInventory` — all interfaces only, **zero adapters** in this
-  pass.
+  `ITiebreaker`, `IGameHistory`, `IInventory` (this pass) plus `IStageRepository` (2026-08-11, admin
+  CRUD counterpart to `IStageCatalog`) — all interfaces only when first added; every one but
+  `IInventory` now has a real adapter, see [[game-lobby-persistence]].
+- **2026-08-11**: `snapshot.go` added `Snapshot`/`Restore` — the seam a Redis-backed `IGameStore`
+  needed to round-trip a `*Game` out of process (see [[game-lobby-persistence]] for the full
+  rationale). `ballot.go` gained one new getter, `Votes() map[ParticipantID]OptionID`
+  (copy-returning) — the only other domain-level change that tanda required, since `HasVoted`/
+  `Count` alone can't reconstruct *which* option someone voted for. `GameResult` (`game_result.go`)
+  gained `Participants []ParticipantOutcome`, filled by both `IGameMode.Outcome` implementations
+  via a shared private `participantOutcomes(g *Game)` helper, so `IGameHistory` can record who
+  played, not just what happened.
 - Deleted: `internal/domain/entities/user/player.go` (the dead 9-`byte`-field `Player` struct).
   `Participant` + `Loadout` replace it; verified nothing else referenced it before deleting
   (`go build ./...` after deletion is the real proof).
@@ -117,13 +126,14 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
   **Stand name**. Fragile against renames — the single place to fix once `powers` gains a real
   persisted traits column (e.g. `power_traits` table/array), at which point `TraitsOf` becomes a
   lookup instead of a name match and nothing else in the game package changes.
-- No stage catalog content exists (no schema, no seed data, no admin CRUD) — `ports.IStageCatalog`
-  is the seam, deliberately left unimplemented per the owner's instruction not to build the catalog
-  content in this pass.
+- **Resolved 2026-08-11**: stage catalog content now has a schema, seed data, and admin CRUD (see
+  [[game-lobby-persistence]]) — `ports.IStageCatalog`/`IStageRepository` both have real adapters.
 - No player inventory (no schema, no unlock flow) — `ports.IInventory` is the seam;
-  `enums.Inventory` as an `AbilitySource` is rejected by `game.NewConfig` until it exists.
-- No game history persistence — `ports.IGameHistory` is the seam; finished/aborted games currently
-  only ever exist for as long as their (not-yet-built) Redis lobby TTL.
+  `enums.Inventory` as an `AbilitySource` is rejected by `game.NewConfig` until it exists. Still the
+  one game-feature port with no adapter after [[game-lobby-persistence]]/[[game-realtime-transport]].
+- **Resolved 2026-08-11**: `ports.IGameHistory` now has a Postgres-backed adapter (see
+  [[game-lobby-persistence]]) — finished/aborted games are recorded before being deleted from the
+  (Redis or in-memory) lobby store.
 - Bot vote heuristic (`DefaultLoadoutEvaluator`) is a first-pass linear scoring function (stand
   stats E..A→1..5, INFINITE→6, plus ability levels plus a rarity bonus) — reasonable enough to
   exercise `IGameMode`/`Game` in tests, not tuned for actual game balance.
