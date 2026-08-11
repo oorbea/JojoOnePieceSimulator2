@@ -828,7 +828,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Lists every Stage, or only manga's if the query param is set.",
+                "description": "Lists every Stage, or only manga's if the query param is set. Description resolved for the request's locale.",
                 "produces": [
                     "application/json"
                 ],
@@ -949,6 +949,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Description resolved for the request's locale.",
                 "produces": [
                     "application/json"
                 ],
@@ -1004,7 +1005,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Admin only. Keeps the original id.",
+                "description": "Admin only. Keeps the original id and picture.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1101,6 +1102,156 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/stages/{id}/picture": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Uploads the image to object storage and stores its key; the response's ` + "`" + `picture` + "`" + ` is a presigned URL.\nThe image is re-encoded to WebP by a background worker: the response is\n202 Accepted with ` + "`" + `pictureStatus` + "`" + ` set to PENDING and the previous\n` + "`" + `picture` + "`" + `/` + "`" + `pictureThumb` + "`" + ` URLs (or \"\" on a first upload); poll GET\n/stages/{id} until ` + "`" + `pictureStatus` + "`" + ` becomes READY or FAILED.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stages"
+                ],
+                "summary": "Set a stage's picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Stage id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Image file (WebP, AVIF, JPEG, PNG or GIF)",
+                        "name": "picture",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/stages/{id}/translations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Unlike GET /stages/{id}, always returns every\nlocale's description at once, for an edit form.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stages"
+                ],
+                "summary": "Get every locale's translation for a stage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Stage id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StageTranslationsResponse"
+                        }
                     },
                     "400": {
                         "description": "Bad Request",
@@ -2462,6 +2613,9 @@ const docTemplate = `{
         "dto.GameStageResponse": {
             "type": "object",
             "properties": {
+                "description": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2473,6 +2627,15 @@ const docTemplate = `{
                 },
                 "order": {
                     "type": "integer"
+                },
+                "picture": {
+                    "type": "string"
+                },
+                "pictureStatus": {
+                    "type": "string"
+                },
+                "pictureThumb": {
+                    "type": "string"
                 }
             }
         },
@@ -2602,12 +2765,21 @@ const docTemplate = `{
                 },
                 "order": {
                     "type": "integer"
+                },
+                "translations": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/dto.StageTranslationRequest"
+                    }
                 }
             }
         },
         "dto.StageResponse": {
             "type": "object",
             "properties": {
+                "description": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -2619,6 +2791,42 @@ const docTemplate = `{
                 },
                 "order": {
                     "type": "integer"
+                },
+                "picture": {
+                    "type": "string"
+                },
+                "pictureStatus": {
+                    "type": "string"
+                },
+                "pictureThumb": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.StageTranslationRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.StageTranslationResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.StageTranslationsResponse": {
+            "type": "object",
+            "properties": {
+                "translations": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/dto.StageTranslationResponse"
+                    }
                 }
             }
         },
