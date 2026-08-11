@@ -123,6 +123,7 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 	rows, err := r.queries.FilterDevilFruitRows(ctx, db.FilterDevilFruitRowsParams{
 		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
 		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:    searchPtr(filters.Search),
 		Locales:   fallbackStrings(locale),
 	})
 	if err != nil {

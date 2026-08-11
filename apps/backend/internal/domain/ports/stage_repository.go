@@ -7,6 +7,16 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 )
 
+// StageFilters mirrors StandFilters/DevilFruitFilters' shape - every field
+// is optional, Filter applies whichever are set.
+type StageFilters struct {
+	Manga *enums.Manga
+	// Search matches case-insensitively against name or the
+	// locale-resolved description. Unescaped - callers must escape any
+	// LIKE metacharacter (%, _, \) before this reaches SQL.
+	Search *string
+}
+
 // IStageRepository is the admin-facing CRUD counterpart to IStageCatalog -
 // one adapter satisfies both, the same relationship IStandRepository has
 // with the read side of the Stand catalogue.
@@ -14,11 +24,12 @@ type IStageRepository interface {
 	// List returns every Stage, ordered by manga then position then name,
 	// description resolved for locale.
 	List(ctx context.Context, locale enums.Locale) ([]game.Stage, error)
-	// ListByManga returns every Stage for manga, ordered by position,
-	// description resolved for locale - the admin-facing, locale-aware
-	// counterpart to IStageCatalog.Stages (which is gameplay-facing and
-	// always resolves at a fixed enums.EnGB - see that port's doc).
-	ListByManga(ctx context.Context, manga enums.Manga, locale enums.Locale) ([]game.Stage, error)
+	// Filter returns every Stage matching the (all-optional) filters,
+	// ordered by manga then position, description resolved for locale -
+	// the admin-facing, locale-aware counterpart to IStageCatalog.Stages
+	// (which is gameplay-facing and always resolves at a fixed
+	// enums.EnGB - see that port's doc).
+	Filter(ctx context.Context, filters StageFilters, locale enums.Locale) ([]game.Stage, error)
 	// FindByID returns the Stage matching id, description resolved for
 	// locale, or ErrStageNotFound.
 	FindByID(ctx context.Context, id game.StageID, locale enums.Locale) (game.Stage, error)

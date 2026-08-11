@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -10,6 +11,30 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres/db"
 )
+
+// likeEscaper escapes the three characters that are meaningful inside a
+// Postgres LIKE/ILIKE pattern (\, %, _), so a user-supplied search term is
+// always matched literally. Queries built from escapeLikePattern's output
+// must pair it with `ESCAPE '\'` in SQL.
+var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+
+// escapeLikePattern escapes s for safe embedding inside a `'%' || ... || '%'`
+// ILIKE pattern - without this, a search term containing % or _ would match
+// far more than the user typed (see FilterStandRows/FilterDevilFruitRows/
+// FilterStageRows).
+func escapeLikePattern(s string) string {
+	return likeEscaper.Replace(s)
+}
+
+// searchPtr escapes and re-wraps an optional search term for use as a
+// nullable ILIKE query parameter, leaving nil untouched.
+func searchPtr(s *string) *string {
+	if s == nil {
+		return nil
+	}
+	escaped := escapeLikePattern(*s)
+	return &escaped
+}
 
 // fallbackStrings renders enums.FallbackChain(locale) as the []string the
 // generated queries expect for their `locales` parameter (most specific

@@ -198,6 +198,7 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 		Precision:       enumStrPtr[enums.StandStat, db.StandStat](filters.Precision),
 		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
 		EvolvesFromName: filters.EvolvesFrom,
+		Search:          searchPtr(filters.Search),
 		Locales:         fallbackStrings(locale),
 	})
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 )
 
 // stageRow is the minimal shape every stages.sql.go row type shares -
-// ListStages/ListStagesByManga/GetStageByID/UpsertStage all return the same
+// ListStages/FilterStageRows/GetStageByID/UpsertStage all return the same
 // columns under different generated row types, so this lets a single
 // mapper function serve all of them via a small per-caller adapter.
 type stageRow struct {
@@ -49,7 +49,7 @@ func fromListStagesRow(r db.ListStagesRow) stageRow {
 	}
 }
 
-func fromListStagesByMangaRow(r db.ListStagesByMangaRow) stageRow {
+func fromFilterStageRow(r db.FilterStageRowsRow) stageRow {
 	return stageRow{
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
 		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,

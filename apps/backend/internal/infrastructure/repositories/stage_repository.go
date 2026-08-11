@@ -37,8 +37,9 @@ var _ ports.IStageRepository = (*StageRepository)(nil)
 // gameplay path ever reads it; a live match re-resolves per viewer at the
 // transport layer instead).
 func (r *StageRepository) Stages(ctx context.Context, manga enums.Manga) ([]game.Stage, error) {
-	rows, err := r.queries.ListStagesByManga(ctx, db.ListStagesByMangaParams{
-		Manga:   manga.String(),
+	dbManga := db.Manga(manga.String())
+	rows, err := r.queries.FilterStageRows(ctx, db.FilterStageRowsParams{
+		Manga:   &dbManga,
 		Locales: fallbackStrings(enums.EnGB),
 	})
 	if err != nil {
@@ -46,7 +47,7 @@ func (r *StageRepository) Stages(ctx context.Context, manga enums.Manga) ([]game
 	}
 	stages := make([]game.Stage, 0, len(rows))
 	for _, row := range rows {
-		st, err := toStage(fromListStagesByMangaRow(row))
+		st, err := toStage(fromFilterStageRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -72,19 +73,26 @@ func (r *StageRepository) List(ctx context.Context, locale enums.Locale) ([]game
 	return stages, nil
 }
 
-// ListByManga implements ports.IStageRepository - the locale-aware,
-// admin-facing counterpart to Stages (IStageCatalog).
-func (r *StageRepository) ListByManga(ctx context.Context, manga enums.Manga, locale enums.Locale) ([]game.Stage, error) {
-	rows, err := r.queries.ListStagesByManga(ctx, db.ListStagesByMangaParams{
-		Manga:   manga.String(),
+// Filter implements ports.IStageRepository - the locale-aware, admin-facing
+// counterpart to Stages (IStageCatalog), matching whichever of filters'
+// fields are set.
+func (r *StageRepository) Filter(ctx context.Context, filters ports.StageFilters, locale enums.Locale) ([]game.Stage, error) {
+	var dbManga *db.Manga
+	if filters.Manga != nil {
+		m := db.Manga(filters.Manga.String())
+		dbManga = &m
+	}
+	rows, err := r.queries.FilterStageRows(ctx, db.FilterStageRowsParams{
+		Manga:   dbManga,
+		Search:  searchPtr(filters.Search),
 		Locales: fallbackStrings(locale),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("listing stages for manga %s: %w", manga, err)
+		return nil, fmt.Errorf("filtering stages: %w", err)
 	}
 	stages := make([]game.Stage, 0, len(rows))
 	for _, row := range rows {
-		st, err := toStage(fromListStagesByMangaRow(row))
+		st, err := toStage(fromFilterStageRow(row))
 		if err != nil {
 			return nil, err
 		}
