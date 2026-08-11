@@ -98,6 +98,9 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
   `ITiebreaker`, `IGameHistory`, `IInventory` (this pass) plus `IStageRepository` (2026-08-11, admin
   CRUD counterpart to `IStageCatalog`) — all interfaces only when first added; every one but
   `IInventory` now has a real adapter, see [[game-lobby-persistence]].
+- **2026-08-11 (later same day)**: `Stage` gained `description`/`picture`/`pictureThumb`/
+  `pictureStatus` fields, same shape as `powers.Power` - see [[game-stage-content]]. `NewStage`
+  grew two trailing params; `SetPictureRenditions` is the new pointer-receiver mutator.
 - **2026-08-11**: `snapshot.go` added `Snapshot`/`Restore` — the seam a Redis-backed `IGameStore`
   needed to round-trip a `*Game` out of process (see [[game-lobby-persistence]] for the full
   rationale). `ballot.go` gained one new getter, `Votes() map[ParticipantID]OptionID`
