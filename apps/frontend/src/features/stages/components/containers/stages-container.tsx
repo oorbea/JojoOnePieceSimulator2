@@ -21,6 +21,7 @@ import {
   type StageInput,
   type StageResponse,
 } from '@/features/stages/types/stages.types'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import { usePicturePicker } from '@/shared/hooks/use-picture-picker'
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from '@/shared/i18n'
@@ -52,16 +53,25 @@ function toInput(values: StageFormValues): StageInput {
 export function StagesContainer() {
   const { t } = useTranslation()
   const [mangaFilter, setMangaFilter] = useState<string | null>(null)
-  // The manga filter goes to the server (?manga=, a distinct cache branch -
-  // see the plan's decision to lean on the backend's existing filter
-  // instead of adding pagination); free-text search stays client-side over
-  // that already-narrowed set.
+  const [search, setSearch] = useState('')
+  // Search is server-side (?q=, ILIKE over name + the locale-resolved
+  // description) - debounced so typing doesn't fire a request per
+  // keystroke. The manga filter goes to the server too (?manga=); both
+  // share one cache branch keyed by the combined filters object.
+  const debouncedSearch = useDebouncedValue(search)
+  const stageFilters = useMemo(() => {
+    const filters: { manga?: StageInput['manga']; q?: string } = {}
+    if (mangaFilter) filters.manga = mangaFilter as StageInput['manga']
+    if (debouncedSearch.trim()) filters.q = debouncedSearch.trim()
+    return filters
+  }, [mangaFilter, debouncedSearch])
+  const hasStageFilters = Object.keys(stageFilters).length > 0
   const {
     data: stages,
     isLoading,
     isError,
     refetch,
-  } = useStages(mangaFilter ? { manga: mangaFilter as StageInput['manga'] } : undefined)
+  } = useStages(hasStageFilters ? stageFilters : undefined)
   const createMutation = useCreateStage()
   const updateMutation = useUpdateStage()
   const deleteMutation = useDeleteStage()
@@ -79,7 +89,6 @@ export function StagesContainer() {
   const [pendingPicture, setPendingPicture] = useState<PickedPicture | null>(null)
   const [stageToDelete, setStageToDelete] = useState<StageResponse | null>(null)
   const [openingEditId, setOpeningEditId] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
 
   const {
     control,
@@ -91,22 +100,16 @@ export function StagesContainer() {
     defaultValues: createDefaultValues(),
   })
 
-  // Free-text search over whatever the server already returned (already
-  // narrowed by manga, if a filter is set) - grouped by manga and ordered
-  // by position for display.
+  // Search and manga are both server-side filters now (see stageFilters
+  // above) - only the display order (grouped by manga, ordered by
+  // position) is still client-side, since the backend's FilterStageRows
+  // already orders that way but a defensive sort costs nothing here.
   const visibleStages = useMemo(() => {
     if (!stages) return []
-    const needle = search.trim().toLowerCase()
-    const filtered = needle
-      ? stages.filter(
-          (s) =>
-            s.name.toLowerCase().includes(needle) || s.description.toLowerCase().includes(needle)
-        )
-      : stages
-    return [...filtered].sort((a, b) =>
+    return [...stages].sort((a, b) =>
       a.manga === b.manga ? a.order - b.order : a.manga.localeCompare(b.manga)
     )
-  }, [stages, search])
+  }, [stages])
 
   const mangaFilterOptions = useMemo(
     () => mangaSchema.options.map((v) => ({ value: v, label: t(`enums.manga.${v}`) })),
@@ -229,6 +232,7 @@ export function StagesContainer() {
       mangaFilter={mangaFilter}
       mangaFilterOptions={mangaFilterOptions}
       onMangaFilterChange={setMangaFilter}
+      hasActiveFilters={hasStageFilters}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,
