@@ -12,6 +12,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
@@ -26,11 +27,13 @@ type GameWSConfig struct {
 	// AllowedOrigins mirrors CORSConfig.AllowedOrigins - reused to build the
 	// WebSocket upgrade's origin allowlist (see originPatterns).
 	AllowedOrigins []string
-	// ResolveStandPicture/ResolveDevilFruitPicture resolve a loadout's
-	// picture keys into URLs - same functions StandEndpoints/
-	// DevilFruitEndpoints already use (StandService.PictureURL etc).
+	// ResolveStandPicture/ResolveDevilFruitPicture/ResolveStagePicture
+	// resolve a loadout's/stage's picture keys into URLs - same functions
+	// StandEndpoints/DevilFruitEndpoints/StageEndpoints already use
+	// (StandService.PictureURL etc).
 	ResolveStandPicture      dto.PictureURLResolver
 	ResolveDevilFruitPicture dto.PictureURLResolver
+	ResolveStagePicture      dto.PictureURLResolver
 }
 
 // GameEndpoints wires the game feature's HTTP surface (creation, discovery,
@@ -40,6 +43,8 @@ type GameWSConfig struct {
 type GameEndpoints struct {
 	svc    *services.GameService
 	hub    *services.GameEventHub
+	stages ports.IStageRepository
+	users  ports.IUserRepository
 	issuer ports.ITokenIssuer
 	// ctx is the application's root context (cancelled on SIGINT/SIGTERM),
 	// watched by every open WebSocket so it can exit promptly on shutdown -
@@ -50,9 +55,49 @@ type GameEndpoints struct {
 	conns connRegistry
 }
 
-// NewGameEndpoints builds a GameEndpoints.
-func NewGameEndpoints(svc *services.GameService, hub *services.GameEventHub, issuer ports.ITokenIssuer, ctx context.Context, cfg GameWSConfig) *GameEndpoints {
-	return &GameEndpoints{svc: svc, hub: hub, issuer: issuer, ctx: ctx, cfg: cfg, conns: newConnRegistry()}
+// NewGameEndpoints builds a GameEndpoints. stages/users back the per-viewer
+// Stage description resolution (see stageTextResolver): a live Game is one
+// instance shared by every participant, so a Stage frozen into a Round
+// can't carry an already-resolved description for each viewer - each
+// response instead looks up the viewer's own configured user.Language() and
+// re-resolves the description at serialize time.
+func NewGameEndpoints(svc *services.GameService, hub *services.GameEventHub, stages ports.IStageRepository, users ports.IUserRepository, issuer ports.ITokenIssuer, ctx context.Context, cfg GameWSConfig) *GameEndpoints {
+	return &GameEndpoints{svc: svc, hub: hub, stages: stages, users: users, issuer: issuer, ctx: ctx, cfg: cfg, conns: newConnRegistry()}
+}
+
+// viewerLocale resolves self's preferred locale from their user record,
+// defaulting to enums.EnGB for a bot (no UserID) or if the lookup fails -
+// this must never block rendering a game state.
+func (e *GameEndpoints) viewerLocale(ctx context.Context, g *game.Game, self game.ParticipantID) enums.Locale {
+	p, ok := g.Participant(self)
+	if !ok || p.UserID() == nil {
+		return enums.EnGB
+	}
+	u, err := e.users.FindByID(ctx, *p.UserID())
+	if err != nil {
+		return enums.EnGB
+	}
+	return u.Language()
+}
+
+// stageTextResolver builds a dto.StageTextResolver bound to locale - each
+// call resolves the Stage's translations and picks the first available
+// locale in enums.FallbackChain(locale) (defense in depth: writes always
+// populate all three, per the owner's decision, so the fallback should
+// never actually trigger in practice).
+func (e *GameEndpoints) stageTextResolver(locale enums.Locale) dto.StageTextResolver {
+	return func(ctx context.Context, id game.StageID) (string, error) {
+		translations, err := e.stages.Translations(ctx, id)
+		if err != nil {
+			return "", err
+		}
+		for _, l := range enums.FallbackChain(locale) {
+			if description, ok := translations[l]; ok {
+				return description, nil
+			}
+		}
+		return "", nil
+	}
 }
 
 // Routes returns the /games sub-router. Unlike every other Routes method in
@@ -95,7 +140,10 @@ func (e *GameEndpoints) respondState(w http.ResponseWriter, r *http.Request, g *
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewGameStateResponse(r.Context(), g, code, self, e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture)
+	locale := e.viewerLocale(r.Context(), g, self)
+	resp, err := dto.NewGameStateResponse(r.Context(), g, code, self,
+		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture,
+		e.stageTextResolver(locale))
 	if err != nil {
 		return err
 	}

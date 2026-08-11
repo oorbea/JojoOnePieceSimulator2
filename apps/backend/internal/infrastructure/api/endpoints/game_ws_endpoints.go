@@ -398,7 +398,10 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 	if err != nil {
 		return
 	}
-	resp, err := dto.NewGameStateResponse(ctx, g, code, self, e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture)
+	locale := e.viewerLocale(ctx, g, self)
+	resp, err := dto.NewGameStateResponse(ctx, g, code, self,
+		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture,
+		e.stageTextResolver(locale))
 	if err != nil {
 		log.Printf("game ws: building state for %s: %v", g.ID(), err)
 		return
