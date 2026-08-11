@@ -8,18 +8,28 @@ import (
 )
 
 // Stage is a single unit of round content - a JoJo part or a One Piece
-// saga. It is deliberately opaque beyond Manga and Order: the actual
-// catalog (names, descriptions, admin CRUD) is served by
-// ports.IStageCatalog and lives outside the domain layer.
+// saga. Name/Manga/Order are what game.Interleave/IGameMode actually use;
+// Description/Picture are display metadata, resolved the same way
+// powers.Power resolves its own (a single already-resolved value per
+// fetch - see ports.IStageRepository/IStageCatalog and, for how a live
+// match re-resolves it per viewer's own configured language instead of
+// whatever was baked in at round-assignment time,
+// api/dto.NewGameStateResponse).
 type Stage struct {
-	id    StageID
-	manga enums.Manga
-	order int
-	name  string
+	id            StageID
+	manga         enums.Manga
+	order         int
+	name          string
+	description   string
+	picture       string
+	pictureThumb  string
+	pictureStatus enums.PictureStatus
 }
 
-// NewStage validates and builds a Stage.
-func NewStage(id StageID, manga enums.Manga, order int, name string) (Stage, error) {
+// NewStage validates and builds a Stage. picture is the only picture field
+// accepted here - thumb/status start empty/NONE, same convention as
+// powers.NewPower; set them together via SetPictureRenditions.
+func NewStage(id StageID, manga enums.Manga, order int, name string, description string, picture string) (Stage, error) {
 	if id.IsNil() {
 		return Stage{}, errors.New("id is required")
 	}
@@ -32,13 +42,32 @@ func NewStage(id StageID, manga enums.Manga, order int, name string) (Stage, err
 	if name == "" {
 		return Stage{}, errors.New("name is required")
 	}
-	return Stage{id: id, manga: manga, order: order, name: name}, nil
+	if description == "" {
+		return Stage{}, errors.New("description is required")
+	}
+	return Stage{id: id, manga: manga, order: order, name: name, description: description, picture: picture}, nil
 }
 
-func (s Stage) ID() StageID        { return s.id }
-func (s Stage) Manga() enums.Manga { return s.manga }
-func (s Stage) Order() int         { return s.order }
-func (s Stage) Name() string       { return s.name }
+func (s Stage) ID() StageID          { return s.id }
+func (s Stage) Manga() enums.Manga   { return s.manga }
+func (s Stage) Order() int           { return s.order }
+func (s Stage) Name() string         { return s.name }
+func (s Stage) Description() string  { return s.description }
+func (s Stage) Picture() string      { return s.picture }
+func (s Stage) PictureThumb() string { return s.pictureThumb }
+
+// PictureStatus reports where this Stage's picture is in the async
+// compression pipeline.
+func (s Stage) PictureStatus() enums.PictureStatus { return s.pictureStatus }
+
+// SetPictureRenditions replaces the stored main and thumbnail picture keys
+// together with the pipeline status that produced them, so the three
+// always change as one unit - same pattern as powers.Power.SetPictureRenditions.
+func (s *Stage) SetPictureRenditions(main, thumb string, status enums.PictureStatus) {
+	s.picture = main
+	s.pictureThumb = thumb
+	s.pictureStatus = status
+}
 
 // Interleave merges per-manga Stage lists into Gauntlet round order: the
 // first Stage of each manga (in enums.Mangas() order), then the second of

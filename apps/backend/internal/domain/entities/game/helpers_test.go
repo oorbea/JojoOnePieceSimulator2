@@ -83,7 +83,7 @@ func mustTeam(t *testing.T, id byte, name string) *game.Team {
 
 func mustStage(t *testing.T, id byte, manga enums.Manga, order int, name string) game.Stage {
 	t.Helper()
-	s, err := game.NewStage(game.StageID{id}, manga, order, name)
+	s, err := game.NewStage(game.StageID{id}, manga, order, name, "a test stage", "")
 	if err != nil {
 		t.Fatalf("NewStage: %v", err)
 	}

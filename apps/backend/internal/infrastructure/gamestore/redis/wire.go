@@ -75,10 +75,14 @@ type wireTeam struct {
 }
 
 type wireStage struct {
-	ID    [16]byte `json:"id"`
-	Manga string   `json:"manga"`
-	Order int      `json:"order"`
-	Name  string   `json:"name"`
+	ID            [16]byte `json:"id"`
+	Manga         string   `json:"manga"`
+	Order         int      `json:"order"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	Picture       string   `json:"picture"`
+	PictureThumb  string   `json:"pictureThumb"`
+	PictureStatus string   `json:"pictureStatus"`
 }
 
 type wireRound struct {
@@ -183,7 +187,11 @@ func toWire(s game.Snapshot) wireGame {
 }
 
 func toWireStage(st game.StageSnapshot) wireStage {
-	return wireStage{ID: st.ID, Manga: st.Manga, Order: st.Order, Name: st.Name}
+	return wireStage{
+		ID: st.ID, Manga: st.Manga, Order: st.Order, Name: st.Name,
+		Description: st.Description, Picture: st.Picture, PictureThumb: st.PictureThumb,
+		PictureStatus: st.PictureStatus,
+	}
 }
 
 func toWireBallot(b game.BallotSnapshot) wireBallot {
@@ -289,7 +297,11 @@ func fromWire(w wireGame) game.Snapshot {
 }
 
 func fromWireStage(w wireStage) game.StageSnapshot {
-	return game.StageSnapshot{ID: w.ID, Manga: w.Manga, Order: w.Order, Name: w.Name}
+	return game.StageSnapshot{
+		ID: w.ID, Manga: w.Manga, Order: w.Order, Name: w.Name,
+		Description: w.Description, Picture: w.Picture, PictureThumb: w.PictureThumb,
+		PictureStatus: w.PictureStatus,
+	}
 }
 
 func fromWireBallot(w wireBallot) game.BallotSnapshot {

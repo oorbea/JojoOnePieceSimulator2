@@ -314,7 +314,7 @@ func mustStage(t *testing.T, manga enums.Manga, order int, name string) game.Sta
 	stageIDCounter++
 	var id game.StageID
 	id[15] = stageIDCounter
-	s, err := game.NewStage(id, manga, order, name)
+	s, err := game.NewStage(id, manga, order, name, "a test stage", "")
 	if err != nil {
 		t.Fatalf("mustStage: %v", err)
 	}

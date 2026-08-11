@@ -67,7 +67,7 @@ func newFreshGame(t *testing.T, seed byte) (*game.Game, string) {
 	if err != nil {
 		t.Fatalf("NewTeam: %v", err)
 	}
-	stage, err := game.NewStage(game.StageID{seed, 20}, enums.Jojo, 0, "Phantom Blood")
+	stage, err := game.NewStage(game.StageID{seed, 20}, enums.Jojo, 0, "Phantom Blood", "a test stage", "")
 	if err != nil {
 		t.Fatalf("NewStage: %v", err)
 	}
