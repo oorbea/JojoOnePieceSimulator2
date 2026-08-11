@@ -60,14 +60,9 @@ func NewGame(id GameID, cfg Config, host *Participant, teams []*Team, stages []S
 		return nil, ErrNoStagesAvailable
 	}
 
-	var mode IGameMode
-	switch cfg.Mode() {
-	case enums.Gauntlet:
-		mode = GauntletMode{}
-	case enums.Versus:
-		mode = VersusMode{}
-	default:
-		return nil, enums.ErrInvalidGameModeKind
+	mode, err := modeFor(cfg.Mode())
+	if err != nil {
+		return nil, err
 	}
 
 	g := &Game{
@@ -85,6 +80,21 @@ func NewGame(id GameID, cfg Config, host *Participant, teams []*Team, stages []S
 		return nil, err
 	}
 	return g, nil
+}
+
+// modeFor resolves the IGameMode strategy for a GameModeKind. Both
+// implementations are stateless (empty structs deriving everything from the
+// *Game passed to them), so the mode itself is never serialized - Restore
+// calls this too, instead of persisting anything mode-related.
+func modeFor(k enums.GameModeKind) (IGameMode, error) {
+	switch k {
+	case enums.Gauntlet:
+		return GauntletMode{}, nil
+	case enums.Versus:
+		return VersusMode{}, nil
+	default:
+		return nil, enums.ErrInvalidGameModeKind
+	}
 }
 
 // --- Getters ---

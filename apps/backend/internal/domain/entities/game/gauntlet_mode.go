@@ -50,6 +50,7 @@ func (GauntletMode) Outcome(g *Game) (GameResult, error) {
 		Mode:         enums.Gauntlet,
 		RoundsPlayed: len(g.rounds),
 		Aborted:      g.state == enums.Aborted,
+		Participants: participantOutcomes(g),
 	}
 	if len(g.rounds) == 0 {
 		return result, nil

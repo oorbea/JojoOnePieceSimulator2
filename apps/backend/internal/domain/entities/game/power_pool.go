@@ -10,6 +10,12 @@ import (
 // twice within a game (Gauntlet) or a round (Versus). Each team must get
 // its own AvailablePowers built from the same underlying catalog - the
 // rival team in Versus may then draw the same powers.
+//
+// AvailablePowers is never a field of Game and is never persisted: the
+// application layer (GameService.beginRound) builds a fresh pool from
+// ports.IGamePowerPool on every loadout assignment and discards it once
+// AssignLoadouts returns. Only the drawn Loadout survives - see
+// Snapshot/Restore.
 type AvailablePowers struct {
 	stands      []*powers.Stand
 	devilFruits []*powers.DevilFruit

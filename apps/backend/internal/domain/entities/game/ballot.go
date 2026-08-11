@@ -61,6 +61,20 @@ func (b *Ballot) Count() int {
 	return len(b.votes)
 }
 
+// Votes returns a copy of every vote cast so far, keyed by participant. It
+// exists for two callers that both need the actual choice rather than just
+// HasVoted/Count: Snapshot (a mid-round Ballot cannot otherwise be
+// serialized) and the application/transport layer revealing votes once a
+// round has resolved (see the "votes hidden until close" transport rule -
+// nothing in the domain hides them, the transport chooses when to read this).
+func (b *Ballot) Votes() map[ParticipantID]OptionID {
+	out := make(map[ParticipantID]OptionID, len(b.votes))
+	for p, o := range b.votes {
+		out[p] = o
+	}
+	return out
+}
+
 // Tally applies plurality over emitted votes only - a participant who
 // never votes (disconnected, or too slow) simply does not count towards
 // the total. Zero emitted votes, or two-or-more options tied for the
