@@ -32,7 +32,10 @@ export function useStages(filters?: StageFilters) {
               return false
             }
             if (pollAttempts.current >= MAX_POLL_ATTEMPTS) return false
-            const interval = Math.min(BASE_POLL_INTERVAL_MS * 2 ** pollAttempts.current, MAX_POLL_INTERVAL_MS)
+            const interval = Math.min(
+              BASE_POLL_INTERVAL_MS * 2 ** pollAttempts.current,
+              MAX_POLL_INTERVAL_MS
+            )
             pollAttempts.current += 1
             return interval
           },

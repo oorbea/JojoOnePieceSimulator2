@@ -1,6 +1,9 @@
 import { z } from 'zod'
 
-import { stageTranslationsFormSchema, type StageTranslationFormValues } from '@/shared/lib/stage-translations'
+import {
+  stageTranslationsFormSchema,
+  type StageTranslationFormValues,
+} from '@/shared/lib/stage-translations'
 import { mangaSchema, type Locale, type Manga, type PictureStatus } from '@/shared/lib/zod'
 
 // Mirrors the backend's dto.StageResponse (apps/backend .../dto/stage_response.go).
@@ -27,7 +30,7 @@ export type StageInput = {
 
 export const stageFormSchema = z.object({
   manga: mangaSchema,
-  order: z.coerce.number().int().min(0, 'validation.orderNonNegative'),
+  order: z.number().int().min(0, 'validation.orderNonNegative'),
   name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
   translations: stageTranslationsFormSchema,
 })

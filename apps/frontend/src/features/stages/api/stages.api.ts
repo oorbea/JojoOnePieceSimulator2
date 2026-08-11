@@ -21,9 +21,9 @@ export async function getStage(id: string): Promise<StageResponse> {
 export async function getStageTranslations(
   id: string
 ): Promise<Partial<Record<Locale, StageTranslationFormValues>>> {
-  const response = await apiClient.get<{ translations: Partial<Record<Locale, StageTranslationFormValues>> }>(
-    `/stages/${id}/translations`
-  )
+  const response = await apiClient.get<{
+    translations: Partial<Record<Locale, StageTranslationFormValues>>
+  }>(`/stages/${id}/translations`)
   return response.data.translations
 }
 
