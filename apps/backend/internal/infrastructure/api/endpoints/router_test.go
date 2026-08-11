@@ -17,7 +17,7 @@ func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 	handler := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, fakeTokenIssuer{}, corsCfg, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 	return httptest.NewServer(handler)
