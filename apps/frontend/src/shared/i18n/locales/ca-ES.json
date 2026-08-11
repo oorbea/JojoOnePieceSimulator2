@@ -194,6 +194,10 @@
     "role": {
       "REGULAR": "Usuari",
       "ADMIN": "Admin"
+    },
+    "manga": {
+      "JOJO": "Les bizarres aventures de JoJo",
+      "ONE_PIECE": "One Piece"
     }
   },
   "errors": {
@@ -250,6 +254,12 @@
     "INVALID_MANGA": "Aquest manga no és vàlid.",
     "INVALID_GAME_STATE": "Aquest estat de partida no és vàlid.",
     "INVENTORY_NOT_SUPPORTED": "Les habilitats basades en inventari encara no són compatibles.",
+    "STAGE_NOT_FOUND": "No s'ha trobat aquesta etapa.",
+    "STAGE_ALREADY_EXISTS": "Ja existeix una etapa amb aquest nom per a aquest manga.",
+    "EMPTY_TEAM_NAME": "Un equip necessita un nom.",
+    "INVALID_PARTICIPANT_KIND": "Aquest tipus de participant no és vàlid.",
+    "INVALID_SQUAD_VERDICT": "Aquest veredicte d'esquadra no és vàlid.",
+    "UNKNOWN_COMMAND": "Aquesta acció no està suportada.",
     "INTERNAL": "Alguna cosa ha anat malament per la nostra part."
   }
 }
