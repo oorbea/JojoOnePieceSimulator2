@@ -39,4 +39,5 @@ export type StageFormValues = z.infer<typeof stageFormSchema>
 
 export type StageFilters = {
   manga?: Manga
+  q?: string
 }

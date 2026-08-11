@@ -57,6 +57,7 @@ type Props = {
   mangaFilter: string | null
   mangaFilterOptions: GlassSelectOption[]
   onMangaFilterChange: (manga: string | null) => void
+  hasActiveFilters: boolean
   form: FormState
   deleteConfirm: ConfirmState
 }
@@ -80,6 +81,7 @@ export function StagesScreen({
   mangaFilter,
   mangaFilterOptions,
   onMangaFilterChange,
+  hasActiveFilters,
   form,
   deleteConfirm,
 }: Props) {
@@ -144,16 +146,18 @@ export function StagesScreen({
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
             <Map size={28} color="$wiiBlue" />
             <GlowText level="label" align="center">
-              {t('stages.emptyTitle')}
+              {t(hasActiveFilters ? 'stages.emptyFilteredTitle' : 'stages.emptyTitle')}
             </GlowText>
-            <GlossButton
-              tone="green"
-              btnSize="sm"
-              onPress={onCreateNew}
-              accessibilityLabel={t('stages.newStage')}
-            >
-              {t('stages.newStage')}
-            </GlossButton>
+            {hasActiveFilters ? null : (
+              <GlossButton
+                tone="green"
+                btnSize="sm"
+                onPress={onCreateNew}
+                accessibilityLabel={t('stages.newStage')}
+              >
+                {t('stages.newStage')}
+              </GlossButton>
+            )}
           </GlassPanel>
         ) : (
           <XStack flexWrap="wrap" gap="$4" justify="center">
