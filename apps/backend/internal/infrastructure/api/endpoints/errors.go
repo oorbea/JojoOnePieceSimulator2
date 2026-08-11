@@ -22,12 +22,12 @@ func handleError(w http.ResponseWriter, err error) {
 	var validationErr *dto.ValidationError
 	switch {
 	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound), errors.Is(err, ports.ErrDevilFruitNotFound),
-		errors.Is(err, ports.ErrGameNotFound):
+		errors.Is(err, ports.ErrGameNotFound), errors.Is(err, ports.ErrStageNotFound):
 		writeError(w, http.StatusNotFound, code, err.Error())
 	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists),
 		errors.Is(err, services.ErrLastAdmin),
 		errors.Is(err, game.ErrGameFull), errors.Is(err, game.ErrTeamFull), errors.Is(err, game.ErrDuplicateParticipant),
-		errors.Is(err, services.ErrAlreadyInGame), errors.Is(err, ports.ErrGameCodeTaken):
+		errors.Is(err, services.ErrAlreadyInGame), errors.Is(err, ports.ErrGameCodeTaken), errors.Is(err, ports.ErrStageAlreadyExists):
 		writeError(w, http.StatusConflict, code, err.Error())
 	case errors.As(err, &validationErr):
 		writeError(w, http.StatusBadRequest, code, "validation failed", validationErr.Errors...)
@@ -61,7 +61,11 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, enums.ErrInvalidGameModeKind),
 		errors.Is(err, enums.ErrInvalidAbilitySource),
 		errors.Is(err, enums.ErrInvalidManga),
-		errors.Is(err, enums.ErrInvalidGameState):
+		errors.Is(err, enums.ErrInvalidGameState),
+		errors.Is(err, game.ErrEmptyTeamName),
+		errors.Is(err, enums.ErrInvalidParticipantKind),
+		errors.Is(err, enums.ErrInvalidSquadVerdict),
+		errors.Is(err, errUnknownCommand):
 		writeError(w, http.StatusBadRequest, code, err.Error())
 	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken):
 		writeError(w, http.StatusUnauthorized, code, "unauthenticated")
