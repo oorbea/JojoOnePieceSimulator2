@@ -97,6 +97,10 @@ error path is still visible on the next `Get`. The Redis store returns a fresh o
 that same partial mutation is discarded (arguably more correct/transactional, but a real behaviour
 difference between the two adapters).
 
+**2026-08-11 (later same day)**: the Stage catalog gained a translated `description` and a
+`picture` (same pipeline as Stand/DevilFruit/user avatars) - see [[game-stage-content]] for that
+follow-up, which also touches `ports.IStageRepository`'s signature described below.
+
 ## Stage catalog (`db/migrations/00008_stages.sql`, `repositories.StageRepository`)
 
 Replaces the old `internal/infrastructure/game/static_stage_catalog.go` stub (now deleted). New
@@ -154,4 +158,4 @@ was missing and every Redis-gated unit test was silently skipping even under tha
   Redis pub/sub sibling for `GameEventHub` — see [[ADR]].
 
 Related: [[gameplay-application-layer]], [[gameplay-domain-design]], [[game-realtime-transport]],
-[[ADR]], [[backend-contract]].
+[[game-stage-content]], [[ADR]], [[backend-contract]].
