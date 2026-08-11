@@ -28,7 +28,7 @@ func buildTestGame(t *testing.T) *game.Game {
 	if err != nil {
 		t.Fatalf("NewTeam: %v", err)
 	}
-	stage, err := game.NewStage(game.StageID{1}, enums.Jojo, 0, "Phantom Blood")
+	stage, err := game.NewStage(game.StageID{1}, enums.Jojo, 0, "Phantom Blood", "a test stage", "")
 	if err != nil {
 		t.Fatalf("NewStage: %v", err)
 	}

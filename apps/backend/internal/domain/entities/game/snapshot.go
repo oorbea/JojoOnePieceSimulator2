@@ -62,10 +62,14 @@ type TeamSnapshot struct {
 
 // StageSnapshot mirrors Stage.
 type StageSnapshot struct {
-	ID    StageID
-	Manga string
-	Order int
-	Name  string
+	ID            StageID
+	Manga         string
+	Order         int
+	Name          string
+	Description   string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
 }
 
 // RoundSnapshot mirrors Round.
@@ -182,7 +186,11 @@ func (g *Game) Snapshot() Snapshot {
 }
 
 func snapshotStage(st Stage) StageSnapshot {
-	return StageSnapshot{ID: st.id, Manga: st.manga.String(), Order: st.order, Name: st.name}
+	return StageSnapshot{
+		ID: st.id, Manga: st.manga.String(), Order: st.order, Name: st.name,
+		Description: st.description, Picture: st.picture, PictureThumb: st.pictureThumb,
+		PictureStatus: st.pictureStatus.String(),
+	}
 }
 
 func snapshotBallot(b *Ballot) BallotSnapshot {
@@ -354,7 +362,16 @@ func restoreStage(ss StageSnapshot) (Stage, error) {
 	if err != nil {
 		return Stage{}, err
 	}
-	return NewStage(ss.ID, manga, ss.Order, ss.Name)
+	st, err := NewStage(ss.ID, manga, ss.Order, ss.Name, ss.Description, ss.Picture)
+	if err != nil {
+		return Stage{}, err
+	}
+	status, err := enums.ParsePictureStatus(ss.PictureStatus)
+	if err != nil {
+		return Stage{}, err
+	}
+	st.SetPictureRenditions(ss.Picture, ss.PictureThumb, status)
+	return st, nil
 }
 
 // restoreBallot rebuilds a Ballot without going through Cast's validation
