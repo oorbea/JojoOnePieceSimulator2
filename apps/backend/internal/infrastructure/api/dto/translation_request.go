@@ -49,3 +49,40 @@ func validateTranslations(m map[string]TranslationRequest) (ports.PowerTranslati
 
 	return out, errs
 }
+
+// StageTranslationRequest is one locale's content in a StageRequest's
+// "translations" map - just a description, unlike TranslationRequest, since
+// a Stage has no skills.
+type StageTranslationRequest struct {
+	Description string `json:"description"`
+}
+
+// validateStageTranslations parses and validates a StageRequest's
+// "translations" map: every key must be a supported locale, and - per the
+// owner's decision, unlike Power translations where only en-GB is mandatory -
+// every one of enums.Locales() must be present with a non-empty description.
+func validateStageTranslations(m map[string]StageTranslationRequest) (ports.StageTranslations, []string) {
+	var errs []string
+	out := make(ports.StageTranslations, len(m))
+
+	for key, t := range m {
+		locale, err := enums.ParseLocale(key)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("translations: unsupported locale %q", key))
+			continue
+		}
+		if t.Description == "" {
+			errs = append(errs, fmt.Sprintf("translations.%s.description is required", key))
+			continue
+		}
+		out[locale] = t.Description
+	}
+
+	for _, l := range enums.Locales() {
+		if _, ok := out[l]; !ok {
+			errs = append(errs, fmt.Sprintf("translations.%s is required", l))
+		}
+	}
+
+	return out, errs
+}
