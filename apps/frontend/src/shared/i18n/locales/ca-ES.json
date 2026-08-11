@@ -52,7 +52,8 @@
     "title": "Panell d'administració",
     "pickChannel": "Tria un canal per gestionar",
     "stands": "Stands",
-    "devilFruits": "Fruites del Diable"
+    "devilFruits": "Fruites del Diable",
+    "stages": "Etapes"
   },
   "profile": {
     "avatarProcessing": "Processant la teva nova foto…",
@@ -127,6 +128,28 @@
     "deleteConfirmButton": "Elimina la Fruita del Diable",
     "deleteConfirmMessage": "\"{{name}}\" s'eliminarà de manera permanent. No es pot desfer."
   },
+  "stages": {
+    "title": "Etapes",
+    "newStage": "Nova Etapa",
+    "emptyTitle": "Cap Etapa coincideix. Prova una altra cerca o filtre.",
+    "errorTitle": "No s'han pogut carregar les Etapes.",
+    "retry": "Torna-ho a provar",
+    "editTitle": "Edita l'Etapa",
+    "changePicture": "Canvia la foto de l'Etapa",
+    "name": "Nom",
+    "manga": "Manga",
+    "order": "Ordre",
+    "orderBadge": "#{{order}}",
+    "description": "Descripció",
+    "searchPlaceholder": "Cerca per nom o descripció…",
+    "filterManga": "Filtra per manga",
+    "editA11y": "Edita {{name}}",
+    "deleteA11y": "Elimina {{name}}",
+    "saveA11y": "Desa l'Etapa",
+    "deleteConfirmTitle": "Vols eliminar l'Etapa?",
+    "deleteConfirmButton": "Elimina l'Etapa",
+    "deleteConfirmMessage": "\"{{name}}\" s'eliminarà de manera permanent. No es pot desfer."
+  },
   "locale": {
     "required": "obligatori",
     "hasError": "té un error"
@@ -143,6 +166,7 @@
     "descriptionTooLong": "La descripció és massa llarga",
     "skillsRequired": "Cal com a mínim una habilitat",
     "translationIncomplete": "Omple la descripció i les habilitats per a aquest idioma, o deixa-ho en blanc",
+    "orderNonNegative": "L'ordre ha de ser zero o més",
     "usernameMinLength": "El nom d'usuari ha de tenir com a mínim 3 caràcters",
     "usernameMaxLength": "El nom d'usuari ha de tenir com a màxim 32 caràcters",
     "usernameFormat": "Només lletres minúscules, números i guions baixos"
@@ -161,7 +185,12 @@
     "usernameUpdated": "Nom d'usuari actualitzat",
     "avatarUploading": "Pujant la teva foto. Això triga una mica.",
     "avatarRemoved": "Foto de perfil eliminada",
-    "accountDeleted": "Compte eliminat"
+    "accountDeleted": "Compte eliminat",
+    "stageCreated": "Etapa creada",
+    "stageUpdated": "Etapa actualitzada",
+    "stageDeleted": "Etapa eliminada",
+    "stagePictureUploading": "Pujant la foto. Això triga una mica.",
+    "stagePictureFailed": "No s'ha pogut processar la foto de l'Etapa. Torna-ho a provar."
   },
   "notFound": {
     "title": "Aquesta pantalla no existeix.",

@@ -52,7 +52,8 @@
     "title": "Panel de administración",
     "pickChannel": "Elige un canal para gestionar",
     "stands": "Stands",
-    "devilFruits": "Frutas del Diablo"
+    "devilFruits": "Frutas del Diablo",
+    "stages": "Etapas"
   },
   "profile": {
     "avatarProcessing": "Procesando tu nueva foto…",
@@ -127,6 +128,28 @@
     "deleteConfirmButton": "Eliminar Fruta del Diablo",
     "deleteConfirmMessage": "\"{{name}}\" se eliminará de forma permanente. No se puede deshacer."
   },
+  "stages": {
+    "title": "Etapas",
+    "newStage": "Nueva Etapa",
+    "emptyTitle": "Ninguna Etapa coincide. Prueba otra búsqueda o filtro.",
+    "errorTitle": "No se han podido cargar las Etapas.",
+    "retry": "Reintentar",
+    "editTitle": "Editar Etapa",
+    "changePicture": "Cambiar foto de la Etapa",
+    "name": "Nombre",
+    "manga": "Manga",
+    "order": "Orden",
+    "orderBadge": "#{{order}}",
+    "description": "Descripción",
+    "searchPlaceholder": "Busca por nombre o descripción…",
+    "filterManga": "Filtrar por manga",
+    "editA11y": "Editar {{name}}",
+    "deleteA11y": "Eliminar {{name}}",
+    "saveA11y": "Guardar Etapa",
+    "deleteConfirmTitle": "¿Eliminar Etapa?",
+    "deleteConfirmButton": "Eliminar Etapa",
+    "deleteConfirmMessage": "\"{{name}}\" se eliminará de forma permanente. No se puede deshacer."
+  },
   "locale": {
     "required": "obligatorio",
     "hasError": "tiene un error"
@@ -143,6 +166,7 @@
     "descriptionTooLong": "La descripción es demasiado larga",
     "skillsRequired": "Se necesita al menos una habilidad",
     "translationIncomplete": "Rellena la descripción y las habilidades para este idioma, o déjalo en blanco",
+    "orderNonNegative": "El orden debe ser cero o mayor",
     "usernameMinLength": "El nombre de usuario debe tener al menos 3 caracteres",
     "usernameMaxLength": "El nombre de usuario debe tener como máximo 32 caracteres",
     "usernameFormat": "Solo letras minúsculas, números y guiones bajos"
@@ -161,7 +185,12 @@
     "usernameUpdated": "Nombre de usuario actualizado",
     "avatarUploading": "Subiendo tu foto. Esto tarda un momento.",
     "avatarRemoved": "Foto de perfil eliminada",
-    "accountDeleted": "Cuenta eliminada"
+    "accountDeleted": "Cuenta eliminada",
+    "stageCreated": "Etapa creada",
+    "stageUpdated": "Etapa actualizada",
+    "stageDeleted": "Etapa eliminada",
+    "stagePictureUploading": "Subiendo la foto. Esto tarda un momento.",
+    "stagePictureFailed": "No se ha podido procesar la foto de la Etapa. Inténtalo de nuevo."
   },
   "notFound": {
     "title": "Esta pantalla no existe.",
