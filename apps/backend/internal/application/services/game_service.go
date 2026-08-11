@@ -83,8 +83,10 @@ type GameService struct {
 	powers   ports.IGamePowerPool
 	weights  ports.IAssignmentWeights
 	tiebreak ports.ITiebreaker
-	// history may be nil - there is no adapter yet (see ports.IGameHistory).
-	// finalizeLocked tolerates that and simply skips recording.
+	// history may be nil - tests exercise GameService without a real
+	// ports.IGameHistory adapter, and finalizeLocked tolerates that by
+	// simply skipping recording. Production always passes one
+	// (repositories.NewGameHistory).
 	history   ports.IGameHistory
 	rng       game.RandomSource
 	hub       *GameEventHub
