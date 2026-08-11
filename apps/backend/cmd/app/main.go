@@ -23,6 +23,7 @@ import (
 	rediscache "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache/redis"
 	gameinfra "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
+	redisgamestore "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore/redis"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
@@ -171,13 +172,39 @@ func main() {
 	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
 	userEndpoints := endpoints.NewUserEndpoints(userService)
 
-	// Game (Gauntlet/Versus) application layer. Websockets + the routes
-	// that would expose this over HTTP are the next tanda (see
-	// ObsidianVault/ADR.md) - it is wired here, ready to be handed to a
-	// router, but nothing calls into it yet.
-	gameStore := gamestore.NewMemoryGameStore()
+	// Game (Gauntlet/Versus) application layer, now fully wired: a Redis
+	// game store when REDIS_URL is set (falling back to the in-memory one
+	// otherwise), a Postgres-backed stage catalog, a persistent game
+	// history, and the WebSocket + HTTP routes exposing all of it.
+	var gameStore ports.IGameStore = gamestore.NewMemoryGameStore()
+	if cfg.RedisURL != "" {
+		redisStore, err := redisgamestore.New(ctx, redisgamestore.Config{
+			URL:         cfg.RedisURL,
+			DialTimeout: cfg.RedisDialTimeout,
+			OpTimeout:   cfg.GameStoreOpTimeout,
+			TTL:         cfg.GameLobbyTTL,
+		})
+		if err != nil {
+			log.Fatalf("connecting to redis game store: %v", err)
+		}
+		defer func() {
+			if err := redisStore.Close(); err != nil {
+				log.Printf("closing redis game store connection: %v", err)
+			}
+		}()
+		gameStore = redisStore
+	} else {
+		log.Printf("game store: REDIS_URL unset, using in-memory store (live games are lost on restart)")
+	}
+
 	gameReaper := gamestore.NewReaper(gameStore, cfg.GameLobbyTTL, cfg.GameLobbyReapInterval)
 	go gameReaper.Start(ctx)
+
+	stageRepository := repositories.NewStageRepository(pool)
+	stageService := services.NewStageService(stageRepository, stageRepository, idgen.UUIDGenerator[game.StageID]{})
+	stageEndpoints := endpoints.NewStageEndpoints(stageService)
+
+	gameHistory := repositories.NewGameHistory(pool)
 
 	gameRNG := random.NewStdRandomGenerator[string]()
 	gameEventHub := services.NewGameEventHub()
@@ -187,19 +214,22 @@ func main() {
 		idgen.UUIDGenerator[game.ParticipantID]{},
 		idgen.UUIDGenerator[game.TeamID]{},
 		userRepo,
-		gameinfra.NewStaticStageCatalog(),
+		stageRepository,
 		gameinfra.NewRepoPowerPool(standRepo, devilFruitRepo),
 		gameinfra.NewDefaultWeights(),
 		gameinfra.NewCoinFlipTiebreaker(gameRNG),
-		// No ports.IGameHistory adapter yet - finished/aborted games are
-		// simply dropped from the store once the match ends.
-		nil,
+		gameHistory,
 		gameRNG,
 		gameEventHub,
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: cfg.GameVotingWindow},
 	)
-	_ = gameService
+	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, tokenIssuer, ctx, endpoints.GameWSConfig{
+		VotingWindow:             cfg.GameVotingWindow,
+		AllowedOrigins:           cfg.CORSAllowedOrigins,
+		ResolveStandPicture:      standService.PictureURL,
+		ResolveDevilFruitPicture: devilFruitService.PictureURL,
+	})
 
 	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit
 	// promptly on shutdown instead of blocking srv.Shutdown's grace window.
@@ -230,7 +260,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
