@@ -36,6 +36,10 @@ services:
       # require db-up first.
       DATABASE_URL: postgres://${POSTGRES_USER:-test}:${POSTGRES_PASSWORD:-test}@postgres:5432/${POSTGRES_DB:-test}?sslmode=disable
       REDIS_URL: redis://redis:6379
+      # Env-gated skip for the redis-backed unit tests (infrastructure/cache/
+      # redis, infrastructure/gamestore/redis) - without this they silently
+      # skip even under test-docker/test-integration-docker.
+      TEST_REDIS_URL: redis://redis:6379
       # config.Load requires these to be non-empty even for tests that never
       # touch R2/Google/JWT for real - harmless placeholders unless a test
       # explicitly overrides them via t.Setenv, same as the config package's
