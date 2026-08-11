@@ -1,7 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 
-import { createStage, deleteStage, updateStage, uploadStagePicture } from '@/features/stages/api/stages.api'
+import {
+  createStage,
+  deleteStage,
+  updateStage,
+  uploadStagePicture,
+} from '@/features/stages/api/stages.api'
 import { stageKeys } from '@/features/stages/api/stages.keys'
 import type { StageInput } from '@/features/stages/types/stages.types'
 import { clearEtags } from '@/shared/api/etag'
@@ -45,7 +50,8 @@ export function useUploadStagePicture() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, asset }: { id: string; asset: PickedPicture }) => uploadStagePicture(id, asset),
+    mutationFn: ({ id, asset }: { id: string; asset: PickedPicture }) =>
+      uploadStagePicture(id, asset),
     onSuccess: () => {
       clearEtags()
       void queryClient.invalidateQueries({ queryKey: stageKeys.allLocales })

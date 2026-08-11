@@ -23,7 +23,14 @@ export function StageCard({ stage, onEdit, onDelete, isEditBusy }: Props) {
   const { t } = useTranslation()
   return (
     <WiiCard padded width={280} gap="$3">
-      <YStack width="100%" height={140} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
+      <YStack
+        width="100%"
+        height={140}
+        rounded="$card"
+        overflow="hidden"
+        position="relative"
+        bg="$plasticEdge"
+      >
         <InsetRing rounded="$card" />
         {/* Read `picture` (not `pictureThumb`) with a `|| null` fallback -
             see admin-panel-crud-ux-fixes.md: pictureThumb is empty until the

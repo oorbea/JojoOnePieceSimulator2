@@ -8,7 +8,10 @@ import { ScrollView, Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
-import { GlassSelect, type GlassSelectOption } from '@/shared/components/presentational/glass-select'
+import {
+  GlassSelect,
+  type GlassSelectOption,
+} from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
@@ -64,7 +67,13 @@ export function StageFormModal({
   )
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+      statusBarTranslucent
+    >
       <YStack
         flex={1}
         items="center"
@@ -179,7 +188,9 @@ export function StageFormModal({
                       <GlassField
                         label={t('stages.order')}
                         value={String(field.value)}
-                        onChangeText={(text) => field.onChange(text === '' ? 0 : Number(text.replace(/[^0-9]/g, '')))}
+                        onChangeText={(text) =>
+                          field.onChange(text === '' ? 0 : Number(text.replace(/[^0-9]/g, '')))
+                        }
                         keyboardType="number-pad"
                         error={errors.order?.message && t(errors.order.message)}
                       />
@@ -221,7 +232,13 @@ export function StageFormModal({
 
           <XStack gap="$2">
             <YStack flex={1}>
-              <GlossButton tone="glass" btnSize="md" disabled={isSaving} onPress={onCancel} accessibilityLabel={t('common.cancel')}>
+              <GlossButton
+                tone="glass"
+                btnSize="md"
+                disabled={isSaving}
+                onPress={onCancel}
+                accessibilityLabel={t('common.cancel')}
+              >
                 {t('common.cancel')}
               </GlossButton>
             </YStack>
