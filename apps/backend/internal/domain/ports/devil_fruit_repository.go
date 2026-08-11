@@ -10,6 +10,10 @@ import (
 type DevilFruitFilters struct {
 	Rarity    *enums.PowerRarity
 	FruitType *enums.FruitType
+	// Search matches case-insensitively against name or the
+	// locale-resolved description. Unescaped - callers must escape any
+	// LIKE metacharacter (%, _, \) before this reaches SQL.
+	Search *string
 }
 
 type IDevilFruitRepository interface {

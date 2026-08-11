@@ -40,6 +40,73 @@ func (q *Queries) DeleteStageTranslations(ctx context.Context, arg DeleteStageTr
 	return err
 }
 
+const filterStageRows = `-- name: FilterStageRows :many
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::manga IS NULL OR s.manga = $2::manga)
+  AND ($3::text IS NULL
+       OR s.name ILIKE '%' || $3::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $3::text || '%' ESCAPE '\')
+ORDER BY s.manga, s.position, s.name
+`
+
+type FilterStageRowsParams struct {
+	Locales []string
+	Manga   *Manga
+	Search  *string
+}
+
+type FilterStageRowsRow struct {
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
+	Description   string
+}
+
+// Returns every stage matching the (all-optional) filters, description
+// resolved for locale - same sqlc.narg(...) IS NULL OR ... pattern as
+// FilterStandRows/FilterDevilFruitRows (stands.sql/devil_fruits.sql).
+func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams) ([]FilterStageRowsRow, error) {
+	rows, err := q.db.Query(ctx, filterStageRows, arg.Locales, arg.Manga, arg.Search)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FilterStageRowsRow{}
+	for rows.Next() {
+		var i FilterStageRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Manga,
+			&i.Position,
+			&i.Name,
+			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureStatus,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getStageByID = `-- name: GetStageByID :one
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
        COALESCE(tr.description, '') AS description
@@ -150,66 +217,6 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 	items := []ListStagesRow{}
 	for rows.Next() {
 		var i ListStagesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Manga,
-			&i.Position,
-			&i.Name,
-			&i.Picture,
-			&i.PictureThumb,
-			&i.PictureStatus,
-			&i.Description,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listStagesByManga = `-- name: ListStagesByManga :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
-       COALESCE(tr.description, '') AS description
-FROM stages s
-         LEFT JOIN LATERAL (
-    SELECT st.description
-    FROM stage_translations st
-    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
-    ORDER BY array_position($1::text[], st.locale::text)
-    LIMIT 1
-    ) tr ON true
-WHERE s.manga = $2
-ORDER BY s.position, s.name
-`
-
-type ListStagesByMangaParams struct {
-	Locales []string
-	Manga   string
-}
-
-type ListStagesByMangaRow struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	Description   string
-}
-
-func (q *Queries) ListStagesByManga(ctx context.Context, arg ListStagesByMangaParams) ([]ListStagesByMangaRow, error) {
-	rows, err := q.db.Query(ctx, listStagesByManga, arg.Locales, arg.Manga)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListStagesByMangaRow{}
-	for rows.Next() {
-		var i ListStagesByMangaRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Manga,

@@ -60,12 +60,13 @@ func (s *StageService) ListStages(ctx context.Context, locale enums.Locale) ([]g
 	return s.repo.List(ctx, locale)
 }
 
-// StagesByManga returns every Stage for manga, ordered by position,
-// description resolved for locale. Admin-facing (locale-aware) - unrelated
-// to IStageCatalog.Stages, which the gameplay engine uses and which always
-// resolves at a fixed enums.EnGB (see that port's doc).
-func (s *StageService) StagesByManga(ctx context.Context, manga enums.Manga, locale enums.Locale) ([]game.Stage, error) {
-	return s.repo.ListByManga(ctx, manga, locale)
+// FilterStages returns every Stage matching the (all-optional) filters,
+// ordered by manga then position, description resolved for locale.
+// Admin-facing (locale-aware) - unrelated to IStageCatalog.Stages, which the
+// gameplay engine uses and which always resolves at a fixed enums.EnGB (see
+// that port's doc).
+func (s *StageService) FilterStages(ctx context.Context, filters ports.StageFilters, locale enums.Locale) ([]game.Stage, error) {
+	return s.repo.Filter(ctx, filters, locale)
 }
 
 // GetStage returns the Stage matching id, description resolved for locale,

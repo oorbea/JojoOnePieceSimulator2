@@ -110,4 +110,7 @@ FROM devil_fruits d
     ) tr ON true
 WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity')::power_rarity)
   AND (sqlc.narg('fruit_type')::fruit_type IS NULL OR d.fruit_type = sqlc.narg('fruit_type')::fruit_type)
+  AND (sqlc.narg('search')::text IS NULL
+       OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
 ORDER BY p.name;

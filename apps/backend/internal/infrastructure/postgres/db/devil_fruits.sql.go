@@ -44,6 +44,9 @@ FROM devil_fruits d
     ) tr ON true
 WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
   AND ($3::fruit_type IS NULL OR d.fruit_type = $3::fruit_type)
+  AND ($4::text IS NULL
+       OR p.name ILIKE '%' || $4::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $4::text || '%' ESCAPE '\')
 ORDER BY p.name
 `
 
@@ -51,6 +54,7 @@ type FilterDevilFruitRowsParams struct {
 	Locales   []string
 	Rarity    *PowerRarity
 	FruitType *FruitType
+	Search    *string
 }
 
 type FilterDevilFruitRowsRow struct {
@@ -67,7 +71,12 @@ type FilterDevilFruitRowsRow struct {
 
 // Returns every devil fruit matching the (all-optional) filters.
 func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruitRowsParams) ([]FilterDevilFruitRowsRow, error) {
-	rows, err := q.db.Query(ctx, filterDevilFruitRows, arg.Locales, arg.Rarity, arg.FruitType)
+	rows, err := q.db.Query(ctx, filterDevilFruitRows,
+		arg.Locales,
+		arg.Rarity,
+		arg.FruitType,
+		arg.Search,
+	)
 	if err != nil {
 		return nil, err
 	}

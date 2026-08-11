@@ -13,7 +13,10 @@ FROM stages s
     ) tr ON true
 ORDER BY s.manga, s.position, s.name;
 
--- name: ListStagesByManga :many
+-- Returns every stage matching the (all-optional) filters, description
+-- resolved for locale - same sqlc.narg(...) IS NULL OR ... pattern as
+-- FilterStandRows/FilterDevilFruitRows (stands.sql/devil_fruits.sql).
+-- name: FilterStageRows :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
        COALESCE(tr.description, '') AS description
 FROM stages s
@@ -24,8 +27,11 @@ FROM stages s
     ORDER BY array_position(sqlc.arg('locales')::text[], st.locale::text)
     LIMIT 1
     ) tr ON true
-WHERE s.manga = sqlc.arg('manga')
-ORDER BY s.position, s.name;
+WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
+  AND (sqlc.narg('search')::text IS NULL
+       OR s.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+ORDER BY s.manga, s.position, s.name;
 
 -- name: GetStageByID :one
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,

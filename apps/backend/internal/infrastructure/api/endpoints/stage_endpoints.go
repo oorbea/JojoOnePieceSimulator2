@@ -10,7 +10,6 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
-	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
@@ -50,38 +49,31 @@ func (e *StageEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConfig) c
 
 // list godoc
 //
-//	@Summary		List stages
-//	@Description	Lists every Stage, or only manga's if the query param is set. Description resolved for the request's locale.
+//	@Summary		List or filter stages
+//	@Description	Lists every Stage, or filters them if any query param is set. Description resolved for the request's locale.
 //	@Tags			stages
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			manga	query		string	false	"JOJO, ONE_PIECE"
+//	@Param			q		query		string	false	"free-text search over name and description"
 //	@Success		200		{array}		dto.StageResponse
 //	@Failure		400		{object}	dto.ErrorResponse
 //	@Failure		401		{object}	dto.ErrorResponse
 //	@Failure		429		{object}	dto.ErrorResponse
 //	@Router			/stages [get]
 func (e *StageEndpoints) list(w http.ResponseWriter, r *http.Request) error {
-	locale := LocaleFromRequest(r)
-
-	if raw := r.URL.Query().Get("manga"); raw != "" {
-		manga, err := enums.ParseManga(raw)
-		if err != nil {
-			return &dto.ValidationError{Errors: []string{fmt.Sprintf("manga: %v", err)}}
-		}
-		stages, err := e.svc.StagesByManga(r.Context(), manga, locale)
-		if err != nil {
-			return err
-		}
-		resp, err := dto.NewStageResponses(r.Context(), stages, e.svc.PictureURL)
-		if err != nil {
-			return err
-		}
-		writeJSON(w, http.StatusOK, resp)
-		return nil
+	filters, hasFilters, err := dto.StageFiltersFromQuery(r.URL.Query())
+	if err != nil {
+		return err
 	}
 
-	stages, err := e.svc.ListStages(r.Context(), locale)
+	locale := LocaleFromRequest(r)
+	var stages []game.Stage
+	if hasFilters {
+		stages, err = e.svc.FilterStages(r.Context(), filters, locale)
+	} else {
+		stages, err = e.svc.ListStages(r.Context(), locale)
+	}
 	if err != nil {
 		return err
 	}

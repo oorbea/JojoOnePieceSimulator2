@@ -16,6 +16,10 @@ type StandFilters struct {
 	Precision   *enums.StandStat
 	Potential   *enums.StandStat
 	EvolvesFrom *string
+	// Search matches case-insensitively against name or the
+	// locale-resolved description. Unescaped - callers must escape any
+	// LIKE metacharacter (%, _, \) before this reaches SQL.
+	Search *string
 }
 
 type IStandRepository interface {
