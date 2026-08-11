@@ -34,11 +34,16 @@ type CORSConfig struct {
 // (see cache_headers.go).
 //
 // middleware.Timeout(60s) is applied per-group rather than globally: every
-// normal route keeps that bound, but /api/v1/events (events_endpoints.go) is
-// a deliberately long-lived SSE stream and must not inherit it - it relies
-// instead on the client's own reconnect logic, a server-side heartbeat, and
-// the app's shutdown context.
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
+// normal route keeps that bound, but /api/v1/events (events_endpoints.go)
+// and /api/v1/games/{id}/ws (game_ws_endpoints.go) are deliberately
+// long-lived streams and must not inherit it. /events relies on the
+// client's own reconnect logic, a server-side heartbeat, and the app's
+// shutdown context; the game WebSocket does the same, plus its own
+// protocol-level ping. GameEndpoints.Routes applies Timeout+RequireAuth to
+// its own REST sub-group internally (chi can't mount two handlers on the
+// same pattern with different middleware), so /games is mounted here
+// alongside /events, outside this file's own Timeout group.
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, gameEndpoints *GameEndpoints, stageEndpoints *StageEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -79,10 +84,13 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 				r.Mount("/stands", standEndpoints.Routes(rateCfg, cacheCfg))
 				r.Mount("/devil-fruits", devilFruitEndpoints.Routes(rateCfg, cacheCfg))
 				r.Mount("/users", userEndpoints.Routes(rateCfg))
+				r.Mount("/stages", stageEndpoints.Routes(rateCfg, cacheCfg))
 			})
 		})
 
 		r.Mount("/events", eventsEndpoints.Routes())
+		// Outside the Timeout group on purpose - see this function's doc.
+		r.Mount("/games", gameEndpoints.Routes(rateCfg))
 	})
 
 	return r

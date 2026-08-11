@@ -170,8 +170,10 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, fakeTokenIssuer{},
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, fakeTokenIssuer{},
 		endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 	return h, repo, pictures
 }
