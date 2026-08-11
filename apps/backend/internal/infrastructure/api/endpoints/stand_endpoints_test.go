@@ -103,6 +103,13 @@ func (f *fakeStandRepository) Filter(_ context.Context, filters ports.StandFilte
 		if filters.Speed != nil && stand.Speed() != *filters.Speed {
 			continue
 		}
+		if filters.Search != nil {
+			needle := strings.ToLower(*filters.Search)
+			if !strings.Contains(strings.ToLower(stand.Name()), needle) &&
+				!strings.Contains(strings.ToLower(stand.Description()), needle) {
+				continue
+			}
+		}
 		results = append(results, stand)
 	}
 	return results, nil
@@ -814,6 +821,58 @@ func TestListAndFilterStands(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &filtered)
 	if len(filtered) != 2 {
 		t.Fatalf("len(filtered) = %d, want 2 (both stands have attackPower=A)", len(filtered))
+	}
+}
+
+func TestListStands_SearchByName(t *testing.T) {
+	h := newTestServer()
+
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Silver Chariot"))
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Star Platinum"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stands?q=silver", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var matched []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &matched)
+	if len(matched) != 1 || matched[0]["name"] != "Silver Chariot" {
+		t.Fatalf("q=silver matched %v, want exactly [Silver Chariot]", matched)
+	}
+}
+
+func TestListStands_SearchByDescription(t *testing.T) {
+	h := newTestServer()
+
+	body := validStandBody("Silver Chariot")
+	body["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "a rapier-wielding stand"
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", body)
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Star Platinum"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stands?q=rapier", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var matched []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &matched)
+	if len(matched) != 1 || matched[0]["name"] != "Silver Chariot" {
+		t.Fatalf("q=rapier matched %v, want exactly [Silver Chariot]", matched)
+	}
+}
+
+func TestListStands_SearchNoMatch(t *testing.T) {
+	h := newTestServer()
+
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Silver Chariot"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stands?q=nonexistent", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var matched []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &matched)
+	if len(matched) != 0 {
+		t.Fatalf("len(matched) = %d, want 0", len(matched))
 	}
 }
 

@@ -297,6 +297,37 @@ func TestDevilFruitRepository_FindByID_NeverCrossesLocales(t *testing.T) {
 	}
 }
 
+// TestDevilFruitRepository_Filter_SearchDifferentiatesCacheKey proves
+// devilFruitFilterKey includes Search - same regression as
+// TestStandRepository_Filter_SearchDifferentiatesCacheKey (stand_repository_test.go).
+func TestDevilFruitRepository_Filter_SearchDifferentiatesCacheKey(t *testing.T) {
+	next := newCountingDevilFruitRepository()
+	fruit := newTestDevilFruit(t, "Gomu Gomu no Mi")
+	_ = next.Save(context.Background(), fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}})
+
+	repo := infracache.NewDevilFruitRepository(next, newFakeCache(), time.Minute, time.Second)
+	ctx := context.Background()
+
+	gomu := "gomu"
+	if _, err := repo.Filter(ctx, ports.DevilFruitFilters{Search: &gomu}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(search=gomu): %v", err)
+	}
+	mera := "mera"
+	if _, err := repo.Filter(ctx, ports.DevilFruitFilters{Search: &mera}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(search=mera): %v", err)
+	}
+	if next.filterCalls != 2 {
+		t.Errorf("underlying Filter calls = %d, want 2 (distinct Search must not share a cache slot)", next.filterCalls)
+	}
+
+	if _, err := repo.Filter(ctx, ports.DevilFruitFilters{Search: &gomu}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(search=gomu) again: %v", err)
+	}
+	if next.filterCalls != 2 {
+		t.Errorf("underlying Filter calls = %d, want 2 (repeating search=gomu should hit cache)", next.filterCalls)
+	}
+}
+
 // failingSaveDevilFruitRepository makes Save always fail, to prove the
 // decorator never invalidates the cache for a write that never committed.
 type failingSaveDevilFruitRepository struct {

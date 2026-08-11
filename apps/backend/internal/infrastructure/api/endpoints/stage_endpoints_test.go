@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -40,14 +41,22 @@ func (f *fakeStageRepository) List(_ context.Context, _ enums.Locale) ([]game.St
 	return all, nil
 }
 
-func (f *fakeStageRepository) ListByManga(_ context.Context, manga enums.Manga, _ enums.Locale) ([]game.Stage, error) {
+func (f *fakeStageRepository) Filter(_ context.Context, filters ports.StageFilters, _ enums.Locale) ([]game.Stage, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []game.Stage
 	for _, s := range f.stages {
-		if s.Manga() == manga {
-			out = append(out, *s)
+		if filters.Manga != nil && s.Manga() != *filters.Manga {
+			continue
 		}
+		if filters.Search != nil {
+			needle := strings.ToLower(*filters.Search)
+			if !strings.Contains(strings.ToLower(s.Name()), needle) &&
+				!strings.Contains(strings.ToLower(s.Description()), needle) {
+				continue
+			}
+		}
+		out = append(out, *s)
 	}
 	return out, nil
 }
@@ -291,6 +300,63 @@ func TestListAndFilterStagesByManga(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &filtered)
 	if len(filtered) != 1 || filtered[0]["name"] != "Alabasta" {
 		t.Fatalf("filtered = %v, want just Alabasta", filtered)
+	}
+}
+
+func TestListStages_SearchByNameAndDescription(t *testing.T) {
+	h := newStageTestServer()
+
+	body := validStageBody("Phantom Blood")
+	body["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "the tale begins in Victorian England"
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", body)
+	alabasta := validStageBody("Alabasta")
+	alabasta["manga"] = "ONE_PIECE"
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", alabasta)
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stages?q=phantom", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var byName []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &byName)
+	if len(byName) != 1 || byName[0]["name"] != "Phantom Blood" {
+		t.Fatalf("q=phantom matched %v, want exactly [Phantom Blood]", byName)
+	}
+
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/stages?q=victorian", nil)
+	var byDescription []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &byDescription)
+	if len(byDescription) != 1 || byDescription[0]["name"] != "Phantom Blood" {
+		t.Fatalf("q=victorian matched %v, want exactly [Phantom Blood]", byDescription)
+	}
+}
+
+func TestListStages_MangaAndSearchCombined(t *testing.T) {
+	h := newStageTestServer()
+
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", validStageBody("Phantom Blood"))
+	alabasta := validStageBody("Alabasta")
+	alabasta["manga"] = "ONE_PIECE"
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", alabasta)
+
+	// "Phantom" only exists on the JOJO side - combined with manga=ONE_PIECE
+	// it must match nothing, proving both filters are applied together
+	// (AND), not either one alone.
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stages?manga=ONE_PIECE&q=phantom", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var none []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &none)
+	if len(none) != 0 {
+		t.Fatalf("len(none) = %d, want 0", len(none))
+	}
+
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/stages?manga=ONE_PIECE&q=alabasta", nil)
+	var matched []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &matched)
+	if len(matched) != 1 || matched[0]["name"] != "Alabasta" {
+		t.Fatalf("matched = %v, want exactly [Alabasta]", matched)
 	}
 }
 

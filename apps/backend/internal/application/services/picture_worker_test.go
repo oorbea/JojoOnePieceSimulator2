@@ -659,14 +659,22 @@ func (f *fakeStageRepository) List(_ context.Context, _ enums.Locale) ([]game.St
 	return all, nil
 }
 
-func (f *fakeStageRepository) ListByManga(_ context.Context, manga enums.Manga, _ enums.Locale) ([]game.Stage, error) {
+func (f *fakeStageRepository) Filter(_ context.Context, filters ports.StageFilters, _ enums.Locale) ([]game.Stage, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []game.Stage
 	for _, s := range f.stages {
-		if s.Manga() == manga {
-			out = append(out, *s)
+		if filters.Manga != nil && s.Manga() != *filters.Manga {
+			continue
 		}
+		if filters.Search != nil {
+			needle := strings.ToLower(*filters.Search)
+			if !strings.Contains(strings.ToLower(s.Name()), needle) &&
+				!strings.Contains(strings.ToLower(s.Description()), needle) {
+				continue
+			}
+		}
+		out = append(out, *s)
 	}
 	return out, nil
 }

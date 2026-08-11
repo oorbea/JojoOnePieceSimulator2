@@ -296,6 +296,40 @@ func TestStandRepository_FindByID_NeverCrossesLocales(t *testing.T) {
 	}
 }
 
+// TestStandRepository_Filter_SearchDifferentiatesCacheKey proves standFilterKey
+// includes Search: two Filter calls that differ only in Search must not
+// share a cache slot, or a search for "chariot" could be answered with a
+// cached result for "platinum" - the exact regression standFilterKey's field
+// list exists to prevent (see keys.go).
+func TestStandRepository_Filter_SearchDifferentiatesCacheKey(t *testing.T) {
+	next := newCountingStandRepository()
+	stand := newTestStand(t, "Silver Chariot")
+	_ = next.Save(context.Background(), stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}})
+
+	repo := infracache.NewStandRepository(next, newFakeCache(), time.Minute, time.Second)
+	ctx := context.Background()
+
+	chariot := "chariot"
+	if _, err := repo.Filter(ctx, ports.StandFilters{Search: &chariot}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(search=chariot): %v", err)
+	}
+	platinum := "platinum"
+	if _, err := repo.Filter(ctx, ports.StandFilters{Search: &platinum}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(search=platinum): %v", err)
+	}
+	if next.filterCalls != 2 {
+		t.Errorf("underlying Filter calls = %d, want 2 (distinct Search must not share a cache slot)", next.filterCalls)
+	}
+
+	// Repeating the first search should hit its own cache entry.
+	if _, err := repo.Filter(ctx, ports.StandFilters{Search: &chariot}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(search=chariot) again: %v", err)
+	}
+	if next.filterCalls != 2 {
+		t.Errorf("underlying Filter calls = %d, want 2 (repeating search=chariot should hit cache)", next.filterCalls)
+	}
+}
+
 // failingSaveRepository makes Save always fail, to prove the decorator
 // never invalidates the cache for a write that never committed.
 type failingSaveRepository struct {
