@@ -1,7 +1,17 @@
 import { z } from 'zod'
 
-import { powerTranslationsFormSchema, type TranslationFormValues } from '@/shared/lib/power-translations'
-import { raritySchema, standStatSchema, type Locale, type PictureStatus, type Rarity, type StandStat } from '@/shared/lib/zod'
+import {
+  powerTranslationsFormSchema,
+  type TranslationFormValues,
+} from '@/shared/lib/power-translations'
+import {
+  raritySchema,
+  standStatSchema,
+  type Locale,
+  type PictureStatus,
+  type Rarity,
+  type StandStat,
+} from '@/shared/lib/zod'
 
 // Mirrors the backend's dto.StandResponse (apps/backend .../dto/stand_response.go).
 // `evolvesFrom` nests recursively — the backend returns the full parent
@@ -64,4 +74,5 @@ export type StandFilters = {
   precision?: StandStat
   potential?: StandStat
   evolvesFrom?: string
+  q?: string
 }
