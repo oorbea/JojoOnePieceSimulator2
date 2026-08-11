@@ -4,12 +4,20 @@ import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
+import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
+import {
+  GlassSelect,
+  type GlassSelectOption,
+} from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import type { Locale } from '@/shared/lib/zod'
-import type { DevilFruitFormValues, DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
+import type {
+  DevilFruitFormValues,
+  DevilFruitResponse,
+} from '@/features/devil-fruits/types/devil-fruits.types'
 
 import { DevilFruitCard } from './devil-fruit-card'
 import { DevilFruitFormModal } from './devil-fruit-form-modal'
@@ -47,6 +55,15 @@ type Props = {
   onEdit: (devilFruit: DevilFruitResponse) => void
   onDelete: (devilFruit: DevilFruitResponse) => void
   openingEditId: string | null
+  search: string
+  onSearchChange: (search: string) => void
+  rarityFilter: string | null
+  rarityFilterOptions: GlassSelectOption[]
+  onRarityFilterChange: (rarity: string | null) => void
+  fruitTypeFilter: string | null
+  fruitTypeFilterOptions: GlassSelectOption[]
+  onFruitTypeFilterChange: (fruitType: string | null) => void
+  hasActiveFilters: boolean
   form: FormState
   deleteConfirm: ConfirmState
 }
@@ -60,6 +77,15 @@ export function DevilFruitsScreen({
   onEdit,
   onDelete,
   openingEditId,
+  search,
+  onSearchChange,
+  rarityFilter,
+  rarityFilterOptions,
+  onRarityFilterChange,
+  fruitTypeFilter,
+  fruitTypeFilterOptions,
+  onFruitTypeFilterChange,
+  hasActiveFilters,
   form,
   deleteConfirm,
 }: Props) {
@@ -79,6 +105,35 @@ export function DevilFruitsScreen({
           </GlossButton>
         </XStack>
 
+        <XStack width="100%" flexWrap="wrap" gap="$3">
+          <YStack flexBasis={220} grow={1}>
+            <GlassField
+              label={t('common.search')}
+              value={search}
+              onChangeText={onSearchChange}
+              placeholder={t('devilFruits.searchPlaceholder')}
+            />
+          </YStack>
+          <YStack flexBasis={200} grow={1}>
+            <GlassSelect
+              label={t('devilFruits.filterRarity')}
+              options={rarityFilterOptions}
+              value={rarityFilter}
+              onChange={onRarityFilterChange}
+              clearable
+            />
+          </YStack>
+          <YStack flexBasis={200} grow={1}>
+            <GlassSelect
+              label={t('devilFruits.filterFruitType')}
+              options={fruitTypeFilterOptions}
+              value={fruitTypeFilter}
+              onChange={onFruitTypeFilterChange}
+              clearable
+            />
+          </YStack>
+        </XStack>
+
         {isLoading ? (
           <YStack width="100%" items="center" p="$6">
             <Spinner size="large" />
@@ -92,7 +147,12 @@ export function DevilFruitsScreen({
             <GlowText level="label" align="center">
               {t('devilFruits.errorTitle')}
             </GlowText>
-            <GlossButton tone="blue" btnSize="sm" onPress={onRetry} accessibilityLabel={t('devilFruits.retry')}>
+            <GlossButton
+              tone="blue"
+              btnSize="sm"
+              onPress={onRetry}
+              accessibilityLabel={t('devilFruits.retry')}
+            >
               {t('devilFruits.retry')}
             </GlossButton>
           </GlassPanel>
@@ -100,16 +160,18 @@ export function DevilFruitsScreen({
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
             <Apple size={28} color="$strawHatRed" />
             <GlowText level="label" align="center">
-              {t('devilFruits.emptyTitle')}
+              {t(hasActiveFilters ? 'devilFruits.emptyFilteredTitle' : 'devilFruits.emptyTitle')}
             </GlowText>
-            <GlossButton
-              tone="green"
-              btnSize="sm"
-              onPress={onCreateNew}
-              accessibilityLabel={t('devilFruits.newDevilFruit')}
-            >
-              {t('devilFruits.newDevilFruit')}
-            </GlossButton>
+            {hasActiveFilters ? null : (
+              <GlossButton
+                tone="green"
+                btnSize="sm"
+                onPress={onCreateNew}
+                accessibilityLabel={t('devilFruits.newDevilFruit')}
+              >
+                {t('devilFruits.newDevilFruit')}
+              </GlossButton>
+            )}
           </GlassPanel>
         ) : (
           <XStack flexWrap="wrap" gap="$4" justify="center">
