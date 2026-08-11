@@ -89,19 +89,16 @@ it yet.
 
 ## `ports.IGameStore` (`internal/domain/ports/game_store.go`)
 
-New port: `Create/Get/GetByCode/Code/Save/Delete/DeleteExpired`, indexed by both `GameID` and join
-code. **Deliberately has no snapshot/rehydration API** — the only adapter today
-(`infrastructure/gamestore.MemoryGameStore`) is a plain in-process map, so none is needed. A
-Redis-backed adapter behind this *same port* is the explicit next step (per the owner) —
-`Game`'s fields are all private with no exported (de)serialization, so that adapter will need to
-either add one or reconstruct via re-running events; not designed yet, on purpose.
-`infrastructure/gamestore.Reaper` sweeps Games untouched for `config.GameLobbyTTL` (default 2h)
-every `GameLobbyReapInterval` (default 10m), mirroring `StorageReconciler`'s `Start`/`RunOnce`
-split as `Start`/`ReapOnce`.
+Port unchanged: `Create/Get/GetByCode/Code/Save/Delete/DeleteExpired`, indexed by both `GameID` and
+join code. **2026-08-11**: `infrastructure/gamestore.MemoryGameStore` is now joined by a
+Redis-backed `infrastructure/gamestore/redis.Store`, selected in `main.go` whenever `REDIS_URL` is
+set. See [[game-lobby-persistence]] for the snapshot seam (`entities/game.Snapshot`/`Restore`) that
+made that possible, the key scheme, and the fail-closed contract. `infrastructure/gamestore.Reaper`
+still sweeps Games untouched for `config.GameLobbyTTL` (default 2h) every `GameLobbyReapInterval`
+(default 10m) — against Redis it's a harmless no-op, since Redis's own `PX` TTL does the actual
+expiry now.
 
-## Cheap adapters (`internal/infrastructure/game/`)
-
-Only the ports that need **zero migration** got a real adapter this tanda:
+## Adapters (`internal/infrastructure/game/`, `internal/infrastructure/repositories/`)
 
 - `CoinFlipTiebreaker` — `ports.ITiebreaker` via a uniform random pick. Swappable for an LLM-backed
   adapter later without touching `GameService`.
@@ -109,21 +106,27 @@ Only the ports that need **zero migration** got a real adapter this tanda:
 - `RepoPowerPool` — `ports.IGamePowerPool` wrapping the existing `IStandRepository.GetAll`/
   `IDevilFruitRepository.GetAll` at a fixed `enums.EnGB` (names, not localized descriptions, are
   all Loadout assignment needs).
-- `StaticStageCatalog` — `ports.IStageCatalog` **hardcoded** with JoJo's 8 parts and 11 One Piece
-  sagas (same names as [[gameplay-game-modes]]'s rulebook). Explicit `TODO`-in-code stopgap: there
-  is still no schema/CRUD for stage content (deliberately out of scope, per the owner) — this exists
-  purely so the application layer is runnable end-to-end.
+- **2026-08-11**: `repositories.StageRepository` replaces the old hardcoded `StaticStageCatalog`,
+  satisfying both `ports.IStageCatalog` (read side, used by `GameService`) and the new
+  `ports.IStageRepository` (admin CRUD, see [[game-realtime-transport]]#stages). Backed by the
+  `stages` table (migration `00008_stages.sql`), seeded with the same 19 names the old stub had.
+- **2026-08-11**: `repositories.GameHistory` implements `ports.IGameHistory` against
+  `game_results`/`game_result_participants` (migration `00009_game_history.sql`). `GameResult`
+  gained a `Participants []ParticipantOutcome` field (filled by both `IGameMode.Outcome`
+  implementations) so history can answer "what did I play", not just "what happened" — see
+  [[game-lobby-persistence]].
 
-`ports.IGameHistory` and `ports.IInventory` still have **no adapter** — `GameService`'s `history`
-dependency is wired as `nil` in `main.go`, which `finalizeLocked` tolerates by design.
+`ports.IInventory` still has no adapter.
 
 ## Error mapping / i18n
 
-`endpoints/error_codes.go` and `endpoints/errors.go` (still in lockstep, per that file's own
-comment) gained every new domain/application sentinel (`GAME_NOT_FOUND`, `NOT_HOST`, `GAME_FULL`,
-`VOTING_CLOSED`, `INVENTORY_NOT_SUPPORTED`, ...) even though no route exists to trigger them yet —
-done now so the mapping isn't forgotten once routes land. Same codes, translated, added to all three
-locales (`en-GB`/`es-ES`/`ca-ES`) under `"errors"`.
+`endpoints/error_codes.go` and `endpoints/errors.go` stay in lockstep (per that file's own
+comment). **2026-08-11** additions: `STAGE_NOT_FOUND`/`STAGE_ALREADY_EXISTS` for the new stage
+catalog, plus three sentinels that existed since this tanda's first pass but had no status/code
+branch until now — `EMPTY_TEAM_NAME`, `INVALID_PARTICIPANT_KIND`, `INVALID_SQUAD_VERDICT` (all
+fell through to 500 `INTERNAL` before) — and `UNKNOWN_COMMAND` for an unrecognized WebSocket
+command. All translated in `en-GB`/`es-ES`/`ca-ES` under `"errors"`, alongside a new
+`"enums"."manga"` map for the `JOJO`/`ONE_PIECE` wire codes.
 
 ## Tests
 
@@ -140,13 +143,20 @@ isolation and the non-blocking-drop behavior. `-race` couldn't be run in this en
 for cgo on this Windows box) — plain `go test ./internal/...` is green; re-run with `-race` wherever
 cgo is available before trusting the concurrency test fully.
 
-## Still not built (the actual next tanda)
+## Still not built
 
-- Redis-backed `IGameStore` adapter (behind the existing port).
-- Websocket transport + HTTP routes/DTOs for every `GameService` method — nothing in
-  `infrastructure/api` calls into this layer yet.
-- Stage catalog schema/migration/admin CRUD (retiring `StaticStageCatalog`).
-- `IGameHistory` and `IInventory` adapters.
+**2026-08-11 update**: everything below this line shipped this tanda — Redis-backed `IGameStore`,
+the WebSocket + HTTP transport, the stage catalog schema/CRUD, and `IGameHistory`. See
+[[game-lobby-persistence]] for the store/persistence half and [[game-realtime-transport]] for the
+transport half. What's genuinely still missing:
+
+- `ports.IInventory` — `AbilitySource=INVENTORY` still returns 501 `INVENTORY_NOT_SUPPORTED`.
+- Frontend: no WebSocket client yet (`socket.io-client` is installed but unwired), no game UI, no
+  admin screens for the new `/stages` CRUD.
+- A `Seq` field on `services.GameEvent` so the transport can *detect* a hub drop instead of relying
+  entirely on the event+snapshot rule to self-heal it (see [[game-realtime-transport]]).
+- `GET /games/preview?code=` (a pre-join preview) and `DELETE /games/{id}/participants/me` (leave
+  without a live socket) — both deliberately deferred, see [[game-realtime-transport]].
 
 Related: [[gameplay-game-modes]], [[gameplay-domain-design]], [[ADR]], [[backend-contract]],
-[[picture-events-sse]].
+[[picture-events-sse]], [[game-lobby-persistence]], [[game-realtime-transport]].

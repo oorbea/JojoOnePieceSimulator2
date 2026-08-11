@@ -69,13 +69,14 @@ Deny-all unless `CORS_ALLOWED_ORIGINS` set explicitly (`config.go:230`). Fronten
 
 ## Websockets
 
-None exist yet. The Gauntlet/Versus game domain ([[gameplay-game-modes]], [[gameplay-domain-design]])
-plus its application layer ([[gameplay-application-layer]], added 2026-08-10) are both built and
-tested, fully wired in `main.go` (`GameService`, an in-memory game store, a per-game event hub, a
-voting-window timer) — but **nothing calls into any of it**: no HTTP routes, no DTOs, no websocket
-transport. Voting/loadout assignment is designed assuming websockets, backed by lobby state in
-Redis; both are still the explicit next step. Until they land, still do not build real-time features
-against this backend.
+**2026-08-11**: live. `GET /api/v1/games/{id}/ws?token=<jwt>` (native `coder/websocket`, JSON
+envelopes) drives every Gauntlet/Versus mutation except creation/join/resume, which stay plain
+HTTP (`POST /games`, `POST /games/join`, `GET /games/{id}`, `GET /games/by-code/{code}`). Backed by
+a Redis-persisted lobby store (`REDIS_URL` set) or an in-memory one otherwise. Full protocol,
+privacy rules (votes hidden until a round resolves, loadouts always public), and connection
+lifecycle in [[game-realtime-transport]]; the store/persistence side in
+[[game-lobby-persistence]]. `/games/{id}/ws` sits outside the router's `Timeout(60s)` group, same
+as `/events`.
 
 ## Domain entities seen in backend history
 
