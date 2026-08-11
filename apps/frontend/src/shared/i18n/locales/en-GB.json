@@ -194,6 +194,10 @@
     "role": {
       "REGULAR": "User",
       "ADMIN": "Admin"
+    },
+    "manga": {
+      "JOJO": "JoJo's Bizarre Adventure",
+      "ONE_PIECE": "One Piece"
     }
   },
   "errors": {
@@ -250,6 +254,12 @@
     "INVALID_MANGA": "That manga isn't valid.",
     "INVALID_GAME_STATE": "That game state isn't valid.",
     "INVENTORY_NOT_SUPPORTED": "Inventory-based abilities aren't supported yet.",
+    "STAGE_NOT_FOUND": "This stage couldn't be found.",
+    "STAGE_ALREADY_EXISTS": "A stage with that name already exists for this manga.",
+    "EMPTY_TEAM_NAME": "A team needs a name.",
+    "INVALID_PARTICIPANT_KIND": "That participant type isn't valid.",
+    "INVALID_SQUAD_VERDICT": "That isn't a valid squad verdict.",
+    "UNKNOWN_COMMAND": "That action isn't supported.",
     "INTERNAL": "Something went wrong on our end."
   }
 }

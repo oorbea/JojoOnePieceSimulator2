@@ -194,6 +194,10 @@
     "role": {
       "REGULAR": "Usuario",
       "ADMIN": "Admin"
+    },
+    "manga": {
+      "JOJO": "Las bizarras aventuras de JoJo",
+      "ONE_PIECE": "One Piece"
     }
   },
   "errors": {
@@ -250,6 +254,12 @@
     "INVALID_MANGA": "Ese manga no es válido.",
     "INVALID_GAME_STATE": "Ese estado de partida no es válido.",
     "INVENTORY_NOT_SUPPORTED": "Las habilidades basadas en inventario aún no están soportadas.",
+    "STAGE_NOT_FOUND": "No se ha encontrado esta etapa.",
+    "STAGE_ALREADY_EXISTS": "Ya existe una etapa con ese nombre para este manga.",
+    "EMPTY_TEAM_NAME": "Un equipo necesita un nombre.",
+    "INVALID_PARTICIPANT_KIND": "Ese tipo de participante no es válido.",
+    "INVALID_SQUAD_VERDICT": "Ese veredicto de escuadrón no es válido.",
+    "UNKNOWN_COMMAND": "Esa acción no está soportada.",
     "INTERNAL": "Algo ha ido mal por nuestra parte."
   }
 }
