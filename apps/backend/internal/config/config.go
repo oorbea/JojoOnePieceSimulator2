@@ -108,6 +108,13 @@ const defaultGameLobbyTTL = 2 * time.Hour
 // Games. 0 disables it.
 const defaultGameLobbyReapInterval = 10 * time.Minute
 
+// defaultGameStoreOpTimeout bounds every individual Redis game-store
+// operation. Deliberately far larger than defaultRedisOpTimeout: the game
+// store is the source of truth for a live match (fail-closed), not an
+// optional speedup over one (fail-open, like the cache) - it should wait
+// out transient latency rather than fail a vote.
+const defaultGameStoreOpTimeout = 2 * time.Second
+
 type Config struct {
 	DatabaseURL    string
 	Port           string
@@ -210,6 +217,11 @@ type Config struct {
 	GameVotingWindow      time.Duration
 	GameLobbyTTL          time.Duration
 	GameLobbyReapInterval time.Duration
+	// GameStoreOpTimeout bounds each Redis game-store operation. See
+	// defaultGameStoreOpTimeout's doc for why it is much larger than
+	// RedisOpTimeout. Only used when RedisURL is set - the in-memory
+	// fallback ignores it.
+	GameStoreOpTimeout time.Duration
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -694,6 +706,18 @@ func Load() (*Config, error) {
 		gameLobbyReapInterval = parsed
 	}
 
+	gameStoreOpTimeout := defaultGameStoreOpTimeout
+	if raw := os.Getenv("GAME_STORE_OP_TIMEOUT"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing GAME_STORE_OP_TIMEOUT: %w", err)
+		}
+		if parsed <= 0 {
+			return nil, fmt.Errorf("GAME_STORE_OP_TIMEOUT must be positive")
+		}
+		gameStoreOpTimeout = parsed
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -764,5 +788,6 @@ func Load() (*Config, error) {
 		GameVotingWindow:      gameVotingWindow,
 		GameLobbyTTL:          gameLobbyTTL,
 		GameLobbyReapInterval: gameLobbyReapInterval,
+		GameStoreOpTimeout:    gameStoreOpTimeout,
 	}, nil
 }
