@@ -114,10 +114,16 @@ func main() {
 	userRepository := repositories.NewUserRepository(pool)
 	var userRepo ports.IUserRepository = userRepository
 
+	// stageRepository is constructed here (moved ahead of where the game
+	// feature used to build it) purely so it can join pictureTargets below -
+	// it only needs the pool, nothing else in this section depends on it.
+	stageRepository := repositories.NewStageRepository(pool)
+
 	pictureTargets := map[enums.PictureSubjectKind]services.PictureTarget{
 		enums.StandSubject:      {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
 		enums.DevilFruitSubject: {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
 		enums.UserSubject:       {Publisher: services.NewUserPicturePublisher(userRepo), KeyPrefix: "users"},
+		enums.StageSubject:      {Publisher: services.NewStagePicturePublisher(stageRepository), KeyPrefix: "stages"},
 	}
 
 	// pictureHub fans out PENDING->READY/FAILED transitions to connected SSE
@@ -200,8 +206,8 @@ func main() {
 	gameReaper := gamestore.NewReaper(gameStore, cfg.GameLobbyTTL, cfg.GameLobbyReapInterval)
 	go gameReaper.Start(ctx)
 
-	stageRepository := repositories.NewStageRepository(pool)
-	stageService := services.NewStageService(stageRepository, stageRepository, idgen.UUIDGenerator[game.StageID]{})
+	stageService := services.NewStageService(stageRepository, idgen.UUIDGenerator[game.StageID]{},
+		pictures, imageProcessor, pictureWorker, picturePolicy)
 	stageEndpoints := endpoints.NewStageEndpoints(stageService)
 
 	gameHistory := repositories.NewGameHistory(pool)
@@ -224,11 +230,12 @@ func main() {
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: cfg.GameVotingWindow},
 	)
-	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, tokenIssuer, ctx, endpoints.GameWSConfig{
+	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepository, userRepo, tokenIssuer, ctx, endpoints.GameWSConfig{
 		VotingWindow:             cfg.GameVotingWindow,
 		AllowedOrigins:           cfg.CORSAllowedOrigins,
 		ResolveStandPicture:      standService.PictureURL,
 		ResolveDevilFruitPicture: devilFruitService.PictureURL,
+		ResolveStagePicture:      stageService.PictureURL,
 	})
 
 	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit
