@@ -120,5 +120,57 @@ what was written. Verified end to end against the live dev stack: migration appl
 fresh container rebuild, and the new `/stages/{id}/translations` route responds `401` unauthenticated
 (routing/auth wiring confirmed) exactly like every other admin route.
 
+## Frontend admin CRUD + remaining backend tests (2026-08-11, follow-up tanda)
+
+`game-realtime-transport.md` had explicitly flagged the admin CRUD screens for Stages as **not
+built**. This tanda closes that gap end to end, following [[admin-panel-crud-ux-fixes]] and
+[[picture-events-sse]]'s existing patterns rather than inventing new ones.
+
+**Backend delta** - production code was already ~95% done (see above); the actual gap was test
+coverage. Added `stage_service_test.go`, `stage_endpoints_test.go` (with a handwritten
+`fakeStageRepository`, since none existed), `stage_mapper_test.go`, a `StageSubject` case in
+`picture_worker_test.go`, and wired `router_test.go`'s `NewStageEndpoints` fixture to a real fake
+instead of `nil`. All existing `go test ./...` still green. `-tags vips` not exercised locally (no
+libvips on this dev machine) - left to CI per [[cicd-picture-pipeline|the CI/CD gate]].
+
+**Frontend**: full `src/features/stages/` feature, copied from `stands`' shape (api/keys/hooks/
+types/components, container+presentational split), `/admin/stages` route, and a third
+`ChannelTile` (icon `Map`, tone `blue`) on the admin hub.
+
+Three deliberate deviations from the Stand template, each because Stage's contract genuinely
+differs, not because the pattern was wrong:
+
+- **No `power-translations.ts` reuse.** Stage's translation rule (every locale mandatory, no
+  `skills`) is the opposite shape from Power's ("only en-GB mandatory, others all-or-nothing"), so
+  parametrizing the existing module would have meant threading a "which locales are required" flag
+  through code that assumes Power's rule everywhere. A sibling `shared/lib/stage-translations.ts`
+  was added instead - same factory-not-singleton/i18n-key-message conventions, no `superRefine`
+  since there's no partial-fill case to reject.
+- **`LocaleTabs` extended, not forked.** It only ever supported one starred ("mandatory") locale.
+  Since every locale is mandatory for Stage, `requiredLocale` now accepts `Locale | Locale[]` -
+  existing Stand/DevilFruit call sites are unaffected (a single `Locale` still works), Stage passes
+  `SUPPORTED_LOCALES` to star all three tabs.
+- **No server-side pagination.** The catalogue is ~19 rows total. "Search + filter" from the
+  original ask became: the manga filter goes to the backend's existing `?manga=` (a distinct
+  `stageKeys.list(filters)` cache branch, same mechanism Stand's rarity/stat filters already use),
+  and free-text search over name+description runs client-side over whatever that returned. Adding
+  `LIMIT/OFFSET` would have been complexity with no real user at this catalogue size.
+
+**SSE bug caught and fixed along the way**: `picture-events-bridge.tsx`'s `PictureEventDTO.kind`
+handler was an `if/else-if/else`, and the final `else` treated *any* kind other than
+`STAND`/`DEVIL_FRUIT` as a profile (`USER`) event. The backend has emitted `kind:"STAGE"` since the
+picture-pipeline section above landed, so every Stage picture-ready/failed event was silently
+invalidating `profileKeys.me` instead of the stage catalogue - nothing crashed, it just never
+refreshed the Stages screen over SSE (native's polling fallback masked it). Replaced with an
+explicit `switch` with one case per kind and a no-op `default`, added `STAGE` to the DTO union, and
+added `stageKeys.allLocales` to the bridge's reconnect resync.
+
+**Known follow-up, not done this tanda**: no `cache/stage_repository.go` Redis decorator exists yet
+(Stand/DevilFruit have one). `stageRepository` in `main.go` stays uncached - functionally fine
+(no staleness risk, since there's no cache to go stale), but every `IStageCatalog.Stages` call in
+`GameService.CreateGame` is a live Postgres round trip, same debt already flagged in
+[[game-lobby-persistence]].
+
 Related: [[game-lobby-persistence]], [[game-realtime-transport]], [[gameplay-domain-design]],
-[[gameplay-application-layer]], [[i18n-multi-language]].
+[[gameplay-application-layer]], [[i18n-multi-language]], [[admin-panel-crud-ux-fixes]],
+[[picture-events-sse]].
