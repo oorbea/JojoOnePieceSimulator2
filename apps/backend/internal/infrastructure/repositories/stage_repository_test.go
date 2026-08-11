@@ -90,9 +90,10 @@ func TestStageRepository_SeedTranslations_ResolvePerLocale(t *testing.T) {
 	repo, _ := newTestStageRepository(t)
 	ctx := context.Background()
 
-	jojo, err := repo.ListByManga(ctx, enums.Jojo, enums.EnGB)
+	jojoManga := enums.Jojo
+	jojo, err := repo.Filter(ctx, ports.StageFilters{Manga: &jojoManga}, enums.EnGB)
 	if err != nil {
-		t.Fatalf("ListByManga(JOJO, en-GB): %v", err)
+		t.Fatalf("Filter(manga=JOJO, en-GB): %v", err)
 	}
 	if len(jojo) == 0 {
 		t.Fatal("no seeded JOJO stages found")
@@ -215,6 +216,87 @@ func TestStageRepository_DuplicateNameConflicts(t *testing.T) {
 	}
 	if err := repo.Save(ctx, b, translations); err == nil || !errors.Is(err, ports.ErrStageAlreadyExists) {
 		t.Errorf("Save(b) = %v, want wrapping ErrStageAlreadyExists", err)
+	}
+}
+
+// TestStageRepository_Filter_SearchMatchesCaseInsensitivelyAndLocale mirrors
+// the DevilFruit repository's combined search test - case-insensitivity,
+// resolving the description in the requested locale (not always en-GB), and
+// treating % as a literal character rather than a wildcard.
+func TestStageRepository_Filter_SearchMatchesCaseInsensitivelyAndLocale(t *testing.T) {
+	repo, pool := newTestStageRepository(t)
+	ctx := context.Background()
+
+	var id [16]byte
+	id[0], id[1] = 0xFA, 0xCE
+	stageID := game.StageID(id)
+	cleanupStage(t, pool, stageID)
+
+	name := "Search Test Stage"
+	translations := ports.StageTranslations{
+		enums.EnGB: "an English-only clue",
+		enums.EsES: "una pista solo en español",
+		enums.CaES: "una pista només en català",
+	}
+	st, err := game.NewStage(stageID, enums.Jojo, 300, name, translations[enums.EnGB], "")
+	if err != nil {
+		t.Fatalf("NewStage: %v", err)
+	}
+	if err := repo.Save(ctx, st, translations); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	// Case-insensitive name match.
+	upperName := "SEARCH TEST"
+	results, err := repo.Filter(ctx, ports.StageFilters{Search: &upperName}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search name): %v", err)
+	}
+	found := false
+	for _, s := range results {
+		if s.Name() == name {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Filter(search=%q) did not include %q", upperName, name)
+	}
+
+	// Description match resolves per the requested locale.
+	needle := "español"
+	esResults, err := repo.Filter(ctx, ports.StageFilters{Search: &needle}, enums.EsES)
+	if err != nil {
+		t.Fatalf("Filter(search, es-ES): %v", err)
+	}
+	found = false
+	for _, s := range esResults {
+		if s.Name() == name {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Filter(search=%q, es-ES) did not include %q", needle, name)
+	}
+	enResults, err := repo.Filter(ctx, ports.StageFilters{Search: &needle}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search, en-GB): %v", err)
+	}
+	for _, s := range enResults {
+		if s.Name() == name {
+			t.Errorf("Filter(search=%q, en-GB) unexpectedly included %q - its en-GB description has no Spanish text", needle, name)
+		}
+	}
+
+	// % must be treated as a literal character, not a wildcard.
+	wildcard := "%"
+	wildcardResults, err := repo.Filter(ctx, ports.StageFilters{Search: &wildcard}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search=%%): %v", err)
+	}
+	for _, s := range wildcardResults {
+		if s.Name() == name {
+			t.Errorf("Filter(search=%%) unexpectedly matched %q - %% must be escaped, not treated as a wildcard", name)
+		}
 	}
 }
 
