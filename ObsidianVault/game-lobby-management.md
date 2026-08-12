@@ -12,6 +12,9 @@ tags:
 
 ## Status
 
+**See [[game-lobby-todo]] for the actionable remaining-work checklist** (backend endpoint tests,
+frontend config-edit UI, pool-filter UI). This note is background/rationale only.
+
 Backend done and tested (unit + real-Redis for the new public index, via a throwaway
 `redis:8-alpine` container). Frontend UI (create/join/browse/lobby-room screens, WebSocket client)
 is **not built yet** - next tanda. See [[gameplay-game-modes]] and [[game-realtime-transport]] for

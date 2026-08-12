@@ -16,6 +16,8 @@ module.exports = {
       testMatch: [
         '<rootDir>/src/shared/lib/__tests__/**/*.test.ts',
         '<rootDir>/src/test/__tests__/**/*.test.ts',
+        '<rootDir>/src/features/**/lib/__tests__/**/*.test.ts',
+        '<rootDir>/src/features/**/stores/__tests__/**/*.test.ts',
       ],
       // jest-expo's own default only whitelists RN/Expo packages for
       // transform, keyed on the FIRST "node_modules/" segment in a path.
@@ -54,6 +56,8 @@ module.exports = {
         '/node_modules/',
         '<rootDir>/src/shared/lib/__tests__/',
         '<rootDir>/src/test/__tests__/',
+        '<rootDir>/src/features/.*/lib/__tests__/',
+        '<rootDir>/src/features/.*/stores/__tests__/',
       ],
       transformIgnorePatterns: [],
       transform: {

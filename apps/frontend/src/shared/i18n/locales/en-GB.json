@@ -35,6 +35,7 @@
   },
   "nav": {
     "home": "Home",
+    "play": "Play",
     "profile": "Profile",
     "admin": "Admin",
     "logOut": "Log out"
@@ -42,6 +43,7 @@
   "home": {
     "pickChannel": "Pick a channel",
     "channels": {
+      "play": "Play",
       "profile": "Profile",
       "stands": "Stands",
       "devilFruits": "Devil Fruits",
@@ -161,6 +163,134 @@
     "deleteConfirmButton": "Delete Stage",
     "deleteConfirmMessage": "\"{{name}}\" will be permanently deleted. This can't be undone."
   },
+  "game": {
+    "hub": {
+      "title": "Play",
+      "subtitle": "Create a lobby, join one with a code, or browse open games.",
+      "create": "Create Lobby",
+      "join": "Join by Code",
+      "browse": "Open Lobbies"
+    },
+    "create": {
+      "title": "Create Lobby",
+      "modeGauntletHint": "Co-op. Play through the story until the squad falls or clears it.",
+      "modeVersusHint": "Competitive. Two even teams, three rounds.",
+      "mangasLabel": "Manga",
+      "teamSizeLabel": "Team size",
+      "teamSizeGauntletLabel": "Max players",
+      "votingSecondsLabel": "Voting window (seconds)",
+      "privacyLabel": "Privacy",
+      "allowBotsLabel": "Allow bots",
+      "allowBotsGauntletHint": "Bots aren't allowed in Gauntlet.",
+      "submit": "Create Lobby",
+      "creating": "Creating…"
+    },
+    "join": {
+      "title": "Join by Code",
+      "codeLabel": "Join code",
+      "codeHelp": "6 characters. No 0, O, 1, or I.",
+      "codePlaceholder": "ABCDEF",
+      "notFound": "No lobby found with that code.",
+      "submit": "Join Lobby",
+      "joining": "Joining…"
+    },
+    "preview": {
+      "host": "Hosted by {{name}}",
+      "lockedBadge": "Locked"
+    },
+    "browse": {
+      "title": "Open Lobbies",
+      "refresh": "Refresh",
+      "hostedBy": "Hosted by {{name}}",
+      "join": "Join",
+      "empty": "No open lobbies right now.",
+      "emptyCta": "Create one",
+      "error": "Couldn't load open lobbies.",
+      "retry": "Retry"
+    },
+    "lobby": {
+      "host": "Host",
+      "you": "You",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "playersCount": "{{count}}/{{max}} players",
+      "switchTeam": "Switch to {{name}}",
+      "emptySlot": "Tap to join",
+      "teamFull": "Team full",
+      "waitingForHost": "Waiting for the host to start…",
+      "reasonNotHost": "Only the host can do that.",
+      "reasonNotInLobby": "Not available right now.",
+      "reasonNotFound": "That player couldn't be found.",
+      "reasonTeamFull": "That team is full.",
+      "ready": "Ready"
+    },
+    "code": {
+      "title": "Join code",
+      "copy": "Copy code",
+      "copied": "Code copied",
+      "share": "Share code",
+      "shared": "Code shared",
+      "shareMessage": "Join my JoJo x One Piece Simulator lobby with code {{code}}",
+      "publicHint": "Public: anyone can find and join this lobby.",
+      "privateHint": "Private: only players with the code can join."
+    },
+    "lock": {
+      "locked": "Locked",
+      "lockAction": "Lock lobby",
+      "unlockAction": "Unlock lobby"
+    },
+    "start": {
+      "start": "Start",
+      "starting": "Starting…",
+      "ready": "Ready to start",
+      "reasonNotHost": "Only the host can start the game.",
+      "reasonAlreadyStarted": "This game has already started.",
+      "reasonNoMangas": "Select at least one manga.",
+      "reasonNeedsTwoTeams": "Versus needs exactly two teams.",
+      "reasonEmptyTeam": "Both teams need at least one player.",
+      "reasonUnequalTeams": "Both teams need the same number of players ({{a}} vs {{b}}).",
+      "reasonNoPlayers": "There aren't enough players to start."
+    },
+    "abort": {
+      "action": "Cancel game",
+      "title": "Cancel this game?",
+      "message": "Every player will be removed and the lobby will close. This can't be undone.",
+      "confirm": "Cancel game"
+    },
+    "leave": {
+      "action": "Leave lobby",
+      "title": "Leave this lobby?",
+      "message": "You can rejoin later with the join code, as long as the lobby is still open.",
+      "confirm": "Leave lobby"
+    },
+    "kick": {
+      "action": "Kick {{name}}",
+      "title": "Kick this player?",
+      "message": "They'll be removed from the lobby immediately.",
+      "confirm": "Kick",
+      "reasonSelf": "You can't kick yourself."
+    },
+    "transferHost": {
+      "action": "Make {{name}} host",
+      "title": "Transfer host?",
+      "message": "They'll gain full control of this lobby's settings and start button.",
+      "confirm": "Transfer host",
+      "reasonBot": "A bot can't be host."
+    },
+    "connection": {
+      "reconnecting": "Reconnecting in {{seconds}}s…",
+      "unavailable": "Live updates aren't available right now.",
+      "retryNow": "Retry now"
+    },
+    "terminal": {
+      "kicked": "You were removed from this lobby.",
+      "abortedByHost": "The host cancelled this game.",
+      "finished": "This game has finished."
+    },
+    "a11y": {
+      "playerRow": "{{name}}"
+    }
+  },
   "locale": {
     "required": "required",
     "hasError": "has an error"
@@ -238,6 +368,31 @@
     "manga": {
       "JOJO": "JoJo's Bizarre Adventure",
       "ONE_PIECE": "One Piece"
+    },
+    "gameMode": {
+      "GAUNTLET": "Gauntlet",
+      "VERSUS": "Versus"
+    },
+    "gameState": {
+      "LOBBY": "Lobby",
+      "ASSIGNING": "Assigning powers",
+      "VOTING": "Voting",
+      "TIEBREAK": "Tiebreak vote",
+      "RESOLVING": "Resolving round",
+      "FINISHED": "Finished",
+      "ABORTED": "Cancelled"
+    },
+    "abilitySource": {
+      "RANDOM": "Random",
+      "INVENTORY": "Inventory"
+    },
+    "participantKind": {
+      "HUMAN": "Player",
+      "BOT": "Bot"
+    },
+    "lobbyVisibility": {
+      "PUBLIC": "Public",
+      "PRIVATE": "Private"
     }
   },
   "errors": {
@@ -300,6 +455,14 @@
     "INVALID_PARTICIPANT_KIND": "That participant type isn't valid.",
     "INVALID_SQUAD_VERDICT": "That isn't a valid squad verdict.",
     "UNKNOWN_COMMAND": "That action isn't supported.",
+    "LOBBY_LOCKED": "This lobby is locked.",
+    "CONFIG_WOULD_EVICT_PLAYERS": "That change would remove seated players. Lower the size after players leave.",
+    "CANNOT_KICK_SELF": "You can't kick yourself.",
+    "POOL_TOO_SMALL": "There aren't enough allowed powers to start with this many players.",
+    "INVALID_VOTING_WINDOW": "That voting window isn't valid.",
+    "INVALID_POOL_FILTER": "That power pool restriction isn't valid.",
+    "INVALID_LOBBY_VISIBILITY": "That privacy setting isn't valid.",
+    "LOBBY_PRIVATE": "This lobby is private. Ask the host for the join code.",
     "INTERNAL": "Something went wrong on our end."
   }
 }
