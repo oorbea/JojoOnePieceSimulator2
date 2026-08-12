@@ -185,6 +185,13 @@
       "submit": "Create Lobby",
       "creating": "Creating…"
     },
+    "config": {
+      "title": "Lobby settings",
+      "readOnly": "Read only",
+      "hostOnly": "Only the host can change these settings.",
+      "saving": "Saving…",
+      "saved": "Saved"
+    },
     "join": {
       "title": "Join by Code",
       "codeLabel": "Join code",

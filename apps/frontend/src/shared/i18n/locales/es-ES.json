@@ -185,6 +185,13 @@
       "submit": "Crear sala",
       "creating": "Creando…"
     },
+    "config": {
+      "title": "Ajustes de la sala",
+      "readOnly": "Solo lectura",
+      "hostOnly": "Solo el anfitrión puede cambiar estos ajustes.",
+      "saving": "Guardando…",
+      "saved": "Guardado"
+    },
     "join": {
       "title": "Unirse con código",
       "codeLabel": "Código de sala",

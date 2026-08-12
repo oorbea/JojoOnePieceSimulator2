@@ -131,3 +131,19 @@ export type CreateGameInput = {
   visibility?: LobbyVisibility
   votingWindowSeconds?: number
 }
+
+// Mirrors services.ConfigUpdateInput / dto.UpdateConfigPayload - the
+// UPDATE_CONFIG command's payload. A full replacement of the lobby's
+// Config, not a partial patch, so every field is required (unlike
+// CreateGameInput's optional visibility/votingWindowSeconds, which the
+// backend only defaults on creation).
+export type UpdateGameConfigInput = {
+  mode: GameMode
+  mangas: Manga[]
+  abilitySource: AbilitySource
+  teamSize: number
+  allowBots: boolean
+  visibility: LobbyVisibility
+  votingWindowSeconds: number
+  poolFilter?: PoolFilter
+}

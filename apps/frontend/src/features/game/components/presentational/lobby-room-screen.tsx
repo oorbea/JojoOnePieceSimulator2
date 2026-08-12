@@ -1,16 +1,20 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
 import { ConnectionBanner } from '@/features/game/components/presentational/connection-banner'
 import { JoinCodeCard } from '@/features/game/components/presentational/join-code-card'
+import { LobbyConfigPanel } from '@/features/game/components/presentational/lobby-config-panel'
 import { LobbyLockRow } from '@/features/game/components/presentational/lobby-lock-row'
 import { SquadRoster } from '@/features/game/components/presentational/squad-roster'
 import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
 import type { GameSnapshot, GameViewer } from '@/features/game/types/game.types'
+import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import type { SocketStatus } from '@/features/game/stores/game-socket.store'
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
+import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
@@ -42,6 +46,24 @@ type Props = {
   confirmSheet: ConfirmSheetState
   confirming: boolean
   onCancelConfirm: () => void
+  configMode: GameMode
+  onChangeConfigMode: (mode: GameMode) => void
+  configMangas: Manga[]
+  onToggleConfigManga: (manga: Manga) => void
+  configTeamSize: number
+  configTeamSizeMin: number
+  configTeamSizeMax: number
+  onChangeConfigTeamSize: (size: number) => void
+  configAllowBots: boolean
+  onToggleConfigAllowBots: () => void
+  configVisibility: LobbyVisibility
+  onToggleConfigVisibility: () => void
+  configVotingWindowSeconds: number
+  onChangeConfigVotingWindow: (seconds: number) => void
+  configSaving: boolean
+  configSaved: boolean
+  configError?: string
+  onSubmitConfig: () => void
 }
 
 export function LobbyRoomScreen({
@@ -64,9 +86,28 @@ export function LobbyRoomScreen({
   confirmSheet,
   confirming,
   onCancelConfirm,
+  configMode,
+  onChangeConfigMode,
+  configMangas,
+  onToggleConfigManga,
+  configTeamSize,
+  configTeamSizeMin,
+  configTeamSizeMax,
+  onChangeConfigTeamSize,
+  configAllowBots,
+  onToggleConfigAllowBots,
+  configVisibility,
+  onToggleConfigVisibility,
+  configVotingWindowSeconds,
+  onChangeConfigVotingWindow,
+  configSaving,
+  configSaved,
+  configError,
+  onSubmitConfig,
 }: Props) {
   const { t } = useTranslation()
   const capacity = snapshot.config.teamSize
+  const [configExpanded, setConfigExpanded] = useState(false)
 
   return (
     <PageShell align="top" scroll maxWidth={1080}>
@@ -114,6 +155,36 @@ export function LobbyRoomScreen({
           onTransferHost={onTransferHost}
         />
       )}
+
+      <FilterDisclosure
+        label={t('game.config.title')}
+        activeCount={0}
+        expanded={configExpanded}
+        onToggle={() => setConfigExpanded((v) => !v)}
+        clearLabel=""
+      >
+        <LobbyConfigPanel
+          isHost={you.isHost}
+          mode={configMode}
+          onChangeMode={onChangeConfigMode}
+          mangas={configMangas}
+          onToggleManga={onToggleConfigManga}
+          teamSize={configTeamSize}
+          teamSizeMin={configTeamSizeMin}
+          teamSizeMax={configTeamSizeMax}
+          onChangeTeamSize={onChangeConfigTeamSize}
+          allowBots={configAllowBots}
+          onToggleAllowBots={onToggleConfigAllowBots}
+          visibility={configVisibility}
+          onToggleVisibility={onToggleConfigVisibility}
+          votingWindowSeconds={configVotingWindowSeconds}
+          onChangeVotingWindow={onChangeConfigVotingWindow}
+          saving={configSaving}
+          saved={configSaved}
+          error={configError}
+          onSubmit={onSubmitConfig}
+        />
+      </FilterDisclosure>
 
       {snapshot.state === 'LOBBY' ? (
         <StartBar isHost={you.isHost} gate={gate} starting={starting} onStart={onStart} onLeave={onLeave} onAbort={onAbort} />

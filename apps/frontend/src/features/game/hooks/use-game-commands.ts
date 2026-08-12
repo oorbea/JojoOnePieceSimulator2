@@ -1,5 +1,6 @@
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import { CLIENT_COMMAND } from '@/features/game/types/game-ws.types'
+import type { UpdateGameConfigInput } from '@/features/game/types/game.types'
 
 // Typed command senders over the socket store's raw send() - one function
 // per WS command, so containers never hand-build a payload shape.
@@ -20,5 +21,10 @@ export function useGameCommands() {
     kick: (participantId: string) => send(CLIENT_COMMAND.KICK, { participantId }),
     transferHost: (participantId: string) => send(CLIENT_COMMAND.TRANSFER_HOST, { participantId }),
     setLocked: (locked: boolean) => send(CLIENT_COMMAND.SET_LOCK, { locked }),
+    // UPDATE_CONFIG is a full replacement (mirrors CreateGameRequest, plus
+    // the fields only editable once a lobby exists) - callers must build
+    // the whole payload from current + edited fields, never a patch.
+    updateConfig: (input: UpdateGameConfigInput) =>
+      send(CLIENT_COMMAND.UPDATE_CONFIG, input as unknown as Record<string, unknown>),
   }
 }

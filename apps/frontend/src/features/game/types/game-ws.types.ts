@@ -16,6 +16,7 @@ export const CLIENT_COMMAND = {
   KICK: 'KICK',
   TRANSFER_HOST: 'TRANSFER_HOST',
   SET_LOCK: 'SET_LOCK',
+  UPDATE_CONFIG: 'UPDATE_CONFIG',
 } as const
 
 export type ClientCommandType = (typeof CLIENT_COMMAND)[keyof typeof CLIENT_COMMAND]
