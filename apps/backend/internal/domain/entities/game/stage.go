@@ -16,13 +16,13 @@ import (
 // whatever was baked in at round-assignment time,
 // api/dto.NewGameStateResponse).
 type Stage struct {
-	id            StageID
-	manga         enums.Manga
-	order         int
 	name          string
 	description   string
 	picture       string
 	pictureThumb  string
+	order         int
+	id            StageID
+	manga         enums.Manga
 	pictureStatus enums.PictureStatus
 }
 

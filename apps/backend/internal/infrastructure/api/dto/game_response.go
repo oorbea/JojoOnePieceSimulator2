@@ -366,12 +366,12 @@ type PublicLobbyResponse struct {
 	GameID              string   `json:"gameId"`
 	Mode                string   `json:"mode"`
 	HostDisplayName     string   `json:"hostDisplayName"`
+	AbilitySource       string   `json:"abilitySource"`
+	Mangas              []string `json:"mangas"`
 	PlayerCount         int      `json:"playerCount"`
 	MaxPlayers          int      `json:"maxPlayers"`
-	Mangas              []string `json:"mangas"`
-	AbilitySource       string   `json:"abilitySource"`
-	AllowBots           bool     `json:"allowBots"`
 	VotingWindowSeconds int      `json:"votingWindowSeconds"`
+	AllowBots           bool     `json:"allowBots"`
 	Locked              bool     `json:"locked"`
 }
 

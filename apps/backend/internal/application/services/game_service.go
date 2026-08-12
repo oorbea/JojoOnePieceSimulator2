@@ -53,18 +53,18 @@ var (
 // so CreateGame takes one argument instead of a long positional list -
 // mirrors StandInput/DevilFruitInput.
 type CreateGameInput struct {
-	Mode          enums.GameModeKind
-	Mangas        []enums.Manga
-	AbilitySource enums.AbilitySource
-	TeamSize      int
-	AllowBots     bool
+	PoolFilter          game.PoolFilter
+	Mangas              []enums.Manga
+	TeamSize            int
+	VotingWindowSeconds int
+	Mode                enums.GameModeKind
+	AbilitySource       enums.AbilitySource
+	AllowBots           bool
 	// Visibility, VotingWindowSeconds, PoolFilter are all optional: a zero
 	// Visibility defaults to enums.Private, a zero VotingWindowSeconds
 	// defaults to VotingPolicy.Window, and a zero PoolFilter means "no
 	// restriction".
-	Visibility          enums.LobbyVisibility
-	VotingWindowSeconds int
-	PoolFilter          game.PoolFilter
+	Visibility enums.LobbyVisibility
 }
 
 // ConfigUpdateInput is EditLobbyConfig's whole-replacement input - the same
@@ -674,16 +674,16 @@ func (s *GameService) GameCode(ctx context.Context, id game.GameID) (string, err
 // non-participant can never learn who's in a lobby or what they'll play as,
 // only whether it's worth joining.
 type LobbyListing struct {
-	GameID              game.GameID
-	Mode                enums.GameModeKind
 	HostDisplayName     string
+	Mangas              []enums.Manga
 	PlayerCount         int
 	MaxPlayers          int
-	Mangas              []enums.Manga
+	VotingWindowSeconds int
+	GameID              game.GameID
+	Mode                enums.GameModeKind
 	AbilitySource       enums.AbilitySource
 	AllowBots           bool
 	Visibility          enums.LobbyVisibility
-	VotingWindowSeconds int
 	Locked              bool
 }
 
