@@ -52,7 +52,7 @@ func rawClient(t *testing.T) *goredis.Client {
 // and a random-ish join code, so concurrent test runs never collide.
 func newFreshGame(t *testing.T, seed byte) (*game.Game, string) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -254,5 +254,94 @@ func TestStore_Get_CorruptPayload_ErrorsAndKeySurvives(t *testing.T) {
 	}
 	if n != 1 {
 		t.Error("corrupt key should survive a failed Get (fail-closed, kept for debugging)")
+	}
+}
+
+// newFreshPublicGame is newFreshGame, but PUBLIC - so it's eligible for the
+// jojo:game:public index.
+func newFreshPublicGame(t *testing.T, seed byte) (*game.Game, string) {
+	t.Helper()
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Public, 30, game.PoolFilter{})
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	var idBytes [16]byte
+	idBytes[0] = seed
+	idBytes[1] = 0xBB
+	host, err := game.NewHumanParticipant(game.ParticipantID{seed, 1}, user.UserID{seed, 2}, "host", game.TeamID{seed, 10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant: %v", err)
+	}
+	team, err := game.NewTeam(game.TeamID{seed, 10}, "Squad", 0)
+	if err != nil {
+		t.Fatalf("NewTeam: %v", err)
+	}
+	stage, err := game.NewStage(game.StageID{seed, 20}, enums.Jojo, 0, "Phantom Blood", "a test stage", "")
+	if err != nil {
+		t.Fatalf("NewStage: %v", err)
+	}
+	g, err := game.NewGame(game.GameID(idBytes), cfg, host, []*game.Team{team}, []game.Stage{stage})
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	code := game.GameID(idBytes).String()[:6]
+	return g, code
+}
+
+func TestStore_ListPublic_ReturnsOnlyPublicGames(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	pub, pubCode := newFreshPublicGame(t, 10)
+	priv, privCode := newFreshGame(t, 11)
+	t.Cleanup(func() {
+		_ = s.Delete(ctx, pub.ID())
+		_ = s.Delete(ctx, priv.ID())
+	})
+
+	if err := s.Create(ctx, pubCode, pub); err != nil {
+		t.Fatalf("Create(pub): %v", err)
+	}
+	if err := s.Create(ctx, privCode, priv); err != nil {
+		t.Fatalf("Create(priv): %v", err)
+	}
+
+	games, err := s.ListPublic(ctx, 10)
+	if err != nil {
+		t.Fatalf("ListPublic: %v", err)
+	}
+	found := false
+	for _, g := range games {
+		if g.ID() == priv.ID() {
+			t.Fatalf("expected the private game to be excluded from ListPublic")
+		}
+		if g.ID() == pub.ID() {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected the public game to be included in ListPublic")
+	}
+}
+
+func TestStore_ListPublic_RemovedAfterDelete(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	pub, code := newFreshPublicGame(t, 12)
+
+	if err := s.Create(ctx, code, pub); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := s.Delete(ctx, pub.ID()); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	games, err := s.ListPublic(ctx, 50)
+	if err != nil {
+		t.Fatalf("ListPublic: %v", err)
+	}
+	for _, g := range games {
+		if g.ID() == pub.ID() {
+			t.Fatalf("expected the deleted game to be removed from the public index")
+		}
 	}
 }

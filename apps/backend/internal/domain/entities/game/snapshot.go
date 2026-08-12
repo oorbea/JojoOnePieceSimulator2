@@ -25,6 +25,7 @@ type Snapshot struct {
 	ID           GameID
 	State        string
 	HostID       ParticipantID
+	Locked       bool
 	Config       ConfigSnapshot
 	Participants []ParticipantSnapshot // in join order (== Game.order)
 	Teams        []TeamSnapshot
@@ -32,13 +33,27 @@ type Snapshot struct {
 	Rounds       []RoundSnapshot
 }
 
-// ConfigSnapshot mirrors Config.
+// ConfigSnapshot mirrors Config. Visibility/VotingWindowSeconds/PoolFilter
+// are additive fields on top of the original v1 shape - see wire.go's
+// snapshotVersion doc for how a legacy payload missing them decodes.
 type ConfigSnapshot struct {
-	Mode          string
-	Mangas        []string
-	AbilitySource string
-	TeamSize      int
-	AllowBots     bool
+	Mode                string
+	Mangas              []string
+	AbilitySource       string
+	TeamSize            int
+	AllowBots           bool
+	Visibility          string
+	VotingWindowSeconds int
+	PoolFilter          PoolFilterSnapshot
+}
+
+// PoolFilterSnapshot mirrors PoolFilter. Empty slices mean "no
+// restriction", exactly like PoolFilter itself.
+type PoolFilterSnapshot struct {
+	StandRarities []string
+	FruitRarities []string
+	FruitTypes    []string
+	Banned        []powers.PowerID
 }
 
 // ParticipantSnapshot mirrors Participant.
@@ -123,12 +138,16 @@ func (g *Game) Snapshot() Snapshot {
 		ID:     g.id,
 		State:  g.state.String(),
 		HostID: g.hostID,
+		Locked: g.locked,
 		Config: ConfigSnapshot{
-			Mode:          g.config.mode.String(),
-			Mangas:        mangaStrings(g.config.mangas),
-			AbilitySource: g.config.abilitySource.String(),
-			TeamSize:      g.config.teamSize,
-			AllowBots:     g.config.allowBots,
+			Mode:                g.config.mode.String(),
+			Mangas:              mangaStrings(g.config.mangas),
+			AbilitySource:       g.config.abilitySource.String(),
+			TeamSize:            g.config.teamSize,
+			AllowBots:           g.config.allowBots,
+			Visibility:          g.config.visibility.String(),
+			VotingWindowSeconds: g.config.votingWindowSeconds,
+			PoolFilter:          snapshotPoolFilter(g.config.poolFilter),
 		},
 		Participants: make([]ParticipantSnapshot, 0, len(g.order)),
 		Teams:        make([]TeamSnapshot, 0, len(g.teams)),
@@ -227,6 +246,63 @@ func mangaStrings(mangas []enums.Manga) []string {
 	return out
 }
 
+func rarityStrings(rarities []enums.PowerRarity) []string {
+	out := make([]string, len(rarities))
+	for i, r := range rarities {
+		out[i] = r.String()
+	}
+	return out
+}
+
+func fruitTypeStrings(types []enums.FruitType) []string {
+	out := make([]string, len(types))
+	for i, t := range types {
+		out[i] = t.String()
+	}
+	return out
+}
+
+func snapshotPoolFilter(f PoolFilter) PoolFilterSnapshot {
+	return PoolFilterSnapshot{
+		StandRarities: rarityStrings(f.standRarities),
+		FruitRarities: rarityStrings(f.fruitRarities),
+		FruitTypes:    fruitTypeStrings(f.fruitTypes),
+		Banned:        append([]powers.PowerID(nil), f.banned...),
+	}
+}
+
+// restorePoolFilter rebuilds a PoolFilter from its snapshot. Unlike
+// NewPoolFilter it does not reject an empty result - an empty
+// PoolFilterSnapshot (legacy payload, or a lobby that never restricted its
+// pool) restores to the "no restriction" PoolFilter{}.
+func restorePoolFilter(fs PoolFilterSnapshot) (PoolFilter, error) {
+	standRarities := make([]enums.PowerRarity, len(fs.StandRarities))
+	for i, r := range fs.StandRarities {
+		parsed, err := enums.ParsePowerRarity(r)
+		if err != nil {
+			return PoolFilter{}, err
+		}
+		standRarities[i] = parsed
+	}
+	fruitRarities := make([]enums.PowerRarity, len(fs.FruitRarities))
+	for i, r := range fs.FruitRarities {
+		parsed, err := enums.ParsePowerRarity(r)
+		if err != nil {
+			return PoolFilter{}, err
+		}
+		fruitRarities[i] = parsed
+	}
+	fruitTypes := make([]enums.FruitType, len(fs.FruitTypes))
+	for i, t := range fs.FruitTypes {
+		parsed, err := enums.ParseFruitType(t)
+		if err != nil {
+			return PoolFilter{}, err
+		}
+		fruitTypes[i] = parsed
+	}
+	return NewPoolFilter(standRarities, fruitRarities, fruitTypes, fs.Banned)
+}
+
 // Restore rebuilds a *Game from a Snapshot. Unlike NewGame/Join/AddBot, it
 // bypasses every capacity/membership invariant (a full lobby must still be
 // restorable) but re-validates every value object through its normal
@@ -254,12 +330,36 @@ func Restore(s Snapshot) (*Game, error) {
 		}
 		mangas[i] = parsed
 	}
+	// Visibility/VotingWindowSeconds/PoolFilter are additive fields - a
+	// legacy Snapshot predating them decodes with an empty Visibility
+	// string and a zero VotingWindowSeconds, which fall back here to
+	// PRIVATE and DefaultVotingWindowSeconds rather than failing to parse.
+	// See wire.go's snapshotVersion doc for why the version wasn't bumped.
+	visibility := enums.Private
+	if s.Config.Visibility != "" {
+		visibility, err = enums.ParseLobbyVisibility(s.Config.Visibility)
+		if err != nil {
+			return nil, err
+		}
+	}
+	votingWindowSeconds := s.Config.VotingWindowSeconds
+	if votingWindowSeconds == 0 {
+		votingWindowSeconds = DefaultVotingWindowSeconds
+	}
+	poolFilter, err := restorePoolFilter(s.Config.PoolFilter)
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := Config{
-		mode:          mode,
-		mangas:        mangas,
-		abilitySource: abilitySource,
-		teamSize:      s.Config.TeamSize,
-		allowBots:     s.Config.AllowBots,
+		mode:                mode,
+		mangas:              mangas,
+		abilitySource:       abilitySource,
+		teamSize:            s.Config.TeamSize,
+		allowBots:           s.Config.AllowBots,
+		visibility:          visibility,
+		votingWindowSeconds: votingWindowSeconds,
+		poolFilter:          poolFilter,
 	}
 
 	state, err := enums.ParseGameState(s.State)
@@ -298,6 +398,7 @@ func Restore(s Snapshot) (*Game, error) {
 		mode:         gameMode,
 		hostID:       s.HostID,
 		state:        state,
+		locked:       s.Locked,
 		participants: make(map[ParticipantID]*Participant, len(s.Participants)),
 		order:        make([]ParticipantID, 0, len(s.Participants)),
 		teams:        teams,

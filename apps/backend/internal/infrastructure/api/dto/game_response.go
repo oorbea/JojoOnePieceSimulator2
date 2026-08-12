@@ -3,16 +3,52 @@ package dto
 import (
 	"context"
 
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 )
 
 // GameConfigResponse mirrors game.Config.
 type GameConfigResponse struct {
-	Mangas        []string `json:"mangas"`
-	AbilitySource string   `json:"abilitySource"`
-	TeamSize      int      `json:"teamSize"`
-	AllowBots     bool     `json:"allowBots"`
+	Mangas              []string           `json:"mangas"`
+	AbilitySource       string             `json:"abilitySource"`
+	TeamSize            int                `json:"teamSize"`
+	AllowBots           bool               `json:"allowBots"`
+	Visibility          string             `json:"visibility"`
+	VotingWindowSeconds int                `json:"votingWindowSeconds"`
+	PoolFilter          PoolFilterResponse `json:"poolFilter"`
+}
+
+// PoolFilterResponse mirrors game.PoolFilter. Empty arrays mean "no
+// restriction", exactly like the domain type.
+type PoolFilterResponse struct {
+	StandRarities []string `json:"standRarities"`
+	FruitRarities []string `json:"fruitRarities"`
+	FruitTypes    []string `json:"fruitTypes"`
+	Banned        []string `json:"banned"`
+}
+
+func newPoolFilterResponse(f game.PoolFilter) PoolFilterResponse {
+	standRarities := make([]string, 0)
+	for _, r := range f.StandRarities() {
+		standRarities = append(standRarities, r.String())
+	}
+	fruitRarities := make([]string, 0)
+	for _, r := range f.FruitRarities() {
+		fruitRarities = append(fruitRarities, r.String())
+	}
+	fruitTypes := make([]string, 0)
+	for _, t := range f.FruitTypes() {
+		fruitTypes = append(fruitTypes, t.String())
+	}
+	banned := make([]string, 0)
+	for _, id := range f.Banned() {
+		banned = append(banned, id.String())
+	}
+	return PoolFilterResponse{
+		StandRarities: standRarities, FruitRarities: fruitRarities,
+		FruitTypes: fruitTypes, Banned: banned,
+	}
 }
 
 // GameTeamResponse mirrors game.Team.
@@ -115,6 +151,7 @@ type GameSnapshotResponse struct {
 	State        string                    `json:"state"`
 	Mode         string                    `json:"mode"`
 	HostID       string                    `json:"hostId"`
+	Locked       bool                      `json:"locked"`
 	Config       GameConfigResponse        `json:"config"`
 	Teams        []GameTeamResponse        `json:"teams"`
 	Participants []GameParticipantResponse `json:"participants"`
@@ -255,11 +292,15 @@ func NewGameStateResponse(
 			State:  g.State().String(),
 			Mode:   g.Config().Mode().String(),
 			HostID: g.HostID().String(),
+			Locked: g.Locked(),
 			Config: GameConfigResponse{
-				Mangas:        mangaNames(g.Config().Mangas()),
-				AbilitySource: g.Config().AbilitySource().String(),
-				TeamSize:      g.Config().TeamSize(),
-				AllowBots:     g.Config().AllowBots(),
+				Mangas:              mangaNames(g.Config().Mangas()),
+				AbilitySource:       g.Config().AbilitySource().String(),
+				TeamSize:            g.Config().TeamSize(),
+				AllowBots:           g.Config().AllowBots(),
+				Visibility:          g.Config().Visibility().String(),
+				VotingWindowSeconds: g.Config().VotingWindowSeconds(),
+				PoolFilter:          newPoolFilterResponse(g.Config().PoolFilter()),
 			},
 			Teams:        teams,
 			Participants: participants,
@@ -315,6 +356,63 @@ func newGameLoadoutResponse(ctx context.Context, l *game.Loadout, resolveStand, 
 		lr.DevilFruit = &fr
 	}
 	return lr, nil
+}
+
+// PublicLobbyResponse is one entry in the public lobby browser - a
+// services.LobbyListing flattened to JSON. Deliberately roster-free and
+// join-code-free: browsing must never leak who's in a lobby, and the
+// public browser joins by GameID, not by code.
+type PublicLobbyResponse struct {
+	GameID              string   `json:"gameId"`
+	Mode                string   `json:"mode"`
+	HostDisplayName     string   `json:"hostDisplayName"`
+	PlayerCount         int      `json:"playerCount"`
+	MaxPlayers          int      `json:"maxPlayers"`
+	Mangas              []string `json:"mangas"`
+	AbilitySource       string   `json:"abilitySource"`
+	AllowBots           bool     `json:"allowBots"`
+	VotingWindowSeconds int      `json:"votingWindowSeconds"`
+	Locked              bool     `json:"locked"`
+}
+
+// NewPublicLobbyResponse flattens a services.LobbyListing for the browser.
+func NewPublicLobbyResponse(l services.LobbyListing) PublicLobbyResponse {
+	return PublicLobbyResponse{
+		GameID:              l.GameID.String(),
+		Mode:                l.Mode.String(),
+		HostDisplayName:     l.HostDisplayName,
+		PlayerCount:         l.PlayerCount,
+		MaxPlayers:          l.MaxPlayers,
+		Mangas:              mangaNames(l.Mangas),
+		AbilitySource:       l.AbilitySource.String(),
+		AllowBots:           l.AllowBots,
+		VotingWindowSeconds: l.VotingWindowSeconds,
+		Locked:              l.Locked,
+	}
+}
+
+// PublicLobbyListResponse is GET /games/public's response body.
+type PublicLobbyListResponse struct {
+	Items []PublicLobbyResponse `json:"items"`
+}
+
+// LobbyPreviewResponse is GET /games/preview's response body - the same
+// summary as PublicLobbyResponse plus the echoed code and visibility, since
+// a preview also works for PRIVATE lobbies (the code itself is the
+// credential).
+type LobbyPreviewResponse struct {
+	PublicLobbyResponse
+	Code       string `json:"code"`
+	Visibility string `json:"visibility"`
+}
+
+// NewLobbyPreviewResponse builds a LobbyPreviewResponse.
+func NewLobbyPreviewResponse(code string, l services.LobbyListing) LobbyPreviewResponse {
+	return LobbyPreviewResponse{
+		PublicLobbyResponse: NewPublicLobbyResponse(l),
+		Code:                code,
+		Visibility:          l.Visibility.String(),
+	}
 }
 
 func mangaNames(mangas []enums.Manga) []string {

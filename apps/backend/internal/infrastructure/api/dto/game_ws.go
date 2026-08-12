@@ -1,6 +1,14 @@
 package dto
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+)
 
 // ClientCommand is the envelope every game WebSocket command arrives in.
 // RequestID is opaque to the server - it exists purely so a client can
@@ -19,13 +27,19 @@ type ClientCommand struct {
 // either (lifecycle-only, driven by the socket's own open/close, so a
 // client can never forge its own or anyone else's presence).
 const (
-	CommandLeave     = "LEAVE"
-	CommandAddBot    = "ADD_BOT"
-	CommandRemoveBot = "REMOVE_BOT"
-	CommandStart     = "START"
-	CommandAbort     = "ABORT"
-	CommandVote      = "VOTE"
-	CommandResync    = "RESYNC"
+	CommandLeave        = "LEAVE"
+	CommandAddBot       = "ADD_BOT"
+	CommandRemoveBot    = "REMOVE_BOT"
+	CommandStart        = "START"
+	CommandAbort        = "ABORT"
+	CommandVote         = "VOTE"
+	CommandResync       = "RESYNC"
+	CommandSwitchTeam   = "SWITCH_TEAM"
+	CommandMovePlayer   = "MOVE_PLAYER"
+	CommandKick         = "KICK"
+	CommandTransferHost = "TRANSFER_HOST"
+	CommandSetLock      = "SET_LOCK"
+	CommandUpdateConfig = "UPDATE_CONFIG"
 )
 
 // AddBotPayload is CommandAddBot's payload.
@@ -41,6 +55,154 @@ type RemoveBotPayload struct {
 // VotePayload is CommandVote's payload.
 type VotePayload struct {
 	Option string `json:"option"`
+}
+
+// SwitchTeamPayload is CommandSwitchTeam's payload. ParticipantID is
+// optional - an empty value means "move myself".
+type SwitchTeamPayload struct {
+	ParticipantID string `json:"participantId,omitempty"`
+	TeamID        string `json:"teamId"`
+}
+
+// MovePlayerPayload is CommandMovePlayer's payload - the host moving
+// someone else. Identical shape to SwitchTeamPayload with ParticipantID
+// required instead of optional; kept as its own command so a client never
+// has to omit a field to express "move myself" vs "move them".
+type MovePlayerPayload struct {
+	ParticipantID string `json:"participantId"`
+	TeamID        string `json:"teamId"`
+}
+
+// KickPayload is CommandKick's payload.
+type KickPayload struct {
+	ParticipantID string `json:"participantId"`
+}
+
+// TransferHostPayload is CommandTransferHost's payload.
+type TransferHostPayload struct {
+	ParticipantID string `json:"participantId"`
+}
+
+// SetLockPayload is CommandSetLock's payload.
+type SetLockPayload struct {
+	Locked bool `json:"locked"`
+}
+
+// PoolFilterPayload is the wire form of game.PoolFilter, shared by
+// CreateGameRequest and CommandUpdateConfig.
+type PoolFilterPayload struct {
+	StandRarities []string `json:"standRarities,omitempty"`
+	FruitRarities []string `json:"fruitRarities,omitempty"`
+	FruitTypes    []string `json:"fruitTypes,omitempty"`
+	Banned        []string `json:"banned,omitempty"`
+}
+
+// ToPoolFilter validates p (which may be nil, meaning "no restriction")
+// into a game.PoolFilter, collecting field errors under the given prefix.
+func (p *PoolFilterPayload) ToPoolFilter(errs *[]string) game.PoolFilter {
+	if p == nil {
+		return game.PoolFilter{}
+	}
+	standRarities := parseRarities(p.StandRarities, "poolFilter.standRarities", errs)
+	fruitRarities := parseRarities(p.FruitRarities, "poolFilter.fruitRarities", errs)
+	fruitTypes := make([]enums.FruitType, 0, len(p.FruitTypes))
+	for _, raw := range p.FruitTypes {
+		t, err := enums.ParseFruitType(raw)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("poolFilter.fruitTypes: %v", err))
+			continue
+		}
+		fruitTypes = append(fruitTypes, t)
+	}
+	banned := make([]powers.PowerID, 0, len(p.Banned))
+	for _, raw := range p.Banned {
+		id, err := powers.ParsePowerID(raw)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("poolFilter.banned: %v", err))
+			continue
+		}
+		banned = append(banned, id)
+	}
+	filter, err := game.NewPoolFilter(standRarities, fruitRarities, fruitTypes, banned)
+	if err != nil {
+		*errs = append(*errs, fmt.Sprintf("poolFilter: %v", err))
+	}
+	return filter
+}
+
+func parseRarities(raw []string, field string, errs *[]string) []enums.PowerRarity {
+	out := make([]enums.PowerRarity, 0, len(raw))
+	for _, r := range raw {
+		parsed, err := enums.ParsePowerRarity(r)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("%s: %v", field, err))
+			continue
+		}
+		out = append(out, parsed)
+	}
+	return out
+}
+
+// UpdateConfigPayload is CommandUpdateConfig's payload and the JSON body
+// accepted by the config-edit REST path - a full replacement of the
+// lobby's Config, the same shape CreateGameRequest builds a Config from
+// plus the fields the host can only set once a lobby exists.
+type UpdateConfigPayload struct {
+	Mode                string             `json:"mode"`
+	Mangas              []string           `json:"mangas"`
+	AbilitySource       string             `json:"abilitySource"`
+	TeamSize            int                `json:"teamSize"`
+	AllowBots           bool               `json:"allowBots"`
+	Visibility          string             `json:"visibility"`
+	VotingWindowSeconds int                `json:"votingWindowSeconds"`
+	PoolFilter          *PoolFilterPayload `json:"poolFilter,omitempty"`
+}
+
+// Validate converts the payload into a services.ConfigUpdateInput,
+// collecting all field errors before returning.
+func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
+	var errs []string
+
+	mode, err := enums.ParseGameModeKind(p.Mode)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("mode: %v", err))
+	}
+	mangas := make([]enums.Manga, 0, len(p.Mangas))
+	for _, raw := range p.Mangas {
+		m, err := enums.ParseManga(raw)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("mangas: %v", err))
+			continue
+		}
+		mangas = append(mangas, m)
+	}
+	abilitySource, err := enums.ParseAbilitySource(p.AbilitySource)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("abilitySource: %v", err))
+	}
+	if p.TeamSize <= 0 {
+		errs = append(errs, "teamSize must be positive")
+	}
+	visibility, err := enums.ParseLobbyVisibility(p.Visibility)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("visibility: %v", err))
+	}
+	poolFilter := p.PoolFilter.ToPoolFilter(&errs)
+
+	if len(errs) > 0 {
+		return services.ConfigUpdateInput{}, &ValidationError{Errors: errs}
+	}
+
+	return services.ConfigUpdateInput{
+		Mode:                mode,
+		Mangas:              mangas,
+		AbilitySource:       abilitySource,
+		TeamSize:            p.TeamSize,
+		AllowBots:           p.AllowBots,
+		Visibility:          visibility,
+		VotingWindowSeconds: p.VotingWindowSeconds,
+		PoolFilter:          poolFilter,
+	}, nil
 }
 
 // ServerFrame is the envelope every server->client frame arrives in.
@@ -69,6 +231,10 @@ const (
 	FrameGameAborted      = "GAME_ABORTED"
 	FrameError            = "ERROR"
 	FrameResyncRequired   = "RESYNC_REQUIRED"
+	FrameTeamChanged      = "TEAM_CHANGED"
+	FramePlayerKicked     = "PLAYER_KICKED"
+	FrameLobbyLockChanged = "LOBBY_LOCK_CHANGED"
+	FrameConfigUpdated    = "CONFIG_UPDATED"
 )
 
 // VotingOpenedPayload/TiebreakOpenedPayload carry a transport-computed
@@ -128,4 +294,18 @@ type GameAbortedPayload struct {
 
 type ResyncRequiredPayload struct {
 	Reason string `json:"reason"`
+}
+
+type TeamChangedPayload struct {
+	ParticipantID string `json:"participantId"`
+	FromTeamID    string `json:"fromTeamId"`
+	ToTeamID      string `json:"toTeamId"`
+}
+
+type PlayerKickedPayload struct {
+	ParticipantID string `json:"participantId"`
+}
+
+type LobbyLockChangedPayload struct {
+	Locked bool `json:"locked"`
 }
