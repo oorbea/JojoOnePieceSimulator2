@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'burnt'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
@@ -17,15 +17,21 @@ import {
 } from '@/features/devil-fruits/hooks/use-devil-fruit-mutations'
 import {
   devilFruitFormSchema,
+  type DevilFruitFilters,
   type DevilFruitFormValues,
   type DevilFruitInput,
   type DevilFruitResponse,
 } from '@/features/devil-fruits/types/devil-fruits.types'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import { usePicturePicker } from '@/shared/hooks/use-picture-picker'
 import { DEFAULT_LOCALE } from '@/shared/i18n'
-import { createEmptyTranslationsForm, fromTranslationsResponse, toTranslationsPayload } from '@/shared/lib/power-translations'
-import type { Locale } from '@/shared/lib/zod'
+import {
+  createEmptyTranslationsForm,
+  fromTranslationsResponse,
+  toTranslationsPayload,
+} from '@/shared/lib/power-translations'
+import { fruitTypeSchema, raritySchema, type Locale } from '@/shared/lib/zod'
 
 // A function, not a constant object - see stands-container.tsx's
 // createDefaultValues for why.
@@ -45,7 +51,35 @@ function toInput(values: DevilFruitFormValues): DevilFruitInput {
 
 export function DevilFruitsContainer() {
   const { t } = useTranslation()
-  const { data: devilFruits, isLoading, isError, refetch } = useDevilFruits()
+
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
+  const [rarityFilter, setRarityFilter] = useState<string | null>(null)
+  const [fruitTypeFilter, setFruitTypeFilter] = useState<string | null>(null)
+
+  const filters = useMemo(() => {
+    const f: DevilFruitFilters = {}
+    if (rarityFilter) f.rarity = rarityFilter as DevilFruitFilters['rarity']
+    if (fruitTypeFilter) f.fruitType = fruitTypeFilter as DevilFruitFilters['fruitType']
+    if (debouncedSearch.trim()) f.q = debouncedSearch.trim()
+    return f
+  }, [rarityFilter, fruitTypeFilter, debouncedSearch])
+  const hasActiveFilters = Object.keys(filters).length > 0
+
+  const {
+    data: devilFruits,
+    isLoading,
+    isError,
+    refetch,
+  } = useDevilFruits(hasActiveFilters ? filters : undefined)
+  const rarityFilterOptions = useMemo(
+    () => raritySchema.options.map((v) => ({ value: v, label: t(`enums.rarity.${v}`) })),
+    [t]
+  )
+  const fruitTypeFilterOptions = useMemo(
+    () => fruitTypeSchema.options.map((v) => ({ value: v, label: t(`enums.fruitType.${v}`) })),
+    [t]
+  )
   const createMutation = useCreateDevilFruit()
   const updateMutation = useUpdateDevilFruit()
   const deleteMutation = useDeleteDevilFruit()
@@ -117,7 +151,8 @@ export function DevilFruitsContainer() {
     if (modalState.mode === 'create') {
       createMutation.mutate(input, {
         onSuccess: (created) => {
-          if (pendingPicture) uploadPictureMutation.mutate({ id: created.id, asset: pendingPicture })
+          if (pendingPicture)
+            uploadPictureMutation.mutate({ id: created.id, asset: pendingPicture })
           closeModal()
         },
       })
@@ -131,7 +166,8 @@ export function DevilFruitsContainer() {
       { id: editingFruit.id, input },
       {
         onSuccess: () => {
-          if (pendingPicture) uploadPictureMutation.mutate({ id: editingFruit.id, asset: pendingPicture })
+          if (pendingPicture)
+            uploadPictureMutation.mutate({ id: editingFruit.id, asset: pendingPicture })
           closeModal()
         },
       }
@@ -180,6 +216,15 @@ export function DevilFruitsContainer() {
       onEdit={(devilFruit) => void openEdit(devilFruit)}
       onDelete={setFruitToDelete}
       openingEditId={openingEditId}
+      search={search}
+      onSearchChange={setSearch}
+      rarityFilter={rarityFilter}
+      rarityFilterOptions={rarityFilterOptions}
+      onRarityFilterChange={setRarityFilter}
+      fruitTypeFilter={fruitTypeFilter}
+      fruitTypeFilterOptions={fruitTypeFilterOptions}
+      onFruitTypeFilterChange={setFruitTypeFilter}
+      hasActiveFilters={hasActiveFilters}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,

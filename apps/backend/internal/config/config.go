@@ -95,6 +95,26 @@ const defaultCacheHTTPMaxAge = 0 * time.Second
 const defaultRedisDialTimeout = 2 * time.Second
 const defaultRedisOpTimeout = 200 * time.Millisecond
 
+// defaultGameVotingWindow is how long a round's Ballot (and its single
+// revote window) stays open before GameService force-closes it.
+const defaultGameVotingWindow = 30 * time.Second
+
+// defaultGameLobbyTTL is how long a Game may go without being touched
+// before the store reaper removes it - well above the voting window so it
+// only ever catches truly abandoned lobbies/matches.
+const defaultGameLobbyTTL = 2 * time.Hour
+
+// defaultGameLobbyReapInterval is how often the reaper sweeps for expired
+// Games. 0 disables it.
+const defaultGameLobbyReapInterval = 10 * time.Minute
+
+// defaultGameStoreOpTimeout bounds every individual Redis game-store
+// operation. Deliberately far larger than defaultRedisOpTimeout: the game
+// store is the source of truth for a live match (fail-closed), not an
+// optional speedup over one (fail-open, like the cache) - it should wait
+// out transient latency rather than fail a vote.
+const defaultGameStoreOpTimeout = 2 * time.Second
+
 type Config struct {
 	DatabaseURL    string
 	Port           string
@@ -190,6 +210,18 @@ type Config struct {
 	// other RateLimit* fields are then ignored).
 	RateLimitEnabled bool
 	CacheEnabled     bool
+	// GameVotingWindow bounds how long a Gauntlet/Versus round's vote (and
+	// its single revote) stays open. GameLobbyTTL/GameLobbyReapInterval
+	// configure the in-memory game store's abandoned-lobby reaper; 0 for
+	// the interval disables it.
+	GameVotingWindow      time.Duration
+	GameLobbyTTL          time.Duration
+	GameLobbyReapInterval time.Duration
+	// GameStoreOpTimeout bounds each Redis game-store operation. See
+	// defaultGameStoreOpTimeout's doc for why it is much larger than
+	// RedisOpTimeout. Only used when RedisURL is set - the in-memory
+	// fallback ignores it.
+	GameStoreOpTimeout time.Duration
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -644,6 +676,48 @@ func Load() (*Config, error) {
 		cacheHTTPMaxAge = parsed
 	}
 
+	gameVotingWindow := defaultGameVotingWindow
+	if raw := os.Getenv("GAME_VOTING_WINDOW"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing GAME_VOTING_WINDOW: %w", err)
+		}
+		gameVotingWindow = parsed
+	}
+
+	gameLobbyTTL := defaultGameLobbyTTL
+	if raw := os.Getenv("GAME_LOBBY_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing GAME_LOBBY_TTL: %w", err)
+		}
+		gameLobbyTTL = parsed
+	}
+
+	gameLobbyReapInterval := defaultGameLobbyReapInterval
+	if raw := os.Getenv("GAME_LOBBY_REAP_INTERVAL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing GAME_LOBBY_REAP_INTERVAL: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("GAME_LOBBY_REAP_INTERVAL must not be negative")
+		}
+		gameLobbyReapInterval = parsed
+	}
+
+	gameStoreOpTimeout := defaultGameStoreOpTimeout
+	if raw := os.Getenv("GAME_STORE_OP_TIMEOUT"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing GAME_STORE_OP_TIMEOUT: %w", err)
+		}
+		if parsed <= 0 {
+			return nil, fmt.Errorf("GAME_STORE_OP_TIMEOUT must be positive")
+		}
+		gameStoreOpTimeout = parsed
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -710,5 +784,10 @@ func Load() (*Config, error) {
 		CacheNotFoundTTL:   cacheNotFoundTTL,
 		CachePresignTTL:    cachePresignTTL,
 		CacheHTTPMaxAge:    cacheHTTPMaxAge,
+
+		GameVotingWindow:      gameVotingWindow,
+		GameLobbyTTL:          gameLobbyTTL,
+		GameLobbyReapInterval: gameLobbyReapInterval,
+		GameStoreOpTimeout:    gameStoreOpTimeout,
 	}, nil
 }

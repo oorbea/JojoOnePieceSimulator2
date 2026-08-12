@@ -23,6 +23,7 @@ See:
 - [[admin-panel-crud-ux-fixes]] — admin Stands/Devil Fruits panel (2026-08-10): ETag clear-on-mutation, picture-status polling, description/skills field bugs
 - [[admin-crud-cache-stale-sw]] — admin CRUD still looked stale in prod (2026-08-10), root cause was the service worker/persisted RQ cache, not the data layer; rewrote sw.js to network-first navigations
 - [[picture-events-sse]] — picture-status polling replaced with SSE push (2026-08-10): in-process hub, admin-only `/api/v1/events`, web-only bridge, native keeps polling fallback; NPM needs manual `proxy_buffering off`
+- [[gameplay-game-modes]] / [[gameplay-domain-design]] — Gauntlet + Versus game modes: domain layer (State/Strategy/Template Method, 2026-08-10). Infra ([[game-lobby-persistence]] Redis lobbies + stage catalog + history, [[game-realtime-transport]] websockets + HTTP routes) closed 2026-08-11.
 
 ## Status (2026-07-28)
 
@@ -30,6 +31,6 @@ Frontend scaffold complete and verified (`tsc`, `eslint`, `expo export -p web`, 
 
 ## Flagged / not done
 
-- No websocket endpoint on backend — `socket.io-client` installed but unwired.
+- Backend now has a native WebSocket endpoint (`/api/v1/games/{id}/ws`, `coder/websocket`) for the game feature — see [[game-realtime-transport]]. `socket.io-client` is still installed on the frontend but unwired; the eventual client should target the native protocol instead, not socket.io.
 - Google OAuth client IDs blank in `.env.example` — auth feature not built yet.
 - No CI. `.github/cicd.yml` exists but empty and in wrong location (should be `.github/workflows/`). Must cover **both** backend (`-tags vips` build/test) and frontend when built.

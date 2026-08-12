@@ -57,6 +57,48 @@ func (ns NullFruitType) Value() (driver.Value, error) {
 	return string(ns.FruitType), nil
 }
 
+type GameMode string
+
+const (
+	GameModeGAUNTLET GameMode = "GAUNTLET"
+	GameModeVERSUS   GameMode = "VERSUS"
+)
+
+func (e *GameMode) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = GameMode(s)
+	case string:
+		*e = GameMode(s)
+	default:
+		return fmt.Errorf("unsupported scan type for GameMode: %T", src)
+	}
+	return nil
+}
+
+type NullGameMode struct {
+	GameMode GameMode
+	Valid    bool // Valid is true if GameMode is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullGameMode) Scan(value interface{}) error {
+	if value == nil {
+		ns.GameMode, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.GameMode.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullGameMode) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.GameMode), nil
+}
+
 type Locale string
 
 const (
@@ -98,6 +140,48 @@ func (ns NullLocale) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.Locale), nil
+}
+
+type Manga string
+
+const (
+	MangaJOJO     Manga = "JOJO"
+	MangaONEPIECE Manga = "ONE_PIECE"
+)
+
+func (e *Manga) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Manga(s)
+	case string:
+		*e = Manga(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Manga: %T", src)
+	}
+	return nil
+}
+
+type NullManga struct {
+	Manga Manga
+	Valid bool // Valid is true if Manga is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullManga) Scan(value interface{}) error {
+	if value == nil {
+		ns.Manga, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Manga.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullManga) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Manga), nil
 }
 
 type PictureStatus string
@@ -325,6 +409,24 @@ type DevilFruit struct {
 	FruitType string
 }
 
+type GameResult struct {
+	GameID       pgtype.UUID
+	Mode         string
+	Winner       string
+	RoundsPlayed int32
+	Aborted      bool
+	RecordedAt   pgtype.Timestamptz
+}
+
+type GameResultParticipant struct {
+	GameID        pgtype.UUID
+	ParticipantID pgtype.UUID
+	UserID        pgtype.UUID
+	DisplayName   string
+	TeamID        pgtype.UUID
+	IsBot         bool
+}
+
 type Power struct {
 	ID            pgtype.UUID
 	Kind          string
@@ -342,6 +444,24 @@ type PowerTranslation struct {
 	Locale      string
 	Description string
 	Skills      []string
+}
+
+type Stage struct {
+	ID            pgtype.UUID
+	Manga         string
+	Position      int32
+	Name          string
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
+}
+
+type StageTranslation struct {
+	StageID     pgtype.UUID
+	Locale      string
+	Description string
 }
 
 type Stand struct {

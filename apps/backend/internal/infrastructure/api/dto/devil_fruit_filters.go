@@ -8,7 +8,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
-// DevilFruitFiltersFromQuery maps the optional ?rarity=&fruitType= query
+// DevilFruitFiltersFromQuery maps the optional ?rarity=&fruitType=&q= query
 // params onto ports.DevilFruitFilters. A param that is absent leaves its
 // pointer nil, so the filter is skipped. The bool reports whether any param
 // was set at all.
@@ -34,6 +34,10 @@ func DevilFruitFiltersFromQuery(q url.Values) (ports.DevilFruitFilters, bool, er
 		} else {
 			filters.FruitType = &fruitType
 		}
+	}
+	if v := q.Get("q"); v != "" {
+		hasFilters = true
+		filters.Search = &v
 	}
 
 	if len(errs) > 0 {

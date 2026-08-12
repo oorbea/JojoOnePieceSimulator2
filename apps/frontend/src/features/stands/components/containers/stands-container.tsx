@@ -7,7 +7,10 @@ import { useTranslation } from 'react-i18next'
 
 import { getStandTranslations } from '@/features/stands/api/stands.api'
 import { standKeys } from '@/features/stands/api/stands.keys'
-import { StandsScreen } from '@/features/stands/components/presentational/stands-screen'
+import {
+  StandsScreen,
+  type StandStatFilterKey,
+} from '@/features/stands/components/presentational/stands-screen'
 import { useStands } from '@/features/stands/hooks/use-stands'
 import {
   useCreateStand,
@@ -15,12 +18,36 @@ import {
   useUpdateStand,
   useUploadStandPicture,
 } from '@/features/stands/hooks/use-stand-mutations'
-import { standFormSchema, type StandFormValues, type StandInput, type StandResponse } from '@/features/stands/types/stands.types'
+import {
+  standFormSchema,
+  type StandFilters,
+  type StandFormValues,
+  type StandInput,
+  type StandResponse,
+} from '@/features/stands/types/stands.types'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import { usePicturePicker } from '@/shared/hooks/use-picture-picker'
 import { DEFAULT_LOCALE } from '@/shared/i18n'
-import { createEmptyTranslationsForm, fromTranslationsResponse, toTranslationsPayload } from '@/shared/lib/power-translations'
-import type { Locale } from '@/shared/lib/zod'
+import {
+  createEmptyTranslationsForm,
+  fromTranslationsResponse,
+  toTranslationsPayload,
+} from '@/shared/lib/power-translations'
+import { raritySchema, standStatSchema, type Locale } from '@/shared/lib/zod'
+
+// Every stat filter key StandFilters exposes, in the order the "more
+// filters" panel renders them - one useState per key would be six near
+// identical declarations, so they live in a single Record instead.
+const STAT_FILTER_KEYS = [
+  'attackPower',
+  'speed',
+  'attackRange',
+  'endurance',
+  'precision',
+  'potential',
+] as const
+type StatFilterKey = StandStatFilterKey
 
 // A function, not a constant object: reset()/useForm's defaultValues become
 // this form's live nested state, so every "create" open needs its own
@@ -47,7 +74,67 @@ function toInput(values: StandFormValues): StandInput {
 
 export function StandsContainer() {
   const { t } = useTranslation()
-  const { data: stands, isLoading, isError, refetch } = useStands()
+
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebouncedValue(search)
+  const [rarityFilter, setRarityFilter] = useState<string | null>(null)
+  const [statFilters, setStatFilters] = useState<Record<StatFilterKey, string | null>>({
+    attackPower: null,
+    speed: null,
+    attackRange: null,
+    endurance: null,
+    precision: null,
+    potential: null,
+  })
+  const [evolvesFromFilter, setEvolvesFromFilter] = useState<string | null>(null)
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
+
+  // evolvesFromFilter is a Stand id (what the picker needs to preselect a
+  // value), but the backend's ?evolvesFrom= is the parent's *name* - resolve
+  // it against the unfiltered roster below, once that's fetched.
+  const filters = useMemo(() => {
+    const f: StandFilters = {}
+    if (rarityFilter) f.rarity = rarityFilter as StandFilters['rarity']
+    for (const key of STAT_FILTER_KEYS) {
+      if (statFilters[key]) f[key] = statFilters[key] as StandFilters[typeof key]
+    }
+    if (debouncedSearch.trim()) f.q = debouncedSearch.trim()
+    return f
+  }, [rarityFilter, statFilters, debouncedSearch])
+
+  // Only counts the filters tucked inside the "More filters" disclosure
+  // (stats + evolvesFrom) - the badge is about what's hidden, not about
+  // search/rarity which are always visible in the row above it.
+  const moreFiltersCount =
+    STAT_FILTER_KEYS.filter((key) => statFilters[key]).length + (evolvesFromFilter ? 1 : 0)
+  const hasActiveFilters = Boolean(rarityFilter) || moreFiltersCount > 0 || Boolean(filters.q)
+
+  // The unfiltered roster feeds both the "Evolves From" filter's own option
+  // list and the create/edit form's "Evolves From" picker - neither should
+  // ever be narrowed by whatever's currently filtering the grid below, or
+  // picking a parent Stand while a filter is active would silently exclude
+  // valid choices. TanStack caches this under its own no-filter key
+  // (standKeys.list(undefined)), so this is one extra request per screen
+  // open, not per keystroke.
+  const { data: allStands } = useStands()
+
+  const evolvesFromNameFilter = useMemo(() => {
+    if (!evolvesFromFilter || !allStands) return undefined
+    return allStands.find((s) => s.id === evolvesFromFilter)?.name
+  }, [evolvesFromFilter, allStands])
+
+  const gridFilters = useMemo(
+    () => (evolvesFromNameFilter ? { ...filters, evolvesFrom: evolvesFromNameFilter } : filters),
+    [filters, evolvesFromNameFilter]
+  )
+
+  const {
+    data: stands,
+    isLoading,
+    isError,
+    refetch,
+  } = useStands(hasActiveFilters ? gridFilters : undefined)
+
   const createMutation = useCreateStand()
   const updateMutation = useUpdateStand()
   const deleteMutation = useDeleteStand()
@@ -77,17 +164,41 @@ export function StandsContainer() {
   })
 
   const evolvesFromOptions = useMemo(() => {
-    if (!stands) return []
+    if (!allStands) return []
     const editingId = modalState.editingStand?.id
     // On create, editingId is undefined - excluding "evolvesFrom === editingId"
     // in that case would exclude every Stand with no evolvesFrom set (i.e.
     // almost all of them), leaving the picker empty. Only apply that
     // exclusion while editing, where it actually prevents a Stand from
     // evolving from something that evolves from itself.
-    return stands
-      .filter((s) => s.id !== editingId && (editingId === undefined || s.evolvesFrom?.id !== editingId))
+    return allStands
+      .filter(
+        (s) => s.id !== editingId && (editingId === undefined || s.evolvesFrom?.id !== editingId)
+      )
       .map((s) => ({ value: s.id, label: s.name }))
-  }, [stands, modalState.editingStand])
+  }, [allStands, modalState.editingStand])
+
+  const rarityFilterOptions = useMemo(
+    () => raritySchema.options.map((v) => ({ value: v, label: t(`enums.rarity.${v}`) })),
+    [t]
+  )
+  const statFilterOptions = useMemo(
+    () => standStatSchema.options.map((v) => ({ value: v, label: t(`enums.standStat.${v}`) })),
+    [t]
+  )
+
+  const onClearFilters = () => {
+    setRarityFilter(null)
+    setStatFilters({
+      attackPower: null,
+      speed: null,
+      attackRange: null,
+      endurance: null,
+      precision: null,
+      potential: null,
+    })
+    setEvolvesFromFilter(null)
+  }
 
   const openCreate = () => {
     reset(createDefaultValues())
@@ -141,7 +252,8 @@ export function StandsContainer() {
     if (modalState.mode === 'create') {
       createMutation.mutate(input, {
         onSuccess: (created) => {
-          if (pendingPicture) uploadPictureMutation.mutate({ id: created.id, asset: pendingPicture })
+          if (pendingPicture)
+            uploadPictureMutation.mutate({ id: created.id, asset: pendingPicture })
           closeModal()
         },
       })
@@ -155,7 +267,8 @@ export function StandsContainer() {
       { id: editingStand.id, input },
       {
         onSuccess: () => {
-          if (pendingPicture) uploadPictureMutation.mutate({ id: editingStand.id, asset: pendingPicture })
+          if (pendingPicture)
+            uploadPictureMutation.mutate({ id: editingStand.id, asset: pendingPicture })
           closeModal()
         },
       }
@@ -172,16 +285,21 @@ export function StandsContainer() {
   // The picture worker is fire-and-forget with no push notification (see
   // ObsidianVault/backend-contract.md) - useStands' polling is what surfaces
   // a PENDING -> FAILED transition, and this is the only place that sees it
-  // land, so it owns telling the user their upload didn't make it.
+  // land, so it owns telling the user their upload didn't make it. Watches
+  // the unfiltered roster, not the (possibly narrowed) grid list - a Stand
+  // whose picture fails while a filter hides it would otherwise never
+  // surface the toast.
   const previouslyPendingIds = useRef<Set<string>>(new Set())
   useEffect(() => {
-    if (!stands) return
-    const failed = stands.filter(
+    if (!allStands) return
+    const failed = allStands.filter(
       (s) => s.pictureStatus === 'FAILED' && previouslyPendingIds.current.has(s.id)
     )
     failed.forEach(() => toast({ title: t('toasts.standPictureFailed'), preset: 'error' }))
-    previouslyPendingIds.current = new Set(stands.filter((s) => s.pictureStatus === 'PENDING').map((s) => s.id))
-  }, [stands, t])
+    previouslyPendingIds.current = new Set(
+      allStands.filter((s) => s.pictureStatus === 'PENDING').map((s) => s.id)
+    )
+  }, [allStands, t])
 
   // A translations.<locale> error is invisible if that locale's tab isn't
   // the active one - jump to the first one with an error on a failed
@@ -207,6 +325,22 @@ export function StandsContainer() {
       onEdit={(stand) => void openEdit(stand)}
       onDelete={setStandToDelete}
       openingEditId={openingEditId}
+      search={search}
+      onSearchChange={setSearch}
+      rarityFilter={rarityFilter}
+      rarityFilterOptions={rarityFilterOptions}
+      onRarityFilterChange={setRarityFilter}
+      statFilters={statFilters}
+      statFilterOptions={statFilterOptions}
+      onStatFilterChange={(key, value) => setStatFilters((prev) => ({ ...prev, [key]: value }))}
+      evolvesFromFilter={evolvesFromFilter}
+      evolvesFromFilterOptions={evolvesFromOptions}
+      onEvolvesFromFilterChange={setEvolvesFromFilter}
+      filtersExpanded={filtersExpanded}
+      onToggleFilters={() => setFiltersExpanded((prev) => !prev)}
+      moreFiltersCount={moreFiltersCount}
+      onClearFilters={onClearFilters}
+      hasActiveFilters={hasActiveFilters}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,

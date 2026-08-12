@@ -287,6 +287,13 @@ WITH RECURSIVE base AS (SELECT p.id,
                                   JOIN powers p ON p.id = s.id
                                   LEFT JOIN stands ef ON ef.id = s.evolves_from_id
                                   LEFT JOIN powers efp ON efp.id = ef.id
+                                  LEFT JOIN LATERAL (
+                             SELECT pt.description
+                             FROM power_translations pt
+                             WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+                             ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+                             LIMIT 1
+                             ) base_tr ON true
                          WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity')::power_rarity)
                            AND (sqlc.narg('attack_power')::stand_stat IS NULL OR
                                 s.attack_power = sqlc.narg('attack_power')::stand_stat)
@@ -300,7 +307,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                            AND (sqlc.narg('potential')::stand_stat IS NULL OR
                                 s.potential = sqlc.narg('potential')::stand_stat)
                            AND (sqlc.narg('evolves_from_name')::text IS NULL OR
-                                efp.name = sqlc.narg('evolves_from_name')::text)),
+                                efp.name = sqlc.narg('evolves_from_name')::text)
+                           AND (sqlc.narg('search')::text IS NULL
+                                OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+                                OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')),
      chain AS (SELECT *
                FROM base
                UNION

@@ -1,0 +1,426 @@
+package game
+
+import (
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+)
+
+// Snapshot is a complete, exported view of a Game's private state, used by
+// ports.IGameStore adapters that cannot keep the same *Game pointer alive
+// across process restarts (unlike the in-memory adapter). It deliberately
+// carries no JSON tags: the wire format is an infrastructure concern (see
+// infrastructure/gamestore/redis), this type only defines what must survive
+// a round trip.
+//
+// Snapshot is a pure read - it does not drain PullEvents. Every Save in
+// application/services.GameService.withGame happens after publish(g), which
+// always drains pending events first, so g.events is guaranteed empty at
+// snapshot time in practice; Snapshot does not bother copying it.
+//
+// Enums travel as their String() form and come back through the existing
+// enums.Parse* functions, so a Snapshot is human-readable JSON and immune to
+// iota renumbering. IDs stay as [16]byte, same as every other ID type.
+type Snapshot struct {
+	ID           GameID
+	State        string
+	HostID       ParticipantID
+	Config       ConfigSnapshot
+	Participants []ParticipantSnapshot // in join order (== Game.order)
+	Teams        []TeamSnapshot
+	Stages       []StageSnapshot
+	Rounds       []RoundSnapshot
+}
+
+// ConfigSnapshot mirrors Config.
+type ConfigSnapshot struct {
+	Mode          string
+	Mangas        []string
+	AbilitySource string
+	TeamSize      int
+	AllowBots     bool
+}
+
+// ParticipantSnapshot mirrors Participant.
+type ParticipantSnapshot struct {
+	ID          ParticipantID
+	UserID      *user.UserID // nil for bots
+	DisplayName string
+	TeamID      TeamID
+	Kind        string
+	Connected   bool
+	Loadout     *LoadoutSnapshot // nil before AssignLoadouts
+}
+
+// TeamSnapshot mirrors Team.
+type TeamSnapshot struct {
+	ID      TeamID
+	Name    string
+	Color   uint32
+	Members []ParticipantID
+}
+
+// StageSnapshot mirrors Stage.
+type StageSnapshot struct {
+	ID            StageID
+	Manga         string
+	Order         int
+	Name          string
+	Description   string
+	Picture       string
+	PictureThumb  string
+	PictureStatus string
+}
+
+// RoundSnapshot mirrors Round.
+type RoundSnapshot struct {
+	Index        int
+	Stage        StageSnapshot
+	Ballot       BallotSnapshot
+	TiebreakUsed bool
+	Result       *RoundResultSnapshot
+}
+
+// BallotSnapshot mirrors Ballot. Votes is a slice, not a map: [16]byte is
+// not a valid JSON object key, and a slice serializes deterministically.
+type BallotSnapshot struct {
+	Options []OptionID
+	Votes   []VoteSnapshot
+}
+
+// VoteSnapshot is a single cast vote.
+type VoteSnapshot struct {
+	ParticipantID ParticipantID
+	Option        OptionID
+}
+
+// RoundResultSnapshot mirrors RoundResult.
+type RoundResultSnapshot struct {
+	Winner            OptionID
+	DecidedByCoinFlip bool
+}
+
+// LoadoutSnapshot mirrors Loadout. Stand/DevilFruit are embedded in full
+// (not by reference): a Loadout is documented as an immutable snapshot of
+// abilities for a game/round, so an admin editing or deleting a power later
+// must not retroactively change or brick a live lobby.
+type LoadoutSnapshot struct {
+	Stand           *powers.Stand
+	DevilFruit      *powers.DevilFruit
+	Spin            string
+	Hamon           string
+	FruitMastery    string
+	ArmamentHaki    string
+	ObservationHaki string
+	ConquerorHaki   string
+	PhysicalForm    string
+}
+
+// Snapshot captures g's complete state for out-of-process persistence. See
+// the package-level doc on Snapshot for what it does and does not carry.
+func (g *Game) Snapshot() Snapshot {
+	s := Snapshot{
+		ID:     g.id,
+		State:  g.state.String(),
+		HostID: g.hostID,
+		Config: ConfigSnapshot{
+			Mode:          g.config.mode.String(),
+			Mangas:        mangaStrings(g.config.mangas),
+			AbilitySource: g.config.abilitySource.String(),
+			TeamSize:      g.config.teamSize,
+			AllowBots:     g.config.allowBots,
+		},
+		Participants: make([]ParticipantSnapshot, 0, len(g.order)),
+		Teams:        make([]TeamSnapshot, 0, len(g.teams)),
+		Stages:       make([]StageSnapshot, 0, len(g.stages)),
+		Rounds:       make([]RoundSnapshot, 0, len(g.rounds)),
+	}
+
+	for _, pid := range g.order {
+		p := g.participants[pid]
+		ps := ParticipantSnapshot{
+			ID:          p.id,
+			UserID:      p.userID,
+			DisplayName: p.displayName,
+			TeamID:      p.teamID,
+			Kind:        p.kind.String(),
+			Connected:   p.connected,
+		}
+		if p.loadout != nil {
+			ls := snapshotLoadout(p.loadout)
+			ps.Loadout = &ls
+		}
+		s.Participants = append(s.Participants, ps)
+	}
+
+	for _, t := range g.teams {
+		s.Teams = append(s.Teams, TeamSnapshot{
+			ID:      t.id,
+			Name:    t.name,
+			Color:   t.color,
+			Members: append([]ParticipantID(nil), t.members...),
+		})
+	}
+
+	for _, st := range g.stages {
+		s.Stages = append(s.Stages, snapshotStage(st))
+	}
+
+	for _, r := range g.rounds {
+		rs := RoundSnapshot{
+			Index:        r.Index,
+			Stage:        snapshotStage(r.Stage),
+			Ballot:       snapshotBallot(r.Ballot),
+			TiebreakUsed: r.TiebreakUsed,
+		}
+		if r.Result != nil {
+			rs.Result = &RoundResultSnapshot{
+				Winner:            r.Result.Winner,
+				DecidedByCoinFlip: r.Result.DecidedByCoinFlip,
+			}
+		}
+		s.Rounds = append(s.Rounds, rs)
+	}
+
+	return s
+}
+
+func snapshotStage(st Stage) StageSnapshot {
+	return StageSnapshot{
+		ID: st.id, Manga: st.manga.String(), Order: st.order, Name: st.name,
+		Description: st.description, Picture: st.picture, PictureThumb: st.pictureThumb,
+		PictureStatus: st.pictureStatus.String(),
+	}
+}
+
+func snapshotBallot(b *Ballot) BallotSnapshot {
+	votes := b.Votes()
+	bs := BallotSnapshot{
+		Options: append([]OptionID(nil), b.options...),
+		Votes:   make([]VoteSnapshot, 0, len(votes)),
+	}
+	for pid, opt := range votes {
+		bs.Votes = append(bs.Votes, VoteSnapshot{ParticipantID: pid, Option: opt})
+	}
+	return bs
+}
+
+func snapshotLoadout(l *Loadout) LoadoutSnapshot {
+	return LoadoutSnapshot{
+		Stand:           l.stand,
+		DevilFruit:      l.devilFruit,
+		Spin:            l.spin.String(),
+		Hamon:           l.hamon.String(),
+		FruitMastery:    l.fruitMastery.String(),
+		ArmamentHaki:    l.armamentHaki.String(),
+		ObservationHaki: l.observationHaki.String(),
+		ConquerorHaki:   l.conquerorHaki.String(),
+		PhysicalForm:    l.physicalForm.String(),
+	}
+}
+
+func mangaStrings(mangas []enums.Manga) []string {
+	out := make([]string, len(mangas))
+	for i, m := range mangas {
+		out[i] = m.String()
+	}
+	return out
+}
+
+// Restore rebuilds a *Game from a Snapshot. Unlike NewGame/Join/AddBot, it
+// bypasses every capacity/membership invariant (a full lobby must still be
+// restorable) but re-validates every value object through its normal
+// constructor, so a Snapshot produced by a different build of this package
+// (or corrupted in transit) fails loudly instead of producing a Game that
+// silently misbehaves.
+//
+// Restore always installs DefaultLoadoutEvaluator{} - the evaluator is
+// behaviour, not data, and is not part of a Snapshot. Callers that need a
+// different evaluator must call SetLoadoutEvaluator afterwards.
+func Restore(s Snapshot) (*Game, error) {
+	mode, err := enums.ParseGameModeKind(s.Config.Mode)
+	if err != nil {
+		return nil, err
+	}
+	abilitySource, err := enums.ParseAbilitySource(s.Config.AbilitySource)
+	if err != nil {
+		return nil, err
+	}
+	mangas := make([]enums.Manga, len(s.Config.Mangas))
+	for i, m := range s.Config.Mangas {
+		parsed, err := enums.ParseManga(m)
+		if err != nil {
+			return nil, err
+		}
+		mangas[i] = parsed
+	}
+	cfg := Config{
+		mode:          mode,
+		mangas:        mangas,
+		abilitySource: abilitySource,
+		teamSize:      s.Config.TeamSize,
+		allowBots:     s.Config.AllowBots,
+	}
+
+	state, err := enums.ParseGameState(s.State)
+	if err != nil {
+		return nil, err
+	}
+
+	gameMode, err := modeFor(mode)
+	if err != nil {
+		return nil, err
+	}
+
+	teams := make([]*Team, 0, len(s.Teams))
+	for _, ts := range s.Teams {
+		t := &Team{
+			id:      ts.ID,
+			name:    ts.Name,
+			color:   ts.Color,
+			members: append([]ParticipantID(nil), ts.Members...),
+		}
+		teams = append(teams, t)
+	}
+
+	stages := make([]Stage, 0, len(s.Stages))
+	for _, ss := range s.Stages {
+		st, err := restoreStage(ss)
+		if err != nil {
+			return nil, err
+		}
+		stages = append(stages, st)
+	}
+
+	g := &Game{
+		id:           s.ID,
+		config:       cfg,
+		mode:         gameMode,
+		hostID:       s.HostID,
+		state:        state,
+		participants: make(map[ParticipantID]*Participant, len(s.Participants)),
+		order:        make([]ParticipantID, 0, len(s.Participants)),
+		teams:        teams,
+		stages:       stages,
+		evaluator:    DefaultLoadoutEvaluator{},
+	}
+
+	for _, ps := range s.Participants {
+		kind, err := enums.ParseParticipantKind(ps.Kind)
+		if err != nil {
+			return nil, err
+		}
+		p := &Participant{
+			id:          ps.ID,
+			userID:      ps.UserID,
+			displayName: ps.DisplayName,
+			teamID:      ps.TeamID,
+			kind:        kind,
+			connected:   ps.Connected,
+		}
+		if ps.Loadout != nil {
+			loadout, err := restoreLoadout(*ps.Loadout)
+			if err != nil {
+				return nil, err
+			}
+			p.loadout = loadout
+		}
+		g.participants[p.id] = p
+		g.order = append(g.order, p.id)
+	}
+
+	g.rounds = make([]Round, 0, len(s.Rounds))
+	for _, rs := range s.Rounds {
+		stage, err := restoreStage(rs.Stage)
+		if err != nil {
+			return nil, err
+		}
+		ballot, err := restoreBallot(rs.Ballot)
+		if err != nil {
+			return nil, err
+		}
+		r := Round{
+			Index:        rs.Index,
+			Stage:        stage,
+			Ballot:       ballot,
+			TiebreakUsed: rs.TiebreakUsed,
+		}
+		if rs.Result != nil {
+			r.Result = &RoundResult{
+				Winner:            rs.Result.Winner,
+				DecidedByCoinFlip: rs.Result.DecidedByCoinFlip,
+			}
+		}
+		g.rounds = append(g.rounds, r)
+	}
+
+	return g, nil
+}
+
+func restoreStage(ss StageSnapshot) (Stage, error) {
+	manga, err := enums.ParseManga(ss.Manga)
+	if err != nil {
+		return Stage{}, err
+	}
+	st, err := NewStage(ss.ID, manga, ss.Order, ss.Name, ss.Description, ss.Picture)
+	if err != nil {
+		return Stage{}, err
+	}
+	status, err := enums.ParsePictureStatus(ss.PictureStatus)
+	if err != nil {
+		return Stage{}, err
+	}
+	st.SetPictureRenditions(ss.Picture, ss.PictureThumb, status)
+	return st, nil
+}
+
+// restoreBallot rebuilds a Ballot without going through Cast's validation
+// against a live options list drift - the options set is trusted as-is
+// since it came from this same Snapshot.
+func restoreBallot(bs BallotSnapshot) (*Ballot, error) {
+	ballot, err := NewBallot(bs.Options)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range bs.Votes {
+		ballot.votes[v.ParticipantID] = v.Option
+	}
+	return ballot, nil
+}
+
+func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
+	spin, err := enums.ParseSpinLevel(ls.Spin)
+	if err != nil {
+		return nil, err
+	}
+	hamon, err := enums.ParseHamonLevel(ls.Hamon)
+	if err != nil {
+		return nil, err
+	}
+	fruitMastery, err := enums.ParseFruitMastery(ls.FruitMastery)
+	if err != nil {
+		return nil, err
+	}
+	armamentHaki, err := enums.ParseHakiLevel(ls.ArmamentHaki)
+	if err != nil {
+		return nil, err
+	}
+	observationHaki, err := enums.ParseHakiLevel(ls.ObservationHaki)
+	if err != nil {
+		return nil, err
+	}
+	conquerorHaki, err := enums.ParseHakiLevel(ls.ConquerorHaki)
+	if err != nil {
+		return nil, err
+	}
+	physicalForm, err := enums.ParsePhysicalForm(ls.PhysicalForm)
+	if err != nil {
+		return nil, err
+	}
+	return NewLoadout(
+		ls.Stand, ls.DevilFruit,
+		spin, hamon, fruitMastery,
+		armamentHaki, observationHaki, conquerorHaki,
+		physicalForm,
+	)
+}

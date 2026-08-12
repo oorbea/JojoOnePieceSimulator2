@@ -28,6 +28,13 @@ services:
   redis:
     container_name: jojo-one-piece-simulator-redis
     image: redis:8-alpine
+    # appendonly + a named volume: Redis now also holds every live
+    # Gauntlet/Versus game (gamestore/redis.Store), not just the read-through
+    # cache, so a Redis restart must not wipe in-progress matches the way an
+    # ephemeral cache-only instance safely could.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
     networks:
       - public-net
     restart: unless-stopped
@@ -103,3 +110,4 @@ services:
 
 volumes:
   postgres-data:
+  redis-data:

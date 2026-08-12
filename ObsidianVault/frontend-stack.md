@@ -12,7 +12,7 @@ PWA, standalone pnpm project (own `pnpm-lock.yaml`, no root workspace — `pnpm-
 
 ## Stack
 
-TypeScript, Expo SDK 57, React Native 0.86, React Native Web, Expo Router (file routing), TanStack Query v5 + `@tanstack/query-async-storage-persister` (persisted via AsyncStorage), Zustand v5, React Hook Form + Zod, Axios, Tamagui v2.5.1 (UI kit — NativeWind dropped, one styling system only), socket.io-client (installed, unwired, no backend WS yet), Expo SecureStore (native) / localStorage (web), Expo PWA (manifest + custom SW), i18next + react-i18next + expo-localization (2026-08-06, see [[i18n-multi-language]]).
+TypeScript, Expo SDK 57, React Native 0.86, React Native Web, Expo Router (file routing), TanStack Query v5 + `@tanstack/query-async-storage-persister` (persisted via AsyncStorage), Zustand v5, React Hook Form + Zod, Axios, Tamagui v2.5.1 (UI kit — NativeWind dropped, one styling system only), socket.io-client (installed, unwired — backend now speaks native WebSocket for the game feature, not socket.io, see [[game-realtime-transport]] — this dep is a removal candidate once a client lands), Expo SecureStore (native) / localStorage (web), Expo PWA (manifest + custom SW), i18next + react-i18next + expo-localization (2026-08-06, see [[i18n-multi-language]]).
 
 ## i18n (2026-08-06)
 
@@ -29,7 +29,7 @@ All deps installed via CLI only, never hand-edited into `package.json` (user har
 | Docker | Both dev (hot reload) + prod (static export via nginx) |
 | Platforms | Web-first, native-ready (iOS/Android configured, not fully asset-built) |
 | Feature scaffolding | Skeleton only, no feature code this pass |
-| socket.io | Install only, no wiring |
+| socket.io | Install only, no wiring — backend's game WS is native, not socket.io (see [[game-realtime-transport]]) |
 
 ## Architecture: Feature-Driven + Container/Presentational
 

@@ -9,9 +9,10 @@ import (
 )
 
 // StandFiltersFromQuery maps the optional ?rarity=&attackPower=&speed=&
-// attackRange=&endurance=&precision=&potential=&evolvesFrom= query params
-// onto ports.StandFilters. A param that is absent leaves its pointer nil, so
-// the filter is skipped. HasFilters reports whether any param was set at all.
+// attackRange=&endurance=&precision=&potential=&evolvesFrom=&q= query
+// params onto ports.StandFilters. A param that is absent leaves its pointer
+// nil, so the filter is skipped. HasFilters reports whether any param was
+// set at all.
 func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 	var filters ports.StandFilters
 	var errs []string
@@ -83,6 +84,10 @@ func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 	if v := q.Get("evolvesFrom"); v != "" {
 		hasFilters = true
 		filters.EvolvesFrom = &v
+	}
+	if v := q.Get("q"); v != "" {
+		hasFilters = true
+		filters.Search = &v
 	}
 
 	if len(errs) > 0 {

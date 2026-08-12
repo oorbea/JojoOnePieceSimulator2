@@ -14,6 +14,7 @@ const (
 	StandSubject PictureSubjectKind = iota
 	DevilFruitSubject
 	UserSubject
+	StageSubject
 )
 
 func (k PictureSubjectKind) String() string {
@@ -24,6 +25,8 @@ func (k PictureSubjectKind) String() string {
 		return "DEVIL_FRUIT"
 	case UserSubject:
 		return "USER"
+	case StageSubject:
+		return "STAGE"
 	default:
 		return "UNKNOWN"
 	}
@@ -33,7 +36,7 @@ var ErrInvalidPictureSubjectKind = errors.New("invalid picture subject kind")
 
 func (k PictureSubjectKind) IsValid() bool {
 	switch k {
-	case StandSubject, DevilFruitSubject, UserSubject:
+	case StandSubject, DevilFruitSubject, UserSubject, StageSubject:
 		return true
 	default:
 		return false

@@ -58,4 +58,21 @@ var (
 	// parsed as an image (corrupt, truncated, or a decompression-bomb sized
 	// header) by an IImageProcessor.
 	ErrInvalidImage = errors.New("invalid image")
+
+	// ErrGameNotFound is returned when an IGameStore lookup (by GameID or by
+	// join code) finds no matching Game.
+	ErrGameNotFound = errors.New("game not found")
+
+	// ErrGameCodeTaken is returned when IGameStore.Create is given a join
+	// code that already indexes a different Game.
+	ErrGameCodeTaken = errors.New("game code already in use")
+
+	// ErrStageNotFound is returned when an IStageRepository lookup by id
+	// finds no matching Stage.
+	ErrStageNotFound = errors.New("stage not found")
+
+	// ErrStageAlreadyExists is returned when saving a Stage would violate
+	// the unique (manga, name) constraint against a different,
+	// already-existing Stage.
+	ErrStageAlreadyExists = errors.New("stage already exists")
 )

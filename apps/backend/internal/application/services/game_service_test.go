@@ -1,0 +1,1072 @@
+package services_test
+
+import (
+	"context"
+	"errors"
+	"sort"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
+)
+
+// --- fakes ---
+
+// fakeIDGen is a generic ports.IIdGenerator[T] that hands out deterministic,
+// distinct ids by incrementing the last byte - mirrors the repo's
+// fakeStandIDGenerator convention.
+type fakeIDGen[T ~[16]byte] struct {
+	mu sync.Mutex
+	n  byte
+}
+
+func newFakeIDGen[T ~[16]byte]() *fakeIDGen[T] { return &fakeIDGen[T]{} }
+
+func (g *fakeIDGen[T]) NewID() T {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.n++
+	var b [16]byte
+	b[15] = g.n
+	return T(b)
+}
+
+type fakeGameStore struct {
+	mu     sync.Mutex
+	byID   map[game.GameID]*game.Game
+	byCode map[string]game.GameID
+}
+
+func newFakeGameStore() *fakeGameStore {
+	return &fakeGameStore{byID: make(map[game.GameID]*game.Game), byCode: make(map[string]game.GameID)}
+}
+
+func (s *fakeGameStore) Create(_ context.Context, code string, g *game.Game) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.byCode[code]; ok {
+		return ports.ErrGameCodeTaken
+	}
+	s.byID[g.ID()] = g
+	s.byCode[code] = g.ID()
+	return nil
+}
+
+func (s *fakeGameStore) Get(_ context.Context, id game.GameID) (*game.Game, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	g, ok := s.byID[id]
+	if !ok {
+		return nil, ports.ErrGameNotFound
+	}
+	return g, nil
+}
+
+func (s *fakeGameStore) GetByCode(_ context.Context, code string) (*game.Game, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	id, ok := s.byCode[code]
+	if !ok {
+		return nil, ports.ErrGameNotFound
+	}
+	g, ok := s.byID[id]
+	if !ok {
+		return nil, ports.ErrGameNotFound
+	}
+	return g, nil
+}
+
+func (s *fakeGameStore) Code(_ context.Context, id game.GameID) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for code, gid := range s.byCode {
+		if gid == id {
+			return code, nil
+		}
+	}
+	return "", ports.ErrGameNotFound
+}
+
+func (s *fakeGameStore) Save(_ context.Context, g *game.Game) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.byID[g.ID()]; !ok {
+		return ports.ErrGameNotFound
+	}
+	s.byID[g.ID()] = g
+	return nil
+}
+
+func (s *fakeGameStore) Delete(_ context.Context, id game.GameID) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.byID[id]; ok {
+		delete(s.byID, id)
+		for code, gid := range s.byCode {
+			if gid == id {
+				delete(s.byCode, code)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *fakeGameStore) DeleteExpired(_ context.Context, _ time.Duration) int { return 0 }
+
+var _ ports.IGameStore = (*fakeGameStore)(nil)
+
+type fakeStageCatalog struct {
+	stages map[enums.Manga][]game.Stage
+	err    error
+}
+
+func (f *fakeStageCatalog) Stages(_ context.Context, m enums.Manga) ([]game.Stage, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return append([]game.Stage(nil), f.stages[m]...), nil
+}
+
+var _ ports.IStageCatalog = (*fakeStageCatalog)(nil)
+
+type fakeGamePowerPool struct {
+	stands []*powers.Stand
+	fruits []*powers.DevilFruit
+}
+
+func (f *fakeGamePowerPool) Stands(context.Context) ([]*powers.Stand, error) {
+	return append([]*powers.Stand(nil), f.stands...), nil
+}
+
+func (f *fakeGamePowerPool) DevilFruits(context.Context) ([]*powers.DevilFruit, error) {
+	return append([]*powers.DevilFruit(nil), f.fruits...), nil
+}
+
+var _ ports.IGamePowerPool = (*fakeGamePowerPool)(nil)
+
+type fakeAssignmentWeights struct{ w game.AssignmentWeights }
+
+func (f fakeAssignmentWeights) Load(context.Context) (game.AssignmentWeights, error) { return f.w, nil }
+
+var _ ports.IAssignmentWeights = fakeAssignmentWeights{}
+
+type fakeTiebreaker struct {
+	mu     sync.Mutex
+	winner string
+	err    error
+	calls  int
+}
+
+func (f *fakeTiebreaker) Break(_ context.Context, options []string) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls++
+	if f.err != nil {
+		return "", f.err
+	}
+	if f.winner != "" {
+		return f.winner, nil
+	}
+	return options[0], nil
+}
+
+var _ ports.ITiebreaker = (*fakeTiebreaker)(nil)
+
+type fakeGameHistory struct {
+	mu      sync.Mutex
+	results []game.GameResult
+	err     error
+}
+
+func (f *fakeGameHistory) Record(_ context.Context, r game.GameResult) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return f.err
+	}
+	f.results = append(f.results, r)
+	return nil
+}
+
+func (f *fakeGameHistory) all() []game.GameResult {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]game.GameResult(nil), f.results...)
+}
+
+var _ ports.IGameHistory = (*fakeGameHistory)(nil)
+
+// fakeRandom is a deterministic game.RandomSource: it pops values from a
+// fixed queue (cycling once exhausted), reduced modulo n.
+type fakeRandom struct {
+	mu  sync.Mutex
+	seq []int
+	i   int
+}
+
+func (r *fakeRandom) IntN(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.seq) == 0 {
+		return 0
+	}
+	v := r.seq[r.i%len(r.seq)]
+	r.i++
+	return v % n
+}
+
+var _ game.RandomSource = (*fakeRandom)(nil)
+
+// fakeUserRepository is shared with auth_service_test.go (same
+// services_test package) - see that file for its definition.
+
+// fakeTimer/fakeClock let voting-window tests advance time deterministically
+// instead of racing a real timer.
+type fakeTimer struct {
+	clock   *fakeClock
+	fn      func()
+	fired   bool
+	stopped bool
+}
+
+func (t *fakeTimer) Stop() bool {
+	t.clock.mu.Lock()
+	defer t.clock.mu.Unlock()
+	if t.fired || t.stopped {
+		return false
+	}
+	t.stopped = true
+	return true
+}
+
+type pendingTimer struct {
+	deadline time.Time
+	timer    *fakeTimer
+}
+
+type fakeClock struct {
+	mu     sync.Mutex
+	now    time.Time
+	timers []*pendingTimer
+}
+
+func newFakeClock() *fakeClock { return &fakeClock{now: time.Unix(0, 0)} }
+
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *fakeClock) AfterFunc(d time.Duration, f func()) services.Timer {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	t := &fakeTimer{clock: c, fn: f}
+	c.timers = append(c.timers, &pendingTimer{deadline: c.now.Add(d), timer: t})
+	return t
+}
+
+// Advance moves the clock forward by d and synchronously fires (in deadline
+// order) every timer that is now due and hasn't already fired/been
+// stopped.
+func (c *fakeClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	c.now = c.now.Add(d)
+	var due []*pendingTimer
+	var remaining []*pendingTimer
+	for _, pt := range c.timers {
+		if pt.timer.stopped || pt.timer.fired {
+			continue
+		}
+		if !pt.deadline.After(c.now) {
+			due = append(due, pt)
+		} else {
+			remaining = append(remaining, pt)
+		}
+	}
+	c.timers = remaining
+	c.mu.Unlock()
+
+	sort.Slice(due, func(i, j int) bool { return due[i].deadline.Before(due[j].deadline) })
+	for _, pt := range due {
+		pt.timer.fired = true
+		pt.timer.fn()
+	}
+}
+
+var _ services.Clock = (*fakeClock)(nil)
+
+// --- fixtures ---
+
+var stageIDCounter byte
+
+func mustStage(t *testing.T, manga enums.Manga, order int, name string) game.Stage {
+	t.Helper()
+	stageIDCounter++
+	var id game.StageID
+	id[15] = stageIDCounter
+	s, err := game.NewStage(id, manga, order, name, "a test stage", "")
+	if err != nil {
+		t.Fatalf("mustStage: %v", err)
+	}
+	return s
+}
+
+var powerIDCounter byte
+
+func mustStand(t *testing.T, name string) *powers.Stand {
+	t.Helper()
+	powerIDCounter++
+	var id powers.PowerID
+	id[15] = powerIDCounter
+	skills := []string{"skill"}
+	power, err := powers.NewPower(id, name, "description", enums.Common, &skills, "")
+	if err != nil {
+		t.Fatalf("mustStand power: %v", err)
+	}
+	stand, err := powers.NewStand(*power, enums.B, enums.B, enums.B, enums.B, enums.B, enums.B, nil)
+	if err != nil {
+		t.Fatalf("mustStand: %v", err)
+	}
+	return stand
+}
+
+func mustDevilFruit(t *testing.T, name string) *powers.DevilFruit {
+	t.Helper()
+	powerIDCounter++
+	var id powers.PowerID
+	id[15] = powerIDCounter
+	skills := []string{"skill"}
+	power, err := powers.NewPower(id, name, "description", enums.Common, &skills, "")
+	if err != nil {
+		t.Fatalf("mustDevilFruit power: %v", err)
+	}
+	fruit, err := powers.NewDevilFruit(*power, enums.Paramecia)
+	if err != nil {
+		t.Fatalf("mustDevilFruit: %v", err)
+	}
+	return fruit
+}
+
+var userIDCounter byte
+
+func mustTestUser(t *testing.T, deps *gameTestDeps, username string) user.UserID {
+	t.Helper()
+	userIDCounter++
+	var id user.UserID
+	id[15] = userIDCounter
+	u, err := user.NewUser(id, "google-sub-"+username, username+"@example.com", username, username, "", enums.Regular)
+	if err != nil {
+		t.Fatalf("mustTestUser: %v", err)
+	}
+	if err := deps.users.Save(context.Background(), u); err != nil {
+		t.Fatalf("mustTestUser save: %v", err)
+	}
+	return id
+}
+
+// --- test wiring ---
+
+type gameTestDeps struct {
+	store    *fakeGameStore
+	stages   *fakeStageCatalog
+	powers   *fakeGamePowerPool
+	weights  fakeAssignmentWeights
+	tiebreak *fakeTiebreaker
+	history  *fakeGameHistory
+	rng      *fakeRandom
+	hub      *services.GameEventHub
+	clock    *fakeClock
+	users    *fakeUserRepository
+}
+
+// newTestGameService builds a GameService with every port faked, all
+// wiring exposed via the returned gameTestDeps for assertions.
+func newTestGameService(t *testing.T) (*services.GameService, *gameTestDeps) {
+	t.Helper()
+	deps := &gameTestDeps{
+		store: newFakeGameStore(),
+		stages: &fakeStageCatalog{stages: map[enums.Manga][]game.Stage{
+			enums.Jojo:     {mustStage(t, enums.Jojo, 0, "Phantom Blood"), mustStage(t, enums.Jojo, 1, "Battle Tendency")},
+			enums.OnePiece: {mustStage(t, enums.OnePiece, 0, "East Blue"), mustStage(t, enums.OnePiece, 1, "Alabasta")},
+		}},
+		powers:   &fakeGamePowerPool{stands: []*powers.Stand{mustStand(t, "Star Platinum"), mustStand(t, "Crazy Diamond")}, fruits: []*powers.DevilFruit{mustDevilFruit(t, "Gomu Gomu no Mi"), mustDevilFruit(t, "Mera Mera no Mi")}},
+		weights:  fakeAssignmentWeights{w: game.DefaultAssignmentWeights()},
+		tiebreak: &fakeTiebreaker{},
+		history:  &fakeGameHistory{},
+		rng:      &fakeRandom{seq: []int{1, 2, 3, 0, 1}},
+		hub:      services.NewGameEventHub(),
+		clock:    newFakeClock(),
+		users:    newFakeUserRepository(),
+	}
+	svc := newGameServiceFromDeps(deps, deps.history)
+	return svc, deps
+}
+
+func newGameServiceFromDeps(deps *gameTestDeps, history ports.IGameHistory) *services.GameService {
+	return services.NewGameService(
+		deps.store,
+		newFakeIDGen[game.GameID](),
+		newFakeIDGen[game.ParticipantID](),
+		newFakeIDGen[game.TeamID](),
+		deps.users,
+		deps.stages,
+		deps.powers,
+		deps.weights,
+		deps.tiebreak,
+		history,
+		deps.rng,
+		deps.hub,
+		deps.clock,
+		services.VotingPolicy{Window: 30 * time.Second},
+	)
+}
+
+func gauntletInput() services.CreateGameInput {
+	return services.CreateGameInput{
+		Mode: enums.Gauntlet, Mangas: []enums.Manga{enums.Jojo}, AbilitySource: enums.Random,
+		TeamSize: 5, AllowBots: false,
+	}
+}
+
+func versusInput(teamSize int) services.CreateGameInput {
+	return services.CreateGameInput{
+		Mode: enums.Versus, Mangas: []enums.Manga{enums.Jojo, enums.OnePiece}, AbilitySource: enums.Random,
+		TeamSize: teamSize, AllowBots: true,
+	}
+}
+
+func hostOf(t *testing.T, g *game.Game) game.ParticipantID {
+	t.Helper()
+	return g.HostID()
+}
+
+// --- creation / membership ---
+
+func TestCreateGame_Gauntlet_Success(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if len(code) != 6 {
+		t.Fatalf("code length = %d, want 6", len(code))
+	}
+	if len(g.Teams()) != 1 {
+		t.Fatalf("teams = %d, want 1", len(g.Teams()))
+	}
+	if g.State() != enums.Lobby {
+		t.Fatalf("state = %v, want LOBBY", g.State())
+	}
+}
+
+func TestCreateGame_Versus_Success(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if len(g.Teams()) != 2 {
+		t.Fatalf("teams = %d, want 2", len(g.Teams()))
+	}
+}
+
+func TestCreateGame_InventoryAbilitySource_Rejected(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	input := gauntletInput()
+	input.AbilitySource = enums.Inventory
+	_, _, err := svc.CreateGame(context.Background(), hostID, input)
+	if !errors.Is(err, game.ErrInventoryNotSupported) {
+		t.Fatalf("err = %v, want ErrInventoryNotSupported", err)
+	}
+}
+
+func TestCreateGame_NoStagesForManga_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	deps.stages.stages[enums.Jojo] = nil
+
+	_, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if !errors.Is(err, game.ErrNoStagesAvailable) {
+		t.Fatalf("err = %v, want ErrNoStagesAvailable", err)
+	}
+}
+
+func TestJoinByCode_Success(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	_, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err := svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	if len(g.Participants()) != 2 {
+		t.Fatalf("participants = %d, want 2", len(g.Participants()))
+	}
+}
+
+func TestJoinByCode_UnknownCode_ReturnsNotFound(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	_, err := svc.JoinByCode(context.Background(), "NOPE12", joinerID)
+	if !errors.Is(err, ports.ErrGameNotFound) {
+		t.Fatalf("err = %v, want ErrGameNotFound", err)
+	}
+}
+
+func TestJoinByCode_AlreadyInGame_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	_, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	_, err = svc.JoinByCode(context.Background(), code, hostID)
+	if !errors.Is(err, services.ErrAlreadyInGame) {
+		t.Fatalf("err = %v, want ErrAlreadyInGame", err)
+	}
+}
+
+func TestJoinByCode_GameFull_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	input := gauntletInput()
+	input.TeamSize = 1
+	_, code, err := svc.CreateGame(context.Background(), hostID, input)
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	_, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if !errors.Is(err, game.ErrGameFull) {
+		t.Fatalf("err = %v, want ErrGameFull", err)
+	}
+}
+
+func TestAddBot_NotHost_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+	_, err = svc.AddBot(context.Background(), g.ID(), joinerParticipant, g.Teams()[1].ID())
+	if !errors.Is(err, game.ErrNotHost) {
+		t.Fatalf("err = %v, want ErrNotHost", err)
+	}
+}
+
+func TestAddBot_GauntletRejected(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	_, err = svc.AddBot(context.Background(), g.ID(), g.HostID(), g.Teams()[0].ID())
+	if !errors.Is(err, game.ErrBotsNotAllowed) {
+		t.Fatalf("err = %v, want ErrBotsNotAllowed", err)
+	}
+}
+
+func TestRemoveBot_NotABot_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	_, err = svc.RemoveBot(context.Background(), g.ID(), g.HostID(), g.HostID())
+	if !errors.Is(err, services.ErrNotABot) {
+		t.Fatalf("err = %v, want ErrNotABot", err)
+	}
+}
+
+func TestAddBotThenRemoveBot_Success(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.AddBot(context.Background(), g.ID(), g.HostID(), g.Teams()[1].ID())
+	if err != nil {
+		t.Fatalf("AddBot: %v", err)
+	}
+	var botID game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.IsBot() {
+			botID = p.ID()
+		}
+	}
+	if botID.IsNil() {
+		t.Fatalf("no bot participant found")
+	}
+	g, err = svc.RemoveBot(context.Background(), g.ID(), g.HostID(), botID)
+	if err != nil {
+		t.Fatalf("RemoveBot: %v", err)
+	}
+	if len(g.Participants()) != 1 {
+		t.Fatalf("participants = %d, want 1", len(g.Participants()))
+	}
+}
+
+// --- lifecycle / voting ---
+
+func TestStartGame_NotHost_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+	_, err = svc.StartGame(context.Background(), g.ID(), joinerParticipant)
+	if !errors.Is(err, game.ErrNotHost) {
+		t.Fatalf("err = %v, want ErrNotHost", err)
+	}
+}
+
+func TestStartGame_VersusUnequalTeams_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	_, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if !errors.Is(err, game.ErrTeamSizeMismatch) {
+		t.Fatalf("err = %v, want ErrTeamSizeMismatch", err)
+	}
+}
+
+func TestStartGame_Gauntlet_OpensFirstRoundVoting(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), hostOf(t, g))
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+	if g.State() != enums.Voting {
+		t.Fatalf("state = %v, want VOTING", g.State())
+	}
+	if len(g.Rounds()) != 1 {
+		t.Fatalf("rounds = %d, want 1", len(g.Rounds()))
+	}
+}
+
+func TestGauntlet_FallMajority_FinishesAndFinalizes(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+
+	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), game.OptionID("FALL"))
+	if err != nil {
+		t.Fatalf("CastVote: %v", err)
+	}
+	if g.State() != enums.Finished {
+		t.Fatalf("state = %v, want FINISHED", g.State())
+	}
+
+	results := deps.history.all()
+	if len(results) != 1 {
+		t.Fatalf("history records = %d, want 1", len(results))
+	}
+	if results[0].Winner != "FALL" || results[0].Aborted {
+		t.Fatalf("result = %+v, want Winner=FALL, Aborted=false", results[0])
+	}
+
+	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
+		t.Fatalf("GetGame after finish: err = %v, want ErrGameNotFound", err)
+	}
+}
+
+func TestGauntlet_ClearAllStages_Victory(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+
+	// gauntletInput selects only Jojo, which has 2 fixture stages - two
+	// SURVIVE votes should clear the run.
+	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), game.OptionID("SURVIVE"))
+	if err != nil {
+		t.Fatalf("CastVote round 1: %v", err)
+	}
+	if g.State() != enums.Voting {
+		t.Fatalf("state after round 1 = %v, want VOTING", g.State())
+	}
+
+	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), game.OptionID("SURVIVE"))
+	if err != nil {
+		t.Fatalf("CastVote round 2: %v", err)
+	}
+	if g.State() != enums.Finished {
+		t.Fatalf("state after round 2 = %v, want FINISHED", g.State())
+	}
+
+	results := deps.history.all()
+	if len(results) != 1 || results[0].Winner != "SURVIVE" {
+		t.Fatalf("results = %+v, want one SURVIVE result", results)
+	}
+}
+
+func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, versusInput(1))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+
+	teamA := g.Teams()[0].ID()
+	optionA := game.OptionID(teamA.String())
+
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+
+	for round := 0; round < game.VersusRounds; round++ {
+		g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), optionA)
+		if err != nil {
+			t.Fatalf("round %d host vote: %v", round, err)
+		}
+		g, err = svc.CastVote(context.Background(), g.ID(), joinerParticipant, optionA)
+		if err != nil {
+			t.Fatalf("round %d joiner vote: %v", round, err)
+		}
+	}
+
+	if g.State() != enums.Finished {
+		t.Fatalf("state = %v, want FINISHED", g.State())
+	}
+	results := deps.history.all()
+	if len(results) != 1 || results[0].Winner != optionA || results[0].RoundsPlayed != game.VersusRounds {
+		t.Fatalf("results = %+v, want team A to win all %d rounds", results, game.VersusRounds)
+	}
+}
+
+func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, versusInput(1))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+
+	teamA := game.OptionID(g.Teams()[0].ID().String())
+	teamB := game.OptionID(g.Teams()[1].ID().String())
+	deps.tiebreak.winner = string(teamA)
+
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+
+	sub, unsub := deps.hub.Subscribe(g.ID())
+	var mu sync.Mutex
+	var events []services.GameEvent
+	done := make(chan struct{})
+	go func() {
+		for e := range sub {
+			mu.Lock()
+			events = append(events, e)
+			mu.Unlock()
+		}
+		close(done)
+	}()
+
+	// First close: a straight tie opens the revote window.
+	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), teamA)
+	if err != nil {
+		t.Fatalf("host vote 1: %v", err)
+	}
+	g, err = svc.CastVote(context.Background(), g.ID(), joinerParticipant, teamB)
+	if err != nil {
+		t.Fatalf("joiner vote 1: %v", err)
+	}
+	if g.State() != enums.Tiebreak {
+		t.Fatalf("state after first tie = %v, want TIEBREAK", g.State())
+	}
+	if deps.tiebreak.calls != 0 {
+		t.Fatalf("tiebreak calls = %d, want 0 before the revote", deps.tiebreak.calls)
+	}
+
+	// Second close (the revote): still tied, so the tiebreaker decides.
+	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), teamA)
+	if err != nil {
+		t.Fatalf("host vote 2: %v", err)
+	}
+	g, err = svc.CastVote(context.Background(), g.ID(), joinerParticipant, teamB)
+	if err != nil {
+		t.Fatalf("joiner vote 2: %v", err)
+	}
+
+	unsub()
+	<-done
+
+	if deps.tiebreak.calls != 1 {
+		t.Fatalf("tiebreak calls = %d, want 1", deps.tiebreak.calls)
+	}
+	if g.State() != enums.Voting {
+		t.Fatalf("state after tiebreak = %v, want VOTING (round 2)", g.State())
+	}
+	if len(g.Rounds()) != 2 {
+		t.Fatalf("rounds = %d, want 2", len(g.Rounds()))
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	found := false
+	for _, e := range events {
+		if rr, ok := e.Event.(game.RoundResolved); ok {
+			if !rr.DecidedByCoinFlip || rr.Winner != teamA {
+				t.Fatalf("RoundResolved = %+v, want DecidedByCoinFlip=true Winner=%s", rr, teamA)
+			}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("no RoundResolved event observed")
+	}
+}
+
+func TestCloseVotingWindow_TimerExpiry_ResolvesWithEmittedVotes(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+
+	// Host never votes - the window expiring must resolve with zero votes,
+	// which is a tie (see game.Ballot.Tally), opening a revote instead of
+	// getting stuck.
+	deps.clock.Advance(30 * time.Second)
+
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame: %v", err)
+	}
+	if g.State() != enums.Tiebreak {
+		t.Fatalf("state = %v, want TIEBREAK", g.State())
+	}
+}
+
+// --- presence ---
+
+func TestDisconnect_HostReassigned(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	oldHost := g.HostID()
+
+	g, err = svc.Disconnect(context.Background(), g.ID(), oldHost)
+	if err != nil {
+		t.Fatalf("Disconnect: %v", err)
+	}
+	if g.HostID() == oldHost || g.HostID().IsNil() {
+		t.Fatalf("host = %v, want reassigned away from %v", g.HostID(), oldHost)
+	}
+}
+
+func TestDisconnect_LastHuman_AbortsAndFinalizes(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+
+	g, err = svc.Disconnect(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("Disconnect: %v", err)
+	}
+	if g.State() != enums.Aborted {
+		t.Fatalf("state = %v, want ABORTED", g.State())
+	}
+
+	results := deps.history.all()
+	if len(results) != 1 || !results[0].Aborted {
+		t.Fatalf("results = %+v, want one aborted result", results)
+	}
+	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
+		t.Fatalf("GetGame after abort: err = %v, want ErrGameNotFound", err)
+	}
+}
+
+func TestFinalize_NilHistory_DoesNotError(t *testing.T) {
+	_, deps := newTestGameService(t)
+	svc := newGameServiceFromDeps(deps, nil)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if _, err := svc.Disconnect(context.Background(), g.ID(), g.HostID()); err != nil {
+		t.Fatalf("Disconnect: %v", err)
+	}
+	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
+		t.Fatalf("GetGame after abort: err = %v, want ErrGameNotFound", err)
+	}
+}
+
+// --- concurrency ---
+
+func TestCastVote_Concurrent_NoRace(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		u := mustTestUser(t, deps, "joiner"+string(rune('A'+i)))
+		g, err = svc.JoinByCode(context.Background(), code, u)
+		if err != nil {
+			t.Fatalf("JoinByCode %d: %v", i, err)
+		}
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+
+	optionA := game.OptionID(g.Teams()[0].ID().String())
+	participants := g.Participants()
+
+	var wg sync.WaitGroup
+	for _, p := range participants {
+		wg.Add(1)
+		go func(id game.ParticipantID) {
+			defer wg.Done()
+			if _, err := svc.CastVote(context.Background(), g.ID(), id, optionA); err != nil {
+				t.Errorf("CastVote(%v): %v", id, err)
+			}
+		}(p.ID())
+	}
+	wg.Wait()
+
+	final, err := svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame: %v", err)
+	}
+	if final.State() != enums.Voting {
+		t.Fatalf("state = %v, want VOTING (round 2 opened)", final.State())
+	}
+	if len(final.Rounds()) != 2 {
+		t.Fatalf("rounds = %d, want 2", len(final.Rounds()))
+	}
+}

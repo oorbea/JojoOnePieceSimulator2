@@ -17,7 +17,12 @@ func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	handler := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, fakeTokenIssuer{}, corsCfg, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	stageRepo := newFakeStageRepository()
+	stageSvc := services.NewStageService(stageRepo, &fakeStageIDGenerator{}, newFakePictureStorage(), &fakeImageProcessor{}, fullQueueEnqueuer{},
+		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
+	stageEndpoints := endpoints.NewStageEndpoints(stageSvc)
+	handler := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, fakeTokenIssuer{}, corsCfg, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 	return httptest.NewServer(handler)
 }
 

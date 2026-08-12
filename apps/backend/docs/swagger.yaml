@@ -1,19 +1,37 @@
 basePath: /api/v1
 definitions:
+  dto.AdminUpdateUserRequest:
+    properties:
+      username:
+        type: string
+    type: object
+  dto.CreateGameRequest:
+    properties:
+      abilitySource:
+        type: string
+      allowBots:
+        type: boolean
+      mangas:
+        items:
+          type: string
+        type: array
+      mode:
+        type: string
+      teamSize:
+        type: integer
+    type: object
   dto.DevilFruitRequest:
     properties:
-      description:
-        type: string
       fruitType:
         type: string
       name:
         type: string
       rarity:
         type: string
-      skills:
-        items:
-          type: string
-        type: array
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.TranslationRequest'
+        type: object
     type: object
   dto.DevilFruitResponse:
     properties:
@@ -40,6 +58,8 @@ definitions:
     type: object
   dto.ErrorResponse:
     properties:
+      code:
+        type: string
       details:
         items:
           type: string
@@ -47,9 +67,187 @@ definitions:
       error:
         type: string
     type: object
+  dto.GameConfigResponse:
+    properties:
+      abilitySource:
+        type: string
+      allowBots:
+        type: boolean
+      mangas:
+        items:
+          type: string
+        type: array
+      teamSize:
+        type: integer
+    type: object
+  dto.GameLoadoutResponse:
+    properties:
+      armamentHaki:
+        type: string
+      conquerorHaki:
+        type: string
+      devilFruit:
+        $ref: '#/definitions/dto.DevilFruitResponse'
+      fruitMastery:
+        type: string
+      hamon:
+        type: string
+      observationHaki:
+        type: string
+      physicalForm:
+        type: string
+      spin:
+        type: string
+      stand:
+        $ref: '#/definitions/dto.StandResponse'
+    type: object
+  dto.GameParticipantResponse:
+    properties:
+      connected:
+        type: boolean
+      displayName:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      loadout:
+        $ref: '#/definitions/dto.GameLoadoutResponse'
+      teamId:
+        type: string
+      userId:
+        type: string
+    type: object
+  dto.GameResultResponse:
+    properties:
+      aborted:
+        type: boolean
+      mode:
+        type: string
+      roundsPlayed:
+        type: integer
+      winner:
+        type: string
+    type: object
+  dto.GameRoundResponse:
+    properties:
+      index:
+        type: integer
+      options:
+        items:
+          type: string
+        type: array
+      result:
+        $ref: '#/definitions/dto.GameRoundResultResponse'
+      stage:
+        $ref: '#/definitions/dto.GameStageResponse'
+      tiebreakUsed:
+        type: boolean
+      votedParticipantIds:
+        items:
+          type: string
+        type: array
+      votes:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  dto.GameRoundResultResponse:
+    properties:
+      decidedByCoinFlip:
+        type: boolean
+      winner:
+        type: string
+    type: object
+  dto.GameSnapshotResponse:
+    properties:
+      code:
+        type: string
+      config:
+        $ref: '#/definitions/dto.GameConfigResponse'
+      hostId:
+        type: string
+      id:
+        type: string
+      mode:
+        type: string
+      participants:
+        items:
+          $ref: '#/definitions/dto.GameParticipantResponse'
+        type: array
+      result:
+        $ref: '#/definitions/dto.GameResultResponse'
+      rounds:
+        items:
+          $ref: '#/definitions/dto.GameRoundResponse'
+        type: array
+      state:
+        type: string
+      teams:
+        items:
+          $ref: '#/definitions/dto.GameTeamResponse'
+        type: array
+    type: object
+  dto.GameStageResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      manga:
+        type: string
+      name:
+        type: string
+      order:
+        type: integer
+      picture:
+        type: string
+      pictureStatus:
+        type: string
+      pictureThumb:
+        type: string
+    type: object
+  dto.GameStateResponse:
+    properties:
+      game:
+        $ref: '#/definitions/dto.GameSnapshotResponse'
+      you:
+        $ref: '#/definitions/dto.GameViewerResponse'
+    type: object
+  dto.GameTeamResponse:
+    properties:
+      color:
+        type: integer
+      id:
+        type: string
+      memberIds:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    type: object
+  dto.GameViewerResponse:
+    properties:
+      hasVoted:
+        type: boolean
+      isHost:
+        type: boolean
+      participantId:
+        type: string
+      teamId:
+        type: string
+      vote:
+        type: string
+    type: object
   dto.GoogleLoginRequest:
     properties:
       idToken:
+        type: string
+    type: object
+  dto.JoinGameRequest:
+    properties:
+      code:
         type: string
     type: object
   dto.LoginResponse:
@@ -63,13 +261,80 @@ definitions:
       user:
         $ref: '#/definitions/dto.UserResponse'
     type: object
+  dto.PowerTranslationsResponse:
+    properties:
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.TranslationResponse'
+        type: object
+    type: object
+  dto.PublicUserResponse:
+    properties:
+      avatar:
+        type: string
+      avatarThumb:
+        type: string
+      completeName:
+        type: string
+      id:
+        type: string
+      username:
+        type: string
+    type: object
+  dto.StageRequest:
+    properties:
+      manga:
+        type: string
+      name:
+        type: string
+      order:
+        type: integer
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.StageTranslationRequest'
+        type: object
+    type: object
+  dto.StageResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      manga:
+        type: string
+      name:
+        type: string
+      order:
+        type: integer
+      picture:
+        type: string
+      pictureStatus:
+        type: string
+      pictureThumb:
+        type: string
+    type: object
+  dto.StageTranslationRequest:
+    properties:
+      description:
+        type: string
+    type: object
+  dto.StageTranslationResponse:
+    properties:
+      description:
+        type: string
+    type: object
+  dto.StageTranslationsResponse:
+    properties:
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.StageTranslationResponse'
+        type: object
+    type: object
   dto.StandRequest:
     properties:
       attackPower:
         type: string
       attackRange:
-        type: string
-      description:
         type: string
       endurance:
         type: string
@@ -83,12 +348,12 @@ definitions:
         type: string
       rarity:
         type: string
-      skills:
-        items:
-          type: string
-        type: array
       speed:
         type: string
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.TranslationRequest'
+        type: object
     type: object
   dto.StandResponse:
     properties:
@@ -125,15 +390,51 @@ definitions:
       speed:
         type: string
     type: object
+  dto.TranslationRequest:
+    properties:
+      description:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+    type: object
+  dto.TranslationResponse:
+    properties:
+      description:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+    type: object
+  dto.UpdateProfileRequest:
+    properties:
+      language:
+        type: string
+      username:
+        type: string
+    type: object
+  dto.UpdateRoleRequest:
+    properties:
+      role:
+        type: string
+    type: object
   dto.UserResponse:
     properties:
+      avatar:
+        type: string
+      avatarStatus:
+        type: string
+      avatarThumb:
+        type: string
       completeName:
         type: string
       email:
         type: string
       id:
         type: string
-      picture:
+      language:
         type: string
       role:
         type: string
@@ -200,6 +501,10 @@ paths:
       - description: PARAMECIA, ZOAN, LOGIA, SPECIAL_PARAMECIA, ANCIENT_ZOAN, MYTHICAL_ZOAN
         in: query
         name: fruitType
+        type: string
+      - description: free-text search over name and description
+        in: query
+        name: q
         type: string
       produces:
       - application/json
@@ -462,6 +767,535 @@ paths:
       summary: Set a devil fruit's picture
       tags:
       - devil-fruits
+  /devil-fruits/{id}/translations:
+    get:
+      description: |-
+        Admin only. Unlike GET /devil-fruits/{id}, always returns
+        every locale's description/skills at once, for an edit form.
+      parameters:
+      - description: Devil fruit id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PowerTranslationsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get every locale's translation for a devil fruit
+      tags:
+      - devil-fruits
+  /games:
+    post:
+      consumes:
+      - application/json
+      description: Seats the caller as host in a new LOBBY. The response's `game.code`
+        is the 6-character join code.
+      parameters:
+      - description: Game to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateGameRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.GameStateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a game
+      tags:
+      - games
+  /games/{id}:
+    get:
+      description: Only a seated participant may resume a game this way.
+      parameters:
+      - description: Game id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GameStateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a game by id
+      tags:
+      - games
+  /games/by-code/{code}:
+    get:
+      description: Only a seated participant may resume a game this way - this is
+        a resume route, not a pre-join preview.
+      parameters:
+      - description: Join code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GameStateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a game by its join code
+      tags:
+      - games
+  /games/join:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Join code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.JoinGameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GameStateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Join a game by its code
+      tags:
+      - games
+  /stages:
+    get:
+      description: Lists every Stage, or filters them if any query param is set. Description
+        resolved for the request's locale.
+      parameters:
+      - description: JOJO, ONE_PIECE
+        in: query
+        name: manga
+        type: string
+      - description: free-text search over name and description
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.StageResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List or filter stages
+      tags:
+      - stages
+    post:
+      consumes:
+      - application/json
+      description: Admin only.
+      parameters:
+      - description: Stage to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.StageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.StageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a stage
+      tags:
+      - stages
+  /stages/{id}:
+    delete:
+      description: Admin only.
+      parameters:
+      - description: Stage id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a stage
+      tags:
+      - stages
+    get:
+      description: Description resolved for the request's locale.
+      parameters:
+      - description: Stage id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a stage by id
+      tags:
+      - stages
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Keeps the original id and picture.
+      parameters:
+      - description: Stage id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Replacement stage
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.StageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a stage
+      tags:
+      - stages
+  /stages/{id}/picture:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Admin only. Uploads the image to object storage and stores its key; the response's `picture` is a presigned URL.
+        The image is re-encoded to WebP by a background worker: the response is
+        202 Accepted with `pictureStatus` set to PENDING and the previous
+        `picture`/`pictureThumb` URLs (or "" on a first upload); poll GET
+        /stages/{id} until `pictureStatus` becomes READY or FAILED.
+      parameters:
+      - description: Stage id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file (WebP, AVIF, JPEG, PNG or GIF)
+        in: formData
+        name: picture
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/dto.StageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a stage's picture
+      tags:
+      - stages
+  /stages/{id}/translations:
+    get:
+      description: |-
+        Admin only. Unlike GET /stages/{id}, always returns every
+        locale's description at once, for an edit form.
+      parameters:
+      - description: Stage id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StageTranslationsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get every locale's translation for a stage
+      tags:
+      - stages
   /stands:
     get:
       description: |-
@@ -500,6 +1334,10 @@ paths:
       - description: name of the Stand this one evolves from
         in: query
         name: evolvesFrom
+        type: string
+      - description: free-text search over name and description
+        in: query
+        name: q
         type: string
       produces:
       - application/json
@@ -762,6 +1600,387 @@ paths:
       summary: Set a stand's picture
       tags:
       - stands
+  /stands/{id}/translations:
+    get:
+      description: |-
+        Admin only. Unlike GET /stands/{id}, always returns every
+        locale's description/skills at once, for an edit form.
+      parameters:
+      - description: Stand id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PowerTranslationsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get every locale's translation for a stand
+      tags:
+      - stands
+  /users:
+    get:
+      description: Admin only.
+      parameters:
+      - description: Page size (default 50, max 200)
+        in: query
+        name: limit
+        type: integer
+      - description: Rows to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Admin only. An admin cannot delete their own account through this
+        route, and the last remaining admin cannot be deleted.
+      parameters:
+      - description: User id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete another user
+      tags:
+      - users
+    get:
+      description: Never includes email or role.
+      parameters:
+      - description: User id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PublicUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get another user's public profile
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Admin only.
+      parameters:
+      - description: User id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New username
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminUpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change another user's username
+      tags:
+      - users
+  /users/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      description: Admin only. An admin cannot change their own role through this
+        route (use another admin account), and the last remaining admin cannot be
+        demoted. A role change only takes effect on the affected user's next login,
+        since the role is carried in the JWT. ADMIN_EMAILS re-promotes a listed email
+        on every login, so demoting one of those emails is temporary.
+      parameters:
+      - description: User id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New role
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change another user's role
+      tags:
+      - users
+  /users/me:
+    delete:
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete the authenticated caller's account
+      tags:
+      - users
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the authenticated caller's profile
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: The only self-editable field. email, role, and completeName are
+        never accepted here - sending them is a 400.
+      parameters:
+      - description: New username
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update the authenticated caller's username
+      tags:
+      - users
+  /users/me/picture:
+    delete:
+      description: Reverts display back to the Google-synced picture.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete the authenticated caller's avatar
+      tags:
+      - users
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Uploads the image to object storage; the response's avatar fields
+        are the previous renditions until the background worker finishes.
+      parameters:
+      - description: Image file (WebP, AVIF, JPEG, PNG or GIF)
+        in: formData
+        name: picture
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set the authenticated caller's avatar
+      tags:
+      - users
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and the JWT access token.
