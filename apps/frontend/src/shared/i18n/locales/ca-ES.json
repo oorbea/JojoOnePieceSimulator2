@@ -185,6 +185,13 @@
       "submit": "Crea la sala",
       "creating": "Creant…"
     },
+    "config": {
+      "title": "Configuració de la sala",
+      "readOnly": "Només lectura",
+      "hostOnly": "Només l'amfitrió pot canviar aquesta configuració.",
+      "saving": "Desant…",
+      "saved": "Desat"
+    },
     "join": {
       "title": "Uneix-te amb codi",
       "codeLabel": "Codi de sala",

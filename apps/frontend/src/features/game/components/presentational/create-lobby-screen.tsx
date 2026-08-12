@@ -1,7 +1,8 @@
-import { ChevronLeft, Globe, Lock, Minus, Plus, Swords, Users } from '@tamagui/lucide-icons-2'
+import { ChevronLeft, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
+import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
@@ -29,49 +30,6 @@ type Props = {
   submitting: boolean
   error?: string
   onSubmit: () => void
-}
-
-function Stepper({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string
-  value: number
-  min: number
-  max: number
-  onChange: (value: number) => void
-}) {
-  return (
-    <YStack gap="$1.5">
-      <GlowText level="label">{label}</GlowText>
-      <XStack items="center" gap="$3">
-        <GlossButton
-          tone="glass"
-          btnSize="sm"
-          shape="circle"
-          disabled={value <= min}
-          onPress={() => onChange(Math.max(min, value - 1))}
-          accessibilityLabel={`${label} -`}
-        >
-          <Minus size={16} color="$panelText" />
-        </GlossButton>
-        <GlowText level="heading">{value}</GlowText>
-        <GlossButton
-          tone="glass"
-          btnSize="sm"
-          shape="circle"
-          disabled={value >= max}
-          onPress={() => onChange(Math.min(max, value + 1))}
-          accessibilityLabel={`${label} +`}
-        >
-          <Plus size={16} color="$panelText" />
-        </GlossButton>
-      </XStack>
-    </YStack>
-  )
 }
 
 export function CreateLobbyScreen({
@@ -161,7 +119,7 @@ export function CreateLobbyScreen({
             </XStack>
           </YStack>
 
-          <Stepper
+          <NumberStepper
             label={mode === 'GAUNTLET' ? t('game.create.teamSizeGauntletLabel') : t('game.create.teamSizeLabel')}
             value={teamSize}
             min={teamSizeMin}
@@ -171,7 +129,7 @@ export function CreateLobbyScreen({
         </YStack>
 
         <YStack flexBasis={320} grow={1} gap="$4">
-          <Stepper
+          <NumberStepper
             label={t('game.create.votingSecondsLabel')}
             value={votingWindowSeconds}
             min={5}
