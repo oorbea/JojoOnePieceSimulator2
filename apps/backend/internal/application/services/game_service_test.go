@@ -119,6 +119,22 @@ func (s *fakeGameStore) Delete(_ context.Context, id game.GameID) error {
 
 func (s *fakeGameStore) DeleteExpired(_ context.Context, _ time.Duration) int { return 0 }
 
+func (s *fakeGameStore) ListPublic(_ context.Context, limit int) ([]*game.Game, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]*game.Game, 0)
+	for _, g := range s.byID {
+		if g.IsPubliclyJoinable() {
+			out = append(out, g)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID().String() < out[j].ID().String() })
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil
+}
+
 var _ ports.IGameStore = (*fakeGameStore)(nil)
 
 type fakeStageCatalog struct {
@@ -676,13 +692,38 @@ func TestStartGame_NotHost_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestStartGame_VersusUnequalTeams_ReturnsError(t *testing.T) {
+func TestStartGame_VersusEmptyTeam_ReturnsError(t *testing.T) {
 	svc, deps := newTestGameService(t)
 	hostID := mustTestUser(t, deps, "host")
 
 	g, _, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
 	if err != nil {
 		t.Fatalf("CreateGame: %v", err)
+	}
+	// Only the host is seated (team A) - team B is empty.
+	_, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if !errors.Is(err, game.ErrNotEnoughPlayers) {
+		t.Fatalf("err = %v, want ErrNotEnoughPlayers", err)
+	}
+}
+
+func TestStartGame_VersusUnequalTeams_ReturnsError(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerAID := mustTestUser(t, deps, "joinerA")
+	joinerBID := mustTestUser(t, deps, "joinerB")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	// pickTeam auto-balances: host->A(1), joinerA->B(1v1), joinerB-> a tie
+	// favors team A -> A(2) vs B(1). Both teams are non-empty but unequal.
+	if _, err := svc.JoinByCode(context.Background(), code, joinerAID); err != nil {
+		t.Fatalf("JoinByCode joinerA: %v", err)
+	}
+	if _, err := svc.JoinByCode(context.Background(), code, joinerBID); err != nil {
+		t.Fatalf("JoinByCode joinerB: %v", err)
 	}
 	_, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
 	if !errors.Is(err, game.ErrTeamSizeMismatch) {
@@ -1068,5 +1109,279 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 	}
 	if len(final.Rounds()) != 2 {
 		t.Fatalf("rounds = %d, want 2", len(final.Rounds()))
+	}
+}
+
+// --- lobby management ---
+
+func TestEditLobbyConfig_HostOnly(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+
+	input := gauntletInput()
+	input.Visibility = enums.Public
+	if _, err := svc.EditLobbyConfig(context.Background(), g.ID(), joinerParticipant, input); !errors.Is(err, game.ErrNotHost) {
+		t.Fatalf("err = %v, want ErrNotHost", err)
+	}
+	g, err = svc.EditLobbyConfig(context.Background(), g.ID(), g.HostID(), input)
+	if err != nil {
+		t.Fatalf("EditLobbyConfig: %v", err)
+	}
+	if g.Config().Visibility() != enums.Public {
+		t.Fatalf("expected the edited Config to be applied")
+	}
+}
+
+func TestEditLobbyConfig_ModeChangeReloadsStagesAndTeams(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+
+	input := versusInput(2)
+	g, err = svc.EditLobbyConfig(context.Background(), g.ID(), g.HostID(), input)
+	if err != nil {
+		t.Fatalf("EditLobbyConfig: %v", err)
+	}
+	if g.Config().Mode() != enums.Versus {
+		t.Fatalf("expected the mode to switch to VERSUS")
+	}
+	if len(g.Teams()) != 2 {
+		t.Fatalf("expected 2 teams after the mode switch, got %d", len(g.Teams()))
+	}
+}
+
+func TestSwitchTeam_Service(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, versusInput(2))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+	host, ok := g.Participant(g.HostID())
+	if !ok {
+		t.Fatalf("expected the host to be seated")
+	}
+	hostTeam := host.TeamID()
+	g, err = svc.SwitchTeam(context.Background(), g.ID(), g.HostID(), joinerParticipant, hostTeam)
+	if err != nil {
+		t.Fatalf("SwitchTeam: %v", err)
+	}
+	p, ok := g.Participant(joinerParticipant)
+	if !ok || p.TeamID() != hostTeam {
+		t.Fatalf("expected the joiner to be seated on the host's team %v", hostTeam)
+	}
+}
+
+func TestKickParticipant_Service(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+	g, err = svc.KickParticipant(context.Background(), g.ID(), g.HostID(), joinerParticipant)
+	if err != nil {
+		t.Fatalf("KickParticipant: %v", err)
+	}
+	if len(g.Participants()) != 1 {
+		t.Fatalf("expected the kicked participant to be removed")
+	}
+}
+
+func TestTransferHost_Service(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+	g, err = svc.TransferHost(context.Background(), g.ID(), g.HostID(), joinerParticipant)
+	if err != nil {
+		t.Fatalf("TransferHost: %v", err)
+	}
+	if g.HostID() != joinerParticipant {
+		t.Fatalf("expected the joiner to be the new host")
+	}
+}
+
+func TestSetLobbyLocked_Service(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.SetLobbyLocked(context.Background(), g.ID(), g.HostID(), true)
+	if err != nil {
+		t.Fatalf("SetLobbyLocked: %v", err)
+	}
+	if !g.Locked() {
+		t.Fatalf("expected the lobby to be locked")
+	}
+	// Locking a lobby is orthogonal to its Visibility - this one is still
+	// PRIVATE by default, so JoinByID still 403s on that, not on the lock.
+	if _, err := svc.JoinByID(context.Background(), g.ID(), joinerID); !errors.Is(err, game.ErrLobbyPrivate) {
+		t.Fatalf("err = %v, want ErrLobbyPrivate", err)
+	}
+}
+
+func TestJoinByID_RejectsPrivateLobby(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if _, err := svc.JoinByID(context.Background(), g.ID(), joinerID); !errors.Is(err, game.ErrLobbyPrivate) {
+		t.Fatalf("err = %v, want ErrLobbyPrivate", err)
+	}
+}
+
+func TestJoinByID_PublicLobby_Success(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	input := gauntletInput()
+	input.Visibility = enums.Public
+	g, _, err := svc.CreateGame(context.Background(), hostID, input)
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByID(context.Background(), g.ID(), joinerID)
+	if err != nil {
+		t.Fatalf("JoinByID: %v", err)
+	}
+	if len(g.Participants()) != 2 {
+		t.Fatalf("expected 2 participants after JoinByID")
+	}
+}
+
+func TestListPublicLobbies_OnlyReturnsBrowsableLobbies(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	privateHostID := mustTestUser(t, deps, "private-host")
+
+	publicInput := gauntletInput()
+	publicInput.Visibility = enums.Public
+	pub, _, err := svc.CreateGame(context.Background(), hostID, publicInput)
+	if err != nil {
+		t.Fatalf("CreateGame (public): %v", err)
+	}
+	if _, _, err := svc.CreateGame(context.Background(), privateHostID, gauntletInput()); err != nil {
+		t.Fatalf("CreateGame (private): %v", err)
+	}
+
+	listings, err := svc.ListPublicLobbies(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("ListPublicLobbies: %v", err)
+	}
+	if len(listings) != 1 {
+		t.Fatalf("expected exactly 1 public lobby listed, got %d", len(listings))
+	}
+	if listings[0].GameID != pub.ID() {
+		t.Fatalf("expected the listed lobby to be the public one")
+	}
+	if listings[0].HostDisplayName == "" {
+		t.Fatalf("expected a host display name on the listing")
+	}
+}
+
+func TestListPublicLobbies_ExcludesLockedLobbies(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	input := gauntletInput()
+	input.Visibility = enums.Public
+	g, _, err := svc.CreateGame(context.Background(), hostID, input)
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if _, err := svc.SetLobbyLocked(context.Background(), g.ID(), g.HostID(), true); err != nil {
+		t.Fatalf("SetLobbyLocked: %v", err)
+	}
+	listings, err := svc.ListPublicLobbies(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("ListPublicLobbies: %v", err)
+	}
+	if len(listings) != 0 {
+		t.Fatalf("expected a locked public lobby to be excluded, got %d", len(listings))
+	}
+}
+
+func TestPreviewByCode_WorksForPrivateLobby(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	_, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	listing, err := svc.PreviewByCode(context.Background(), code)
+	if err != nil {
+		t.Fatalf("PreviewByCode: %v", err)
+	}
+	if listing.PlayerCount != 1 {
+		t.Fatalf("expected the preview to report 1 seated player, got %d", listing.PlayerCount)
 	}
 }

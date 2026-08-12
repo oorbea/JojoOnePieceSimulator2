@@ -13,7 +13,7 @@ Solo hobby/learning project. CI/CD to prod set up 2026-08-02 (see [[cicd-deploym
 
 ## Stack
 - Backend: Go, hexagonal/clean architecture (`internal/domain`, `internal/application`, `internal/infrastructure`), sqlc + Postgres, Chi-style router, Swagger docs, Redis-like `ICache` port.
-- Domain: Stands, DevilFruits, Powers, Users/Auth (Google OAuth), Games (Gauntlet/Versus modes — domain layer only, see [[gameplay-domain-design]]).
+- Domain: Stands, DevilFruits, Powers, Users/Auth (Google OAuth), Games (Gauntlet/Versus modes, full lobby lifecycle incl. host config edit/team-switch/kick/transfer-host/lock/public-browser — see [[gameplay-domain-design]], [[game-lobby-management]]).
 - Picture pipeline: libvips-based image processing (thumbnails/renditions), async status (`PictureStatus`), stored via a picture-storage port that fronts a multi-provider fallback chain (R2 → B2 → Supabase) — see [[storage-fallback-chain]].
 - Frontend: Expo/React Native + Tamagui, TanStack Query, secure-storage session store.
 - Deploy: docker-compose (base + dev/prod overrides) + nginx (frontend), CI in `.github/workflows/ci.yml` (PR→main, required check), CD in `.github/workflows/cd.yml` (push→main, Tailscale+SSH) — see [[cicd-deployment]].

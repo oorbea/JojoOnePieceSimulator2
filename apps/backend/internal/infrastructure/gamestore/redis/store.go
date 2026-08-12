@@ -60,23 +60,33 @@ var _ ports.IGameStore = (*Store)(nil)
 // and the code index under the same TTL. Returns 0 if the code was already
 // taken (by a different, still-live game), 1 on success.
 //
-// KEYS[1] = id key, KEYS[2] = code key, KEYS[3] = codeof key
-// ARGV[1] = id, ARGV[2] = code, ARGV[3] = payload, ARGV[4] = ttl in ms
+// KEYS[1] = id key, KEYS[2] = code key, KEYS[3] = codeof key,
+// KEYS[4] = public index (ZSET)
+// ARGV[1] = id, ARGV[2] = code, ARGV[3] = payload, ARGV[4] = ttl in ms,
+// ARGV[5] = "1"/"0" publicly joinable, ARGV[6] = index score (now+ttl, ms)
 var createScript = goredis.NewScript(`
 if redis.call('SET', KEYS[2], ARGV[1], 'NX', 'PX', ARGV[4]) == false then
 	return 0
 end
 redis.call('SET', KEYS[1], ARGV[3], 'PX', ARGV[4])
 redis.call('SET', KEYS[3], ARGV[2], 'PX', ARGV[4])
+if ARGV[5] == '1' then
+	redis.call('ZADD', KEYS[4], ARGV[6], ARGV[1])
+end
 return 1
 `)
 
 // saveScript overwrites the payload and refreshes all three keys' TTL in
-// one round trip. Returns 0 if the game was never Create'd (or has already
-// expired/been deleted), 1 on success.
+// one round trip, and keeps the public index (KEYS[3]) in sync with the
+// saved Game's current IsPubliclyJoinable() value - this single branch is
+// what covers every transition (privacy toggled, locked, started, a team
+// filled up) since they all arrive as an ordinary Save. Returns 0 if the
+// game was never Create'd (or has already expired/been deleted), 1 on
+// success.
 //
-// KEYS[1] = id key, KEYS[2] = codeof key
-// ARGV[1] = payload, ARGV[2] = ttl in ms
+// KEYS[1] = id key, KEYS[2] = codeof key, KEYS[3] = public index (ZSET)
+// ARGV[1] = payload, ARGV[2] = ttl in ms, ARGV[3] = "1"/"0" publicly
+// joinable, ARGV[4] = index score (now+ttl, ms), ARGV[5] = id
 var saveScript = goredis.NewScript(`
 if redis.call('EXISTS', KEYS[1]) == 0 then
 	return 0
@@ -87,25 +97,54 @@ if code then
 	redis.call('PEXPIRE', KEYS[2], ARGV[2])
 	redis.call('PEXPIRE', 'jojo:game:code:' .. code, ARGV[2])
 end
+if ARGV[3] == '1' then
+	redis.call('ZADD', KEYS[3], ARGV[4], ARGV[5])
+else
+	redis.call('ZREM', KEYS[3], ARGV[5])
+end
 return 1
 `)
 
 // deleteScript removes all three keys for a game, resolving the code index
-// first so the code key can be found.
+// first so the code key can be found, and always removes it from the
+// public index too.
 //
-// KEYS[1] = id key, KEYS[2] = codeof key
+// KEYS[1] = id key, KEYS[2] = codeof key, KEYS[3] = public index (ZSET)
+// ARGV[1] = id
 var deleteScript = goredis.NewScript(`
 local code = redis.call('GET', KEYS[2])
 redis.call('DEL', KEYS[1], KEYS[2])
 if code then
 	redis.call('DEL', 'jojo:game:code:' .. code)
 end
+redis.call('ZREM', KEYS[3], ARGV[1])
 return 1
+`)
+
+// listPublicScript prunes any index member whose score (an absolute
+// now+ttl expiry, refreshed on every Create/Save) has already passed, then
+// returns up to limit of the remaining members' ids, most recently active
+// first (higher score first, since score is "when this write's TTL
+// expires").
+//
+// KEYS[1] = public index (ZSET)
+// ARGV[1] = now in ms, ARGV[2] = limit
+var listPublicScript = goredis.NewScript(`
+redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1])
+return redis.call('ZREVRANGE', KEYS[1], 0, tonumber(ARGV[2]) - 1)
 `)
 
 func idKey(id game.GameID) string     { return "jojo:game:id:" + id.String() }
 func codeKey(code string) string      { return "jojo:game:code:" + code }
 func codeOfKey(id game.GameID) string { return "jojo:game:codeof:" + id.String() }
+func publicIndexKey() string          { return "jojo:game:public" }
+
+func publicFlag(g *game.Game) string {
+	if g.IsPubliclyJoinable() {
+		return "1"
+	}
+	return "0"
+}
 
 // New connects to the Redis instance described by cfg and verifies
 // reachability with a PING bounded by cfg.DialTimeout, so a misconfigured
@@ -140,9 +179,11 @@ func (s *Store) Create(ctx context.Context, code string, g *game.Game) error {
 	opCtx, cancel := s.opContext(ctx)
 	defer cancel()
 
+	now := s.now()
+	score := now.Add(s.ttl).UnixMilli()
 	res, err := createScript.Run(opCtx, s.client,
-		[]string{idKey(g.ID()), codeKey(code), codeOfKey(g.ID())},
-		g.ID().String(), code, payload, s.ttl.Milliseconds(),
+		[]string{idKey(g.ID()), codeKey(code), codeOfKey(g.ID()), publicIndexKey()},
+		g.ID().String(), code, payload, s.ttl.Milliseconds(), publicFlag(g), score,
 	).Int()
 	if err != nil {
 		return fmt.Errorf("creating game %s: %w", g.ID(), err)
@@ -215,9 +256,10 @@ func (s *Store) Save(ctx context.Context, g *game.Game) error {
 	opCtx, cancel := s.opContext(ctx)
 	defer cancel()
 
+	score := s.now().Add(s.ttl).UnixMilli()
 	res, err := saveScript.Run(opCtx, s.client,
-		[]string{idKey(g.ID()), codeOfKey(g.ID())},
-		payload, s.ttl.Milliseconds(),
+		[]string{idKey(g.ID()), codeOfKey(g.ID()), publicIndexKey()},
+		payload, s.ttl.Milliseconds(), publicFlag(g), score, g.ID().String(),
 	).Int()
 	if err != nil {
 		return fmt.Errorf("saving game %s: %w", g.ID(), err)
@@ -233,10 +275,51 @@ func (s *Store) Delete(ctx context.Context, id game.GameID) error {
 	opCtx, cancel := s.opContext(ctx)
 	defer cancel()
 
-	if _, err := deleteScript.Run(opCtx, s.client, []string{idKey(id), codeOfKey(id)}).Result(); err != nil {
+	if _, err := deleteScript.Run(opCtx, s.client,
+		[]string{idKey(id), codeOfKey(id), publicIndexKey()}, id.String(),
+	).Result(); err != nil {
 		return fmt.Errorf("deleting game %s: %w", id, err)
 	}
 	return nil
+}
+
+// ListPublic implements ports.IGameStore. It never uses SCAN/KEYS: the
+// public index is an explicit ZSET (jojo:game:public) kept in sync by
+// Create/Save/Delete, scored by each write's own absolute TTL expiry so a
+// stale member is prunable by score alone. A member whose id key has
+// already been evicted out-of-band (should not normally happen, since
+// every write refreshing the index also refreshes the id key under the
+// same TTL) is lazily removed here rather than surfaced as an error - one
+// poisoned/expired entry must not break the whole browse listing, unlike
+// every other operation on this fail-closed Store.
+func (s *Store) ListPublic(ctx context.Context, limit int) ([]*game.Game, error) {
+	opCtx, cancel := s.opContext(ctx)
+	defer cancel()
+
+	ids, err := listPublicScript.Run(opCtx, s.client,
+		[]string{publicIndexKey()}, s.now().UnixMilli(), limit,
+	).StringSlice()
+	if err != nil {
+		return nil, fmt.Errorf("listing public games: %w", err)
+	}
+
+	games := make([]*game.Game, 0, len(ids))
+	for _, idStr := range ids {
+		id, err := game.ParseGameID(idStr)
+		if err != nil {
+			continue
+		}
+		g, err := s.Get(opCtx, id)
+		if err != nil {
+			if errors.Is(err, ports.ErrGameNotFound) {
+				_ = s.client.ZRem(opCtx, publicIndexKey(), idStr).Err()
+				continue
+			}
+			continue
+		}
+		games = append(games, g)
+	}
+	return games, nil
 }
 
 // DeleteExpired implements ports.IGameStore. It always returns 0 and does

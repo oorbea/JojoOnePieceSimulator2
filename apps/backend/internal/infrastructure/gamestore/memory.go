@@ -7,6 +7,7 @@ package gamestore
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -130,4 +131,30 @@ func (s *MemoryGameStore) DeleteExpired(_ context.Context, olderThan time.Durati
 		}
 	}
 	return removed
+}
+
+// ListPublic implements ports.IGameStore. No SCAN ban applies here (that
+// constraint is Redis-specific) - a plain map scan is fine for a
+// single-instance in-memory store.
+func (s *MemoryGameStore) ListPublic(_ context.Context, limit int) ([]*game.Game, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	entries := make([]*entry, 0)
+	for _, e := range s.byID {
+		if e.game.IsPubliclyJoinable() {
+			entries = append(entries, e)
+		}
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].updatedAt.After(entries[j].updatedAt)
+	})
+	if limit > 0 && len(entries) > limit {
+		entries = entries[:limit]
+	}
+	out := make([]*game.Game, len(entries))
+	for i, e := range entries {
+		out[i] = e.game
+	}
+	return out, nil
 }

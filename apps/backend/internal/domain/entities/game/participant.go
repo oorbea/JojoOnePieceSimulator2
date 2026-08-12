@@ -85,3 +85,8 @@ func (p *Participant) Reconnect() { p.connected = true }
 
 // AssignLoadout replaces this participant's current abilities.
 func (p *Participant) AssignLoadout(l *Loadout) { p.loadout = l }
+
+// setTeam moves this participant to teamID. Deliberately unexported: only
+// Game may reseat a participant, since a Team's member list must change in
+// lockstep (see Game.SwitchTeam / Game.Reconfigure).
+func (p *Participant) setTeam(id TeamID) { p.teamID = id }

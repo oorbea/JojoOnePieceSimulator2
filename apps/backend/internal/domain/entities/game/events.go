@@ -60,3 +60,33 @@ func (GameFinished) Name() string { return "GAME_FINISHED" }
 type GameAborted struct{ Reason string }
 
 func (GameAborted) Name() string { return "GAME_ABORTED" }
+
+// TeamChanged is emitted by SwitchTeam whenever a participant actually
+// moves teams (not on the already-there no-op).
+type TeamChanged struct {
+	ParticipantID ParticipantID
+	FromTeamID    TeamID
+	ToTeamID      TeamID
+}
+
+func (TeamChanged) Name() string { return "TEAM_CHANGED" }
+
+// PlayerKicked is emitted by Kick, before the follow-on PlayerLeft, so the
+// transport can tell an involuntary removal apart from a voluntary Leave
+// and close the victim's socket instead of letting it dangle.
+type PlayerKicked struct{ ParticipantID ParticipantID }
+
+func (PlayerKicked) Name() string { return "PLAYER_KICKED" }
+
+// LobbyLockChanged is emitted by SetLocked whenever the lock actually
+// toggles (not on a same-value no-op).
+type LobbyLockChanged struct{ Locked bool }
+
+func (LobbyLockChanged) Name() string { return "LOBBY_LOCK_CHANGED" }
+
+// ConfigUpdated is emitted by Reconfigure. It carries no fields - the
+// mandatory follow-up STATE frame is what the transport uses to deliver the
+// new configuration, exactly like every other structural change.
+type ConfigUpdated struct{}
+
+func (ConfigUpdated) Name() string { return "CONFIG_UPDATED" }

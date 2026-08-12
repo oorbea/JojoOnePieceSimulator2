@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewGame_GauntletRequiresStages(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, 5, false)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, 5, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestGame_OnlyHostCanAbort(t *testing.T) {
 }
 
 func TestGame_VersusRequiresEqualTeamsToStart(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 2, false)
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -60,7 +60,22 @@ func TestGame_VersusRequiresEqualTeamsToStart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewGame: %v", err)
 	}
-	// Only team A has a player (the host) - team B is empty.
+	// Only team A has a player (the host) - team B is empty. An empty team
+	// is ErrNotEnoughPlayers, not a size mismatch (see the unequal-but-
+	// non-empty case below).
+	if err := g.Start(g.HostID()); err != game.ErrNotEnoughPlayers {
+		t.Fatalf("expected ErrNotEnoughPlayers, got %v", err)
+	}
+
+	other := mustHumanParticipant(t, 2, 2, 101)
+	if err := g.Join(other); err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+	other2 := mustHumanParticipant(t, 3, 3, 100)
+	if err := g.Join(other2); err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+	// Now team A has 2 players, team B has 1 - unequal but both non-empty.
 	if err := g.Start(g.HostID()); err != game.ErrTeamSizeMismatch {
 		t.Fatalf("expected ErrTeamSizeMismatch, got %v", err)
 	}
@@ -94,8 +109,12 @@ func TestGame_AbortsWhenNoHumansRemain(t *testing.T) {
 	}
 }
 
-func TestGame_VersusAbortsWhenTeamEmpty(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 1, false)
+func TestGame_VersusTeamEmptiedInLobbyDoesNotAbort(t *testing.T) {
+	// An empty Versus team is normal and recoverable in LOBBY (more
+	// players can still join, or SwitchTeam can empty a team on the way
+	// to an even split) - only a mid-match empty team aborts. See
+	// TestGame_VersusAbortsWhenTeamEmptiesMidMatch below.
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -113,8 +132,46 @@ func TestGame_VersusAbortsWhenTeamEmpty(t *testing.T) {
 	if err := g.Leave(other.ID(), &fakeRandom{}); err != nil {
 		t.Fatalf("Leave: %v", err)
 	}
+	if g.State() != enums.Lobby {
+		t.Fatalf("expected LOBBY (not aborted) when a versus team empties before starting, got %v", g.State())
+	}
+}
+
+func TestGame_VersusAbortsWhenTeamEmptiesMidMatch(t *testing.T) {
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	host := mustHumanParticipant(t, 1, 1, 100)
+	other := mustHumanParticipant(t, 2, 2, 101)
+	teamA := mustTeam(t, 100, "A")
+	teamB := mustTeam(t, 101, "B")
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{teamA, teamB}, someStages(t))
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	if err := g.Join(other); err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+	if err := g.Start(g.HostID()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	builder := game.NewLoadoutBuilder(cfg.Mangas(), game.DefaultAssignmentWeights(), &fakeRandom{})
+	pools := map[game.TeamID]*game.AvailablePowers{
+		teamA.ID(): game.NewAvailablePowers(nil, nil),
+		teamB.ID(): game.NewAvailablePowers(nil, nil),
+	}
+	if err := g.AssignLoadouts(builder, pools); err != nil {
+		t.Fatalf("AssignLoadouts: %v", err)
+	}
+	if err := g.OpenVoting(&fakeRandom{}); err != nil {
+		t.Fatalf("OpenVoting: %v", err)
+	}
+	if err := g.Leave(other.ID(), &fakeRandom{}); err != nil {
+		t.Fatalf("Leave: %v", err)
+	}
 	if g.State() != enums.Aborted {
-		t.Fatalf("expected ABORTED when a versus team is left empty, got %v", g.State())
+		t.Fatalf("expected ABORTED when a versus team empties mid-match, got %v", g.State())
 	}
 }
 
