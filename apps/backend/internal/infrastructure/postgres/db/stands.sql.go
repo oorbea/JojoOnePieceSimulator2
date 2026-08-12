@@ -58,6 +58,13 @@ WITH RECURSIVE base AS (SELECT p.id,
                                   JOIN powers p ON p.id = s.id
                                   LEFT JOIN stands ef ON ef.id = s.evolves_from_id
                                   LEFT JOIN powers efp ON efp.id = ef.id
+                                  LEFT JOIN LATERAL (
+                             SELECT pt.description
+                             FROM power_translations pt
+                             WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+                             ORDER BY array_position($1::text[], pt.locale::text)
+                             LIMIT 1
+                             ) base_tr ON true
                          WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
                            AND ($3::stand_stat IS NULL OR
                                 s.attack_power = $3::stand_stat)
@@ -71,7 +78,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                            AND ($8::stand_stat IS NULL OR
                                 s.potential = $8::stand_stat)
                            AND ($9::text IS NULL OR
-                                efp.name = $9::text)),
+                                efp.name = $9::text)
+                           AND ($10::text IS NULL
+                                OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
+                                OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')),
      chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
                FROM base
                UNION
@@ -146,6 +156,7 @@ type FilterStandRowsParams struct {
 	Precision       *StandStat
 	Potential       *StandStat
 	EvolvesFromName *string
+	Search          *string
 }
 
 type FilterStandRowsRow struct {
@@ -182,6 +193,7 @@ func (q *Queries) FilterStandRows(ctx context.Context, arg FilterStandRowsParams
 		arg.Precision,
 		arg.Potential,
 		arg.EvolvesFromName,
+		arg.Search,
 	)
 	if err != nil {
 		return nil, err

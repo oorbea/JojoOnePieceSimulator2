@@ -10,19 +10,22 @@ import { GlowText } from './glow-text'
 type LocaleTabsProps = {
   value: Locale
   onChange: (locale: Locale) => void
-  requiredLocale: Locale
+  // A single Locale for Stand/Devil Fruit's "only en-GB is mandatory" rule;
+  // an array for Stage's "every locale is mandatory" rule (see the vault's
+  // game-stage-content.md) - pass SUPPORTED_LOCALES to star every tab.
+  requiredLocale: Locale | Locale[]
   localesWithErrors?: Locale[]
   requiredLabel: string
   errorLabel: string
 }
 
-// Locale switcher for the Stand/Devil Fruit admin forms - one pill per
+// Locale switcher for the Stand/Devil Fruit/Stage admin forms - one pill per
 // supported locale, reusing ChannelBarItem's existing active/press styling
-// instead of a new glass recipe. The mandatory locale (en-GB) never shows
-// an error dot on its own - a real validation error there gets its own dot
-// like any other locale. The error state is never color-only: it's also
-// spelled out in accessibilityLabel (errorLabel), per the project's
-// touch/a11y guidelines (visual-only error indication is an anti-pattern).
+// instead of a new glass recipe. A mandatory locale never shows an error dot
+// on its own - a real validation error there gets its own dot like any
+// other locale. The error state is never color-only: it's also spelled out
+// in accessibilityLabel (errorLabel), per the project's touch/a11y
+// guidelines (visual-only error indication is an anti-pattern).
 export function LocaleTabs({
   value,
   onChange,
@@ -35,7 +38,9 @@ export function LocaleTabs({
     <XStack gap="$2" flexWrap="wrap">
       {SUPPORTED_LOCALES.map((locale) => {
         const isActive = locale === value
-        const isRequired = locale === requiredLocale
+        const isRequired = Array.isArray(requiredLocale)
+          ? requiredLocale.includes(locale)
+          : locale === requiredLocale
         const hasError = localesWithErrors.includes(locale)
         const label = LOCALE_ENDONYMS[locale]
         const a11yLabel = [label, isRequired && requiredLabel, hasError && errorLabel]

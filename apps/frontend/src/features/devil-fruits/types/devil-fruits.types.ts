@@ -1,7 +1,17 @@
 import { z } from 'zod'
 
-import { powerTranslationsFormSchema, type TranslationFormValues } from '@/shared/lib/power-translations'
-import { fruitTypeSchema, raritySchema, type FruitType, type Locale, type PictureStatus, type Rarity } from '@/shared/lib/zod'
+import {
+  powerTranslationsFormSchema,
+  type TranslationFormValues,
+} from '@/shared/lib/power-translations'
+import {
+  fruitTypeSchema,
+  raritySchema,
+  type FruitType,
+  type Locale,
+  type PictureStatus,
+  type Rarity,
+} from '@/shared/lib/zod'
 
 // Mirrors the backend's dto.DevilFruitResponse.
 export type DevilFruitResponse = {
@@ -38,4 +48,5 @@ export type DevilFruitFormValues = z.infer<typeof devilFruitFormSchema>
 export type DevilFruitFilters = {
   rarity?: Rarity
   fruitType?: FruitType
+  q?: string
 }

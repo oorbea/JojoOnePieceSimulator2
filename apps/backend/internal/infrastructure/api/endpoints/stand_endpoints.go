@@ -111,6 +111,7 @@ func (e *StandEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConfig) c
 //	@Param			precision	query		string	false	"E, D, C, B, A, INFINITE, NULL"
 //	@Param			potential	query		string	false	"E, D, C, B, A, INFINITE, NULL"
 //	@Param			evolvesFrom	query		string	false	"name of the Stand this one evolves from"
+//	@Param			q			query		string	false	"free-text search over name and description"
 //	@Description	Responses carry an ETag; a request with a matching If-None-Match
 //	@Description	gets 304 Not Modified with no body instead of the full list.
 //	@Success		200			{array}		dto.StandResponse

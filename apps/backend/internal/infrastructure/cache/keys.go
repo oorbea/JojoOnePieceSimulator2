@@ -46,8 +46,8 @@ func allKey(locale enums.Locale) string {
 
 // standFilterKey renders filters in a fixed field order (rarity,
 // attackPower, speed, attackRange, endurance, precision, potential,
-// evolvesFrom) so two requests differing only in query-param order share one
-// cache entry, then hashes the result to bound key length.
+// evolvesFrom, search) so two requests differing only in query-param order
+// share one cache entry, then hashes the result to bound key length.
 func standFilterKey(filters ports.StandFilters, locale enums.Locale) string {
 	canonical := stringifyStat(filters.Rarity) + "|" +
 		stringifyStat(filters.AttackPower) + "|" +
@@ -56,14 +56,16 @@ func standFilterKey(filters ports.StandFilters, locale enums.Locale) string {
 		stringifyStat(filters.Endurance) + "|" +
 		stringifyStat(filters.Precision) + "|" +
 		stringifyStat(filters.Potential) + "|" +
-		derefString(filters.EvolvesFrom)
+		derefString(filters.EvolvesFrom) + "|" +
+		derefString(filters.Search)
 	return "filter:" + locale.String() + ":" + hashString(canonical)
 }
 
 // devilFruitFilterKey mirrors standFilterKey for ports.DevilFruitFilters
-// (rarity, fruitType).
+// (rarity, fruitType, search).
 func devilFruitFilterKey(filters ports.DevilFruitFilters, locale enums.Locale) string {
-	canonical := stringifyStat(filters.Rarity) + "|" + stringifyStat(filters.FruitType)
+	canonical := stringifyStat(filters.Rarity) + "|" + stringifyStat(filters.FruitType) + "|" +
+		derefString(filters.Search)
 	return "filter:" + locale.String() + ":" + hashString(canonical)
 }
 

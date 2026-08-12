@@ -5,6 +5,7 @@ package repositories_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
@@ -187,6 +188,103 @@ func TestStandRepository_Filter(t *testing.T) {
 	for _, s := range results {
 		if s.Name() == name {
 			t.Errorf("Filter(Speed=NULL) unexpectedly included %q (its speed is B)", name)
+		}
+	}
+}
+
+// TestStandRepository_Filter_SearchMatchesNameCaseInsensitively proves the
+// ILIKE search matches regardless of case and doesn't touch unrelated rows.
+func TestStandRepository_Filter_SearchMatchesNameCaseInsensitively(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	name := uniqueName(t, "The World")
+	stand := newTestStand(t, name, nil)
+	saveStand(t, repo, ctx, stand)
+
+	needle := strings.ToUpper(name[:8]) // e.g. "THE WORL" - exercises ILIKE's case-insensitivity
+	results, err := repo.Filter(ctx, ports.StandFilters{Search: &needle}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search): %v", err)
+	}
+	found := false
+	for _, s := range results {
+		if s.Name() == name {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Filter(search=%q) did not include %q", needle, name)
+	}
+}
+
+// TestStandRepository_Filter_SearchMatchesLocaleResolvedDescription proves
+// the ILIKE search runs against the description resolved for the requested
+// locale, not always en-GB.
+func TestStandRepository_Filter_SearchMatchesLocaleResolvedDescription(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	name := uniqueName(t, "Hermit Purple")
+	stand := newTestStand(t, name, nil)
+	if err := repo.Save(ctx, stand, ports.PowerTranslations{
+		enums.EnGB: {Description: "an English-only clue", Skills: stand.Skills()},
+		enums.EsES: {Description: "una pista solo en español", Skills: stand.Skills()},
+	}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := repo.Delete(context.Background(), stand.ID()); err != nil && !errors.Is(err, ports.ErrStandNotFound) {
+			t.Errorf("cleanup Delete(%s): %v", stand.Name(), err)
+		}
+	})
+
+	needle := "español"
+	esResults, err := repo.Filter(ctx, ports.StandFilters{Search: &needle}, enums.EsES)
+	if err != nil {
+		t.Fatalf("Filter(search, es-ES): %v", err)
+	}
+	found := false
+	for _, s := range esResults {
+		if s.Name() == name {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Filter(search=%q, es-ES) did not include %q", needle, name)
+	}
+
+	enResults, err := repo.Filter(ctx, ports.StandFilters{Search: &needle}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search, en-GB): %v", err)
+	}
+	for _, s := range enResults {
+		if s.Name() == name {
+			t.Errorf("Filter(search=%q, en-GB) unexpectedly included %q - its en-GB description has no Spanish text", needle, name)
+		}
+	}
+}
+
+// TestStandRepository_Filter_SearchEscapesLikeMetacharacters proves a search
+// term containing % or _ is treated literally, not as a LIKE wildcard - see
+// escapeLikePattern (power_translations.go). Without escaping, "%" would
+// match every row in the table instead of zero.
+func TestStandRepository_Filter_SearchEscapesLikeMetacharacters(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	name := uniqueName(t, "Crazy Diamond")
+	stand := newTestStand(t, name, nil)
+	saveStand(t, repo, ctx, stand)
+
+	wildcard := "%"
+	results, err := repo.Filter(ctx, ports.StandFilters{Search: &wildcard}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search=%%): %v", err)
+	}
+	for _, s := range results {
+		if s.Name() == name {
+			t.Errorf("Filter(search=%%) unexpectedly matched %q - %% must be escaped, not treated as a wildcard", name)
 		}
 	}
 }

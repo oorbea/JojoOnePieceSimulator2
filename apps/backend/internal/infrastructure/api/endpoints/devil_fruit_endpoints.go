@@ -57,6 +57,7 @@ func (e *DevilFruitEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConf
 //	@Security		BearerAuth
 //	@Param			rarity		query		string	false	"COMMON, RARE, EPIC, LEGENDARY"
 //	@Param			fruitType	query		string	false	"PARAMECIA, ZOAN, LOGIA, SPECIAL_PARAMECIA, ANCIENT_ZOAN, MYTHICAL_ZOAN"
+//	@Param			q			query		string	false	"free-text search over name and description"
 //	@Description	Responses carry an ETag; a request with a matching If-None-Match
 //	@Description	gets 304 Not Modified with no body instead of the full list.
 //	@Success		200			{array}		dto.DevilFruitResponse

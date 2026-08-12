@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -125,4 +126,36 @@ func (p *userPicturePublisher) UpdatePicture(ctx context.Context, id string, mai
 		return err
 	}
 	return p.repo.UpdateAvatar(ctx, userID, main, thumb, status)
+}
+
+// stagePicturePublisher adapts a ports.IStageRepository to PicturePublisher.
+type stagePicturePublisher struct {
+	repo ports.IStageRepository
+}
+
+// NewStagePicturePublisher wraps repo so the picture worker can publish
+// transcoded renditions onto Stages without depending on the full
+// ports.IStageRepository surface.
+func NewStagePicturePublisher(repo ports.IStageRepository) PicturePublisher {
+	return &stagePicturePublisher{repo: repo}
+}
+
+func (p *stagePicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, error) {
+	stageID, err := game.ParseStageID(id)
+	if err != nil {
+		return "", "", err
+	}
+	st, err := p.repo.FindByID(ctx, stageID, enums.EnGB)
+	if err != nil {
+		return "", "", err
+	}
+	return st.Picture(), st.PictureThumb(), nil
+}
+
+func (p *stagePicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error {
+	stageID, err := game.ParseStageID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.UpdatePicture(ctx, stageID, main, thumb, status)
 }

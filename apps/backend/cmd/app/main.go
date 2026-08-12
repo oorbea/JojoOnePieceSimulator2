@@ -12,6 +12,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -20,9 +21,13 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/auth"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache"
 	rediscache "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache/redis"
+	gameinfra "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
+	redisgamestore "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore/redis"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/random"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/s3store"
@@ -109,10 +114,16 @@ func main() {
 	userRepository := repositories.NewUserRepository(pool)
 	var userRepo ports.IUserRepository = userRepository
 
+	// stageRepository is constructed here (moved ahead of where the game
+	// feature used to build it) purely so it can join pictureTargets below -
+	// it only needs the pool, nothing else in this section depends on it.
+	stageRepository := repositories.NewStageRepository(pool)
+
 	pictureTargets := map[enums.PictureSubjectKind]services.PictureTarget{
 		enums.StandSubject:      {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
 		enums.DevilFruitSubject: {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
 		enums.UserSubject:       {Publisher: services.NewUserPicturePublisher(userRepo), KeyPrefix: "users"},
+		enums.StageSubject:      {Publisher: services.NewStagePicturePublisher(stageRepository), KeyPrefix: "stages"},
 	}
 
 	// pictureHub fans out PENDING->READY/FAILED transitions to connected SSE
@@ -167,6 +178,66 @@ func main() {
 	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
 	userEndpoints := endpoints.NewUserEndpoints(userService)
 
+	// Game (Gauntlet/Versus) application layer, now fully wired: a Redis
+	// game store when REDIS_URL is set (falling back to the in-memory one
+	// otherwise), a Postgres-backed stage catalog, a persistent game
+	// history, and the WebSocket + HTTP routes exposing all of it.
+	var gameStore ports.IGameStore = gamestore.NewMemoryGameStore()
+	if cfg.RedisURL != "" {
+		redisStore, err := redisgamestore.New(ctx, redisgamestore.Config{
+			URL:         cfg.RedisURL,
+			DialTimeout: cfg.RedisDialTimeout,
+			OpTimeout:   cfg.GameStoreOpTimeout,
+			TTL:         cfg.GameLobbyTTL,
+		})
+		if err != nil {
+			log.Fatalf("connecting to redis game store: %v", err)
+		}
+		defer func() {
+			if err := redisStore.Close(); err != nil {
+				log.Printf("closing redis game store connection: %v", err)
+			}
+		}()
+		gameStore = redisStore
+	} else {
+		log.Printf("game store: REDIS_URL unset, using in-memory store (live games are lost on restart)")
+	}
+
+	gameReaper := gamestore.NewReaper(gameStore, cfg.GameLobbyTTL, cfg.GameLobbyReapInterval)
+	go gameReaper.Start(ctx)
+
+	stageService := services.NewStageService(stageRepository, idgen.UUIDGenerator[game.StageID]{},
+		pictures, imageProcessor, pictureWorker, picturePolicy)
+	stageEndpoints := endpoints.NewStageEndpoints(stageService)
+
+	gameHistory := repositories.NewGameHistory(pool)
+
+	gameRNG := random.NewStdRandomGenerator[string]()
+	gameEventHub := services.NewGameEventHub()
+	gameService := services.NewGameService(
+		gameStore,
+		idgen.UUIDGenerator[game.GameID]{},
+		idgen.UUIDGenerator[game.ParticipantID]{},
+		idgen.UUIDGenerator[game.TeamID]{},
+		userRepo,
+		stageRepository,
+		gameinfra.NewRepoPowerPool(standRepo, devilFruitRepo),
+		gameinfra.NewDefaultWeights(),
+		gameinfra.NewCoinFlipTiebreaker(gameRNG),
+		gameHistory,
+		gameRNG,
+		gameEventHub,
+		services.NewSystemClock(),
+		services.VotingPolicy{Window: cfg.GameVotingWindow},
+	)
+	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepository, userRepo, tokenIssuer, ctx, endpoints.GameWSConfig{
+		VotingWindow:             cfg.GameVotingWindow,
+		AllowedOrigins:           cfg.CORSAllowedOrigins,
+		ResolveStandPicture:      standService.PictureURL,
+		ResolveDevilFruitPicture: devilFruitService.PictureURL,
+		ResolveStagePicture:      stageService.PictureURL,
+	})
+
 	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit
 	// promptly on shutdown instead of blocking srv.Shutdown's grace window.
 	eventsEndpoints := endpoints.NewEventsEndpoints(pictureHub, tokenIssuer, ctx)
@@ -196,7 +267,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

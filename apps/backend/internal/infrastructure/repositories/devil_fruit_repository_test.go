@@ -5,6 +5,7 @@ package repositories_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
@@ -159,6 +160,83 @@ func TestDevilFruitRepository_Filter(t *testing.T) {
 	for _, f := range results {
 		if f.Name() == name {
 			t.Errorf("Filter(FruitType=LOGIA) unexpectedly included %q (its type is PARAMECIA)", name)
+		}
+	}
+}
+
+// TestDevilFruitRepository_Filter_SearchMatchesCaseInsensitivelyAndLocale
+// combines the case-insensitivity, locale-resolved-description, and
+// literal-metacharacter checks in one test - same coverage as the three
+// separate Stand tests (stand_repository_test.go), condensed since the SQL
+// path (FilterDevilFruitRows) is a plain WHERE, not a recursive CTE.
+func TestDevilFruitRepository_Filter_SearchMatchesCaseInsensitivelyAndLocale(t *testing.T) {
+	repo := newTestDevilFruitRepo(t)
+	ctx := context.Background()
+
+	name := uniqueName(t, "Hie Hie no Mi")
+	fruit := newTestDevilFruit(t, name, enums.Logia)
+	if err := repo.Save(ctx, fruit, ports.PowerTranslations{
+		enums.EnGB: {Description: "an English-only clue", Skills: fruit.Skills()},
+		enums.EsES: {Description: "una pista solo en español", Skills: fruit.Skills()},
+	}); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := repo.Delete(context.Background(), fruit.ID()); err != nil && !errors.Is(err, ports.ErrDevilFruitNotFound) {
+			t.Errorf("cleanup Delete(%s): %v", fruit.Name(), err)
+		}
+	})
+
+	// Case-insensitive name match.
+	upperName := strings.ToUpper(name[:6])
+	results, err := repo.Filter(ctx, ports.DevilFruitFilters{Search: &upperName}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search name): %v", err)
+	}
+	found := false
+	for _, f := range results {
+		if f.Name() == name {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Filter(search=%q) did not include %q", upperName, name)
+	}
+
+	// Description match resolves per the requested locale, not always en-GB.
+	needle := "español"
+	esResults, err := repo.Filter(ctx, ports.DevilFruitFilters{Search: &needle}, enums.EsES)
+	if err != nil {
+		t.Fatalf("Filter(search, es-ES): %v", err)
+	}
+	found = false
+	for _, f := range esResults {
+		if f.Name() == name {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("Filter(search=%q, es-ES) did not include %q", needle, name)
+	}
+	enResults, err := repo.Filter(ctx, ports.DevilFruitFilters{Search: &needle}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search, en-GB): %v", err)
+	}
+	for _, f := range enResults {
+		if f.Name() == name {
+			t.Errorf("Filter(search=%q, en-GB) unexpectedly included %q - its en-GB description has no Spanish text", needle, name)
+		}
+	}
+
+	// % must be treated as a literal character, not a wildcard.
+	wildcard := "%"
+	wildcardResults, err := repo.Filter(ctx, ports.DevilFruitFilters{Search: &wildcard}, enums.EnGB)
+	if err != nil {
+		t.Fatalf("Filter(search=%%): %v", err)
+	}
+	for _, f := range wildcardResults {
+		if f.Name() == name {
+			t.Errorf("Filter(search=%%) unexpectedly matched %q - %% must be escaped, not treated as a wildcard", name)
 		}
 	}
 }

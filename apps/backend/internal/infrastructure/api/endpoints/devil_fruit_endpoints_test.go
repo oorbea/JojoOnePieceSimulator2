@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -88,6 +89,13 @@ func (f *fakeDevilFruitRepository) Filter(_ context.Context, filters ports.Devil
 		if filters.FruitType != nil && fruit.FruitType() != *filters.FruitType {
 			continue
 		}
+		if filters.Search != nil {
+			needle := strings.ToLower(*filters.Search)
+			if !strings.Contains(strings.ToLower(fruit.Name()), needle) &&
+				!strings.Contains(strings.ToLower(fruit.Description()), needle) {
+				continue
+			}
+		}
 		results = append(results, fruit)
 	}
 	return results, nil
@@ -170,8 +178,10 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, fakeTokenIssuer{},
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, fakeTokenIssuer{},
 		endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 	return h, repo, pictures
 }
@@ -282,6 +292,39 @@ func TestListAndFilterDevilFruits(t *testing.T) {
 	}
 	if len(empty) != 0 {
 		t.Fatalf("len(empty) = %d, want 0", len(empty))
+	}
+}
+
+func TestListDevilFruits_SearchByNameAndDescription(t *testing.T) {
+	h, _, _ := newDevilFruitTestServer()
+
+	body := validDevilFruitBody("Gomu Gomu no Mi")
+	body["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "turns the user into rubber"
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", body)
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Mera Mera no Mi"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits?q=gomu", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body = %s", rec.Code, rec.Body.String())
+	}
+	var byName []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &byName)
+	if len(byName) != 1 || byName[0]["name"] != "Gomu Gomu no Mi" {
+		t.Fatalf("q=gomu matched %v, want exactly [Gomu Gomu no Mi]", byName)
+	}
+
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits?q=rubber", nil)
+	var byDescription []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &byDescription)
+	if len(byDescription) != 1 || byDescription[0]["name"] != "Gomu Gomu no Mi" {
+		t.Fatalf("q=rubber matched %v, want exactly [Gomu Gomu no Mi]", byDescription)
+	}
+
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits?q=nonexistent", nil)
+	var noMatch []map[string]any
+	_ = json.Unmarshal(rec.Body.Bytes(), &noMatch)
+	if len(noMatch) != 0 {
+		t.Fatalf("len(noMatch) = %d, want 0", len(noMatch))
 	}
 }
 
