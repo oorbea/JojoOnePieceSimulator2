@@ -1,4 +1,4 @@
-import { Home, Shield, User } from '@tamagui/lucide-icons-2'
+import { Gamepad2, Home, Shield, User } from '@tamagui/lucide-icons-2'
 import { usePathname, useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 
@@ -11,8 +11,9 @@ import { useThemeStore } from '@/shared/stores/theme.store'
 // widen the union and add an entry here once a new route exists. Labels
 // come from useTranslation() in the component below - this only pins the
 // i18n key per route.
-const NAV_ITEMS: { href: '/' | '/profile' | '/admin'; labelKey: string; icon: AppShellNavItem['icon'] }[] = [
+const NAV_ITEMS: { href: '/' | '/play' | '/profile' | '/admin'; labelKey: string; icon: AppShellNavItem['icon'] }[] = [
   { href: '/', labelKey: 'nav.home', icon: Home },
+  { href: '/play', labelKey: 'nav.play', icon: Gamepad2 },
   { href: '/profile', labelKey: 'nav.profile', icon: User },
 ]
 
@@ -36,7 +37,10 @@ export function AppShellContainer({ children }: { children: React.ReactNode }) {
     href: item.href,
     icon: item.icon,
     label: t(item.labelKey),
-    active: pathname === item.href || (item.href === '/admin' && pathname.startsWith('/admin')),
+    active:
+      pathname === item.href ||
+      (item.href === '/admin' && pathname.startsWith('/admin')) ||
+      (item.href === '/play' && pathname.startsWith('/play')),
   }))
 
   return (

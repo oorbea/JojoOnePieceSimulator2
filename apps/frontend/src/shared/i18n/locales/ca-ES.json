@@ -35,6 +35,7 @@
   },
   "nav": {
     "home": "Inici",
+    "play": "Juga",
     "profile": "Perfil",
     "admin": "Admin",
     "logOut": "Tanca la sessió"
@@ -42,6 +43,7 @@
   "home": {
     "pickChannel": "Tria un canal",
     "channels": {
+      "play": "Juga",
       "profile": "Perfil",
       "stands": "Stands",
       "devilFruits": "Fruites del Diable",
@@ -161,6 +163,134 @@
     "deleteConfirmButton": "Elimina l'Etapa",
     "deleteConfirmMessage": "\"{{name}}\" s'eliminarà de manera permanent. No es pot desfer."
   },
+  "game": {
+    "hub": {
+      "title": "Juga",
+      "subtitle": "Crea una sala, uneix-te amb un codi, o mira les sales obertes.",
+      "create": "Crea una sala",
+      "join": "Uneix-te amb codi",
+      "browse": "Sales obertes"
+    },
+    "create": {
+      "title": "Crea una sala",
+      "modeGauntletHint": "Cooperatiu. Avança per la història fins caure o completar-la.",
+      "modeVersusHint": "Competitiu. Dos equips iguals, tres rondes.",
+      "mangasLabel": "Manga",
+      "teamSizeLabel": "Mida de l'equip",
+      "teamSizeGauntletLabel": "Jugadors màxims",
+      "votingSecondsLabel": "Finestra de votació (segons)",
+      "privacyLabel": "Privadesa",
+      "allowBotsLabel": "Permet bots",
+      "allowBotsGauntletHint": "Els bots no es permeten a Gauntlet.",
+      "submit": "Crea la sala",
+      "creating": "Creant…"
+    },
+    "join": {
+      "title": "Uneix-te amb codi",
+      "codeLabel": "Codi de sala",
+      "codeHelp": "6 caràcters. Sense 0, O, 1 ni I.",
+      "codePlaceholder": "ABCDEF",
+      "notFound": "No s'ha trobat cap sala amb aquest codi.",
+      "submit": "Uneix-te a la sala",
+      "joining": "Unint-te…"
+    },
+    "preview": {
+      "host": "Organitzada per {{name}}",
+      "lockedBadge": "Bloquejada"
+    },
+    "browse": {
+      "title": "Sales obertes",
+      "refresh": "Actualitza",
+      "hostedBy": "Organitzada per {{name}}",
+      "join": "Uneix-te",
+      "empty": "No hi ha cap sala oberta ara mateix.",
+      "emptyCta": "Crea'n una",
+      "error": "No s'han pogut carregar les sales obertes.",
+      "retry": "Torna-ho a provar"
+    },
+    "lobby": {
+      "host": "Amfitrió",
+      "you": "Tu",
+      "connected": "Connectat",
+      "disconnected": "Desconnectat",
+      "playersCount": "{{count}}/{{max}} jugadors",
+      "switchTeam": "Canvia a {{name}}",
+      "emptySlot": "Toca per unir-te",
+      "teamFull": "Equip ple",
+      "waitingForHost": "Esperant que l'amfitrió comenci…",
+      "reasonNotHost": "Només l'amfitrió pot fer això.",
+      "reasonNotInLobby": "No disponible ara mateix.",
+      "reasonNotFound": "No s'ha trobat aquest jugador.",
+      "reasonTeamFull": "Aquest equip està ple.",
+      "ready": "Llest"
+    },
+    "code": {
+      "title": "Codi de sala",
+      "copy": "Copia el codi",
+      "copied": "Codi copiat",
+      "share": "Comparteix el codi",
+      "shared": "Codi compartit",
+      "shareMessage": "Uneix-te a la meva sala de JoJo x One Piece Simulator amb el codi {{code}}",
+      "publicHint": "Pública: qualsevol pot trobar i unir-se a aquesta sala.",
+      "privateHint": "Privada: només s'hi pot unir qui tingui el codi."
+    },
+    "lock": {
+      "locked": "Bloquejada",
+      "lockAction": "Bloqueja la sala",
+      "unlockAction": "Desbloqueja la sala"
+    },
+    "start": {
+      "start": "Comença",
+      "starting": "Començant…",
+      "ready": "Llesta per començar",
+      "reasonNotHost": "Només l'amfitrió pot començar la partida.",
+      "reasonAlreadyStarted": "Aquesta partida ja ha començat.",
+      "reasonNoMangas": "Selecciona com a mínim un manga.",
+      "reasonNeedsTwoTeams": "Versus necessita exactament dos equips.",
+      "reasonEmptyTeam": "Els dos equips necessiten com a mínim un jugador.",
+      "reasonUnequalTeams": "Els dos equips necessiten el mateix nombre de jugadors ({{a}} contra {{b}}).",
+      "reasonNoPlayers": "No hi ha prou jugadors per començar."
+    },
+    "abort": {
+      "action": "Cancel·la la partida",
+      "title": "Vols cancel·lar aquesta partida?",
+      "message": "S'eliminarà tots els jugadors i la sala es tancarà. Això no es pot desfer.",
+      "confirm": "Cancel·la la partida"
+    },
+    "leave": {
+      "action": "Abandona la sala",
+      "title": "Vols abandonar aquesta sala?",
+      "message": "Podràs tornar-hi més tard amb el codi de sala, mentre segueixi oberta.",
+      "confirm": "Abandona la sala"
+    },
+    "kick": {
+      "action": "Expulsa {{name}}",
+      "title": "Vols expulsar aquest jugador?",
+      "message": "S'eliminarà de la sala immediatament.",
+      "confirm": "Expulsa",
+      "reasonSelf": "No et pots expulsar a tu mateix."
+    },
+    "transferHost": {
+      "action": "Fes amfitrió a {{name}}",
+      "title": "Vols transferir l'amfitrió?",
+      "message": "Obtindrà el control total de la configuració i el botó de començar d'aquesta sala.",
+      "confirm": "Transfereix l'amfitrió",
+      "reasonBot": "Un bot no pot ser amfitrió."
+    },
+    "connection": {
+      "reconnecting": "Reconnectant en {{seconds}} s…",
+      "unavailable": "Les actualitzacions en directe no estan disponibles ara mateix.",
+      "retryNow": "Torna-ho a provar ara"
+    },
+    "terminal": {
+      "kicked": "T'han expulsat d'aquesta sala.",
+      "abortedByHost": "L'amfitrió ha cancel·lat aquesta partida.",
+      "finished": "Aquesta partida ha acabat."
+    },
+    "a11y": {
+      "playerRow": "{{name}}"
+    }
+  },
   "locale": {
     "required": "obligatori",
     "hasError": "té un error"
@@ -238,6 +368,31 @@
     "manga": {
       "JOJO": "Les bizarres aventures de JoJo",
       "ONE_PIECE": "One Piece"
+    },
+    "gameMode": {
+      "GAUNTLET": "Gauntlet",
+      "VERSUS": "Versus"
+    },
+    "gameState": {
+      "LOBBY": "Sala",
+      "ASSIGNING": "Repartint poders",
+      "VOTING": "Votació",
+      "TIEBREAK": "Vot de desempat",
+      "RESOLVING": "Resolent la ronda",
+      "FINISHED": "Acabada",
+      "ABORTED": "Cancel·lada"
+    },
+    "abilitySource": {
+      "RANDOM": "Aleatori",
+      "INVENTORY": "Inventari"
+    },
+    "participantKind": {
+      "HUMAN": "Jugador",
+      "BOT": "Bot"
+    },
+    "lobbyVisibility": {
+      "PUBLIC": "Pública",
+      "PRIVATE": "Privada"
     }
   },
   "errors": {
@@ -300,6 +455,14 @@
     "INVALID_PARTICIPANT_KIND": "Aquest tipus de participant no és vàlid.",
     "INVALID_SQUAD_VERDICT": "Aquest veredicte d'esquadra no és vàlid.",
     "UNKNOWN_COMMAND": "Aquesta acció no està suportada.",
+    "LOBBY_LOCKED": "Aquesta sala està bloquejada.",
+    "CONFIG_WOULD_EVICT_PLAYERS": "Aquest canvi eliminaria jugadors ja asseguts. Redueix la mida després que marxin.",
+    "CANNOT_KICK_SELF": "No et pots expulsar a tu mateix.",
+    "POOL_TOO_SMALL": "No hi ha prou poders permesos per començar amb tants jugadors.",
+    "INVALID_VOTING_WINDOW": "Aquesta finestra de votació no és vàlida.",
+    "INVALID_POOL_FILTER": "Aquesta restricció del repertori de poders no és vàlida.",
+    "INVALID_LOBBY_VISIBILITY": "Aquesta configuració de privadesa no és vàlida.",
+    "LOBBY_PRIVATE": "Aquesta sala és privada. Demana el codi de sala a l'amfitrió.",
     "INTERNAL": "Alguna cosa ha anat malament per la nostra part."
   }
 }

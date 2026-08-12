@@ -49,6 +49,15 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         // to prevent, just for the persisted layer instead of the service
         // worker (see public/sw.js for that half).
         buster: env.EXPO_PUBLIC_BUILD_ID,
+        dehydrateOptions: {
+          // A live game/lobby snapshot is realtime state the WebSocket
+          // store owns (see features/game/api/game.keys.ts) - persisting it
+          // to AsyncStorage would rehydrate yesterday's roster/state on next
+          // launch, the exact "stale until you clear the cache" class the
+          // buster above guards against for the schema dimension instead.
+          shouldDehydrateQuery: (query) =>
+            query.queryKey[1] !== 'games' && query.state.status === 'success',
+        },
       }}
     >
       {children}
