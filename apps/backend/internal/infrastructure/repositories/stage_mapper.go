@@ -15,14 +15,14 @@ import (
 // columns under different generated row types, so this lets a single
 // mapper function serve all of them via a small per-caller adapter.
 type stageRow struct {
-	ID            pgtype.UUID
 	Manga         string
-	Position      int32
 	Name          string
 	Description   string
 	Picture       string
 	PictureThumb  string
 	PictureStatus string
+	Position      int32
+	ID            pgtype.UUID
 }
 
 func toStage(r stageRow) (game.Stage, error) {

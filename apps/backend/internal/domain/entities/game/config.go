@@ -55,14 +55,14 @@ var (
 // host changes it by having Game.Reconfigure swap in a whole new Config,
 // never by mutating one in place.
 type Config struct {
-	mode                enums.GameModeKind
+	poolFilter          PoolFilter
 	mangas              []enums.Manga
-	abilitySource       enums.AbilitySource
 	teamSize            int
+	votingWindowSeconds int
+	mode                enums.GameModeKind
+	abilitySource       enums.AbilitySource
 	allowBots           bool
 	visibility          enums.LobbyVisibility
-	votingWindowSeconds int
-	poolFilter          PoolFilter
 }
 
 // NewConfig validates and builds a Config.

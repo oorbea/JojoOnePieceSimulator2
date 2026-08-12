@@ -10,8 +10,8 @@ import (
 // terminal state (READY or FAILED) - the SSE handler serializes this
 // directly to subscribed clients.
 type PictureEvent struct {
-	Kind      enums.PictureSubjectKind
 	SubjectID string
+	Kind      enums.PictureSubjectKind
 	Status    enums.PictureStatus
 }
 
