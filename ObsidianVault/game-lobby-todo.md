@@ -16,19 +16,15 @@ nothing needs re-deriving. Background/rationale for what's already shipped lives
 [[game-lobby-management]] (backend) and [[game-lobby-frontend]] (frontend) - read those for *why*,
 this note for *what's left*.
 
-## 0. Current state (2026-08-12) - check this is still accurate before trusting anything below
+## 0. Current state (2026-08-13) - DONE, closed out
 
-- Branch `develop`, **nothing from this feature is committed yet**. `git status --short` at the
-  time of writing showed only modified/new files, no commits. **First action of a new session:
-  run `git status` and `git diff --stat` to confirm this is still true** before assuming the working
-  tree matches this note - if a commit happened since, some of "not committed" below is stale.
-- Backend: fully done and tested (unit + real Redis for the public-lobby index). `go build ./...`,
-  `go vet ./...`, `go test ./...` all clean in `apps/backend`.
-- Frontend: `tsc --noEmit` clean, `pnpm run test:ci` green (34 suites / 301 tests) in
-  `apps/frontend`.
-- **Not yet done, in priority order below**: §1 commit, §2 backend endpoint tests, §3 config-edit
-  UI, §4 power-pool restriction UI, §5 (optional) drag-to-move, §6 in-match UI (separate large
-  tanda, only a stub today).
+- §1-§4 all committed on `develop` (commits 5aa8766, 2a82c8c, 8ab0356, a6a3ef5, 1ddead1, 9b88996).
+- Backend: `go build ./...`, `go vet ./...`, `go test ./...` clean, including new
+  `game_endpoints_test.go`/`game_ws_endpoints_test.go` (§2).
+- Frontend: `tsc --noEmit` clean, `pnpm run test:ci` green (34 suites / 305 tests), including
+  the config-edit panel (§3) and power-pool restriction UI (§4).
+- **Remaining, not part of "finish the lobbies"**: §5 (optional drag-to-move polish, skip unless
+  asked), §6 (in-match UI - separate, larger future tanda).
 
 ## 1. Commit the existing work
 
