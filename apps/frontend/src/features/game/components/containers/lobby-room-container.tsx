@@ -106,15 +106,17 @@ export function LobbyRoomContainer() {
   // lands for this game (tracked by a config-version key), never on every
   // render - otherwise the host's in-progress edits would be clobbered by
   // their own optimistic-less round trip or another client's STATE push.
+  // Adjusted directly during render (React's own recommended pattern for
+  // "reset state when some derived key changes") rather than in an effect -
+  // no extra commit-then-re-render, and avoids `react-hooks/set-state-in-
+  // effect` flagging the unconditional `setState` inside a `useEffect` body.
   const configVersionKey = snapshot
     ? `${snapshot.id}:${JSON.stringify(snapshot.config)}:${snapshot.mode}`
     : null
-  useEffect(() => {
-    if (!snapshot || configVersionKey === configSeededFor) return
+  if (snapshot && configVersionKey !== configSeededFor) {
     setConfigForm(configFormFromSnapshot(snapshot.mode, snapshot.config))
     setConfigSeededFor(configVersionKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on configVersionKey, not snapshot identity
-  }, [configVersionKey])
+  }
 
   useEffect(() => {
     if (!socket.terminal) return

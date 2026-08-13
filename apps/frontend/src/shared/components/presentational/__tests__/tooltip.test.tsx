@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Pressable, Text } from 'react-native'
 import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 
@@ -7,12 +8,16 @@ import { TooltipBubble, useTooltipTrigger } from '../tooltip'
 // `GlossButton`, so this test locks in `useTooltipTrigger`'s own on/off
 // behavior without depending on how Tamagui's `Button` forwards long-press
 // events under the hood. `triggerRef.current` is stubbed with a fake
-// `.measure()` (react-test-renderer's host instances don't implement the
-// real native measure bridge call), matching the shape `useTooltipTrigger`
-// expects from any real RN host component.
+// `.measure()` in an effect, not during render (react-hooks/refs flags a
+// ref write in the render body itself) - react-test-renderer's host
+// instances don't implement the real native measure bridge call, so this
+// fills in the shape `useTooltipTrigger` expects from any real RN host
+// component, and it's set by the time a later `fireEvent` interaction runs.
 function TestTrigger({ label }: { label?: string }) {
   const { visible, anchor, triggerRef, triggerProps } = useTooltipTrigger(label)
-  triggerRef.current = { measure: (cb) => cb(0, 0, 50, 20, 100, 200) }
+  useEffect(() => {
+    triggerRef.current = { measure: (cb) => cb(0, 0, 50, 20, 100, 200) }
+  }, [triggerRef])
   return (
     <Pressable accessibilityLabel="trigger" {...triggerProps}>
       <Text>Press me</Text>

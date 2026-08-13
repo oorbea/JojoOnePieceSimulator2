@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { JoinLobbyScreen } from '@/features/game/components/presentational/join-lobby-screen'
@@ -14,10 +14,16 @@ export function JoinLobbyContainer() {
   const params = useLocalSearchParams<{ code?: string }>()
   const [code, setCode] = useState(() => normalizeCode(params.code ?? ''))
 
-  useEffect(() => {
+  // Adjusts state when the deep-link param changes, during render rather
+  // than in an effect (React's own recommended pattern for this) - avoids
+  // both the extra commit-then-re-render an effect would cost and the
+  // `react-hooks/set-state-in-effect` lint rule, which flags an
+  // unconditional `setState` inside `useEffect` as a cascading-render risk.
+  const [seededParamCode, setSeededParamCode] = useState(params.code)
+  if (params.code !== seededParamCode) {
+    setSeededParamCode(params.code)
     if (params.code) setCode(normalizeCode(params.code))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the deep-link param changing
-  }, [params.code])
+  }
 
   const preview = useLobbyPreview(code)
   const joinGame = useJoinGameByCode()
