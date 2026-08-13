@@ -130,6 +130,7 @@ export type CreateGameInput = {
   allowBots: boolean
   visibility?: LobbyVisibility
   votingWindowSeconds?: number
+  poolFilter?: PoolFilter
 }
 
 // Mirrors services.ConfigUpdateInput / dto.UpdateConfigPayload - the

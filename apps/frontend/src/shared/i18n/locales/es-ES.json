@@ -192,6 +192,17 @@
       "saving": "Guardando…",
       "saved": "Guardado"
     },
+    "pool": {
+      "title": "Pool de poderes",
+      "rarities": "Rarezas",
+      "fruitTypes": "Tipos de fruta",
+      "banlist": "Poderes prohibidos",
+      "banlistSearch": "Buscar Stands y Frutas del Diablo",
+      "banlistEmpty": "Todavía no hay poderes prohibidos",
+      "banned": "Prohibido",
+      "removeBan": "Quitar {{name}} de la lista de prohibidos",
+      "clearAll": "Quitar todo"
+    },
     "join": {
       "title": "Unirse con código",
       "codeLabel": "Código de sala",
