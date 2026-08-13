@@ -187,7 +187,8 @@
       "submit": "Crear sala",
       "creating": "Creando…",
       "help": {
-        "mode": "Gauntlet es cooperativo contra la historia; Versus enfrenta a dos equipos.",
+        "modeGauntlet": "Cooperativo contra la historia. Todo el escuadrón gana o cae junto.",
+        "modeVersus": "Competitivo. Dos equipos iguales se enfrentan en tres rondas.",
         "mangas": "De qué universos saca esta sala los Stands y las Frutas del Diablo.",
         "teamSize": "Cuántos jugadores caben en cada equipo (Versus) o en el escuadrón (Gauntlet).",
         "votingSeconds": "Cuánto tiempo tienen los jugadores para votar en cada ronda.",
@@ -210,12 +211,19 @@
       "banlistSearch": "Buscar Stands y Frutas del Diablo",
       "banlistEmpty": "Todavía no hay poderes prohibidos",
       "removeBan": "Quitar {{name}} de la lista de prohibidos",
-      "clearAll": "Quitar todo"
+      "clearAll": "Quitar todo",
+      "banByFilter": {
+        "title": "Banear por filtro",
+        "rarities": "Rareza",
+        "fruitTypes": "Tipo de fruta",
+        "standStats": "Stats del Stand",
+        "banMatching": "Banear coincidencias",
+        "matchCount": "{{count}} poderes coinciden"
+      }
     },
     "join": {
       "title": "Unirse con código",
       "codeLabel": "Código de sala",
-      "codeHelp": "6 caracteres.",
       "codePlaceholder": "ABCDEF",
       "notFound": "No se ha encontrado ninguna sala con ese código.",
       "submit": "Unirse a la sala",

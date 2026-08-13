@@ -6,13 +6,17 @@ import { TooltipBubble, useTooltipTrigger } from '../tooltip'
 // Exercises the hook directly against a bare RN `Pressable` rather than
 // `GlossButton`, so this test locks in `useTooltipTrigger`'s own on/off
 // behavior without depending on how Tamagui's `Button` forwards long-press
-// events under the hood.
+// events under the hood. `triggerRef.current` is stubbed with a fake
+// `.measure()` (react-test-renderer's host instances don't implement the
+// real native measure bridge call), matching the shape `useTooltipTrigger`
+// expects from any real RN host component.
 function TestTrigger({ label }: { label?: string }) {
-  const { visible, triggerProps } = useTooltipTrigger(label)
+  const { visible, anchor, triggerRef, triggerProps } = useTooltipTrigger(label)
+  triggerRef.current = { measure: (cb) => cb(0, 0, 50, 20, 100, 200) }
   return (
     <Pressable accessibilityLabel="trigger" {...triggerProps}>
       <Text>Press me</Text>
-      <TooltipBubble visible={visible} label={label} />
+      <TooltipBubble visible={visible} label={label} anchor={anchor} />
     </Pressable>
   )
 }

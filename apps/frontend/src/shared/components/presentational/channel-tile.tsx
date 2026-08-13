@@ -56,16 +56,12 @@ export function ChannelTile({
 }: ChannelTileProps) {
   const bg = locked ? '$plasticEdge' : TONE_BG[tone]
   const tooltipLabel = locked ? `${label}, coming soon` : label
-  const { visible: tooltipVisible, triggerProps } = useTooltipTrigger(tooltipLabel)
+  const { visible: tooltipVisible, anchor: tooltipAnchor, triggerRef, triggerProps } = useTooltipTrigger(tooltipLabel)
 
   return (
-    // Outer wrapper is NOT `overflow:hidden` - the tile itself needs that
-    // clip (rounded corners over the gloss overlay), but it would also clip
-    // the tooltip bubble, which renders above the box on purpose. Kept as a
-    // separate, unclipped sibling instead (same reasoning as SpeechBubble's
-    // tail living outside GlassPanel's own `overflow:hidden`).
-    <YStack position="relative">
+    <>
       <YStack
+        ref={triggerRef as never}
         {...triggerProps}
         width={96}
         height={96}
@@ -109,7 +105,7 @@ export function ChannelTile({
           {label}
         </GlowText>
       </YStack>
-      <TooltipBubble visible={tooltipVisible} label={tooltipLabel} />
-    </YStack>
+      <TooltipBubble visible={tooltipVisible} label={tooltipLabel} anchor={tooltipAnchor} />
+    </>
   )
 }

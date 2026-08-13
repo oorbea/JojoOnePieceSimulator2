@@ -118,17 +118,17 @@ const ChannelBarItemFrame = styled(YStack, {
 })
 
 type ChannelBarItemProps = React.ComponentProps<typeof ChannelBarItemFrame> & {
-  /** No `overflow:hidden` on this frame, so (unlike `WiiCard`/`ChannelTile`)
-   * the bubble can render directly inside it without an extra wrapper. */
   tooltip?: string
 }
 
 export function ChannelBarItem({ tooltip, children, ...rest }: ChannelBarItemProps) {
-  const { visible, triggerProps } = useTooltipTrigger(tooltip)
+  const { visible, anchor, triggerRef, triggerProps } = useTooltipTrigger(tooltip)
   return (
-    <ChannelBarItemFrame {...rest} {...triggerProps}>
-      {children}
-      <TooltipBubble visible={visible} label={tooltip} />
-    </ChannelBarItemFrame>
+    <>
+      <ChannelBarItemFrame ref={triggerRef as never} {...rest} {...triggerProps}>
+        {children}
+      </ChannelBarItemFrame>
+      <TooltipBubble visible={visible} label={tooltip} anchor={anchor} />
+    </>
   )
 }

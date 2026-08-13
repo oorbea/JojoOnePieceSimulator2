@@ -79,13 +79,14 @@ export function GlossButton({
   const sizeStyle = SIZE_STYLES[btnSize]
   const shapeStyle = SHAPE_STYLES[shape]
   const tooltipLabel = tooltip === null ? undefined : (tooltip ?? (accessibilityLabel as string | undefined))
-  const { visible: tooltipVisible, triggerProps } = useTooltipTrigger(tooltipLabel)
+  const { visible: tooltipVisible, anchor: tooltipAnchor, triggerRef, triggerProps } = useTooltipTrigger(tooltipLabel)
 
   return (
     <YStack position="relative" items="center" justify="center">
       {flare && !disabled ? <LensFlare size={btnSize === 'lg' ? 'md' : 'sm'} /> : null}
-      <TooltipBubble visible={tooltipVisible} label={tooltipLabel} />
+      <TooltipBubble visible={tooltipVisible} label={tooltipLabel} anchor={tooltipAnchor} />
       <Button
+        ref={triggerRef as never}
         {...rest}
         {...triggerProps}
         disabled={disabled}
