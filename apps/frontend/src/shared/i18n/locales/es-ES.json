@@ -181,9 +181,20 @@
       "votingSecondsLabel": "Ventana de votación (segundos)",
       "privacyLabel": "Privacidad",
       "allowBotsLabel": "Permitir bots",
+      "allowBotsOn": "Con bots",
+      "allowBotsOff": "Sin bots",
       "allowBotsGauntletHint": "Los bots no están permitidos en Gauntlet.",
       "submit": "Crear sala",
-      "creating": "Creando…"
+      "creating": "Creando…",
+      "help": {
+        "mode": "Gauntlet es cooperativo contra la historia; Versus enfrenta a dos equipos.",
+        "mangas": "De qué universos saca esta sala los Stands y las Frutas del Diablo.",
+        "teamSize": "Cuántos jugadores caben en cada equipo (Versus) o en el escuadrón (Gauntlet).",
+        "votingSeconds": "Cuánto tiempo tienen los jugadores para votar en cada ronda.",
+        "privacy": "Las salas públicas aparecen en Salas abiertas. Las privadas solo se unen con código.",
+        "allowBots": "Rellena los huecos vacíos con bots. No disponible en Gauntlet.",
+        "pool": "Bloquea Stands o Frutas del Diablo concretas para que nunca salgan en esta sala."
+      }
     },
     "config": {
       "title": "Ajustes de la sala",
@@ -193,20 +204,18 @@
       "saved": "Guardado"
     },
     "pool": {
-      "title": "Pool de poderes",
-      "rarities": "Rarezas",
-      "fruitTypes": "Tipos de fruta",
+      "title": "Poderes bloqueados",
+      "bannedHint": "Los poderes bloqueados no saldrán en esta sala. Si no bloqueas ninguno, entran todos.",
       "banlist": "Poderes prohibidos",
       "banlistSearch": "Buscar Stands y Frutas del Diablo",
       "banlistEmpty": "Todavía no hay poderes prohibidos",
-      "banned": "Prohibido",
       "removeBan": "Quitar {{name}} de la lista de prohibidos",
       "clearAll": "Quitar todo"
     },
     "join": {
       "title": "Unirse con código",
       "codeLabel": "Código de sala",
-      "codeHelp": "6 caracteres. Sin 0, O, 1 ni I.",
+      "codeHelp": "6 caracteres.",
       "codePlaceholder": "ABCDEF",
       "notFound": "No se ha encontrado ninguna sala con ese código.",
       "submit": "Unirse a la sala",
@@ -384,7 +393,7 @@
       "ADMIN": "Admin"
     },
     "manga": {
-      "JOJO": "Las bizarras aventuras de JoJo",
+      "JOJO": "JoJo's Bizarre Adventure",
       "ONE_PIECE": "One Piece"
     },
     "gameMode": {

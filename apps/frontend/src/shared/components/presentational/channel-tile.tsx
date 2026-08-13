@@ -6,6 +6,7 @@ import { asToken } from '@/shared/lib/tamagui-token'
 
 import { GlossOverlay } from './gloss-overlay'
 import { GlowText } from './glow-text'
+import { TooltipBubble, useTooltipTrigger } from './tooltip'
 import { InsetRing } from './wii-card'
 
 export type ChannelTileTone = 'blue' | 'grape' | 'red' | 'yellow' | 'green' | 'pink'
@@ -54,9 +55,12 @@ export function ChannelTile({
   locked = false,
 }: ChannelTileProps) {
   const bg = locked ? '$plasticEdge' : TONE_BG[tone]
+  const tooltipLabel = locked ? `${label}, coming soon` : label
+  const { visible: tooltipVisible, triggerProps } = useTooltipTrigger(tooltipLabel)
 
   return (
     <YStack
+      {...triggerProps}
       width={96}
       height={96}
       $md={{ width: 112, height: 112 }}
@@ -89,6 +93,7 @@ export function ChannelTile({
       )}
     >
       <InsetRing rounded="$card" />
+      <TooltipBubble visible={tooltipVisible} label={tooltipLabel} />
       {!locked ? <GlossOverlay coverage="half" shape="card" /> : null}
       {locked ? (
         <Lock size={22} color="$panelTextSoft" />

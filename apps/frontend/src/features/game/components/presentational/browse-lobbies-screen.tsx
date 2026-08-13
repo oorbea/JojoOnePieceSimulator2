@@ -41,10 +41,10 @@ export function BrowseLobbiesScreen({ onBack, onCreate, lobbies, isLoading, isFe
       {isLoading ? <ActivityIndicator /> : null}
 
       {isError ? (
-        <SpeechBubble>
+        <SpeechBubble maxW={420} self="center" items="center">
           <XStack items="center" gap="$2">
             <TriangleAlert size={16} color="$strawHatRedDeep" />
-            <GlowText level="label">{t('game.browse.error')}</GlowText>
+            <GlowText level="label" align="center">{t('game.browse.error')}</GlowText>
           </XStack>
           <GlossButton tone="glass" btnSize="sm" onPress={onRefresh} accessibilityLabel={t('game.browse.retry')}>
             {t('game.browse.retry')}
@@ -53,8 +53,8 @@ export function BrowseLobbiesScreen({ onBack, onCreate, lobbies, isLoading, isFe
       ) : null}
 
       {!isLoading && !isError && lobbies.length === 0 ? (
-        <SpeechBubble>
-          <GlowText level="label">{t('game.browse.empty')}</GlowText>
+        <SpeechBubble maxW={420} self="center" items="center">
+          <GlowText level="label" align="center">{t('game.browse.empty')}</GlowText>
           <GlossButton tone="green" btnSize="sm" onPress={onCreate} accessibilityLabel={t('game.browse.emptyCta')}>
             {t('game.browse.emptyCta')}
           </GlossButton>

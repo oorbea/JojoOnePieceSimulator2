@@ -7,7 +7,7 @@ import { CreateLobbyScreen } from '@/features/game/components/presentational/cre
 import { useCreateGame } from '@/features/game/hooks/use-create-game'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { toAppError } from '@/shared/api/errors'
-import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
 
@@ -62,30 +62,6 @@ export function CreateLobbyContainer() {
     )
   }
 
-  const handleToggleRarity = (rarity: Rarity) => {
-    setPoolFilter((current) => {
-      const has = current.standRarities.includes(rarity)
-      return {
-        ...current,
-        standRarities: has
-          ? current.standRarities.filter((r) => r !== rarity)
-          : [...current.standRarities, rarity],
-        fruitRarities: has
-          ? current.fruitRarities.filter((r) => r !== rarity)
-          : [...current.fruitRarities, rarity],
-      }
-    })
-  }
-
-  const handleToggleFruitType = (fruitType: FruitType) => {
-    setPoolFilter((current) => ({
-      ...current,
-      fruitTypes: current.fruitTypes.includes(fruitType)
-        ? current.fruitTypes.filter((f) => f !== fruitType)
-        : [...current.fruitTypes, fruitType],
-    }))
-  }
-
   const handleAddBan = (id: string) => {
     setPoolFilter((current) =>
       current.banned.includes(id) ? current : { ...current, banned: [...current.banned, id] }
@@ -96,11 +72,11 @@ export function CreateLobbyContainer() {
     setPoolFilter((current) => ({ ...current, banned: current.banned.filter((b) => b !== id) }))
   }
 
-  const poolActiveCount =
-    poolFilter.standRarities.length +
-    poolFilter.fruitRarities.length +
-    poolFilter.fruitTypes.length +
-    poolFilter.banned.length
+  // Whitelisting by rarity/fruit-type isn't exposed in the UI (owner call -
+  // only banning specific powers is needed) even though `PoolFilter` still
+  // carries those fields for the backend, so the active-count badge only
+  // ever reflects the banlist.
+  const poolActiveCount = poolFilter.banned.length
 
   const handleSubmit = () => {
     createGame.mutate(
@@ -140,8 +116,6 @@ export function CreateLobbyContainer() {
       poolFilter={poolFilter}
       poolActiveCount={poolActiveCount}
       banlistItems={banlistItems}
-      onToggleRarity={handleToggleRarity}
-      onToggleFruitType={handleToggleFruitType}
       onAddBan={handleAddBan}
       onRemoveBan={handleRemoveBan}
       onClearPoolFilter={() => setPoolFilter(EMPTY_POOL_FILTER)}

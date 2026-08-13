@@ -22,7 +22,7 @@ type SpeechBubbleProps = React.ComponentProps<typeof GlassPanel> & {
 export function SpeechBubble({ tailSide = 'bottom', children, ...rest }: SpeechBubbleProps) {
   return (
     <YStack position="relative">
-      <GlassPanel radiusSize="bubble" {...rest}>
+      <GlassPanel radiusSize="bubble" p="$4" gap="$3" items="flex-start" {...rest}>
         {children}
       </GlassPanel>
       <YStack

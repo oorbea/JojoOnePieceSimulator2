@@ -1,4 +1,4 @@
-import { ChevronLeft, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
+import { Bot, ChevronLeft, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
@@ -9,10 +9,12 @@ import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { InfoHint } from '@/shared/components/presentational/info-hint'
 import { PageShell } from '@/shared/components/presentational/page-shell'
+import { SettingRow } from '@/shared/components/presentational/setting-row'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 
 type Props = {
   onBack: () => void
@@ -33,8 +35,6 @@ type Props = {
   poolFilter: PoolFilter
   poolActiveCount: number
   banlistItems: BannableItem[]
-  onToggleRarity: (rarity: Rarity) => void
-  onToggleFruitType: (fruitType: FruitType) => void
   onAddBan: (id: string) => void
   onRemoveBan: (id: string) => void
   onClearPoolFilter: () => void
@@ -62,8 +62,6 @@ export function CreateLobbyScreen({
   poolFilter,
   poolActiveCount,
   banlistItems,
-  onToggleRarity,
-  onToggleFruitType,
   onAddBan,
   onRemoveBan,
   onClearPoolFilter,
@@ -122,7 +120,10 @@ export function CreateLobbyScreen({
       <GlassPanel glossy p="$5" gap="$4" width="100%" $md={{ flexDirection: 'row' }}>
         <YStack flexBasis={320} grow={1} gap="$4">
           <YStack gap="$1.5">
-            <GlowText level="label">{t('game.create.mangasLabel')}</GlowText>
+            <XStack items="center" gap="$1.5">
+              <GlowText level="label">{t('game.create.mangasLabel')}</GlowText>
+              <InfoHint text={t('game.create.help.mangas')} />
+            </XStack>
             <XStack gap="$2">
               {(['JOJO', 'ONE_PIECE'] as Manga[]).map((manga) => (
                 <GlossButton
@@ -140,6 +141,7 @@ export function CreateLobbyScreen({
 
           <NumberStepper
             label={mode === 'GAUNTLET' ? t('game.create.teamSizeGauntletLabel') : t('game.create.teamSizeLabel')}
+            help={<InfoHint text={t('game.create.help.teamSize')} />}
             value={teamSize}
             min={teamSizeMin}
             max={teamSizeMax}
@@ -150,14 +152,14 @@ export function CreateLobbyScreen({
         <YStack flexBasis={320} grow={1} gap="$4">
           <NumberStepper
             label={t('game.create.votingSecondsLabel')}
+            help={<InfoHint text={t('game.create.help.votingSeconds')} />}
             value={votingWindowSeconds}
             min={5}
             max={180}
             onChange={onChangeVotingWindow}
           />
 
-          <YStack gap="$1.5">
-            <GlowText level="label">{t('game.create.privacyLabel')}</GlowText>
+          <SettingRow label={t('game.create.privacyLabel')} help={<InfoHint text={t('game.create.help.privacy')} />}>
             <GlossButton
               tone="glass"
               btnSize="sm"
@@ -173,19 +175,26 @@ export function CreateLobbyScreen({
                 {t(`enums.lobbyVisibility.${visibility}`)}
               </XStack>
             </GlossButton>
-          </YStack>
+          </SettingRow>
 
           <YStack gap="$1.5">
-            <GlowText level="label">{t('game.create.allowBotsLabel')}</GlowText>
-            <GlossButton
-              tone={allowBots ? 'blue' : 'glass'}
-              btnSize="sm"
-              disabled={mode === 'GAUNTLET'}
-              onPress={onToggleAllowBots}
-              accessibilityLabel={t('game.create.allowBotsLabel')}
+            <SettingRow
+              label={t('game.create.allowBotsLabel')}
+              help={<InfoHint text={t('game.create.help.allowBots')} />}
             >
-              {allowBots ? t('common.save') : t('common.none')}
-            </GlossButton>
+              <GlossButton
+                tone={allowBots ? 'blue' : 'glass'}
+                btnSize="sm"
+                disabled={mode === 'GAUNTLET'}
+                onPress={onToggleAllowBots}
+                accessibilityLabel={allowBots ? t('game.create.allowBotsOn') : t('game.create.allowBotsOff')}
+              >
+                <XStack items="center" gap="$2">
+                  <Bot size={14} color="$panelText" />
+                  {allowBots ? t('game.create.allowBotsOn') : t('game.create.allowBotsOff')}
+                </XStack>
+              </GlossButton>
+            </SettingRow>
             {mode === 'GAUNTLET' ? (
               <GlowText level="label">{t('game.create.allowBotsGauntletHint')}</GlowText>
             ) : null}
@@ -193,16 +202,7 @@ export function CreateLobbyScreen({
         </YStack>
       </GlassPanel>
 
-      <PowerPoolFields
-        editable
-        standRarities={poolFilter.standRarities as Rarity[]}
-        fruitRarities={poolFilter.fruitRarities as Rarity[]}
-        fruitTypes={poolFilter.fruitTypes as FruitType[]}
-        activeCount={poolActiveCount}
-        onToggleRarity={onToggleRarity}
-        onToggleFruitType={onToggleFruitType}
-        onClearAll={onClearPoolFilter}
-      >
+      <PowerPoolFields editable activeCount={poolActiveCount} onClearAll={onClearPoolFilter}>
         <BanlistField
           editable
           banned={poolFilter.banned}
