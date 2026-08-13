@@ -2,21 +2,20 @@ import { Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
+import { BanlistField, type BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
+import { PowerPoolFields } from '@/features/game/components/presentational/fields/power-pool-fields'
+import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
 
 // Fields mirror create-lobby-screen.tsx's exactly (mode, mangas, team size,
-// voting window, privacy, allow bots) since UPDATE_CONFIG is a full
-// replacement of the same Config shape. Pool-filter (rarity/fruit-type/
-// banlist) is deliberately not included here yet - that's a separate
-// follow-up (see game-lobby-todo.md's power-pool restriction UI item); this
-// component's props/layout are kept flat and field-per-row so that item can
-// extend it with a few more rows without restructuring anything here.
+// voting window, privacy, allow bots, pool filter) since UPDATE_CONFIG is a
+// full replacement of the same Config shape.
 type Props = {
   isHost: boolean
   mode: GameMode
@@ -33,6 +32,14 @@ type Props = {
   onToggleVisibility: () => void
   votingWindowSeconds: number
   onChangeVotingWindow: (seconds: number) => void
+  poolFilter: PoolFilter
+  poolActiveCount: number
+  banlistItems: BannableItem[]
+  onToggleRarity: (rarity: Rarity) => void
+  onToggleFruitType: (fruitType: FruitType) => void
+  onAddBan: (id: string) => void
+  onRemoveBan: (id: string) => void
+  onClearPoolFilter: () => void
   saving: boolean
   saved: boolean
   error?: string
@@ -55,6 +62,14 @@ export function LobbyConfigPanel({
   onToggleVisibility,
   votingWindowSeconds,
   onChangeVotingWindow,
+  poolFilter,
+  poolActiveCount,
+  banlistItems,
+  onToggleRarity,
+  onToggleFruitType,
+  onAddBan,
+  onRemoveBan,
+  onClearPoolFilter,
   saving,
   saved,
   error,
@@ -219,6 +234,25 @@ export function LobbyConfigPanel({
           </YStack>
         </YStack>
       </GlassPanel>
+
+      <PowerPoolFields
+        editable={isHost}
+        standRarities={poolFilter.standRarities as Rarity[]}
+        fruitRarities={poolFilter.fruitRarities as Rarity[]}
+        fruitTypes={poolFilter.fruitTypes as FruitType[]}
+        activeCount={poolActiveCount}
+        onToggleRarity={onToggleRarity}
+        onToggleFruitType={onToggleFruitType}
+        onClearAll={onClearPoolFilter}
+      >
+        <BanlistField
+          editable={isHost}
+          banned={poolFilter.banned}
+          items={banlistItems}
+          onAddBan={onAddBan}
+          onRemoveBan={onRemoveBan}
+        />
+      </PowerPoolFields>
 
       {error ? <GlowText level="label" color="$strawHatRedDeep">{error}</GlowText> : null}
 

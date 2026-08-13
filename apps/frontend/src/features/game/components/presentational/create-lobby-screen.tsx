@@ -2,14 +2,17 @@ import { ChevronLeft, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
+import { BanlistField, type BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
+import { PowerPoolFields } from '@/features/game/components/presentational/fields/power-pool-fields'
+import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
 
 type Props = {
   onBack: () => void
@@ -27,6 +30,14 @@ type Props = {
   onToggleVisibility: () => void
   votingWindowSeconds: number
   onChangeVotingWindow: (seconds: number) => void
+  poolFilter: PoolFilter
+  poolActiveCount: number
+  banlistItems: BannableItem[]
+  onToggleRarity: (rarity: Rarity) => void
+  onToggleFruitType: (fruitType: FruitType) => void
+  onAddBan: (id: string) => void
+  onRemoveBan: (id: string) => void
+  onClearPoolFilter: () => void
   submitting: boolean
   error?: string
   onSubmit: () => void
@@ -48,6 +59,14 @@ export function CreateLobbyScreen({
   onToggleVisibility,
   votingWindowSeconds,
   onChangeVotingWindow,
+  poolFilter,
+  poolActiveCount,
+  banlistItems,
+  onToggleRarity,
+  onToggleFruitType,
+  onAddBan,
+  onRemoveBan,
+  onClearPoolFilter,
   submitting,
   error,
   onSubmit,
@@ -173,6 +192,25 @@ export function CreateLobbyScreen({
           </YStack>
         </YStack>
       </GlassPanel>
+
+      <PowerPoolFields
+        editable
+        standRarities={poolFilter.standRarities as Rarity[]}
+        fruitRarities={poolFilter.fruitRarities as Rarity[]}
+        fruitTypes={poolFilter.fruitTypes as FruitType[]}
+        activeCount={poolActiveCount}
+        onToggleRarity={onToggleRarity}
+        onToggleFruitType={onToggleFruitType}
+        onClearAll={onClearPoolFilter}
+      >
+        <BanlistField
+          editable
+          banned={poolFilter.banned}
+          items={banlistItems}
+          onAddBan={onAddBan}
+          onRemoveBan={onRemoveBan}
+        />
+      </PowerPoolFields>
 
       {error ? <GlowText level="label" color="$strawHatRedDeep">{error}</GlowText> : null}
 

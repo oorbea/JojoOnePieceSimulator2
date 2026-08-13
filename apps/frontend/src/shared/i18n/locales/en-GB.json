@@ -192,6 +192,17 @@
       "saving": "Saving…",
       "saved": "Saved"
     },
+    "pool": {
+      "title": "Power pool",
+      "rarities": "Rarities",
+      "fruitTypes": "Fruit types",
+      "banlist": "Banned powers",
+      "banlistSearch": "Search Stands and Devil Fruits",
+      "banlistEmpty": "No powers banned yet",
+      "banned": "Banned",
+      "removeBan": "Remove {{name}} from the banlist",
+      "clearAll": "Clear all"
+    },
     "join": {
       "title": "Join by Code",
       "codeLabel": "Join code",

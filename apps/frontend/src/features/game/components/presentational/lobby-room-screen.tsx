@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
+import type { BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { ConnectionBanner } from '@/features/game/components/presentational/connection-banner'
 import { JoinCodeCard } from '@/features/game/components/presentational/join-code-card'
 import { LobbyConfigPanel } from '@/features/game/components/presentational/lobby-config-panel'
@@ -10,8 +11,8 @@ import { SquadRoster } from '@/features/game/components/presentational/squad-ros
 import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
-import type { GameSnapshot, GameViewer } from '@/features/game/types/game.types'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
+import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
 import type { SocketStatus } from '@/features/game/stores/game-socket.store'
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
@@ -60,6 +61,14 @@ type Props = {
   onToggleConfigVisibility: () => void
   configVotingWindowSeconds: number
   onChangeConfigVotingWindow: (seconds: number) => void
+  configPoolFilter: PoolFilter
+  configPoolActiveCount: number
+  configBanlistItems: BannableItem[]
+  onToggleConfigRarity: (rarity: Rarity) => void
+  onToggleConfigFruitType: (fruitType: FruitType) => void
+  onAddConfigBan: (id: string) => void
+  onRemoveConfigBan: (id: string) => void
+  onClearConfigPoolFilter: () => void
   configSaving: boolean
   configSaved: boolean
   configError?: string
@@ -100,6 +109,14 @@ export function LobbyRoomScreen({
   onToggleConfigVisibility,
   configVotingWindowSeconds,
   onChangeConfigVotingWindow,
+  configPoolFilter,
+  configPoolActiveCount,
+  configBanlistItems,
+  onToggleConfigRarity,
+  onToggleConfigFruitType,
+  onAddConfigBan,
+  onRemoveConfigBan,
+  onClearConfigPoolFilter,
   configSaving,
   configSaved,
   configError,
@@ -179,6 +196,14 @@ export function LobbyRoomScreen({
           onToggleVisibility={onToggleConfigVisibility}
           votingWindowSeconds={configVotingWindowSeconds}
           onChangeVotingWindow={onChangeConfigVotingWindow}
+          poolFilter={configPoolFilter}
+          poolActiveCount={configPoolActiveCount}
+          banlistItems={configBanlistItems}
+          onToggleRarity={onToggleConfigRarity}
+          onToggleFruitType={onToggleConfigFruitType}
+          onAddBan={onAddConfigBan}
+          onRemoveBan={onRemoveConfigBan}
+          onClearPoolFilter={onClearConfigPoolFilter}
           saving={configSaving}
           saved={configSaved}
           error={configError}

@@ -192,6 +192,17 @@
       "saving": "Desant…",
       "saved": "Desat"
     },
+    "pool": {
+      "title": "Pool de poders",
+      "rarities": "Raresa",
+      "fruitTypes": "Tipus de fruita",
+      "banlist": "Poders prohibits",
+      "banlistSearch": "Cerca Stands i Fruites del Diable",
+      "banlistEmpty": "Encara no hi ha poders prohibits",
+      "banned": "Prohibit",
+      "removeBan": "Treu {{name}} de la llista de prohibits",
+      "clearAll": "Treu-ho tot"
+    },
     "join": {
       "title": "Uneix-te amb codi",
       "codeLabel": "Codi de sala",

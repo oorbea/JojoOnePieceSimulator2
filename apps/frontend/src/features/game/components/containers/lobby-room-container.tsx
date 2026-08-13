@@ -1,8 +1,9 @@
 import { useRouter, useLocalSearchParams } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 
+import type { BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { LobbyRoomScreen, type ConfirmSheetState } from '@/features/game/components/presentational/lobby-room-screen'
 import { gameKeys } from '@/features/game/api/game.keys'
 import { useGameCommands } from '@/features/game/hooks/use-game-commands'
@@ -12,11 +13,13 @@ import { formatCode } from '@/features/game/lib/game-code'
 import { startGate } from '@/features/game/lib/lobby-rules'
 import { shareJoinCode } from '@/features/game/lib/share'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
-import type { GameConfig } from '@/features/game/types/game.types'
+import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
+import { useDevilFruits } from '@/features/devil-fruits'
+import { useStands } from '@/features/stands'
 
 const GAUNTLET_MIN = 1
 const GAUNTLET_MAX = 10
@@ -34,6 +37,7 @@ type ConfigFormState = {
   allowBots: boolean
   visibility: LobbyVisibility
   votingWindowSeconds: number
+  poolFilter: PoolFilter
 }
 
 function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormState {
@@ -44,6 +48,7 @@ function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormS
     allowBots: config.allowBots,
     visibility: config.visibility,
     votingWindowSeconds: config.votingWindowSeconds,
+    poolFilter: config.poolFilter,
   }
 }
 
@@ -57,6 +62,16 @@ export function LobbyRoomContainer() {
   const detail = useGameDetail(id ?? null, socket.status)
   const commands = useGameCommands()
   const resetSocket = useGameSocketStore((s) => s.reset)
+  const standsQuery = useStands()
+  const devilFruitsQuery = useDevilFruits()
+
+  const banlistItems: BannableItem[] = useMemo(
+    () => [
+      ...(standsQuery.data ?? []).map((s) => ({ id: s.id, name: s.name, kind: 'STAND' as const })),
+      ...(devilFruitsQuery.data ?? []).map((f) => ({ id: f.id, name: f.name, kind: 'DEVIL_FRUIT' as const })),
+    ],
+    [standsQuery.data, devilFruitsQuery.data]
+  )
 
   const [starting, setStarting] = useState(false)
   const [confirmSheet, setConfirmSheet] = useState<ConfirmSheetState>(null)
@@ -191,6 +206,72 @@ export function LobbyRoomContainer() {
     })
   }
 
+  const handleToggleConfigRarity = (rarity: Rarity) => {
+    setConfigForm((current) => {
+      const base = current ?? form
+      const has = base.poolFilter.standRarities.includes(rarity)
+      return {
+        ...base,
+        poolFilter: {
+          ...base.poolFilter,
+          standRarities: has
+            ? base.poolFilter.standRarities.filter((r) => r !== rarity)
+            : [...base.poolFilter.standRarities, rarity],
+          fruitRarities: has
+            ? base.poolFilter.fruitRarities.filter((r) => r !== rarity)
+            : [...base.poolFilter.fruitRarities, rarity],
+        },
+      }
+    })
+  }
+
+  const handleToggleConfigFruitType = (fruitType: FruitType) => {
+    setConfigForm((current) => {
+      const base = current ?? form
+      const has = base.poolFilter.fruitTypes.includes(fruitType)
+      return {
+        ...base,
+        poolFilter: {
+          ...base.poolFilter,
+          fruitTypes: has
+            ? base.poolFilter.fruitTypes.filter((f) => f !== fruitType)
+            : [...base.poolFilter.fruitTypes, fruitType],
+        },
+      }
+    })
+  }
+
+  const handleAddConfigBan = (powerId: string) => {
+    setConfigForm((current) => {
+      const base = current ?? form
+      if (base.poolFilter.banned.includes(powerId)) return base
+      return { ...base, poolFilter: { ...base.poolFilter, banned: [...base.poolFilter.banned, powerId] } }
+    })
+  }
+
+  const handleRemoveConfigBan = (powerId: string) => {
+    setConfigForm((current) => {
+      const base = current ?? form
+      return {
+        ...base,
+        poolFilter: { ...base.poolFilter, banned: base.poolFilter.banned.filter((b) => b !== powerId) },
+      }
+    })
+  }
+
+  const handleClearConfigPoolFilter = () => {
+    setConfigForm((current) => {
+      const base = current ?? form
+      return { ...base, poolFilter: { standRarities: [], fruitRarities: [], fruitTypes: [], banned: [] } }
+    })
+  }
+
+  const configPoolActiveCount =
+    form.poolFilter.standRarities.length +
+    form.poolFilter.fruitRarities.length +
+    form.poolFilter.fruitTypes.length +
+    form.poolFilter.banned.length
+
   const handleSubmitConfig = () => {
     setConfigSaving(true)
     setConfigSaved(false)
@@ -202,7 +283,7 @@ export function LobbyRoomContainer() {
       allowBots: form.allowBots,
       visibility: form.visibility,
       votingWindowSeconds: form.votingWindowSeconds,
-      poolFilter: snapshot.config.poolFilter,
+      poolFilter: form.poolFilter,
     })
     setTimeout(() => {
       setConfigSaving(false)
@@ -257,6 +338,14 @@ export function LobbyRoomContainer() {
       }
       configVotingWindowSeconds={form.votingWindowSeconds}
       onChangeConfigVotingWindow={(votingWindowSeconds) => setConfigForm({ ...form, votingWindowSeconds })}
+      configPoolFilter={form.poolFilter}
+      configPoolActiveCount={configPoolActiveCount}
+      configBanlistItems={banlistItems}
+      onToggleConfigRarity={handleToggleConfigRarity}
+      onToggleConfigFruitType={handleToggleConfigFruitType}
+      onAddConfigBan={handleAddConfigBan}
+      onRemoveConfigBan={handleRemoveConfigBan}
+      onClearConfigPoolFilter={handleClearConfigPoolFilter}
       configSaving={configSaving}
       configSaved={configSaved}
       onSubmitConfig={handleSubmitConfig}
