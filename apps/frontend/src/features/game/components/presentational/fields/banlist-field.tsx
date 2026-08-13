@@ -7,14 +7,29 @@ import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { a11yProps } from '@/shared/lib/a11y'
+import type { FruitType, Rarity, StandStat } from '@/shared/lib/zod'
+
+/** Every `StandResponse` stat field `BanByFilterFields` can filter on. */
+export type StandStatKey =
+  'attackPower' | 'speed' | 'attackRange' | 'endurance' | 'precision' | 'potential'
 
 // A power that can be banned - built by the container from
 // @/features/stands's useStands() and @/features/devil-fruits's
 // useDevilFruits() results (cross-feature imports go through those
 // barrels, never their internal paths). `kind` is display-only, both power
 // kinds share the same PowerID space server-side so `banned` is a flat
-// list of ids regardless of kind.
-export type BannableItem = { id: string; name: string; kind: 'STAND' | 'DEVIL_FRUIT' }
+// list of ids regardless of kind. `rarity`/`fruitType`/`stats` are carried
+// alongside the id/name so `BanByFilterFields` can compute "ban every power
+// matching this rarity/fruit-type/stand-stat" without a second query -
+// `BanlistField` itself only ever reads `id`/`name`/`kind`.
+export type BannableItem = {
+  id: string
+  name: string
+  kind: 'STAND' | 'DEVIL_FRUIT'
+  rarity: Rarity
+  fruitType?: FruitType
+  stats?: Record<StandStatKey, StandStat>
+}
 
 const MAX_RESULTS = 6
 

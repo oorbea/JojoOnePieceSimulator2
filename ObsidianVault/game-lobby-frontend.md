@@ -114,6 +114,30 @@ mistake - now `game.create.allowBotsOn`/`allowBotsOff`), `SettingRow`/`InfoHint`
 empty-state bubble had no `p`/`gap`, so text touched the edge and got clipped by the panel's
 `overflow:hidden`).
 
+## Segundo UX pass, mismo día - "ban by filter" recuperado (no era whitelist)
+
+El owner reportó que quitar el todo el filtro de rareza/tipo-de-fruta/stat de Stand (pase anterior)
+perdió una funcionalidad real: poder banear en bloque ("banea todo lo LEGENDARY", "banea todos los
+Stand con SPD:A") en vez de buscar poder a poder en `BanlistField`. Distinto de la whitelist que sí
+se retiró a propósito - `BanByFilterFields` (`fields/ban-by-filter-fields.tsx`) sigue siendo
+**puro baneo**: calcula qué `BannableItem[]` cumplen los criterios elegidos (rarezas, tipos de fruta,
+6 stats de Stand vía `GlassSelect`, mismo patrón que el filtro de administración de Stands) y llama
+`onBanMatching(ids)`, que añade esos ids al mismo `poolFilter.banned` plano - no toca
+`standRarities`/`fruitRarities`/`fruitTypes` del backend en ningún momento. Un stat filter excluye
+DevilFruits del match (no tienen stats) y un fruit-type filter excluye Stands (no tienen tipo de
+fruta) - misma regla "la dimensión implica el tipo" que ya usaba el resto de esta feature.
+`BannableItem` (`fields/banlist-field.tsx`) ganó `rarity`/`fruitType`/`stats` para poder filtrar sin
+una segunda query - los containers ya tenían `useStands()`/`useDevilFruits()` completos.
+
+Otros arreglos del mismo pase: tooltips reescritos a `Modal` (ver
+[[norma-tooltips-y-ayuda-contextual]]), cola de `SpeechBubble` centrada de verdad, tooltip de
+Gauntlet/Versus separado en dos claves (`game.create.help.modeGauntlet`/`modeVersus`, antes
+compartían una), `/play/join` ya no muestra el texto "6 caracteres." - el botón simplemente se
+deshabilita hasta `isCompleteCode(code)` (ya existía en `lib/game-code.ts`, sin usar hasta ahora), y
+el vacío/error de `/play/browse` pasó de `SpeechBubble` a la misma `GlassPanel` plana que usa el
+vacío de Stands en admin (`stands-screen.tsx`) - una tarjeta plana con icono se lee mejor ahí que un
+bocadillo con cola apuntando a la nada.
+
 Related: [[game-lobby-management]], [[gameplay-game-modes]], [[frontend-stack]],
 [[frontend-responsive-frutiger-aero]], [[i18n-multi-language]], [[zettelkasten-workflow]],
 [[norma-tooltips-y-ayuda-contextual]].

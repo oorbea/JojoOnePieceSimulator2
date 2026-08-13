@@ -66,5 +66,42 @@ El posicionamiento horizontal de `TooltipBubble` solo se centra pixel-perfect en
   admite porcentajes en `transform`). En nativo ancla desde el punto medio del trigger sin corregir,
   aceptable para las etiquetas cortas que lleva.
 
+## Reescritura a Modal (2026-08-13, tercer pase) - el diseño con `position:absolute` estaba roto de raíz
+
+El owner reportó tooltips/popovers cortados y "por detrás de otros elementos" en varias pantallas.
+Causa real: RN solo compara `zIndex` entre **hermanos directos** (la misma razón por la que
+`ConfirmSheet` es un `Modal` de verdad y no un overlay absoluto, ver
+[[frontend-responsive-frutiger-aero]]) - una burbuja anidada varios niveles dentro de un formulario
+quedaba recortada por el `overflow:hidden` de un ancestro (`GlassPanel`, `WiiCard`, `ChannelTile`) o
+pintada por debajo de un hermano no relacionado más abajo en el árbol, según qué contenedor tuviera
+su propio contexto de apilamiento. El primer diseño (bubble como hijo absoluto anidado) nunca podía
+arreglarse del todo con retoques de z-index.
+
+**Fix**: `useTooltipTrigger`/`TooltipBubble` (`tooltip.tsx`) ahora miden la posición real en pantalla
+del trigger vía `.measure()` (RN) y renderizan la burbuja dentro de un `Modal transparent` de verdad,
+igual que `ConfirmSheet`/`GlassSelect` - un layer de raíz, inmune a cualquier overflow/scroll/z-index
+de ancestros. `GlossButton`, `ChannelTile` y `ChannelBarItem` adjuntan un `ref` interno al nodo host
+para la medición; ya no necesitan el wrapper `position:relative` sin `overflow:hidden` que el pase
+anterior usó como parche (`ChannelTile` tenía ese wrapper y AÚN ASÍ el tooltip se recortaba - la causa
+real nunca fue solo el `overflow:hidden` local). Centrado horizontal sigue siendo solo-web (`transform:
+translateX(-50%)`), nativo ancla desde la esquina superior-izquierda del trigger sin el nudge final.
+
+`InfoHint` recibió el mismo tratamiento: el popover persistente (tap-to-toggle) ahora es un `Modal`
+anclado por `.measure()` sobre un `View ref={...} collapsable={false}` que envuelve el `GlossButton`
+(necesario porque `GlossButton` no es `forwardRef`).
+
+Test (`tooltip.test.tsx`) stubea `triggerRef.current` con un `.measure()` falso, porque
+react-test-renderer no implementa el puente nativo real de `measure()`.
+
+## `SpeechBubble`: la cola ya no usa un offset fijo del 18%/40%
+
+Todos los usos reales (`play-hub-screen.tsx`, `login-screen.tsx`, `error-fallback.tsx`,
+`info-hint.tsx`) son diálogos centrados de ancho variable - una cola fija a `l:'18%'` solo coincidía
+por casualidad con una anchura de caja concreta y se veía descentrada en cualquier otra (el bug
+"diálogo mal centrado" del hub). La cola ahora se centra en ambos ejes (mismo truco `transform`
+web-only que `TooltipBubble`); en web hay que combinar `rotate="45deg"` y el `translate` en el MISMO
+array de `style` (RN aplana estilos por clave completa, no hace merge de arrays `transform` - un
+`style` aparte con solo `translateX` se habría comido la rotación).
+
 Related: [[a11y-web-leak]], [[frontend-responsive-frutiger-aero]], [[norma-diseno-ui-ux]],
 [[game-lobby-frontend]], [[zettelkasten-workflow]].

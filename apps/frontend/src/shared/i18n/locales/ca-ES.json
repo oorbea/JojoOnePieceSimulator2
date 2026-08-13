@@ -187,7 +187,8 @@
       "submit": "Crea la sala",
       "creating": "Creant…",
       "help": {
-        "mode": "Gauntlet és cooperatiu contra la història; Versus enfronta dos equips.",
+        "modeGauntlet": "Cooperatiu contra la història. Tot l'esquadró guanya o cau junt.",
+        "modeVersus": "Competitiu. Dos equips iguals s'enfronten en tres rondes.",
         "mangas": "De quins universos treu aquesta sala els Stands i les Fruites del Diable.",
         "teamSize": "Quants jugadors caben a cada equip (Versus) o a l'esquadró (Gauntlet).",
         "votingSeconds": "Quant de temps tenen els jugadors per votar a cada ronda.",
@@ -210,12 +211,19 @@
       "banlistSearch": "Cerca Stands i Fruites del Diable",
       "banlistEmpty": "Encara no hi ha poders prohibits",
       "removeBan": "Treu {{name}} de la llista de prohibits",
-      "clearAll": "Treu-ho tot"
+      "clearAll": "Treu-ho tot",
+      "banByFilter": {
+        "title": "Bloca per filtre",
+        "rarities": "Raresa",
+        "fruitTypes": "Tipus de fruita",
+        "standStats": "Stats de l'Stand",
+        "banMatching": "Bloca coincidències",
+        "matchCount": "{{count}} poders coincideixen"
+      }
     },
     "join": {
       "title": "Uneix-te amb codi",
       "codeLabel": "Codi de sala",
-      "codeHelp": "6 caràcters.",
       "codePlaceholder": "ABCDEF",
       "notFound": "No s'ha trobat cap sala amb aquest codi.",
       "submit": "Uneix-te a la sala",

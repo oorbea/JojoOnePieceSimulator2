@@ -67,8 +67,27 @@ export function LobbyRoomContainer() {
 
   const banlistItems: BannableItem[] = useMemo(
     () => [
-      ...(standsQuery.data ?? []).map((s) => ({ id: s.id, name: s.name, kind: 'STAND' as const })),
-      ...(devilFruitsQuery.data ?? []).map((f) => ({ id: f.id, name: f.name, kind: 'DEVIL_FRUIT' as const })),
+      ...(standsQuery.data ?? []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        kind: 'STAND' as const,
+        rarity: s.rarity,
+        stats: {
+          attackPower: s.attackPower,
+          speed: s.speed,
+          attackRange: s.attackRange,
+          endurance: s.endurance,
+          precision: s.precision,
+          potential: s.potential,
+        },
+      })),
+      ...(devilFruitsQuery.data ?? []).map((f) => ({
+        id: f.id,
+        name: f.name,
+        kind: 'DEVIL_FRUIT' as const,
+        rarity: f.rarity,
+        fruitType: f.fruitType,
+      })),
     ],
     [standsQuery.data, devilFruitsQuery.data]
   )
@@ -224,6 +243,14 @@ export function LobbyRoomContainer() {
     })
   }
 
+  const handleBanMatchingConfig = (powerIds: string[]) => {
+    setConfigForm((current) => {
+      const base = current ?? form
+      const banned = [...base.poolFilter.banned, ...powerIds.filter((id) => !base.poolFilter.banned.includes(id))]
+      return { ...base, poolFilter: { ...base.poolFilter, banned } }
+    })
+  }
+
   const handleClearConfigPoolFilter = () => {
     setConfigForm((current) => {
       const base = current ?? form
@@ -307,6 +334,7 @@ export function LobbyRoomContainer() {
       configBanlistItems={banlistItems}
       onAddConfigBan={handleAddConfigBan}
       onRemoveConfigBan={handleRemoveConfigBan}
+      onBanMatchingConfig={handleBanMatchingConfig}
       onClearConfigPoolFilter={handleClearConfigPoolFilter}
       configSaving={configSaving}
       configSaved={configSaved}

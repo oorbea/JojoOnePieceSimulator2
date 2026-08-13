@@ -187,7 +187,8 @@
       "submit": "Create Lobby",
       "creating": "Creating…",
       "help": {
-        "mode": "Gauntlet is co-op against the story; Versus is two teams competing.",
+        "modeGauntlet": "Co-op against the story. The whole squad wins or falls together.",
+        "modeVersus": "Competitive. Two even teams face off over three rounds.",
         "mangas": "Which universes this lobby draws Stands and Devil Fruits from.",
         "teamSize": "How many players fit on each team (Versus) or in the squad (Gauntlet).",
         "votingSeconds": "How long players get to vote on choices during a round.",
@@ -210,12 +211,19 @@
       "banlistSearch": "Search Stands and Devil Fruits",
       "banlistEmpty": "No powers banned yet",
       "removeBan": "Remove {{name}} from the banlist",
-      "clearAll": "Clear all"
+      "clearAll": "Clear all",
+      "banByFilter": {
+        "title": "Ban by filter",
+        "rarities": "Rarity",
+        "fruitTypes": "Fruit type",
+        "standStats": "Stand stats",
+        "banMatching": "Ban matching",
+        "matchCount": "{{count}} powers match"
+      }
     },
     "join": {
       "title": "Join by Code",
       "codeLabel": "Join code",
-      "codeHelp": "6 characters.",
       "codePlaceholder": "ABCDEF",
       "notFound": "No lobby found with that code.",
       "submit": "Join Lobby",

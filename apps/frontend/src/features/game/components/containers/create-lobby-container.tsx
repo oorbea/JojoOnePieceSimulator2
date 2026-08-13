@@ -40,8 +40,27 @@ export function CreateLobbyContainer() {
 
   const banlistItems: BannableItem[] = useMemo(
     () => [
-      ...(standsQuery.data ?? []).map((s) => ({ id: s.id, name: s.name, kind: 'STAND' as const })),
-      ...(devilFruitsQuery.data ?? []).map((f) => ({ id: f.id, name: f.name, kind: 'DEVIL_FRUIT' as const })),
+      ...(standsQuery.data ?? []).map((s) => ({
+        id: s.id,
+        name: s.name,
+        kind: 'STAND' as const,
+        rarity: s.rarity,
+        stats: {
+          attackPower: s.attackPower,
+          speed: s.speed,
+          attackRange: s.attackRange,
+          endurance: s.endurance,
+          precision: s.precision,
+          potential: s.potential,
+        },
+      })),
+      ...(devilFruitsQuery.data ?? []).map((f) => ({
+        id: f.id,
+        name: f.name,
+        kind: 'DEVIL_FRUIT' as const,
+        rarity: f.rarity,
+        fruitType: f.fruitType,
+      })),
     ],
     [standsQuery.data, devilFruitsQuery.data]
   )
@@ -70,6 +89,13 @@ export function CreateLobbyContainer() {
 
   const handleRemoveBan = (id: string) => {
     setPoolFilter((current) => ({ ...current, banned: current.banned.filter((b) => b !== id) }))
+  }
+
+  const handleBanMatching = (ids: string[]) => {
+    setPoolFilter((current) => ({
+      ...current,
+      banned: [...current.banned, ...ids.filter((id) => !current.banned.includes(id))],
+    }))
   }
 
   // Whitelisting by rarity/fruit-type isn't exposed in the UI (owner call -
@@ -118,6 +144,7 @@ export function CreateLobbyContainer() {
       banlistItems={banlistItems}
       onAddBan={handleAddBan}
       onRemoveBan={handleRemoveBan}
+      onBanMatching={handleBanMatching}
       onClearPoolFilter={() => setPoolFilter(EMPTY_POOL_FILTER)}
       submitting={createGame.isPending}
       error={createGame.error ? t(`errors.${toAppError(createGame.error).code}`, { defaultValue: toAppError(createGame.error).message }) : undefined}

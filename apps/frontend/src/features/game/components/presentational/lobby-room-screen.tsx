@@ -66,6 +66,7 @@ type Props = {
   configBanlistItems: BannableItem[]
   onAddConfigBan: (id: string) => void
   onRemoveConfigBan: (id: string) => void
+  onBanMatchingConfig: (ids: string[]) => void
   onClearConfigPoolFilter: () => void
   configSaving: boolean
   configSaved: boolean
@@ -112,6 +113,7 @@ export function LobbyRoomScreen({
   configBanlistItems,
   onAddConfigBan,
   onRemoveConfigBan,
+  onBanMatchingConfig,
   onClearConfigPoolFilter,
   configSaving,
   configSaved,
@@ -197,6 +199,7 @@ export function LobbyRoomScreen({
           banlistItems={configBanlistItems}
           onAddBan={onAddConfigBan}
           onRemoveBan={onRemoveConfigBan}
+          onBanMatching={onBanMatchingConfig}
           onClearPoolFilter={onClearConfigPoolFilter}
           saving={configSaving}
           saved={configSaved}

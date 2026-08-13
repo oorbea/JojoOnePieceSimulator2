@@ -13,12 +13,13 @@ type Props = {
   children?: ReactNode
 }
 
-// Collapsible power-pool restriction section - banlist only (rarity/fruit-
-// type whitelisting was cut from the UI: the owner confirmed only banning
-// specific powers is needed, not restricting by rarity/fruit-type, even
-// though the backend's `PoolFilter` still carries those fields for a
-// future pass). `children` is `BanlistField` - kept as a slot instead of
-// rendered directly here so this component owns only the disclosure chrome.
+// Collapsible power-pool restriction section - banning only (rarity/fruit-
+// type/stand-stat *whitelisting* was cut from the UI: the owner confirmed
+// only banning specific powers is needed, not restricting the pool to only
+// those categories, even though the backend's `PoolFilter` still carries
+// those allowlist fields for a future pass). `children` is
+// `BanByFilterFields` + `BanlistField` - kept as a slot instead of rendered
+// directly here so this component owns only the disclosure chrome.
 export function PowerPoolFields({ editable, activeCount, onClearAll, children }: Props) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)

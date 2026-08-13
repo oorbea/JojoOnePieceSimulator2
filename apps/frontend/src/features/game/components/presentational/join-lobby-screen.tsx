@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ActivityIndicator } from 'react-native'
 import { XStack, YStack } from 'tamagui'
 
-import { CODE_LENGTH } from '@/features/game/lib/game-code'
+import { CODE_LENGTH, isCompleteCode } from '@/features/game/lib/game-code'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -52,7 +52,6 @@ export function JoinLobbyScreen({
         maxLength={CODE_LENGTH}
         error={previewError}
       />
-      <GlowText level="label">{t('game.join.codeHelp')}</GlowText>
 
       {previewLoading ? <ActivityIndicator /> : null}
 
@@ -82,7 +81,7 @@ export function JoinLobbyScreen({
           tone="blue"
           btnSize="lg"
           width="100%"
-          disabled={!preview || joining}
+          disabled={!isCompleteCode(code) || !preview || joining}
           onPress={onSubmit}
           accessibilityLabel={t('game.join.submit')}
         >
