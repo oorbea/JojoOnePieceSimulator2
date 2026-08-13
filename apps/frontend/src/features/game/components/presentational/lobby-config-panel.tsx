@@ -77,8 +77,18 @@ export function LobbyConfigPanel({
   onSubmit,
 }: Props) {
   const { t } = useTranslation()
-  const gauntletTooltip = useTooltipTrigger(isHost ? t('game.create.help.modeGauntlet') : undefined)
-  const versusTooltip = useTooltipTrigger(isHost ? t('game.create.help.modeVersus') : undefined)
+  const {
+    visible: gauntletTooltipVisible,
+    anchor: gauntletTooltipAnchor,
+    triggerRef: gauntletTooltipRef,
+    triggerProps: gauntletTooltipProps,
+  } = useTooltipTrigger(isHost ? t('game.create.help.modeGauntlet') : undefined)
+  const {
+    visible: versusTooltipVisible,
+    anchor: versusTooltipAnchor,
+    triggerRef: versusTooltipRef,
+    triggerProps: versusTooltipProps,
+  } = useTooltipTrigger(isHost ? t('game.create.help.modeVersus') : undefined)
 
   return (
     <YStack width="100%" gap="$3">
@@ -92,7 +102,7 @@ export function LobbyConfigPanel({
       {isHost ? (
         <XStack width="100%" flexWrap="wrap" gap="$3">
           <WiiCard
-            ref={gauntletTooltip.triggerRef as never}
+            ref={gauntletTooltipRef as never}
             interactive
             flexBasis={200}
             grow={1}
@@ -100,14 +110,14 @@ export function LobbyConfigPanel({
             gap="$2"
             borderColor={mode === 'GAUNTLET' ? ('$wiiBlue' as never) : undefined}
             onPress={() => onChangeMode('GAUNTLET')}
-            {...gauntletTooltip.triggerProps}
+            {...gauntletTooltipProps}
             {...a11yProps(t('enums.gameMode.GAUNTLET'), 'button')}
           >
             <Users size={22} color="$panelText" />
             <GlowText level="heading">{t('enums.gameMode.GAUNTLET')}</GlowText>
           </WiiCard>
           <WiiCard
-            ref={versusTooltip.triggerRef as never}
+            ref={versusTooltipRef as never}
             interactive
             flexBasis={200}
             grow={1}
@@ -115,14 +125,14 @@ export function LobbyConfigPanel({
             gap="$2"
             borderColor={mode === 'VERSUS' ? ('$strawHatRed' as never) : undefined}
             onPress={() => onChangeMode('VERSUS')}
-            {...versusTooltip.triggerProps}
+            {...versusTooltipProps}
             {...a11yProps(t('enums.gameMode.VERSUS'), 'button')}
           >
             <Swords size={22} color="$panelText" />
             <GlowText level="heading">{t('enums.gameMode.VERSUS')}</GlowText>
           </WiiCard>
-          <TooltipBubble visible={gauntletTooltip.visible} label={t('game.create.help.modeGauntlet')} anchor={gauntletTooltip.anchor} />
-          <TooltipBubble visible={versusTooltip.visible} label={t('game.create.help.modeVersus')} anchor={versusTooltip.anchor} />
+          <TooltipBubble visible={gauntletTooltipVisible} label={t('game.create.help.modeGauntlet')} anchor={gauntletTooltipAnchor} />
+          <TooltipBubble visible={versusTooltipVisible} label={t('game.create.help.modeVersus')} anchor={versusTooltipAnchor} />
         </XStack>
       ) : (
         <XStack width="100%" items="center" gap="$2">
