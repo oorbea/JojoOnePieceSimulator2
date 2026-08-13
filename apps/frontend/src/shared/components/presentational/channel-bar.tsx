@@ -3,6 +3,7 @@ import { styled, XStack, YStack } from 'tamagui'
 import { isWeb, WEB_BLUR_STYLE } from '@/shared/lib/web-blur'
 
 import { GlossOverlay } from './gloss-overlay'
+import { TooltipBubble, useTooltipTrigger } from './tooltip'
 
 const ChannelBarFrame = styled(XStack, {
   name: 'ChannelBar',
@@ -92,7 +93,7 @@ export function ChannelBar({ children, style, dock = 'static', t, b, ...rest }: 
   )
 }
 
-export const ChannelBarItem = styled(YStack, {
+const ChannelBarItemFrame = styled(YStack, {
   name: 'ChannelBarItem',
   height: 48,
   minW: 48,
@@ -115,3 +116,19 @@ export const ChannelBarItem = styled(YStack, {
     },
   } as const,
 })
+
+type ChannelBarItemProps = React.ComponentProps<typeof ChannelBarItemFrame> & {
+  /** No `overflow:hidden` on this frame, so (unlike `WiiCard`/`ChannelTile`)
+   * the bubble can render directly inside it without an extra wrapper. */
+  tooltip?: string
+}
+
+export function ChannelBarItem({ tooltip, children, ...rest }: ChannelBarItemProps) {
+  const { visible, triggerProps } = useTooltipTrigger(tooltip)
+  return (
+    <ChannelBarItemFrame {...rest} {...triggerProps}>
+      {children}
+      <TooltipBubble visible={visible} label={tooltip} />
+    </ChannelBarItemFrame>
+  )
+}

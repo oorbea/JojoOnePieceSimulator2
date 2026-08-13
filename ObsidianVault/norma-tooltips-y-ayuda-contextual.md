@@ -39,14 +39,29 @@ en vez de anotar cada call site.
   de su tamaño actual); en su lugar da al control un contenedor `self="flex-start"` que se ajusta al
   contenido.
 
-## Deuda deliberada (no olvidado, decisión de alcance)
+## Cobertura completa (2026-08-13, segundo pase)
 
-- `ChannelBarItem`/`ThemeToggle` (la barra de navegación) y `WiiCard interactive` (las tarjetas de
-  modo Gauntlet/Versus, que ya muestran texto completo + hint permanente) **no** recibieron tooltip en
-  este pase — fuera del alcance de las cuatro pantallas que el owner señaló, y de valor marginal donde
-  ya hay texto visible. Si se retoma: mismo patrón (`useTooltipTrigger` + `TooltipBubble`), sin
-  envolver el pressable existente.
-- El posicionamiento horizontal de `TooltipBubble` solo se centra pixel-perfect en web (`transform:
+Los items que se dejaron fuera del primer pase también llevan tooltip ahora, a petición explícita del
+owner ("ponle tooltips a lo que dudabas"):
+- `ChannelBarItem` (nav items de la barra superior/dock inferior + botón de logout en
+  `app-shell.tsx`) y `ThemeToggle` — convertido de `styled(YStack, ...)` bare a un wrapper función
+  (mismo patrón que `GlossButton`), con prop `tooltip?: string` explícita (no hay un
+  `accessibilityLabel` propio del que derivar por defecto, porque los call sites ya construyen su
+  propio `a11yProps(...)` fuera del componente).
+- `WiiCard interactive` en los selectores de modo Gauntlet/Versus (`create-lobby-screen.tsx`,
+  `lobby-config-panel.tsx`) — el tooltip usa la clave `game.create.help.mode` (ya existía en las tres
+  locales desde el primer pase, sin usar hasta ahora). **No** se tocó la primitiva `wii-card.tsx`
+  en sí: tiene `overflow:'hidden'` propio, así que el bubble se renderiza en un `YStack
+  position="relative"` envolvente (mismo `flexBasis`/`grow` que antes llevaba el `WiiCard`), no
+  dentro de la tarjeta — meterlo dentro lo habría recortado.
+
+**Bug encontrado y arreglado de paso:** `ChannelTile` (los tiles del home) sí tiene
+`overflow:'hidden'` propio, y el tooltip se había metido como hijo directo en el primer pase — el
+bubble (que se posiciona por encima de la caja) habría quedado recortado sin que ningún test lo
+detectara (RNTL no renderiza layout real). Se corrigió con el mismo patrón de envoltorio
+`position:'relative'` sin `overflow:'hidden'` por fuera.
+
+El posicionamiento horizontal de `TooltipBubble` solo se centra pixel-perfect en web (`transform:
   translateX(-50%)`, condicionado por `isWeb` igual que el blur de `WEB_BLUR_STYLE` — RN nativo no
   admite porcentajes en `transform`). En nativo ancla desde el punto medio del trigger sin corregir,
   aceptable para las etiquetas cortas que lleva.

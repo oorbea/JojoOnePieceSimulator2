@@ -10,6 +10,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { SettingRow } from '@/shared/components/presentational/setting-row'
+import { TooltipBubble, useTooltipTrigger } from '@/shared/components/presentational/tooltip'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
@@ -73,6 +74,8 @@ export function LobbyConfigPanel({
   onSubmit,
 }: Props) {
   const { t } = useTranslation()
+  const gauntletTooltip = useTooltipTrigger(isHost ? t('game.create.help.mode') : undefined)
+  const versusTooltip = useTooltipTrigger(isHost ? t('game.create.help.mode') : undefined)
 
   return (
     <YStack width="100%" gap="$3">
@@ -85,32 +88,36 @@ export function LobbyConfigPanel({
 
       {isHost ? (
         <XStack width="100%" flexWrap="wrap" gap="$3">
-          <WiiCard
-            interactive
-            flexBasis={200}
-            grow={1}
-            padded
-            gap="$2"
-            borderColor={mode === 'GAUNTLET' ? ('$wiiBlue' as never) : undefined}
-            onPress={() => onChangeMode('GAUNTLET')}
-            {...a11yProps(t('enums.gameMode.GAUNTLET'), 'button')}
-          >
-            <Users size={22} color="$panelText" />
-            <GlowText level="heading">{t('enums.gameMode.GAUNTLET')}</GlowText>
-          </WiiCard>
-          <WiiCard
-            interactive
-            flexBasis={200}
-            grow={1}
-            padded
-            gap="$2"
-            borderColor={mode === 'VERSUS' ? ('$strawHatRed' as never) : undefined}
-            onPress={() => onChangeMode('VERSUS')}
-            {...a11yProps(t('enums.gameMode.VERSUS'), 'button')}
-          >
-            <Swords size={22} color="$panelText" />
-            <GlowText level="heading">{t('enums.gameMode.VERSUS')}</GlowText>
-          </WiiCard>
+          <YStack position="relative" flexBasis={200} grow={1}>
+            <WiiCard
+              interactive
+              padded
+              gap="$2"
+              borderColor={mode === 'GAUNTLET' ? ('$wiiBlue' as never) : undefined}
+              onPress={() => onChangeMode('GAUNTLET')}
+              {...gauntletTooltip.triggerProps}
+              {...a11yProps(t('enums.gameMode.GAUNTLET'), 'button')}
+            >
+              <Users size={22} color="$panelText" />
+              <GlowText level="heading">{t('enums.gameMode.GAUNTLET')}</GlowText>
+            </WiiCard>
+            <TooltipBubble visible={gauntletTooltip.visible} label={t('game.create.help.mode')} />
+          </YStack>
+          <YStack position="relative" flexBasis={200} grow={1}>
+            <WiiCard
+              interactive
+              padded
+              gap="$2"
+              borderColor={mode === 'VERSUS' ? ('$strawHatRed' as never) : undefined}
+              onPress={() => onChangeMode('VERSUS')}
+              {...versusTooltip.triggerProps}
+              {...a11yProps(t('enums.gameMode.VERSUS'), 'button')}
+            >
+              <Swords size={22} color="$panelText" />
+              <GlowText level="heading">{t('enums.gameMode.VERSUS')}</GlowText>
+            </WiiCard>
+            <TooltipBubble visible={versusTooltip.visible} label={t('game.create.help.mode')} />
+          </YStack>
         </XStack>
       ) : (
         <XStack width="100%" items="center" gap="$2">

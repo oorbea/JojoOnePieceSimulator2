@@ -59,50 +59,57 @@ export function ChannelTile({
   const { visible: tooltipVisible, triggerProps } = useTooltipTrigger(tooltipLabel)
 
   return (
-    <YStack
-      {...triggerProps}
-      width={96}
-      height={96}
-      $md={{ width: 112, height: 112 }}
-      $lg={{ width: 128, height: 128 }}
-      rounded="$card"
-      overflow="hidden"
-      position="relative"
-      items="center"
-      justify="center"
-      gap="$1.5"
-      bg={asToken(bg)}
-      borderWidth={1.5}
-      borderColor="$glassEdge"
-      shadowColor="$softShadow"
-      shadowOffset={{ width: 0, height: 8 }}
-      shadowRadius={18}
-      shadowOpacity={1}
-      elevation={5}
-      opacity={locked ? 0.65 : 1}
-      disabled={locked}
-      onPress={locked ? undefined : onPress}
-      transition={locked ? undefined : 'bouncy'}
-      hoverStyle={locked ? undefined : { scale: 1.05, y: -4 }}
-      pressStyle={locked ? undefined : { scale: 0.94, y: 2 }}
-      cursor={locked ? 'default' : 'pointer'}
-      {...a11yProps(
-        locked ? `${label}, coming soon` : label,
-        locked ? 'none' : 'button',
-        locked ? { disabled: true } : undefined
-      )}
-    >
-      <InsetRing rounded="$card" />
+    // Outer wrapper is NOT `overflow:hidden` - the tile itself needs that
+    // clip (rounded corners over the gloss overlay), but it would also clip
+    // the tooltip bubble, which renders above the box on purpose. Kept as a
+    // separate, unclipped sibling instead (same reasoning as SpeechBubble's
+    // tail living outside GlassPanel's own `overflow:hidden`).
+    <YStack position="relative">
+      <YStack
+        {...triggerProps}
+        width={96}
+        height={96}
+        $md={{ width: 112, height: 112 }}
+        $lg={{ width: 128, height: 128 }}
+        rounded="$card"
+        overflow="hidden"
+        position="relative"
+        items="center"
+        justify="center"
+        gap="$1.5"
+        bg={asToken(bg)}
+        borderWidth={1.5}
+        borderColor="$glassEdge"
+        shadowColor="$softShadow"
+        shadowOffset={{ width: 0, height: 8 }}
+        shadowRadius={18}
+        shadowOpacity={1}
+        elevation={5}
+        opacity={locked ? 0.65 : 1}
+        disabled={locked}
+        onPress={locked ? undefined : onPress}
+        transition={locked ? undefined : 'bouncy'}
+        hoverStyle={locked ? undefined : { scale: 1.05, y: -4 }}
+        pressStyle={locked ? undefined : { scale: 0.94, y: 2 }}
+        cursor={locked ? 'default' : 'pointer'}
+        {...a11yProps(
+          locked ? `${label}, coming soon` : label,
+          locked ? 'none' : 'button',
+          locked ? { disabled: true } : undefined
+        )}
+      >
+        <InsetRing rounded="$card" />
+        {!locked ? <GlossOverlay coverage="half" shape="card" /> : null}
+        {locked ? (
+          <Lock size={22} color="$panelTextSoft" />
+        ) : (
+          <Icon size={26} color="white" strokeWidth={2.5} />
+        )}
+        <GlowText level="label" tone={locked ? 'soft' : 'onColor'} align="center" fontSize="$2">
+          {label}
+        </GlowText>
+      </YStack>
       <TooltipBubble visible={tooltipVisible} label={tooltipLabel} />
-      {!locked ? <GlossOverlay coverage="half" shape="card" /> : null}
-      {locked ? (
-        <Lock size={22} color="$panelTextSoft" />
-      ) : (
-        <Icon size={26} color="white" strokeWidth={2.5} />
-      )}
-      <GlowText level="label" tone={locked ? 'soft' : 'onColor'} align="center" fontSize="$2">
-        {label}
-      </GlowText>
     </YStack>
   )
 }

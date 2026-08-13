@@ -99,6 +99,7 @@ export function AppShell({
               <ChannelBarItem
                 key={item.href}
                 active={item.active}
+                tooltip={item.label}
                 onPress={() => onNavigate(item.href)}
                 {...a11yProps(item.label, 'button')}
               >
@@ -115,6 +116,7 @@ export function AppShell({
 
         <ChannelBarItem
           iconOnly
+          tooltip={t('nav.logOut')}
           onPress={onLogout}
           {...a11yProps(t('nav.logOut'), 'button')}
           hitSlop={8}
@@ -141,6 +143,7 @@ export function AppShell({
               <ChannelBarItem
                 active={item.active}
                 iconOnly
+                tooltip={item.label}
                 onPress={() => onNavigate(item.href)}
                 {...a11yProps(item.label, 'button')}
               >
