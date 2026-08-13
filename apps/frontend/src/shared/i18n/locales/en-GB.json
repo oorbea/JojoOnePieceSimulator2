@@ -181,9 +181,20 @@
       "votingSecondsLabel": "Voting window (seconds)",
       "privacyLabel": "Privacy",
       "allowBotsLabel": "Allow bots",
+      "allowBotsOn": "Bots on",
+      "allowBotsOff": "No bots",
       "allowBotsGauntletHint": "Bots aren't allowed in Gauntlet.",
       "submit": "Create Lobby",
-      "creating": "Creating…"
+      "creating": "Creating…",
+      "help": {
+        "mode": "Gauntlet is co-op against the story; Versus is two teams competing.",
+        "mangas": "Which universes this lobby draws Stands and Devil Fruits from.",
+        "teamSize": "How many players fit on each team (Versus) or in the squad (Gauntlet).",
+        "votingSeconds": "How long players get to vote on choices during a round.",
+        "privacy": "Public lobbies show up in Open Lobbies. Private lobbies are join-by-code only.",
+        "allowBots": "Fill empty player slots with bots. Not available in Gauntlet.",
+        "pool": "Ban specific Stands or Devil Fruits so they never get drawn in this lobby."
+      }
     },
     "config": {
       "title": "Lobby settings",
@@ -193,20 +204,18 @@
       "saved": "Saved"
     },
     "pool": {
-      "title": "Power pool",
-      "rarities": "Rarities",
-      "fruitTypes": "Fruit types",
+      "title": "Blocked powers",
+      "bannedHint": "Blocked powers never get drawn in this lobby. Leave empty to allow every power.",
       "banlist": "Banned powers",
       "banlistSearch": "Search Stands and Devil Fruits",
       "banlistEmpty": "No powers banned yet",
-      "banned": "Banned",
       "removeBan": "Remove {{name}} from the banlist",
       "clearAll": "Clear all"
     },
     "join": {
       "title": "Join by Code",
       "codeLabel": "Join code",
-      "codeHelp": "6 characters. No 0, O, 1, or I.",
+      "codeHelp": "6 characters.",
       "codePlaceholder": "ABCDEF",
       "notFound": "No lobby found with that code.",
       "submit": "Join Lobby",

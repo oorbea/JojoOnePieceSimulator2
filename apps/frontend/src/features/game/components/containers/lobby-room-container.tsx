@@ -15,7 +15,7 @@ import { shareJoinCode } from '@/features/game/lib/share'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
-import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
 import { useDevilFruits } from '@/features/devil-fruits'
@@ -206,41 +206,6 @@ export function LobbyRoomContainer() {
     })
   }
 
-  const handleToggleConfigRarity = (rarity: Rarity) => {
-    setConfigForm((current) => {
-      const base = current ?? form
-      const has = base.poolFilter.standRarities.includes(rarity)
-      return {
-        ...base,
-        poolFilter: {
-          ...base.poolFilter,
-          standRarities: has
-            ? base.poolFilter.standRarities.filter((r) => r !== rarity)
-            : [...base.poolFilter.standRarities, rarity],
-          fruitRarities: has
-            ? base.poolFilter.fruitRarities.filter((r) => r !== rarity)
-            : [...base.poolFilter.fruitRarities, rarity],
-        },
-      }
-    })
-  }
-
-  const handleToggleConfigFruitType = (fruitType: FruitType) => {
-    setConfigForm((current) => {
-      const base = current ?? form
-      const has = base.poolFilter.fruitTypes.includes(fruitType)
-      return {
-        ...base,
-        poolFilter: {
-          ...base.poolFilter,
-          fruitTypes: has
-            ? base.poolFilter.fruitTypes.filter((f) => f !== fruitType)
-            : [...base.poolFilter.fruitTypes, fruitType],
-        },
-      }
-    })
-  }
-
   const handleAddConfigBan = (powerId: string) => {
     setConfigForm((current) => {
       const base = current ?? form
@@ -266,11 +231,10 @@ export function LobbyRoomContainer() {
     })
   }
 
-  const configPoolActiveCount =
-    form.poolFilter.standRarities.length +
-    form.poolFilter.fruitRarities.length +
-    form.poolFilter.fruitTypes.length +
-    form.poolFilter.banned.length
+  // Whitelisting by rarity/fruit-type isn't exposed in the UI (owner call -
+  // only banning specific powers is needed), so the active-count badge only
+  // ever reflects the banlist.
+  const configPoolActiveCount = form.poolFilter.banned.length
 
   const handleSubmitConfig = () => {
     setConfigSaving(true)
@@ -341,8 +305,6 @@ export function LobbyRoomContainer() {
       configPoolFilter={form.poolFilter}
       configPoolActiveCount={configPoolActiveCount}
       configBanlistItems={banlistItems}
-      onToggleConfigRarity={handleToggleConfigRarity}
-      onToggleConfigFruitType={handleToggleConfigFruitType}
       onAddConfigBan={handleAddConfigBan}
       onRemoveConfigBan={handleRemoveConfigBan}
       onClearConfigPoolFilter={handleClearConfigPoolFilter}

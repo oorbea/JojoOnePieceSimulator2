@@ -12,7 +12,7 @@ import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
 import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
-import type { FruitType, GameMode, LobbyVisibility, Manga, Rarity } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import type { SocketStatus } from '@/features/game/stores/game-socket.store'
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
@@ -64,8 +64,6 @@ type Props = {
   configPoolFilter: PoolFilter
   configPoolActiveCount: number
   configBanlistItems: BannableItem[]
-  onToggleConfigRarity: (rarity: Rarity) => void
-  onToggleConfigFruitType: (fruitType: FruitType) => void
   onAddConfigBan: (id: string) => void
   onRemoveConfigBan: (id: string) => void
   onClearConfigPoolFilter: () => void
@@ -112,8 +110,6 @@ export function LobbyRoomScreen({
   configPoolFilter,
   configPoolActiveCount,
   configBanlistItems,
-  onToggleConfigRarity,
-  onToggleConfigFruitType,
   onAddConfigBan,
   onRemoveConfigBan,
   onClearConfigPoolFilter,
@@ -199,8 +195,6 @@ export function LobbyRoomScreen({
           poolFilter={configPoolFilter}
           poolActiveCount={configPoolActiveCount}
           banlistItems={configBanlistItems}
-          onToggleRarity={onToggleConfigRarity}
-          onToggleFruitType={onToggleConfigFruitType}
           onAddBan={onAddConfigBan}
           onRemoveBan={onRemoveConfigBan}
           onClearPoolFilter={onClearConfigPoolFilter}

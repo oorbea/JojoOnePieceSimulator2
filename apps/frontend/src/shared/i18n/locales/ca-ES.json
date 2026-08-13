@@ -181,9 +181,20 @@
       "votingSecondsLabel": "Finestra de votació (segons)",
       "privacyLabel": "Privadesa",
       "allowBotsLabel": "Permet bots",
+      "allowBotsOn": "Amb bots",
+      "allowBotsOff": "Sense bots",
       "allowBotsGauntletHint": "Els bots no es permeten a Gauntlet.",
       "submit": "Crea la sala",
-      "creating": "Creant…"
+      "creating": "Creant…",
+      "help": {
+        "mode": "Gauntlet és cooperatiu contra la història; Versus enfronta dos equips.",
+        "mangas": "De quins universos treu aquesta sala els Stands i les Fruites del Diable.",
+        "teamSize": "Quants jugadors caben a cada equip (Versus) o a l'esquadró (Gauntlet).",
+        "votingSeconds": "Quant de temps tenen els jugadors per votar a cada ronda.",
+        "privacy": "Les sales públiques apareixen a Sales obertes. Les privades només s'hi entra amb codi.",
+        "allowBots": "Omple els llocs buits amb bots. No disponible a Gauntlet.",
+        "pool": "Bloca Stands o Fruites del Diable concrets perquè mai surtin en aquesta sala."
+      }
     },
     "config": {
       "title": "Configuració de la sala",
@@ -193,20 +204,18 @@
       "saved": "Desat"
     },
     "pool": {
-      "title": "Pool de poders",
-      "rarities": "Raresa",
-      "fruitTypes": "Tipus de fruita",
+      "title": "Poders blocats",
+      "bannedHint": "Els poders blocats no sortiran en aquesta sala. Si no en blocs cap, hi entren tots.",
       "banlist": "Poders prohibits",
       "banlistSearch": "Cerca Stands i Fruites del Diable",
       "banlistEmpty": "Encara no hi ha poders prohibits",
-      "banned": "Prohibit",
       "removeBan": "Treu {{name}} de la llista de prohibits",
       "clearAll": "Treu-ho tot"
     },
     "join": {
       "title": "Uneix-te amb codi",
       "codeLabel": "Codi de sala",
-      "codeHelp": "6 caràcters. Sense 0, O, 1 ni I.",
+      "codeHelp": "6 caràcters.",
       "codePlaceholder": "ABCDEF",
       "notFound": "No s'ha trobat cap sala amb aquest codi.",
       "submit": "Uneix-te a la sala",
@@ -384,7 +393,7 @@
       "ADMIN": "Admin"
     },
     "manga": {
-      "JOJO": "Les bizarres aventures de JoJo",
+      "JOJO": "JoJo's Bizarre Adventure",
       "ONE_PIECE": "One Piece"
     },
     "gameMode": {

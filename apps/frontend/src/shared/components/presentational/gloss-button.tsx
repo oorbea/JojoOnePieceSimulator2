@@ -5,6 +5,7 @@ import { asToken } from '@/shared/lib/tamagui-token'
 
 import { GlossOverlay } from './gloss-overlay'
 import { LensFlare } from './lens-flare'
+import { TooltipBubble, useTooltipTrigger } from './tooltip'
 
 export type GlossButtonTone =
   'blue' | 'red' | 'yellow' | 'green' | 'pink' | 'orange' | 'grape' | 'glass'
@@ -50,6 +51,12 @@ type GlossButtonProps = Omit<ButtonProps, 'size'> & {
   /** Renders a single lens-flare glow behind this button. Use on ONE
    * primary CTA per screen — never on every button. */
   flare?: boolean
+  /** Tooltip text (hover/focus on web, long-press on native). Defaults to
+   * `accessibilityLabel` - every `GlossButton` in the app is a project-norm
+   * tooltip target, so most call sites need no change at all. Pass `null`
+   * to opt a specific button out (e.g. it already has visible text and an
+   * adjacent hint). */
+  tooltip?: string | null
 }
 
 // Physical 3D Wii/iOS button: a hard offset "lip" in the tone's deep shade
@@ -65,17 +72,22 @@ export function GlossButton({
   children,
   disabled,
   accessibilityLabel,
+  tooltip,
   ...rest
 }: GlossButtonProps) {
   const toneStyle = TONE_STYLES[tone]
   const sizeStyle = SIZE_STYLES[btnSize]
   const shapeStyle = SHAPE_STYLES[shape]
+  const tooltipLabel = tooltip === null ? undefined : (tooltip ?? (accessibilityLabel as string | undefined))
+  const { visible: tooltipVisible, triggerProps } = useTooltipTrigger(tooltipLabel)
 
   return (
     <YStack position="relative" items="center" justify="center">
       {flare && !disabled ? <LensFlare size={btnSize === 'lg' ? 'md' : 'sm'} /> : null}
+      <TooltipBubble visible={tooltipVisible} label={tooltipLabel} />
       <Button
         {...rest}
+        {...triggerProps}
         disabled={disabled}
         overflow="hidden"
         position="relative"

@@ -23,6 +23,10 @@ this note for *what's left*.
   `game_endpoints_test.go`/`game_ws_endpoints_test.go` (§2).
 - Frontend: `tsc --noEmit` clean, `pnpm run test:ci` green (34 suites / 305 tests), including
   the config-edit panel (§3) and power-pool restriction UI (§4).
+- **2026-08-13 UX pass**: §4's rarity/fruit-type whitelist chips were removed from the UI (owner
+  found them confusing, only banning is needed) - see [[game-lobby-frontend]]'s "UX pass" section.
+  `PowerPoolFields` is banlist-only now; the backend `PoolFilter` type is untouched. `tsc --noEmit`
+  clean, `pnpm run test:ci` green (36 suites / 313 tests) after this pass.
 - **Remaining, not part of "finish the lobbies"**: §5 (optional drag-to-move polish, skip unless
   asked), §6 (in-match UI - separate, larger future tanda).
 

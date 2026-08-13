@@ -93,5 +93,27 @@ tests, including 9 new socket-store tests run against a real Redis-free in-memor
   silently run in the `native` project instead (wrong preset, would still probably pass but for the
   wrong reasons, per [[frontend-stack]]'s documented trap).
 
+## UX pass (2026-08-13) - pool restriction is banlist-only, not whitelist
+
+Owner reviewed the shipped screens and confirmed the power-pool restriction UI (rarity/fruit-type
+whitelist chips + banlist, both built in the earlier §4 pass) was confusing - unclear whether a chip
+meant "only these" or "not these". Decision: **drop the rarity/fruit-type whitelist chips from the
+UI entirely, keep only the banlist.** `PowerPoolFields` (`fields/power-pool-fields.tsx`) is now just a
+`FilterDisclosure` wrapping `BanlistField`, with `activeCount` = `poolFilter.banned.length`. The
+backend `PoolFilter` type is untouched (`standRarities`/`fruitRarities`/`fruitTypes` still exist and
+still get sent as empty arrays) - this was a UI-only simplification, not a backend or type change, so
+whitelisting can be reintroduced later without a migration if ever asked for again.
+
+Same pass also fixed: the join-code screen's alphabet copy (removed, `CODE_ALPHABET` in
+`lib/game-code.ts` still enforces it silently), manga names no longer translated
+(`enums.manga.JOJO` reads "JoJo's Bizarre Adventure" in all three locales - see
+[[i18n-multi-language]]'s "names are never translated" rule, which this had violated), the
+"Guardar"/"Ninguno" copy bug on the allow-bots toggle (was reusing `common.save`/`common.none` by
+mistake - now `game.create.allowBotsOn`/`allowBotsOff`), `SettingRow`/`InfoHint`/tooltip primitives
+(see [[norma-tooltips-y-ayuda-contextual]]), and `SpeechBubble`'s missing default padding (browse's
+empty-state bubble had no `p`/`gap`, so text touched the edge and got clipped by the panel's
+`overflow:hidden`).
+
 Related: [[game-lobby-management]], [[gameplay-game-modes]], [[frontend-stack]],
-[[frontend-responsive-frutiger-aero]], [[i18n-multi-language]], [[zettelkasten-workflow]].
+[[frontend-responsive-frutiger-aero]], [[i18n-multi-language]], [[zettelkasten-workflow]],
+[[norma-tooltips-y-ayuda-contextual]].
