@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Modal } from 'react-native'
+import { createPortal } from 'react-dom'
 import { YStack } from 'tamagui'
 
 import { isWeb } from '@/shared/lib/web-blur'
@@ -82,31 +83,45 @@ type TooltipBubbleProps = { visible: boolean; label?: string; anchor: Anchor | n
 export function TooltipBubble({ visible, label, anchor }: TooltipBubbleProps) {
   if (!visible || !label || !anchor) return null
 
-  // pointerEvents="none" on Modal itself (not just its children): RNW's Modal
-  // renders a fixed, full-viewport wrapper div with no pointer-events style of
-  // its own, so it swallows hover/click for the whole screen even though the
-  // bubble content underneath is already inert - that stole hover off the
-  // trigger button the instant the tooltip opened, flipping visible on/off
-  // forever and blocking every click behind it.
+  const bubble = (
+    <YStack
+      position="absolute"
+      t={Math.max(anchor.y - 8, 4)}
+      l={anchor.x + anchor.width / 2}
+      maxW={220}
+      style={{
+        pointerEvents: 'none',
+        ...(isWeb ? { transform: [{ translateX: '-50%' }, { translateY: '-100%' }] } : null),
+      }}
+    >
+      <GlassPanel tone="strong" elevate={2} px="$2.5" py="$1.5" rounded="$pill">
+        <GlowText level="label" fontSize="$1" numberOfLines={2}>
+          {label}
+        </GlowText>
+      </GlassPanel>
+    </YStack>
+  )
+
+  // Web skips RN's `Modal`: RNW's implementation wraps content in a fixed,
+  // full-viewport div (`ModalAnimation`'s own wrapper, not the one holding our
+  // content) that has no `pointer-events` style of its own and no prop to set
+  // one - it swallows hover/click for the whole screen for as long as ANY
+  // tooltip is visible. That stole hover off the trigger the instant the
+  // tooltip opened, flipping visible on/off forever and blocking every click
+  // behind it. A plain fixed-position portal to `document.body` gives the
+  // same "floats above everything, anchored to a measured screen position"
+  // behavior without that wrapper.
+  if (isWeb) {
+    return createPortal(
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}>{bubble}</div>,
+      document.body
+    )
+  }
+
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent pointerEvents="none">
+    <Modal visible transparent animationType="none" statusBarTranslucent>
       <YStack flex={1} style={{ pointerEvents: 'none' }}>
-        <YStack
-          position="absolute"
-          t={Math.max(anchor.y - 8, 4)}
-          l={anchor.x + anchor.width / 2}
-          maxW={220}
-          style={{
-            pointerEvents: 'none',
-            ...(isWeb ? { transform: [{ translateX: '-50%' }, { translateY: '-100%' }] } : null),
-          }}
-        >
-          <GlassPanel tone="strong" elevate={2} px="$2.5" py="$1.5" rounded="$pill">
-            <GlowText level="label" fontSize="$1" numberOfLines={2}>
-              {label}
-            </GlowText>
-          </GlassPanel>
-        </YStack>
+        {bubble}
       </YStack>
     </Modal>
   )
