@@ -1,12 +1,15 @@
 import { Pencil, Sparkles, Trash2 } from '@tamagui/lucide-icons-2'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image } from 'react-native'
+import { Image, Pressable } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
 import { InsetRing, WiiCard } from '@/shared/components/presentational/wii-card'
+import { a11yProps } from '@/shared/lib/a11y'
 import type { StandResponse } from '@/features/stands/types/stands.types'
 
 type Props = {
@@ -27,18 +30,26 @@ const STAT_LABELS: { key: keyof Pick<StandResponse, 'attackPower' | 'speed' | 'a
 
 export function StandCard({ stand, onEdit, onDelete, isEditBusy }: Props) {
   const { t } = useTranslation()
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   return (
     <WiiCard padded width={280} gap="$3">
-      <YStack width="100%" height={140} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
-        <InsetRing rounded="$card" />
-        {stand.pictureThumb ? (
-          <Image source={{ uri: stand.pictureThumb }} style={{ width: '100%', height: '100%' }} />
-        ) : (
-          <YStack flex={1} items="center" justify="center">
-            <Sparkles size={32} color="$standPurple" />
-          </YStack>
-        )}
-      </YStack>
+      <Pressable
+        onPress={() => setIsPreviewOpen(true)}
+        disabled={!stand.pictureThumb}
+        {...a11yProps(t('stands.previewA11y', { name: stand.name }), 'imagebutton')}
+      >
+        <YStack width="100%" height={140} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
+          <InsetRing rounded="$card" />
+          {stand.pictureThumb ? (
+            <Image source={{ uri: stand.pictureThumb }} style={{ width: '100%', height: '100%' }} />
+          ) : (
+            <YStack flex={1} items="center" justify="center">
+              <Sparkles size={32} color="$standPurple" />
+            </YStack>
+          )}
+        </YStack>
+      </Pressable>
+      <ImageLightbox visible={isPreviewOpen} uri={stand.picture} onClose={() => setIsPreviewOpen(false)} />
 
       <YStack gap="$1">
         <GlowText level="heading" numberOfLines={1}>
