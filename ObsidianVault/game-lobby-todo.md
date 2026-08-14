@@ -129,15 +129,19 @@ view needed - it's installed but unused, and adding a `GestureHandlerRootView` t
 `app-providers.tsx` is a bigger change than this feature needs). Disable when `maxSm` breakpoint or
 `useReducedMotion()`. The tap-based path must stay as the accessible primary path regardless.
 
-## 6. In-match UI (rounds, voting, loadouts) - separate, larger tanda
+## 6. In-match UI (rounds, voting, loadouts) - split into two tandas
 
-Explicitly out of scope for "finish the lobbies" - this is the *next* feature, not a missing piece
-of this one. The socket store (`features/game/stores/game-socket.store.ts`) already has stub
-handling for `VOTING_OPENED`/`VOTE_CAST`/`ROUND_RESOLVED`/etc. (see the frame-type switch in
-`onmessage`), and `types/game-ws.types.ts` has their payload shapes - both ready for that tanda to
-build on, don't redo them. If the owner asks for this, treat it as a fresh planning pass (new
-Explore + Plan agents), not a continuation of this checklist - it's a different scale of work
-(round timer UI, live vote counts, loadout cards, tiebreak flow, result screen).
+**Start + assignment + reveal - DONE (2026-08-14)**, see [[game-match-assignment-frontend]] for the
+full technical note. `lobby-room-screen.tsx` now renders a real match screen (stage banner, roster,
+animated sequential loadout reveal) once `snapshot.state` leaves `LOBBY`, on the same `/play/[id]`
+route - no new screen/route. `EXPO_PUBLIC_SOCKET_URL` was also finally set (was blank since the WS
+transport shipped), see [[docker-setup]].
+
+**Still open, separate future tanda**: voting UI (vote buttons, live vote counts - blocked on a
+backend bug, `VOTE_CAST.votesCast` is always 0, never set in `game_ws_endpoints.go`), tiebreak flow,
+round-resolved feedback, and the final result screen (`GAME_FINISHED` still just toasts and bounces
+to `/play`). If the owner asks for this, treat it as a fresh planning pass (new Explore + Plan
+agents) - it's a different scale of work, and the backend bug needs fixing first.
 
 ## How to verify when done
 
