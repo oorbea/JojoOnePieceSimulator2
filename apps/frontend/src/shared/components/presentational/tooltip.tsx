@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Modal } from 'react-native'
 import { createPortal } from 'react-dom'
 import { YStack } from 'tamagui'
@@ -9,6 +9,7 @@ import { GlassPanel } from './glass-panel'
 import { GlowText } from './glow-text'
 
 const NATIVE_AUTO_HIDE_MS = 1800
+const VIEWPORT_EDGE_MARGIN = 8
 
 type Anchor = { x: number; y: number; width: number; height: number }
 
@@ -81,17 +82,60 @@ type TooltipBubbleProps = { visible: boolean; label?: string; anchor: Anchor | n
 // fine for the short labels these carry). Inert to the pointer throughout,
 // so it never eats the hover/press meant for the button underneath.
 export function TooltipBubble({ visible, label, anchor }: TooltipBubbleProps) {
+  const bubbleRef = useRef<HTMLElement | null>(null)
+  // Centering the bubble on the anchor's midpoint (via `translateX(-50%)`)
+  // pushes it straight off-screen for any trigger near a screen edge (e.g.
+  // "Admin" in the top-right nav) - `left`/`right` never clamped to the
+  // viewport. Re-measured on web only, after the bubble has painted at its
+  // natural centered spot, using `useLayoutEffect` so the correction lands
+  // before the browser's next paint (no visible jump). Native skips this: no
+  // viewport to overflow off of in the same way, and it already anchors
+  // uncorrected from the trigger's top-left corner (see comment below).
+  const [clampedCenterX, setClampedCenterX] = useState<number | null>(null)
+  // Same edge problem, vertically: a trigger flush against the top of the
+  // viewport (the nav bar's own buttons - "Admin", "Perfil", ...) has no
+  // room above it at all, so anchoring above and translating up by the
+  // bubble's own height (`translateY(-100%)`) pushed the whole thing off the
+  // top of the screen - only "above" was ever attempted. Flips to "below"
+  // the trigger when there isn't enough room above; falls back to "above"
+  // otherwise, unchanged from before this fix.
+  const [placement, setPlacement] = useState<'above' | 'below'>('above')
+
+  useLayoutEffect(() => {
+    if (!isWeb || !visible || !anchor) {
+      setClampedCenterX(null)
+      setPlacement('above')
+      return
+    }
+    const el = bubbleRef.current as unknown as HTMLElement | null
+    const width = el?.offsetWidth
+    const height = el?.offsetHeight
+    if (!width || !height) return
+    const half = width / 2
+    const centerX = anchor.x + anchor.width / 2
+    const min = half + VIEWPORT_EDGE_MARGIN
+    const max = window.innerWidth - half - VIEWPORT_EDGE_MARGIN
+    setClampedCenterX(Math.min(Math.max(centerX, min), max))
+    setPlacement(anchor.y - 8 - height < VIEWPORT_EDGE_MARGIN ? 'below' : 'above')
+  }, [visible, anchor?.x, anchor?.y, anchor?.width, anchor?.height, label])
+
   if (!visible || !label || !anchor) return null
+
+  const centerX = clampedCenterX ?? anchor.x + anchor.width / 2
+  const topY = placement === 'below' ? anchor.y + anchor.height + 8 : Math.max(anchor.y - 8, 4)
 
   const bubble = (
     <YStack
+      ref={bubbleRef as never}
       position="absolute"
-      t={Math.max(anchor.y - 8, 4)}
-      l={anchor.x + anchor.width / 2}
+      t={topY}
+      l={centerX}
       maxW={220}
       style={{
         pointerEvents: 'none',
-        ...(isWeb ? { transform: [{ translateX: '-50%' }, { translateY: '-100%' }] } : null),
+        ...(isWeb
+          ? { transform: [{ translateX: '-50%' }, { translateY: placement === 'below' ? '0%' : '-100%' }] }
+          : null),
       }}
     >
       <GlassPanel tone="strong" elevate={2} px="$2.5" py="$1.5" rounded="$pill">
