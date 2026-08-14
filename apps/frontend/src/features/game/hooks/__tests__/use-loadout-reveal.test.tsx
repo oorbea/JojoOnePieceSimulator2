@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { Text } from 'react-native'
 
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
-import type { RevealStep } from '@/features/game/lib/loadout-reveal'
+import { REVEAL_INTRO_MS, REVEAL_SPIN_MS, revealDurationMs } from '@/features/game/lib/loadout-reveal'
+import type { Manga } from '@/shared/lib/zod'
 
 async function advance(ms: number) {
   await act(async () => {
@@ -18,21 +19,22 @@ async function advance(ms: number) {
 // via `revealedAssignmentSeq` catching up to `assignmentSeq`. This harness
 // models that with its own bit of state instead of the real socket store,
 // since only the active:true->false-on-markRevealed shape matters here.
-function Harness({ steps, reducedMotion }: { steps: RevealStep[]; reducedMotion: boolean }) {
+function Harness({ mangas, serverRevealMs }: { mangas: Manga[]; serverRevealMs: number | null }) {
   const [revealedOnce, setRevealedOnce] = useState(false)
   const active = !revealedOnce
   const result = useLoadoutReveal({
-    steps,
+    mangas,
     active,
-    reducedMotion,
     markRevealed: () => setRevealedOnce(true),
+    serverRevealMs,
   })
   return (
     <Text testID="state">
       {JSON.stringify({
-        revealedIds: [...result.revealedIds].sort(),
-        visibleSlotsById: result.visibleSlotsById,
         isRevealing: result.isRevealing,
+        phase: result.phase,
+        slotIndex: result.slotIndex,
+        totalSlots: result.totalSlots,
       })}
     </Text>
   )
@@ -51,42 +53,69 @@ describe('useLoadoutReveal', () => {
     jest.useRealTimers()
   })
 
-  it('still plays every step even though active flips true->false on the same tick markRevealed fires (the historic timer-cancellation bug)', async () => {
-    const steps: RevealStep[] = [
-      { participantId: 'p1', slot: -1 },
-      { participantId: 'p1', slot: 0 },
-      { participantId: 'p1', slot: 1 },
-    ]
+  it('still plays through every phase even though active flips true->false on the same tick markRevealed fires (the historic timer-cancellation bug)', async () => {
+    const mangas: Manga[] = ['JOJO']
 
-    await render(<Harness steps={steps} reducedMotion={false} />)
+    await render(<Harness mangas={mangas} serverRevealMs={null} />)
 
-    // Nothing revealed yet - the flip step hasn't fired.
-    expect(readState()).toEqual({ revealedIds: [], visibleSlotsById: {}, isRevealing: true })
+    // Intro hasn't elapsed yet.
+    expect(readState()).toEqual({ isRevealing: true, phase: 'intro', slotIndex: -1, totalSlots: 3 })
 
-    // Past the flip step (450ms): the card is face-up, no slots yet.
-    await advance(451)
-    expect(readState().revealedIds).toEqual(['p1'])
-    expect(readState().visibleSlotsById).toEqual({})
-    expect(readState().isRevealing).toBe(true)
+    // Past the intro: the first slot (stand) starts spinning.
+    await advance(REVEAL_INTRO_MS + 1)
+    expect(readState().phase).toBe('spin')
+    expect(readState().slotIndex).toBe(0)
 
-    // Past the first slot step (450 + 220ms).
-    await advance(220)
-    expect(readState().visibleSlotsById).toEqual({ p1: 1 })
-
-    // Past the second (last) slot step - reveal finishes.
-    await advance(220)
-    expect(readState().visibleSlotsById).toEqual({ p1: 2 })
+    // Past the whole timeline: reveal finishes and the last phase is outro.
+    await advance(revealDurationMs(mangas))
     expect(readState().isRevealing).toBe(false)
   })
 
-  it('reveals everything at once under reduced motion', async () => {
-    const steps: RevealStep[] = [
-      { participantId: 'p1', slot: -1 },
-      { participantId: 'p1', slot: 0 },
-    ]
+  it('scales every phase by serverRevealMs/localTotal - a constants drift degrades pacing, not sync with the server-authoritative duration', async () => {
+    const mangas: Manga[] = ['JOJO']
+    const localTotal = revealDurationMs(mangas)
+    const serverRevealMs = localTotal * 2 // server thinks the reveal takes twice as long
 
-    await render(<Harness steps={steps} reducedMotion />)
+    await render(<Harness mangas={mangas} serverRevealMs={serverRevealMs} />)
 
-    expect(readState()).toEqual({ revealedIds: ['p1'], visibleSlotsById: { p1: 1 }, isRevealing: false })
+    // At the LOCAL intro duration, the scaled version hasn't reached the
+    // first spin yet (it needs roughly double the time).
+    await advance(REVEAL_INTRO_MS + 1)
+    expect(readState().phase).toBe('intro')
+
+    // The full scaled duration finishes the whole thing.
+    await advance(serverRevealMs)
+    expect(readState().isRevealing).toBe(false)
+  })
+
+  it('skip jumps straight to done', async () => {
+    const mangas: Manga[] = ['JOJO', 'ONE_PIECE']
+    let skip: (() => void) | null = null
+
+    function SkipHarness() {
+      const result = useLoadoutReveal({ mangas, active: true, markRevealed: () => {}, serverRevealMs: null })
+      skip = result.skip
+      return <Text testID="state">{JSON.stringify({ isRevealing: result.isRevealing })}</Text>
+    }
+
+    await render(<SkipHarness />)
+    expect(readState().isRevealing).toBe(true)
+
+    await act(async () => {
+      skip?.()
+    })
+    expect(readState().isRevealing).toBe(false)
+  })
+
+  it('spin phases advance one slot at a time in order', async () => {
+    const mangas: Manga[] = ['JOJO']
+
+    await render(<Harness mangas={mangas} serverRevealMs={null} />)
+
+    await advance(REVEAL_INTRO_MS + 1)
+    expect(readState()).toMatchObject({ phase: 'spin', slotIndex: 0 })
+
+    await advance(REVEAL_SPIN_MS + 1)
+    expect(readState()).toMatchObject({ phase: 'land', slotIndex: 0 })
   })
 })

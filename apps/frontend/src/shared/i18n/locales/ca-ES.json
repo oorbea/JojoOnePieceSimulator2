@@ -313,7 +313,17 @@
         "armamentHaki": "Haki de l'Armament",
         "observationHaki": "Haki de l'Observació",
         "conquerorHaki": "Haki del Conqueridor",
-        "physicalForm": "Forma física"
+        "physicalForm": "Forma física",
+        "stand": "Stand",
+        "devilFruit": "Fruita del Diable"
+      },
+      "reveal": {
+        "title": "Sorteig de poders",
+        "intro": "Preparats…",
+        "progress": "{{current}}/{{total}}",
+        "skip": "Salta",
+        "skipA11y": "Salta l'animació del sorteig de poders",
+        "votingIn": "La votació comença en {{seconds}}s"
       }
     },
     "leave": {

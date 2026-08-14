@@ -13,6 +13,7 @@ import { SquadRoster } from '@/features/game/components/presentational/squad-ros
 import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
+import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
 import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
@@ -74,8 +75,9 @@ type Props = {
   configError?: string
   onSubmitConfig: () => void
   live: LiveMatchState
-  revealedIds: Set<string>
-  visibleSlotsById: Record<string, number>
+  revealPhase: RevealPhaseKind
+  revealSlotIndex: number
+  revealTotalSlots: number
   isRevealing: boolean
   onSkipReveal: () => void
   reducedMotion: boolean
@@ -127,8 +129,9 @@ export function LobbyRoomScreen({
   configError,
   onSubmitConfig,
   live,
-  revealedIds,
-  visibleSlotsById,
+  revealPhase,
+  revealSlotIndex,
+  revealTotalSlots,
   isRevealing,
   onSkipReveal,
   reducedMotion,
@@ -240,8 +243,9 @@ export function LobbyRoomScreen({
           nextRetryAt={nextRetryAt}
           onRetryNow={onRetryNow}
           live={live}
-          revealedIds={revealedIds}
-          visibleSlotsById={visibleSlotsById}
+          revealPhase={revealPhase}
+          revealSlotIndex={revealSlotIndex}
+          revealTotalSlots={revealTotalSlots}
           isRevealing={isRevealing}
           onSkipReveal={onSkipReveal}
           reducedMotion={reducedMotion}

@@ -313,7 +313,17 @@
         "armamentHaki": "Armament Haki",
         "observationHaki": "Observation Haki",
         "conquerorHaki": "Conqueror's Haki",
-        "physicalForm": "Physical Form"
+        "physicalForm": "Physical Form",
+        "stand": "Stand",
+        "devilFruit": "Devil Fruit"
+      },
+      "reveal": {
+        "title": "Power draw",
+        "intro": "Get ready…",
+        "progress": "{{current}}/{{total}}",
+        "skip": "Skip",
+        "skipA11y": "Skip the power draw animation",
+        "votingIn": "Voting opens in {{seconds}}s"
       }
     },
     "leave": {

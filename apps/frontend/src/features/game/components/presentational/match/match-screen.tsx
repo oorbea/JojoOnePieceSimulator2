@@ -2,10 +2,12 @@ import { useTranslation } from 'react-i18next'
 import { XStack } from 'tamagui'
 
 import { MatchRoster } from '@/features/game/components/presentational/match/match-roster'
+import { RevealStage } from '@/features/game/components/presentational/match/reveal-stage'
 import { StageBanner } from '@/features/game/components/presentational/match/stage-banner'
 import { VotingStatusBar } from '@/features/game/components/presentational/match/voting-status-bar'
 import { ConnectionBanner } from '@/features/game/components/presentational/connection-banner'
 import { currentRound } from '@/features/game/lib/match-rules'
+import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
 import type { GameSnapshot, GameViewer } from '@/features/game/types/game.types'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -18,18 +20,19 @@ type Props = {
   nextRetryAt: number | null
   onRetryNow: () => void
   live: LiveMatchState
-  revealedIds: Set<string>
-  visibleSlotsById: Record<string, number>
+  revealPhase: RevealPhaseKind
+  revealSlotIndex: number
+  revealTotalSlots: number
   isRevealing: boolean
   onSkipReveal: () => void
   reducedMotion: boolean
   onAbort: () => void
 }
 
-// Renders once the lobby has moved past LOBBY. ASSIGNING is realistically
-// never observed by a client (see GameService.StartGame's single withGame
-// call), so this never special-cases it - it just falls through to whatever
-// currentRound/hasAllLoadouts already say.
+// Renders once the lobby has moved past LOBBY. While isRevealing, the
+// sorteo overlay (RevealStage) takes over instead of the roster/stage
+// banner - ASSIGNING is now genuinely observable (see GameService.
+// scheduleRevealDelay), and this is exactly the state that overlay covers.
 export function MatchScreen({
   snapshot,
   you,
@@ -37,8 +40,9 @@ export function MatchScreen({
   nextRetryAt,
   onRetryNow,
   live,
-  revealedIds,
-  visibleSlotsById,
+  revealPhase,
+  revealSlotIndex,
+  revealTotalSlots,
   isRevealing,
   onSkipReveal,
   reducedMotion,
@@ -68,23 +72,32 @@ export function MatchScreen({
         ) : null}
       </XStack>
 
-      {round ? <StageBanner stage={round.stage} roundIndex={round.index} /> : null}
+      {isRevealing ? (
+        <RevealStage
+          snapshot={snapshot}
+          selfId={you.participantId}
+          phase={revealPhase}
+          slotIndex={revealSlotIndex}
+          totalSlots={revealTotalSlots}
+          onSkip={onSkipReveal}
+          reducedMotion={reducedMotion}
+        />
+      ) : (
+        <>
+          {round ? <StageBanner stage={round.stage} roundIndex={round.index} /> : null}
 
-      <VotingStatusBar
-        isRevealing={isRevealing}
-        onSkip={onSkipReveal}
-        tiebreak={live.tiebreak}
-        votingClosesAt={live.votingClosesAt}
-        gameState={snapshot.state}
-      />
+          <VotingStatusBar
+            isRevealing={false}
+            onSkip={onSkipReveal}
+            tiebreak={live.tiebreak}
+            votingClosesAt={live.votingClosesAt}
+            revealEndsAt={live.revealEndsAt}
+            gameState={snapshot.state}
+          />
 
-      <MatchRoster
-        snapshot={snapshot}
-        selfId={you.participantId}
-        revealedIds={revealedIds}
-        visibleSlotsById={visibleSlotsById}
-        reducedMotion={reducedMotion}
-      />
+          <MatchRoster snapshot={snapshot} selfId={you.participantId} />
+        </>
+      )}
     </>
   )
 }

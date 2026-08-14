@@ -12,7 +12,7 @@ import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { formatCode } from '@/features/game/lib/game-code'
 import { startGate } from '@/features/game/lib/lobby-rules'
-import { revealSteps, shouldReveal } from '@/features/game/lib/loadout-reveal'
+import { shouldReveal } from '@/features/game/lib/loadout-reveal'
 import { shareJoinCode } from '@/features/game/lib/share'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
@@ -107,15 +107,15 @@ export function LobbyRoomContainer() {
   const reducedMotion = useReducedMotion()
 
   // Computed unconditionally (before the !snapshot early return below) since
-  // hooks can't be called conditionally - steps/active fall back to safe
-  // empty/false values until snapshot/you actually arrive.
-  const steps = snapshot && you ? revealSteps(snapshot, you.participantId) : []
+  // hooks can't be called conditionally - mangas/active fall back to safe
+  // empty/false values until snapshot actually arrives.
+  const revealMangas = snapshot?.config.mangas ?? []
   const revealActive = !!snapshot && shouldReveal(socket.live, snapshot)
   const loadoutReveal = useLoadoutReveal({
-    steps,
+    mangas: revealMangas,
     active: revealActive,
-    reducedMotion,
     markRevealed: socket.markAssignmentRevealed,
+    serverRevealMs: socket.live.revealMs,
   })
 
   // Reseed the edit form whenever a fresh CONFIG_UPDATED/STATE snapshot
@@ -366,8 +366,9 @@ export function LobbyRoomContainer() {
       configSaved={configSaved}
       onSubmitConfig={handleSubmitConfig}
       live={socket.live}
-      revealedIds={loadoutReveal.revealedIds}
-      visibleSlotsById={loadoutReveal.visibleSlotsById}
+      revealPhase={loadoutReveal.phase}
+      revealSlotIndex={loadoutReveal.slotIndex}
+      revealTotalSlots={loadoutReveal.totalSlots}
       isRevealing={loadoutReveal.isRevealing}
       onSkipReveal={loadoutReveal.skip}
       reducedMotion={reducedMotion}

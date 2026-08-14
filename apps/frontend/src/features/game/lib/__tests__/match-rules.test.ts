@@ -1,4 +1,4 @@
-import { currentRound, hasAllLoadouts, loadoutSlots, secondsUntil } from '@/features/game/lib/match-rules'
+import { currentRound, hasAllLoadouts, loadoutSlots, revealSlotKinds, secondsUntil } from '@/features/game/lib/match-rules'
 import type { GameLoadout, GameParticipant, GameRound, GameSnapshot } from '@/features/game/types/game.types'
 import type { Manga } from '@/shared/lib/zod'
 
@@ -116,16 +116,22 @@ describe('loadoutSlots', () => {
     ])
   })
 
-  it('omits spin/hamon/fruitMastery when NONE', () => {
+  it('includes spin/hamon/fruitMastery even when NONE - the slot count depends only on mangas, never the draw', () => {
     const slots = loadoutSlots(loadout(), BOTH)
     expect(slots.map((s) => s.key)).toEqual([
       'physicalForm',
       'stand',
       'devilFruit',
+      'fruitMastery',
+      'hamon',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',
+      'spin',
     ])
+    expect(slots.find((s) => s.key === 'fruitMastery')?.value).toBe('NONE')
+    expect(slots.find((s) => s.key === 'hamon')?.value).toBe('NONE')
+    expect(slots.find((s) => s.key === 'spin')?.value).toBe('NONE')
   })
 
   it('never filters haki/physicalForm even at their floor value', () => {
@@ -147,6 +153,37 @@ describe('loadoutSlots', () => {
   it('a ONE_PIECE-only lobby never gets a JoJo slot', () => {
     const slots = loadoutSlots(loadout({ fruitMastery: 'REGULAR' }), ['ONE_PIECE'])
     expect(slots.map((s) => s.key)).toEqual([
+      'physicalForm',
+      'devilFruit',
+      'fruitMastery',
+      'armamentHaki',
+      'observationHaki',
+      'conquerorHaki',
+    ])
+  })
+})
+
+describe('revealSlotKinds', () => {
+  it('both mangas: all 9 slots in draw order', () => {
+    expect(revealSlotKinds(['JOJO', 'ONE_PIECE'])).toEqual([
+      'physicalForm',
+      'stand',
+      'devilFruit',
+      'fruitMastery',
+      'hamon',
+      'armamentHaki',
+      'observationHaki',
+      'conquerorHaki',
+      'spin',
+    ])
+  })
+
+  it('jojo only: stand, hamon, spin', () => {
+    expect(revealSlotKinds(['JOJO'])).toEqual(['stand', 'hamon', 'spin'])
+  })
+
+  it('one piece only: physicalForm, devilFruit, fruitMastery, the three hakis', () => {
+    expect(revealSlotKinds(['ONE_PIECE'])).toEqual([
       'physicalForm',
       'devilFruit',
       'fruitMastery',

@@ -16,9 +16,11 @@ export function TraitChip({ slot }: Props) {
   const { t } = useTranslation()
   if (!slot.i18nKey || slot.value === undefined) return null
 
+  const isNone = slot.value === 'NONE'
+
   return (
-    <GlassPanel tone="plastic" px="$2" py="$1" rounded="$pill" elevate={0}>
-      <GlowText level="label" fontSize="$1">
+    <GlassPanel tone="plastic" px="$2" py="$1" rounded="$pill" elevate={0} opacity={isNone ? 0.55 : 1}>
+      <GlowText level="label" fontSize="$1" tone={isNone ? 'soft' : undefined}>
         {t(slot.i18nKey)}: {t(`enums.${enumNamespace(slot.key)}.${slot.value}`)}
       </GlowText>
     </GlassPanel>
