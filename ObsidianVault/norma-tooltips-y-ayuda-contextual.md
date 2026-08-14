@@ -103,5 +103,69 @@ web-only que `TooltipBubble`); en web hay que combinar `rotate="45deg"` y el `tr
 array de `style` (RN aplana estilos por clave completa, no hace merge de arrays `transform` - un
 `style` aparte con solo `translateX` se habría comido la rotación).
 
+## Web: `Modal` de react-native-web se comía el hover/click de TODA la pantalla (2026-08-14, cuarto pase)
+
+El owner reportó que en web los botones "dejaban de funcionar", como si estuvieran constantemente
+haciendo hover y dejándolo de hacer. Reproducido: al pasar el ratón por un botón con tooltip, el click
+tardaba varios intentos en registrar en cualquier botón de la pantalla, no solo en el que tenía el
+tooltip abierto.
+
+**Causa real**: el tercer pase movió `TooltipBubble` a un `Modal` de verdad para librarse de los
+problemas de z-index/overflow (bien, ver arriba) — pero en web, `Modal` es una implementación de
+`react-native-web`, no un modal nativo del SO. Esa implementación son tres wrappers anidados
+(`ModalPortal` → `ModalAnimation` → `ModalFocusTrap` → `ModalContent`), y **dos** de ellos renderizan
+sus propios `<div>` `position:fixed; inset:0` cubriendo la pantalla entera:
+- `ModalContent` sí reenvía las props sueltas (`rest`) al `View` que renderiza — ahí un
+  `pointerEvents="none"` en el `<Modal>` sí llega.
+- `ModalAnimation` (la capa que va POR ENCIMA) tiene su propio `<div style={styles.container}>`
+  (`position:fixed`, `zIndex:9999`) definido en su propio `StyleSheet`, sin `pointer-events` propio y
+  **sin ninguna prop pública para dárselo** — pasar `pointerEvents="none"` al `<Modal>` de RN no llega
+  ahí, sólo al hijo de `ModalContent`.
+
+Resultado: mientras el tooltip está `visible`, ese `div` de `ModalAnimation` (pantalla completa,
+`pointer-events:auto` por defecto) queda por encima de TODO en el DOM (portal al final de `<body>`).
+El ratón, al entrar en el botón, dispara `onHoverIn` → se monta el `Modal` → ese div fixed pasa a estar
+encima del cursor → el navegador manda `mouseleave` al botón real (ahora tapado) → `onHoverOut` →
+se desmonta el `Modal` → el div desaparece → el ratón vuelve a estar "sobre" el botón → `onHoverIn` de
+nuevo… bucle infinito de hover on/off, y cualquier click que cayera a mitad de ese ciclo se lo comía el
+div fixed en vez de llegar al botón.
+
+Diagnóstico hecho con `document.elementFromPoint(x, y)` + `getComputedStyle(...).pointerEvents` desde
+la consola del navegador sobre el punto de un botón real: devolvía el `<div>` fixed de `ModalAnimation`
+(`pointer-events: auto`) en vez del botón, incluso con el `pointerEvents="none"` puesto en `ModalContent`.
+
+**Fix**: en web, `TooltipBubble` ya NO usa `Modal` de RN. Usa `createPortal` de `react-dom` directo a
+`document.body` con un `<div style={{position:'fixed', inset:0, pointerEvents:'none'}}>` — el mismo
+efecto de "capa de raíz, inmune a overflow/z-index de ancestros" que buscaba el tercer pase, pero sin
+pasar por la implementación de `Modal` de `react-native-web` (que no tiene forma de hacerse
+transparente al puntero de verdad). Nativo sigue usando `Modal` tal cual - ahí es un modal real del
+SO, sin este problema.
+
+**Lección para cualquier `Modal` transparente/decorativo en web** (tooltips, popovers, badges
+flotantes - cualquier cosa que NO deba capturar el puntero): no basta con `pointerEvents="none"` en el
+`<Modal>` de RN en web. Hay que evitar `Modal` de RN en la rama web y usar un `createPortal` a
+`document.body` propio, o verificar explícitamente con `elementFromPoint` que no queda ningún wrapper
+intermedio con `pointer-events: auto` tapando la pantalla.
+
+## Quinto pase (2026-08-14, mismo día): la burbuja se salía de pantalla en los bordes
+
+Con el bug del hover ya arreglado, el owner encontró el siguiente: el tooltip del botón "Admin"
+(nav superior derecha) se recortaba contra el borde superior de la ventana, y cualquier trigger cerca
+del borde derecho lo habría hecho también contra ese lado. Causa: `TooltipBubble` centraba siempre el
+eje X sobre el punto medio del trigger (`l: anchor.x + anchor.width/2` + `translateX(-50%)`) y siempre
+anclaba por ENCIMA (`t: anchor.y - 8` + `translateY(-100%)`), sin comprobar nunca si quedaba sitio -
+ninguno de los dos ejes se clampeaba contra el viewport.
+
+**Fix** (mismo `tooltip.tsx`, sólo rama web): tras el primer render (con la burbuja ya montada en su
+posición "natural" sin clampear), un `useLayoutEffect` mide el `offsetWidth`/`offsetHeight` real del
+nodo vía un `ref` en el `YStack` y corrige antes del siguiente paint (sin parpadeo visible):
+- Horizontal: el centro se clampea a `[mitad+8px, innerWidth-mitad-8px]`.
+- Vertical: si no cabe por encima del trigger (`anchor.y - 8 - height < 8px`), se cambia de sitio y se
+  ancla DEBAJO (`t: anchor.y + anchor.height + 8`, `translateY(0%)` en vez de `-100%`) en lugar de
+  encima.
+
+Nativo no se toca - sigue sin el `translateX(-50%)`/clamp (ancla sin corregir desde la esquina
+superior-izquierda, norma ya aceptada en el tercer pase de arriba).
+
 Related: [[a11y-web-leak]], [[frontend-responsive-frutiger-aero]], [[norma-diseno-ui-ux]],
 [[game-lobby-frontend]], [[zettelkasten-workflow]].
