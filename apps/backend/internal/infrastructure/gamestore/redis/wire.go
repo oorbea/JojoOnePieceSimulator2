@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/powersnap"
 )
@@ -22,6 +23,15 @@ import (
 // cannot be read after a deploy is a visible GAME_NOT_FOUND, not a
 // corrupted-looking Game. The TTL (game_service.go's Config.GameLobbyTTL,
 // default 2h) means any such breakage self-heals within that window.
+//
+// The lobby-management tanda (Locked, Config.Visibility/VotingWindowSeconds/
+// PoolFilter) deliberately did NOT bump this: every new field is
+// `omitempty` and game.Restore already defaults an absent Visibility to
+// PRIVATE, an absent/zero VotingWindowSeconds to
+// game.DefaultVotingWindowSeconds, an absent PoolFilter to "no
+// restriction", and an absent Locked to false - so a lobby saved by the
+// previous build decodes cleanly instead of dying with a version mismatch
+// mid-TTL. Only a change with no safe default would justify bumping to 2.
 const snapshotVersion = 1
 
 // envelope wraps a wireGame with a version tag and a last-write timestamp
@@ -42,6 +52,7 @@ type wireGame struct {
 	ID           [16]byte          `json:"id"`
 	State        string            `json:"state"`
 	HostID       [16]byte          `json:"hostId"`
+	Locked       bool              `json:"locked,omitempty"`
 	Config       wireConfig        `json:"config"`
 	Participants []wireParticipant `json:"participants"`
 	Teams        []wireTeam        `json:"teams"`
@@ -50,11 +61,21 @@ type wireGame struct {
 }
 
 type wireConfig struct {
-	Mode          string   `json:"mode"`
-	Mangas        []string `json:"mangas"`
-	AbilitySource string   `json:"abilitySource"`
-	TeamSize      int      `json:"teamSize"`
-	AllowBots     bool     `json:"allowBots"`
+	Mode                string         `json:"mode"`
+	Mangas              []string       `json:"mangas"`
+	AbilitySource       string         `json:"abilitySource"`
+	TeamSize            int            `json:"teamSize"`
+	AllowBots           bool           `json:"allowBots"`
+	Visibility          string         `json:"visibility,omitempty"`
+	VotingWindowSeconds int            `json:"votingWindowSeconds,omitempty"`
+	PoolFilter          wirePoolFilter `json:"poolFilter,omitempty"`
+}
+
+type wirePoolFilter struct {
+	StandRarities []string   `json:"standRarities,omitempty"`
+	FruitRarities []string   `json:"fruitRarities,omitempty"`
+	FruitTypes    []string   `json:"fruitTypes,omitempty"`
+	Banned        [][16]byte `json:"banned,omitempty"`
 }
 
 type wireParticipant struct {
@@ -126,12 +147,16 @@ func toWire(s game.Snapshot) wireGame {
 		ID:     s.ID,
 		State:  s.State,
 		HostID: s.HostID,
+		Locked: s.Locked,
 		Config: wireConfig{
-			Mode:          s.Config.Mode,
-			Mangas:        append([]string(nil), s.Config.Mangas...),
-			AbilitySource: s.Config.AbilitySource,
-			TeamSize:      s.Config.TeamSize,
-			AllowBots:     s.Config.AllowBots,
+			Mode:                s.Config.Mode,
+			Mangas:              append([]string(nil), s.Config.Mangas...),
+			AbilitySource:       s.Config.AbilitySource,
+			TeamSize:            s.Config.TeamSize,
+			AllowBots:           s.Config.AllowBots,
+			Visibility:          s.Config.Visibility,
+			VotingWindowSeconds: s.Config.VotingWindowSeconds,
+			PoolFilter:          toWirePoolFilter(s.Config.PoolFilter),
 		},
 		Participants: make([]wireParticipant, 0, len(s.Participants)),
 		Teams:        make([]wireTeam, 0, len(s.Teams)),
@@ -186,6 +211,32 @@ func toWire(s game.Snapshot) wireGame {
 	return w
 }
 
+func toWirePoolFilter(f game.PoolFilterSnapshot) wirePoolFilter {
+	banned := make([][16]byte, len(f.Banned))
+	for i, id := range f.Banned {
+		banned[i] = [16]byte(id)
+	}
+	return wirePoolFilter{
+		StandRarities: append([]string(nil), f.StandRarities...),
+		FruitRarities: append([]string(nil), f.FruitRarities...),
+		FruitTypes:    append([]string(nil), f.FruitTypes...),
+		Banned:        banned,
+	}
+}
+
+func fromWirePoolFilter(w wirePoolFilter) game.PoolFilterSnapshot {
+	banned := make([]powers.PowerID, len(w.Banned))
+	for i, id := range w.Banned {
+		banned[i] = powers.PowerID(id)
+	}
+	return game.PoolFilterSnapshot{
+		StandRarities: append([]string(nil), w.StandRarities...),
+		FruitRarities: append([]string(nil), w.FruitRarities...),
+		FruitTypes:    append([]string(nil), w.FruitTypes...),
+		Banned:        banned,
+	}
+}
+
 func toWireStage(st game.StageSnapshot) wireStage {
 	return wireStage{
 		ID: st.ID, Manga: st.Manga, Order: st.Order, Name: st.Name,
@@ -233,12 +284,16 @@ func fromWire(w wireGame) game.Snapshot {
 		ID:     w.ID,
 		State:  w.State,
 		HostID: w.HostID,
+		Locked: w.Locked,
 		Config: game.ConfigSnapshot{
-			Mode:          w.Config.Mode,
-			Mangas:        append([]string(nil), w.Config.Mangas...),
-			AbilitySource: w.Config.AbilitySource,
-			TeamSize:      w.Config.TeamSize,
-			AllowBots:     w.Config.AllowBots,
+			Mode:                w.Config.Mode,
+			Mangas:              append([]string(nil), w.Config.Mangas...),
+			AbilitySource:       w.Config.AbilitySource,
+			TeamSize:            w.Config.TeamSize,
+			AllowBots:           w.Config.AllowBots,
+			Visibility:          w.Config.Visibility,
+			VotingWindowSeconds: w.Config.VotingWindowSeconds,
+			PoolFilter:          fromWirePoolFilter(w.Config.PoolFilter),
 		},
 		Participants: make([]game.ParticipantSnapshot, 0, len(w.Participants)),
 		Teams:        make([]game.TeamSnapshot, 0, len(w.Teams)),

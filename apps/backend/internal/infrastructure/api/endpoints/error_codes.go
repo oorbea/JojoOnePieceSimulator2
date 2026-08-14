@@ -139,6 +139,22 @@ func errorCode(err error) string {
 		return "INVALID_SQUAD_VERDICT"
 	case errors.Is(err, errUnknownCommand):
 		return "UNKNOWN_COMMAND"
+	case errors.Is(err, game.ErrLobbyLocked):
+		return "LOBBY_LOCKED"
+	case errors.Is(err, game.ErrConfigWouldEvictPlayers):
+		return "CONFIG_WOULD_EVICT_PLAYERS"
+	case errors.Is(err, game.ErrCannotKickSelf):
+		return "CANNOT_KICK_SELF"
+	case errors.Is(err, game.ErrPoolTooSmall):
+		return "POOL_TOO_SMALL"
+	case errors.Is(err, game.ErrInvalidVotingWindow):
+		return "INVALID_VOTING_WINDOW"
+	case errors.Is(err, game.ErrInvalidPoolFilter):
+		return "INVALID_POOL_FILTER"
+	case errors.Is(err, enums.ErrInvalidLobbyVisibility):
+		return "INVALID_LOBBY_VISIBILITY"
+	case errors.Is(err, game.ErrLobbyPrivate):
+		return "LOBBY_PRIVATE"
 	default:
 		return "INTERNAL"
 	}

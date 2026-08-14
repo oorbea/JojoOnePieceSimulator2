@@ -30,6 +30,7 @@ type Game struct {
 	rounds       []Round
 	evaluator    LoadoutEvaluator
 	events       []DomainEvent
+	locked       bool // host-toggled: blocks new Join while true (AddBot is unaffected)
 }
 
 // NewGame builds a Game in the LOBBY state with host already seated. teams
@@ -106,6 +107,15 @@ func (g *Game) HostID() ParticipantID  { return g.hostID }
 func (g *Game) Mode() IGameMode        { return g.mode }
 func (g *Game) Teams() []*Team         { return append([]*Team(nil), g.teams...) }
 func (g *Game) Rounds() []Round        { return append([]Round(nil), g.rounds...) }
+func (g *Game) Stages() []Stage        { return append([]Stage(nil), g.stages...) }
+func (g *Game) Locked() bool           { return g.locked }
+
+// IsPubliclyJoinable reports whether g should appear in the public lobby
+// browser: still in LOBBY, marked PUBLIC, and not locked. Shared by both
+// ports.IGameStore adapters so the browsing predicate lives in one place.
+func (g *Game) IsPubliclyJoinable() bool {
+	return g.state == enums.Lobby && g.config.visibility == enums.Public && !g.locked
+}
 
 func (g *Game) Participant(id ParticipantID) (*Participant, bool) {
 	p, ok := g.participants[id]
@@ -173,6 +183,9 @@ func (g *Game) removeFromOrder(id ParticipantID) {
 func (g *Game) Join(p *Participant) error {
 	if g.state != enums.Lobby {
 		return ErrInvalidStateTransition
+	}
+	if g.locked {
+		return ErrLobbyLocked
 	}
 	if p.Kind() != enums.Human {
 		return ErrBotsNotAllowed
@@ -283,7 +296,11 @@ func (g *Game) checkAbortConditions() {
 		g.abort("no connected humans remain")
 		return
 	}
-	if g.config.Mode() == enums.Versus {
+	// An empty Versus team only aborts once the match is actually under
+	// way: in LOBBY it's normal and recoverable (more players can still
+	// join, or SwitchTeam can empty a team on the way to an even split) -
+	// see errors.go's ErrTeamSizeMismatch doc and Game.Start's own gate.
+	if g.config.Mode() == enums.Versus && g.state != enums.Lobby {
 		for _, t := range g.teams {
 			if t.Size() == 0 {
 				g.abort("a team has no players")
@@ -310,11 +327,226 @@ func (g *Game) Abort(callerID ParticipantID) error {
 	return nil
 }
 
+// SwitchTeam moves targetID onto teamID while the Game is still in LOBBY.
+// Any participant may move themselves; moving someone else requires being
+// the host. A no-op (target already on teamID) succeeds without emitting an
+// event.
+func (g *Game) SwitchTeam(callerID, targetID ParticipantID, teamID TeamID) error {
+	if g.state != enums.Lobby {
+		return ErrInvalidStateTransition
+	}
+	if callerID != targetID && callerID != g.hostID {
+		return ErrNotHost
+	}
+	target, ok := g.participants[targetID]
+	if !ok {
+		return ErrParticipantNotFound
+	}
+	to := g.teamByID(teamID)
+	if to == nil {
+		return ErrTeamNotFound
+	}
+	if target.TeamID() == teamID {
+		return nil
+	}
+	if to.Size() >= g.config.TeamSize() {
+		return ErrTeamFull
+	}
+	from := g.teamByID(target.TeamID())
+	fromID := target.TeamID()
+	if from != nil {
+		from.RemoveMember(targetID)
+	}
+	to.AddMember(targetID)
+	target.setTeam(teamID)
+	g.emit(TeamChanged{ParticipantID: targetID, FromTeamID: fromID, ToTeamID: teamID})
+	return nil
+}
+
+// Kick removes targetID from the Game entirely. Host-only, LOBBY-only; the
+// host cannot kick themselves (use Leave, or TransferHost first). Emits
+// PlayerKicked before delegating the actual removal to Leave, so the
+// transport can close the victim's socket before the roster changes
+// underneath it.
+func (g *Game) Kick(callerID, targetID ParticipantID, rng RandomSource) error {
+	if g.state != enums.Lobby {
+		return ErrInvalidStateTransition
+	}
+	if callerID != g.hostID {
+		return ErrNotHost
+	}
+	if callerID == targetID {
+		return ErrCannotKickSelf
+	}
+	if _, ok := g.participants[targetID]; !ok {
+		return ErrParticipantNotFound
+	}
+	g.emit(PlayerKicked{ParticipantID: targetID})
+	return g.Leave(targetID, rng)
+}
+
+// TransferHost hands the host role to targetID, a connected human
+// participant. Host-only.
+func (g *Game) TransferHost(callerID, targetID ParticipantID) error {
+	if callerID != g.hostID {
+		return ErrNotHost
+	}
+	if g.state == enums.Finished || g.state == enums.Aborted {
+		return ErrInvalidStateTransition
+	}
+	target, ok := g.participants[targetID]
+	if !ok {
+		return ErrParticipantNotFound
+	}
+	if target.Kind() != enums.Human {
+		return ErrBotsNotAllowed
+	}
+	if !target.Connected() {
+		return ErrParticipantNotFound
+	}
+	g.hostID = targetID
+	g.emit(HostReassigned{NewHostID: targetID})
+	return nil
+}
+
+// SetLocked toggles whether new humans may Join this lobby. Host-only,
+// LOBBY-only. AddBot is unaffected by locking - only human self-service
+// joins are gated. A no-op (already at the requested value) succeeds
+// without emitting an event.
+func (g *Game) SetLocked(callerID ParticipantID, locked bool) error {
+	if g.state != enums.Lobby {
+		return ErrInvalidStateTransition
+	}
+	if callerID != g.hostID {
+		return ErrNotHost
+	}
+	if g.locked == locked {
+		return nil
+	}
+	g.locked = locked
+	g.emit(LobbyLockChanged{Locked: locked})
+	return nil
+}
+
+// Reconfigure replaces the lobby's Config while still in LOBBY. Host-only.
+// newTeams must already be built by the caller (Game cannot mint TeamIDs):
+// pass g.Teams() back unchanged when cfg.Mode() matches the current mode,
+// or a freshly-built team set (1 team for Gauntlet, 2 for Versus) when the
+// mode is changing. On a mode change, every currently seated human is
+// re-seated onto newTeams by alternating join order (Gauntlet -> Versus) or
+// merging onto the single team (Versus -> Gauntlet); bots are dropped if
+// the new mode is Gauntlet or no longer allows them. Reconfigure never
+// evicts a human: if newTeams would be too small to hold every seated human
+// (because cfg lowers TeamSize), it fails with ErrConfigWouldEvictPlayers
+// and leaves the Game entirely unchanged.
+func (g *Game) Reconfigure(callerID ParticipantID, cfg Config, newTeams []*Team, stages []Stage) error {
+	if g.state != enums.Lobby {
+		return ErrInvalidStateTransition
+	}
+	if callerID != g.hostID {
+		return ErrNotHost
+	}
+	expectedTeams := 1
+	if cfg.Mode() == enums.Versus {
+		expectedTeams = VersusTeamCount
+	}
+	if len(newTeams) != expectedTeams {
+		return ErrTeamSizeMismatch
+	}
+	if cfg.Mode() == enums.Gauntlet && len(stages) == 0 {
+		return ErrNoStagesAvailable
+	}
+
+	sameMode := cfg.Mode() == g.config.Mode()
+	plan := make(map[ParticipantID]TeamID, len(g.order))
+	var botsToDrop []ParticipantID
+
+	if sameMode {
+		// Team identities are unchanged; just re-check capacity against the
+		// (possibly smaller) new TeamSize per existing team.
+		counts := make(map[TeamID]int, len(g.teams))
+		for _, pid := range g.order {
+			p := g.participants[pid]
+			if p.Kind() == enums.Bot && (cfg.Mode() != enums.Versus || !cfg.AllowBots()) {
+				botsToDrop = append(botsToDrop, pid)
+				continue
+			}
+			counts[p.TeamID()]++
+			plan[pid] = p.TeamID()
+		}
+		for _, t := range newTeams {
+			if counts[t.ID()] > cfg.TeamSize() {
+				return ErrConfigWouldEvictPlayers
+			}
+		}
+	} else if cfg.Mode() == enums.Versus {
+		// Gauntlet -> Versus: alternate join order across the two new teams.
+		humans := make([]ParticipantID, 0, len(g.order))
+		for _, pid := range g.order {
+			if g.participants[pid].Kind() == enums.Human {
+				humans = append(humans, pid)
+			} else {
+				botsToDrop = append(botsToDrop, pid)
+			}
+		}
+		if len(humans) > cfg.TeamSize()*expectedTeams {
+			return ErrConfigWouldEvictPlayers
+		}
+		for i, pid := range humans {
+			plan[pid] = newTeams[i%expectedTeams].ID()
+		}
+	} else {
+		// Versus -> Gauntlet: merge every human onto the single team; bots
+		// are never allowed in Gauntlet.
+		humans := make([]ParticipantID, 0, len(g.order))
+		for _, pid := range g.order {
+			if g.participants[pid].Kind() == enums.Human {
+				humans = append(humans, pid)
+			} else {
+				botsToDrop = append(botsToDrop, pid)
+			}
+		}
+		if len(humans) > cfg.TeamSize() {
+			return ErrConfigWouldEvictPlayers
+		}
+		for _, pid := range humans {
+			plan[pid] = newTeams[0].ID()
+		}
+	}
+
+	// All checks passed - apply. Bots are dropped via the ordinary Leave
+	// path (no rng needed: a bot can never become host), then the new
+	// Config/teams/stages replace the old ones and every remaining
+	// participant is reseated per plan.
+	for _, pid := range botsToDrop {
+		delete(g.participants, pid)
+		g.removeFromOrder(pid)
+		g.emit(PlayerLeft{ParticipantID: pid})
+	}
+
+	g.config = cfg
+	g.teams = append([]*Team(nil), newTeams...)
+	g.stages = append([]Stage(nil), stages...)
+
+	for _, pid := range g.order {
+		p := g.participants[pid]
+		teamID := plan[pid]
+		p.setTeam(teamID)
+		if t := g.teamByID(teamID); t != nil {
+			t.AddMember(pid)
+		}
+	}
+
+	g.emit(ConfigUpdated{})
+	return nil
+}
+
 // --- Lifecycle ---
 
-// Start moves the Game from LOBBY to ASSIGNING. Only the host may call it,
-// and only once every team meets its size requirement (Gauntlet: at least
-// one player; Versus: exactly Config.TeamSize() on both teams).
+// Start moves the Game from LOBBY to ASSIGNING. Only the host may call it.
+// Gauntlet needs at least one player; Versus needs both teams equal in size
+// and non-empty - not necessarily full to Config.TeamSize() (that's only
+// the per-team capacity ceiling enforced by addParticipant/SwitchTeam).
 func (g *Game) Start(callerID ParticipantID) error {
 	if g.state != enums.Lobby {
 		return ErrInvalidStateTransition
@@ -328,8 +560,12 @@ func (g *Game) Start(callerID ParticipantID) error {
 			return ErrNotEnoughPlayers
 		}
 	case enums.Versus:
+		first := g.teams[0].Size()
 		for _, t := range g.teams {
-			if t.Size() != g.config.TeamSize() {
+			if t.Size() == 0 {
+				return ErrNotEnoughPlayers
+			}
+			if t.Size() != first {
 				return ErrTeamSizeMismatch
 			}
 		}

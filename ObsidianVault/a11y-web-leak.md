@@ -33,4 +33,6 @@ chasing a "crash" in `gloss-button.tsx` that was just this DOM-attribute warning
   `pointerEvents=` under `apps/frontend/src` to catch a new leak before it ships.
 
 Related: [[frontend-responsive-frutiger-aero]] (same primitive layer, same `gloss-button.tsx` this
-was first noticed in).
+was first noticed in), [[norma-tooltips-y-ayuda-contextual]] (the tooltip primitive spreads its
+hover/focus/long-press handlers onto the same pressable for the exact same reason this note gives for
+`pointerEvents`/`a11yProps` - wrapping in an extra `Pressable` would steal the tap).

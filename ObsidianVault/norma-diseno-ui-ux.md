@@ -36,4 +36,6 @@ composición sobre las primitivas ya existentes (`GlassPanel`, `WiiCard`, `Gloss
    mantiene `lucide-react-native`**, que es lo que ya usa el shell (`app-shell-container.tsx`).
    Anteponer siempre la consistencia del repo a la sugerencia genérica de la skill.
 
-Ver también [[zettelkasten-workflow]] (norma hermana: registrar decisiones de diseño en el vault).
+Ver también [[zettelkasten-workflow]] (norma hermana: registrar decisiones de diseño en el vault) y
+[[norma-tooltips-y-ayuda-contextual]] (norma hermana: todo botón lleva tooltip, `InfoHint` para
+explicar conceptos).

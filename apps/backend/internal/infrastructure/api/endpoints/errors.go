@@ -27,7 +27,8 @@ func handleError(w http.ResponseWriter, err error) {
 	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists),
 		errors.Is(err, services.ErrLastAdmin),
 		errors.Is(err, game.ErrGameFull), errors.Is(err, game.ErrTeamFull), errors.Is(err, game.ErrDuplicateParticipant),
-		errors.Is(err, services.ErrAlreadyInGame), errors.Is(err, ports.ErrGameCodeTaken), errors.Is(err, ports.ErrStageAlreadyExists):
+		errors.Is(err, services.ErrAlreadyInGame), errors.Is(err, ports.ErrGameCodeTaken), errors.Is(err, ports.ErrStageAlreadyExists),
+		errors.Is(err, game.ErrLobbyLocked), errors.Is(err, game.ErrConfigWouldEvictPlayers):
 		writeError(w, http.StatusConflict, code, err.Error())
 	case errors.As(err, &validationErr):
 		writeError(w, http.StatusBadRequest, code, "validation failed", validationErr.Errors...)
@@ -65,11 +66,16 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, game.ErrEmptyTeamName),
 		errors.Is(err, enums.ErrInvalidParticipantKind),
 		errors.Is(err, enums.ErrInvalidSquadVerdict),
-		errors.Is(err, errUnknownCommand):
+		errors.Is(err, errUnknownCommand),
+		errors.Is(err, game.ErrCannotKickSelf),
+		errors.Is(err, game.ErrPoolTooSmall),
+		errors.Is(err, game.ErrInvalidVotingWindow),
+		errors.Is(err, game.ErrInvalidPoolFilter),
+		errors.Is(err, enums.ErrInvalidLobbyVisibility):
 		writeError(w, http.StatusBadRequest, code, err.Error())
 	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken):
 		writeError(w, http.StatusUnauthorized, code, "unauthenticated")
-	case errors.Is(err, ports.ErrForbidden), errors.Is(err, game.ErrNotHost):
+	case errors.Is(err, ports.ErrForbidden), errors.Is(err, game.ErrNotHost), errors.Is(err, game.ErrLobbyPrivate):
 		writeError(w, http.StatusForbidden, code, "forbidden")
 	case errors.Is(err, services.ErrPictureTooLarge):
 		writeError(w, http.StatusRequestEntityTooLarge, code, err.Error())

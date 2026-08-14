@@ -9,12 +9,19 @@ import (
 )
 
 // CreateGameRequest is the JSON body accepted by POST /games.
+// Visibility/VotingWindowSeconds/PoolFilter are all optional: an empty
+// Visibility defaults to PRIVATE, a zero VotingWindowSeconds defaults to
+// the service's configured window, and an absent PoolFilter means "no
+// restriction" - see services.GameService.buildConfig.
 type CreateGameRequest struct {
-	Mode          string   `json:"mode"`
-	Mangas        []string `json:"mangas"`
-	AbilitySource string   `json:"abilitySource"`
-	TeamSize      int      `json:"teamSize"`
-	AllowBots     bool     `json:"allowBots"`
+	Mode                string             `json:"mode"`
+	Mangas              []string           `json:"mangas"`
+	AbilitySource       string             `json:"abilitySource"`
+	TeamSize            int                `json:"teamSize"`
+	AllowBots           bool               `json:"allowBots"`
+	Visibility          string             `json:"visibility,omitempty"`
+	VotingWindowSeconds int                `json:"votingWindowSeconds,omitempty"`
+	PoolFilter          *PoolFilterPayload `json:"poolFilter,omitempty"`
 }
 
 // Validate converts the request into a services.CreateGameInput, collecting
@@ -46,16 +53,28 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 		errs = append(errs, "teamSize must be positive")
 	}
 
+	var visibility enums.LobbyVisibility
+	if r.Visibility != "" {
+		visibility, err = enums.ParseLobbyVisibility(r.Visibility)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("visibility: %v", err))
+		}
+	}
+	poolFilter := r.PoolFilter.ToPoolFilter(&errs)
+
 	if len(errs) > 0 {
 		return services.CreateGameInput{}, &ValidationError{Errors: errs}
 	}
 
 	return services.CreateGameInput{
-		Mode:          mode,
-		Mangas:        mangas,
-		AbilitySource: abilitySource,
-		TeamSize:      r.TeamSize,
-		AllowBots:     r.AllowBots,
+		Mode:                mode,
+		Mangas:              mangas,
+		AbilitySource:       abilitySource,
+		TeamSize:            r.TeamSize,
+		AllowBots:           r.AllowBots,
+		Visibility:          visibility,
+		VotingWindowSeconds: r.VotingWindowSeconds,
+		PoolFilter:          poolFilter,
 	}, nil
 }
 

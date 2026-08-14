@@ -72,4 +72,26 @@ var (
 	// ErrPowerPoolExhausted is returned when a team's AvailablePowers has
 	// no more unique Stand/DevilFruit left to draw.
 	ErrPowerPoolExhausted = errors.New("no more unique powers available for this team")
+
+	// ErrLobbyLocked is returned when a human tries to Join a lobby the
+	// host has locked. AddBot is unaffected.
+	ErrLobbyLocked = errors.New("lobby is locked")
+
+	// ErrConfigWouldEvictPlayers is returned when Reconfigure's new Config/
+	// team shape could not hold every currently seated human without
+	// dropping one - Reconfigure never evicts a human, it just refuses.
+	ErrConfigWouldEvictPlayers = errors.New("new configuration would evict seated players")
+
+	// ErrCannotKickSelf is returned when the host tries to Kick themselves.
+	ErrCannotKickSelf = errors.New("host cannot kick themselves")
+
+	// ErrPoolTooSmall is returned when Start is called but the lobby's
+	// filtered power pool has fewer unique Stands/DevilFruits than
+	// Config.TeamSize() requires for a selected manga.
+	ErrPoolTooSmall = errors.New("filtered power pool is too small to start")
+
+	// ErrLobbyPrivate is returned when a join-by-id attempt targets a
+	// lobby whose Config.Visibility() is not Public - only the join code
+	// (POST /games/join) can reach a private lobby.
+	ErrLobbyPrivate = errors.New("lobby is private")
 )

@@ -27,6 +27,7 @@ export function ThemeToggle({ mode, onCycle }: ThemeToggleProps) {
   return (
     <ChannelBarItem
       iconOnly
+      tooltip={t(`theme.${mode}`)}
       onPress={onCycle}
       pressStyle={{ scale: 0.9, rotate: '-12deg' }}
       {...a11yProps(t(`theme.${mode}`), 'button')}

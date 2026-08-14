@@ -35,4 +35,11 @@ type IGameStore interface {
 	// returning how many were removed. Called periodically by a reaper so
 	// an abandoned lobby does not linger forever.
 	DeleteExpired(ctx context.Context, olderThan time.Duration) int
+	// ListPublic returns up to limit Games currently eligible for the
+	// public lobby browser (see game.Game.IsPubliclyJoinable), most
+	// recently active first. Create and Save both re-derive membership in
+	// this list from the Game they're given, so no separate "mark public"
+	// call is needed - an adapter that cannot use SCAN/KEYS (Redis) keeps
+	// its own explicit index instead.
+	ListPublic(ctx context.Context, limit int) ([]*game.Game, error)
 }

@@ -2,6 +2,7 @@ package services
 
 import (
 	"sync"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 )
@@ -15,6 +16,11 @@ type GameEvent struct {
 	// filter/log without a type-switch over every concrete event.
 	Name  string
 	Event game.DomainEvent
+	// VotingWindow is the lobby's own configured voting-window duration at
+	// the moment this event was published - the transport uses it to
+	// compute VOTING_OPENED/TIEBREAK_OPENED's closesAt instead of the
+	// service-wide default, since each lobby may now configure its own.
+	VotingWindow time.Duration
 }
 
 // GameEventHub is an in-process, single-instance pub/sub for GameEvents,
