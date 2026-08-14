@@ -174,4 +174,133 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     expect(FakeWebSocket.instances.length).toBe(0)
   })
+
+  it('LOADOUTS_ASSIGNED bumps assignmentSeq without touching snapshot/feed', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    const snapshot = { game: { id: 'g1' }, you: { participantId: 'p1' } }
+    ws.receive({ type: 'STATE', payload: snapshot })
+
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+
+    expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
+    expect(useGameSocketStore.getState().live.assignedRoundIndex).toBe(0)
+    expect(useGameSocketStore.getState().snapshot).toEqual(snapshot)
+    expect(useGameSocketStore.getState().feed.length).toBe(0)
+  })
+
+  it('bumps assignmentSeq to 2 across two assignment frames', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 1 } })
+
+    expect(useGameSocketStore.getState().live.assignmentSeq).toBe(2)
+    expect(useGameSocketStore.getState().live.assignedRoundIndex).toBe(1)
+  })
+
+  it('VOTING_OPENED populates live with roundIndex/closesAt and clears tiebreak', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+
+    const live = useGameSocketStore.getState().live
+    expect(live.votingRoundIndex).toBe(0)
+    expect(live.votingClosesAt).toBe(Date.parse('2100-01-01T00:00:10.000Z'))
+    expect(live.tiebreak).toBe(false)
+  })
+
+  it('TIEBREAK_OPENED populates live the same way with tiebreak true', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    ws.receive({ type: 'TIEBREAK_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+
+    const live = useGameSocketStore.getState().live
+    expect(live.votingRoundIndex).toBe(0)
+    expect(live.votingClosesAt).toBe(Date.parse('2100-01-01T00:00:10.000Z'))
+    expect(live.tiebreak).toBe(true)
+  })
+
+  it('ROUND_RESOLVED clears the countdown and still pushes to feed', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+
+    ws.receive({ type: 'ROUND_RESOLVED', payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false } })
+
+    const live = useGameSocketStore.getState().live
+    expect(live.votingRoundIndex).toBeNull()
+    expect(live.votingClosesAt).toBeNull()
+    expect(useGameSocketStore.getState().feed.length).toBe(1)
+  })
+
+  it('markAssignmentRevealed sets revealedAssignmentSeq to the current assignmentSeq', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    expect(useGameSocketStore.getState().live.assignmentSeq).toBeGreaterThan(
+      useGameSocketStore.getState().live.revealedAssignmentSeq
+    )
+
+    useGameSocketStore.getState().markAssignmentRevealed()
+
+    const live = useGameSocketStore.getState().live
+    expect(live.revealedAssignmentSeq).toBe(live.assignmentSeq)
+  })
+
+  it('reset() clears live back to its zero/null initial value', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+
+    useGameSocketStore.getState().reset()
+
+    expect(useGameSocketStore.getState().live).toEqual({
+      assignmentSeq: 0,
+      revealedAssignmentSeq: 0,
+      assignedRoundIndex: null,
+      votingRoundIndex: null,
+      votingClosesAt: null,
+      tiebreak: false,
+    })
+  })
+
+  it('a gameId change clears live', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws1 = FakeWebSocket.instances[0]
+    ws1.open()
+    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
+
+    useGameSocketStore.getState().attach('g2', factory)
+
+    expect(useGameSocketStore.getState().live.assignmentSeq).toBe(0)
+  })
+
+  it('a reconnect for the same gameId preserves live', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws1 = FakeWebSocket.instances[0]
+    ws1.open()
+    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
+
+    // retryNow() connects immediately (bypassing the real reconnect-delay
+    // setTimeout) - same gameId, so this exercises the "reconnect, not a
+    // fresh attach" path without needing fake timers.
+    useGameSocketStore.getState().retryNow()
+    const ws2 = FakeWebSocket.instances[1]
+    ws2.open()
+
+    expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
+  })
 })

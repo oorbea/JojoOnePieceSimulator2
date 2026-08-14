@@ -292,6 +292,27 @@
       "message": "Every player will be removed and the lobby will close. This can't be undone.",
       "confirm": "Cancel game"
     },
+    "match": {
+      "title": "Match",
+      "roundBadge": "Round {{index}}",
+      "drawing": "Drawing powers…",
+      "revealing": "Revealing powers…",
+      "skipReveal": "Skip",
+      "skipRevealA11y": "Skip the power reveal",
+      "tiebreakOpen": "Tiebreak vote open",
+      "closesIn": "Closes in {{seconds}}s",
+      "noStand": "No Stand",
+      "noFruit": "No Devil Fruit",
+      "trait": {
+        "spin": "Spin",
+        "hamon": "Hamon",
+        "fruitMastery": "Fruit Mastery",
+        "armamentHaki": "Armament Haki",
+        "observationHaki": "Observation Haki",
+        "conquerorHaki": "Conqueror's Haki",
+        "physicalForm": "Physical Form"
+      }
+    },
     "leave": {
       "action": "Leave lobby",
       "title": "Leave this lobby?",
@@ -416,6 +437,37 @@
       "RESOLVING": "Resolving round",
       "FINISHED": "Finished",
       "ABORTED": "Cancelled"
+    },
+    "spinLevel": {
+      "NONE": "None",
+      "BASIC": "Basic",
+      "ADVANCED": "Advanced",
+      "GOLDEN": "Golden",
+      "INFINITE": "Infinite"
+    },
+    "hamonLevel": {
+      "NONE": "None",
+      "BASIC": "Basic",
+      "ADVANCED": "Advanced",
+      "PERFECT": "Perfect"
+    },
+    "fruitMastery": {
+      "NONE": "None",
+      "REGULAR": "Regular",
+      "ADVANCED": "Advanced",
+      "AWAKENED": "Awakened"
+    },
+    "hakiLevel": {
+      "PRIVATE": "Private",
+      "VICE_ADMIRAL": "Vice Admiral",
+      "YONKO_COMMANDER": "Yonko Commander",
+      "YONKO_PLUS": "Yonko+"
+    },
+    "physicalForm": {
+      "PRIVATE": "Private",
+      "VICE_ADMIRAL": "Vice Admiral",
+      "YONKO_COMMANDER": "Yonko Commander",
+      "YONKO_PLUS": "Yonko+"
     },
     "abilitySource": {
       "RANDOM": "Random",

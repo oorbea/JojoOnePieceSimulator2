@@ -9,12 +9,15 @@ import { gameKeys } from '@/features/game/api/game.keys'
 import { useGameCommands } from '@/features/game/hooks/use-game-commands'
 import { useGameDetail } from '@/features/game/hooks/use-game-detail'
 import { useGameSocket } from '@/features/game/hooks/use-game-socket'
+import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { formatCode } from '@/features/game/lib/game-code'
 import { startGate } from '@/features/game/lib/lobby-rules'
+import { revealOrder, shouldReveal } from '@/features/game/lib/loadout-reveal'
 import { shareJoinCode } from '@/features/game/lib/share'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
+import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
 import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
@@ -101,6 +104,19 @@ export function LobbyRoomContainer() {
 
   const snapshot = socket.snapshot ?? detail.data?.game ?? null
   const you = socket.you ?? detail.data?.you ?? null
+  const reducedMotion = useReducedMotion()
+
+  // Computed unconditionally (before the !snapshot early return below) since
+  // hooks can't be called conditionally - order/active fall back to safe
+  // empty/false values until snapshot/you actually arrive.
+  const order = snapshot && you ? revealOrder(snapshot, you.participantId) : []
+  const revealActive = !!snapshot && shouldReveal(socket.live, snapshot)
+  const loadoutReveal = useLoadoutReveal({
+    order,
+    active: revealActive,
+    reducedMotion,
+    markRevealed: socket.markAssignmentRevealed,
+  })
 
   // Reseed the edit form whenever a fresh CONFIG_UPDATED/STATE snapshot
   // lands for this game (tracked by a config-version key), never on every
@@ -341,6 +357,11 @@ export function LobbyRoomContainer() {
       configSaving={configSaving}
       configSaved={configSaved}
       onSubmitConfig={handleSubmitConfig}
+      live={socket.live}
+      revealedIds={loadoutReveal.revealedIds}
+      isRevealing={loadoutReveal.isRevealing}
+      onSkipReveal={loadoutReveal.skip}
+      reducedMotion={reducedMotion}
     />
   )
 }

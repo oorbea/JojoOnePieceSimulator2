@@ -292,6 +292,27 @@
       "message": "S'eliminarà tots els jugadors i la sala es tancarà. Això no es pot desfer.",
       "confirm": "Cancel·la la partida"
     },
+    "match": {
+      "title": "Partida",
+      "roundBadge": "Ronda {{index}}",
+      "drawing": "Repartint poders…",
+      "revealing": "Revelant poders…",
+      "skipReveal": "Salta",
+      "skipRevealA11y": "Salta la revelació de poders",
+      "tiebreakOpen": "Vot de desempat obert",
+      "closesIn": "Tanca en {{seconds}}s",
+      "noStand": "Sense Stand",
+      "noFruit": "Sense Fruita del Diable",
+      "trait": {
+        "spin": "Spin",
+        "hamon": "Hamon",
+        "fruitMastery": "Mestratge de fruita",
+        "armamentHaki": "Haki de l'Armament",
+        "observationHaki": "Haki de l'Observació",
+        "conquerorHaki": "Haki del Conqueridor",
+        "physicalForm": "Forma física"
+      }
+    },
     "leave": {
       "action": "Abandona la sala",
       "title": "Vols abandonar aquesta sala?",
@@ -416,6 +437,37 @@
       "RESOLVING": "Resolent la ronda",
       "FINISHED": "Acabada",
       "ABORTED": "Cancel·lada"
+    },
+    "spinLevel": {
+      "NONE": "Cap",
+      "BASIC": "Bàsic",
+      "ADVANCED": "Avançat",
+      "GOLDEN": "Daurat",
+      "INFINITE": "Infinit"
+    },
+    "hamonLevel": {
+      "NONE": "Cap",
+      "BASIC": "Bàsic",
+      "ADVANCED": "Avançat",
+      "PERFECT": "Perfecte"
+    },
+    "fruitMastery": {
+      "NONE": "Cap",
+      "REGULAR": "Regular",
+      "ADVANCED": "Avançada",
+      "AWAKENED": "Despertada"
+    },
+    "hakiLevel": {
+      "PRIVATE": "Soldat",
+      "VICE_ADMIRAL": "Vicealmirall",
+      "YONKO_COMMANDER": "Comandant Yonko",
+      "YONKO_PLUS": "Yonko+"
+    },
+    "physicalForm": {
+      "PRIVATE": "Soldat",
+      "VICE_ADMIRAL": "Vicealmirall",
+      "YONKO_COMMANDER": "Comandant Yonko",
+      "YONKO_PLUS": "Yonko+"
     },
     "abilitySource": {
       "RANDOM": "Aleatori",
