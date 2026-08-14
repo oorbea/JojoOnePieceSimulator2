@@ -11,6 +11,7 @@ type Props = {
   snapshot: GameSnapshot
   selfId: string
   revealedIds: Set<string>
+  visibleSlotsById: Record<string, number>
   reducedMotion: boolean
 }
 
@@ -18,8 +19,9 @@ type Props = {
 // GAUNTLET: one wrapped row of cards. The caller's own loadout renders
 // inline, highlighted by LoadoutCard's isSelf prop, rather than in a
 // separate section.
-export function MatchRoster({ snapshot, selfId, revealedIds, reducedMotion }: Props) {
+export function MatchRoster({ snapshot, selfId, revealedIds, visibleSlotsById, reducedMotion }: Props) {
   const { t } = useTranslation()
+  const mangas = snapshot.config.mangas
 
   if (snapshot.mode === 'VERSUS') {
     return (
@@ -39,6 +41,8 @@ export function MatchRoster({ snapshot, selfId, revealedIds, reducedMotion }: Pr
                     participant={p}
                     isSelf={p.id === selfId}
                     revealed={revealedIds.has(p.id)}
+                    visibleSlots={visibleSlotsById[p.id] ?? 0}
+                    mangas={mangas}
                     reducedMotion={reducedMotion}
                   />
                 ))}
@@ -60,6 +64,8 @@ export function MatchRoster({ snapshot, selfId, revealedIds, reducedMotion }: Pr
             participant={p}
             isSelf={p.id === selfId}
             revealed={revealedIds.has(p.id)}
+            visibleSlots={visibleSlotsById[p.id] ?? 0}
+            mangas={mangas}
             reducedMotion={reducedMotion}
           />
         ))}

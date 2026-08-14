@@ -13,13 +13,16 @@ var physicalFormLevels = []enums.PhysicalForm{enums.PhysicalFormPrivate, enums.P
 
 // LoadoutBuilder is the Template Method that assembles a Loadout for one
 // participant. Which abilities get drawn at all is fixed by the mangas in
-// play (JoJo draws Stand/Spin/Hamon, One Piece draws DevilFruit/
-// FruitMastery/the three Hakis/PhysicalForm) and always in this order: the
-// DevilFruit is drawn before its FruitMastery, since the latter depends on
-// the former. The concrete draws are weighted random picks
-// (RandomSource + AssignmentWeights); the hard invariants (fruit<->mastery
-// coupling, RequiresSpin4) are re-checked by NewLoadout at the very end
-// regardless of what the weighted draws produced.
+// play (JoJo draws Stand/Spin/Hamon, One Piece draws PhysicalForm/DevilFruit/
+// FruitMastery/the three Hakis), always in this fixed step order regardless
+// of manga - each step is simply skipped when its manga isn't selected:
+// PhysicalForm -> Stand -> DevilFruit -> FruitMastery -> Hamon ->
+// ArmamentHaki -> ObservationHaki -> ConquerorHaki -> Spin. DevilFruit is
+// drawn before its FruitMastery, since the latter depends on the former; the
+// RequiresSpin4 override runs after Spin is drawn, last of all. The concrete
+// draws are weighted random picks (RandomSource + AssignmentWeights); the
+// hard invariants (fruit<->mastery coupling, RequiresSpin4) are re-checked by
+// NewLoadout at the very end regardless of what the weighted draws produced.
 type LoadoutBuilder struct {
 	mangas  map[enums.Manga]struct{}
 	weights AssignmentWeights
@@ -57,12 +60,14 @@ func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 		err             error
 	)
 
+	if b.hasManga(enums.OnePiece) {
+		physicalForm = b.drawPhysicalForm()
+	}
+
 	if b.hasManga(enums.Jojo) {
 		if stand, err = b.drawStand(pool); err != nil {
 			return nil, err
 		}
-		spin = b.drawSpin()
-		hamon = b.drawHamon()
 	}
 
 	if b.hasManga(enums.OnePiece) {
@@ -70,10 +75,20 @@ func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 			return nil, err
 		}
 		fruitMastery = b.drawFruitMastery(devilFruit)
+	}
+
+	if b.hasManga(enums.Jojo) {
+		hamon = b.drawHamon()
+	}
+
+	if b.hasManga(enums.OnePiece) {
 		armamentHaki = b.drawHaki(b.weights.ArmamentHakiWeights)
 		observationHaki = b.drawHaki(b.weights.ObservationHakiWeights)
 		conquerorHaki = b.drawHaki(b.weights.ConquerorHakiWeights)
-		physicalForm = b.drawPhysicalForm()
+	}
+
+	if b.hasManga(enums.Jojo) {
+		spin = b.drawSpin()
 	}
 
 	if stand != nil && HasTrait(&stand.Power, enums.RequiresSpin4) {

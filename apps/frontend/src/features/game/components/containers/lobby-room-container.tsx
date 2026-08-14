@@ -12,7 +12,7 @@ import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { formatCode } from '@/features/game/lib/game-code'
 import { startGate } from '@/features/game/lib/lobby-rules'
-import { revealOrder, shouldReveal } from '@/features/game/lib/loadout-reveal'
+import { revealSteps, shouldReveal } from '@/features/game/lib/loadout-reveal'
 import { shareJoinCode } from '@/features/game/lib/share'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
@@ -107,12 +107,12 @@ export function LobbyRoomContainer() {
   const reducedMotion = useReducedMotion()
 
   // Computed unconditionally (before the !snapshot early return below) since
-  // hooks can't be called conditionally - order/active fall back to safe
+  // hooks can't be called conditionally - steps/active fall back to safe
   // empty/false values until snapshot/you actually arrive.
-  const order = snapshot && you ? revealOrder(snapshot, you.participantId) : []
+  const steps = snapshot && you ? revealSteps(snapshot, you.participantId) : []
   const revealActive = !!snapshot && shouldReveal(socket.live, snapshot)
   const loadoutReveal = useLoadoutReveal({
-    order,
+    steps,
     active: revealActive,
     reducedMotion,
     markRevealed: socket.markAssignmentRevealed,
@@ -233,14 +233,39 @@ export function LobbyRoomContainer() {
     })
   }
 
-  const handleToggleConfigManga = (manga: Manga) => {
-    setConfigForm((current) => {
-      const base = current ?? form
-      const mangas = base.mangas.includes(manga)
-        ? base.mangas.filter((m) => m !== manga)
-        : [...base.mangas, manga]
-      return { ...base, mangas }
+  // Submits a full config replacement built from `next` (not from whatever
+  // `form` happens to be at call time) - UPDATE_CONFIG is a full replacement,
+  // and reading `form` here would race React's state batching for callers
+  // that also just called setConfigForm in the same event (see
+  // handleToggleConfigManga below).
+  const submitConfigForm = (next: ConfigFormState) => {
+    setConfigSaving(true)
+    setConfigSaved(false)
+    commands.updateConfig({
+      mode: next.mode,
+      mangas: next.mangas,
+      abilitySource: snapshot.config.abilitySource,
+      teamSize: next.teamSize,
+      allowBots: next.allowBots,
+      visibility: next.visibility,
+      votingWindowSeconds: next.votingWindowSeconds,
+      poolFilter: next.poolFilter,
     })
+    setTimeout(() => {
+      setConfigSaving(false)
+      setConfigSaved(true)
+    }, 500)
+  }
+
+  // The manga selector now lives on the main lobby screen (MangaRow), always
+  // visible instead of tucked inside "Lobby settings" - so, unlike every
+  // other field in that settings panel, it has no separate "Save" step and
+  // autosaves on every toggle.
+  const handleToggleConfigManga = (manga: Manga) => {
+    const mangas = form.mangas.includes(manga) ? form.mangas.filter((m) => m !== manga) : [...form.mangas, manga]
+    const next = { ...form, mangas }
+    setConfigForm(next)
+    submitConfigForm(next)
   }
 
   const handleAddConfigBan = (powerId: string) => {
@@ -281,24 +306,7 @@ export function LobbyRoomContainer() {
   // ever reflects the banlist.
   const configPoolActiveCount = form.poolFilter.banned.length
 
-  const handleSubmitConfig = () => {
-    setConfigSaving(true)
-    setConfigSaved(false)
-    commands.updateConfig({
-      mode: form.mode,
-      mangas: form.mangas,
-      abilitySource: snapshot.config.abilitySource,
-      teamSize: form.teamSize,
-      allowBots: form.allowBots,
-      visibility: form.visibility,
-      votingWindowSeconds: form.votingWindowSeconds,
-      poolFilter: form.poolFilter,
-    })
-    setTimeout(() => {
-      setConfigSaving(false)
-      setConfigSaved(true)
-    }, 500)
-  }
+  const handleSubmitConfig = () => submitConfigForm(form)
 
   const shareMessage = t('game.code.shareMessage', { code: formatCode(snapshot.code) })
 
@@ -359,6 +367,7 @@ export function LobbyRoomContainer() {
       onSubmitConfig={handleSubmitConfig}
       live={socket.live}
       revealedIds={loadoutReveal.revealedIds}
+      visibleSlotsById={loadoutReveal.visibleSlotsById}
       isRevealing={loadoutReveal.isRevealing}
       onSkipReveal={loadoutReveal.skip}
       reducedMotion={reducedMotion}

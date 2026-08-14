@@ -23,8 +23,11 @@ type Props = {
   isHost: boolean
   mode: GameMode
   onChangeMode: (mode: GameMode) => void
+  /** Read-only here - the manga selector itself lives on the main lobby
+   * screen now (see `MangaRow`), always visible instead of tucked inside
+   * this collapsed panel. Still needed for the submit button's
+   * empty-selection guard below. */
   mangas: Manga[]
-  onToggleManga: (manga: Manga) => void
   teamSize: number
   teamSizeMin: number
   teamSizeMax: number
@@ -53,7 +56,6 @@ export function LobbyConfigPanel({
   mode,
   onChangeMode,
   mangas,
-  onToggleManga,
   teamSize,
   teamSizeMin,
   teamSizeMax,
@@ -143,29 +145,6 @@ export function LobbyConfigPanel({
 
       <GlassPanel glossy p="$5" gap="$4" width="100%" $md={{ flexDirection: 'row' }}>
         <YStack flexBasis={320} grow={1} gap="$4">
-          <YStack gap="$1.5">
-            <GlowText level="label">{t('game.create.mangasLabel')}</GlowText>
-            {isHost ? (
-              <XStack gap="$2">
-                {(['JOJO', 'ONE_PIECE'] as Manga[]).map((manga) => (
-                  <GlossButton
-                    key={manga}
-                    tone={mangas.includes(manga) ? 'blue' : 'glass'}
-                    btnSize="sm"
-                    onPress={() => onToggleManga(manga)}
-                    accessibilityLabel={t(`enums.manga.${manga}`)}
-                  >
-                    {t(`enums.manga.${manga}`)}
-                  </GlossButton>
-                ))}
-              </XStack>
-            ) : (
-              <GlowText level="heading">
-                {mangas.map((manga) => t(`enums.manga.${manga}`)).join(', ')}
-              </GlowText>
-            )}
-          </YStack>
-
           {isHost ? (
             <NumberStepper
               label={mode === 'GAUNTLET' ? t('game.create.teamSizeGauntletLabel') : t('game.create.teamSizeLabel')}

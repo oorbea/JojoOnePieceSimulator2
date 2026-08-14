@@ -1,4 +1,4 @@
-import { revealOrder, revealStepMs, shouldReveal } from '@/features/game/lib/loadout-reveal'
+import { flipStepMs, revealOrder, revealSteps, slotStepMs, shouldReveal } from '@/features/game/lib/loadout-reveal'
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameLoadout, GameParticipant, GameSnapshot } from '@/features/game/types/game.types'
 
@@ -37,7 +37,7 @@ function snapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
   }
 }
 
-function loadout(): GameLoadout {
+function loadout(overrides: Partial<GameLoadout> = {}): GameLoadout {
   return {
     spin: 'NONE',
     hamon: 'NONE',
@@ -46,6 +46,7 @@ function loadout(): GameLoadout {
     observationHaki: 'PRIVATE',
     conquerorHaki: 'PRIVATE',
     physicalForm: 'PRIVATE',
+    ...overrides,
   }
 }
 
@@ -138,12 +139,53 @@ describe('shouldReveal', () => {
   })
 })
 
-describe('revealStepMs', () => {
-  it('is zero under reduced motion', () => {
-    expect(revealStepMs(true)).toBe(0)
+describe('flipStepMs / slotStepMs', () => {
+  it('are zero under reduced motion', () => {
+    expect(flipStepMs(true)).toBe(0)
+    expect(slotStepMs(true)).toBe(0)
   })
 
-  it('is a positive delay otherwise', () => {
-    expect(revealStepMs(false)).toBeGreaterThan(0)
+  it('are a positive delay otherwise', () => {
+    expect(flipStepMs(false)).toBeGreaterThan(0)
+    expect(slotStepMs(false)).toBeGreaterThan(0)
+  })
+})
+
+describe('revealSteps', () => {
+  it('GAUNTLET: one flip step per participant (self last), no slot steps for an ONE_PIECE-only lobby with a JOJO-only loadout', () => {
+    const snap = snapshot({
+      mode: 'GAUNTLET',
+      config: { ...snapshot().config, mangas: ['ONE_PIECE'] },
+      participants: [
+        participant({ id: 'p1', loadout: loadout({ physicalForm: 'VICE_ADMIRAL' }) }),
+        participant({ id: 'p2', loadout: loadout({ physicalForm: 'VICE_ADMIRAL' }) }),
+      ],
+    })
+    const steps = revealSteps(snap, 'p1')
+    // p2 flips first (self last), then its ONE_PIECE slots (physicalForm,
+    // devilFruit block, 3 haki = 5; fruitMastery omitted since NONE), then
+    // p1 flips + its own 5 slots.
+    expect(steps).toEqual([
+      { participantId: 'p2', slot: -1 },
+      { participantId: 'p2', slot: 0 },
+      { participantId: 'p2', slot: 1 },
+      { participantId: 'p2', slot: 2 },
+      { participantId: 'p2', slot: 3 },
+      { participantId: 'p2', slot: 4 },
+      { participantId: 'p1', slot: -1 },
+      { participantId: 'p1', slot: 0 },
+      { participantId: 'p1', slot: 1 },
+      { participantId: 'p1', slot: 2 },
+      { participantId: 'p1', slot: 3 },
+      { participantId: 'p1', slot: 4 },
+    ])
+  })
+
+  it('a participant with no loadout only contributes its flip step', () => {
+    const snap = snapshot({
+      mode: 'GAUNTLET',
+      participants: [participant({ id: 'p1' })],
+    })
+    expect(revealSteps(snap, 'p2')).toEqual([{ participantId: 'p1', slot: -1 }])
   })
 })

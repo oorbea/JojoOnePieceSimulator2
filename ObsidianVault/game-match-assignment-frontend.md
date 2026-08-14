@@ -71,6 +71,76 @@ stat grid, fruit type, all locale-independent or numeric). If localized power te
 on this card, look the power up by `id` in `useStands()`/`useDevilFruits()`'s already-viewer-locale
 cache instead of trusting the loadout payload - don't patch `RepoPowerPool` for this alone.
 
+## Reveal never actually played, and only revealed one card at a time (fixed 2026-08-14)
+
+The owner tried a real Gauntlet match: no reveal animation ever played (the countdown just ran with
+every card face-down), and pressing Skip dumped every loadout at once - matching exactly what
+"broken but only escapable via Skip" looks like.
+
+**Root cause**: `use-loadout-reveal.ts`'s scheduling effect depended on `[active, orderKey]` and
+returned `clearTimers` as its cleanup. But the very first thing that effect does is call
+`markRevealed()`, which bumps the socket store's `revealedAssignmentSeq` up to `assignmentSeq` -
+which is exactly what `shouldReveal()` (`loadout-reveal.ts`) gates on. So on the **very next
+render**, `active` flips `true → false`, React runs the previous effect's cleanup (`clearTimers`,
+since the dependency changed), and every just-scheduled `setTimeout` is cancelled before the first
+one could ever fire. `revealedCount` stayed at 0 forever; `revealing` stayed `true` forever (nothing
+ever set it `false`), which is why Skip kept showing. Skip itself was never broken - it doesn't go
+through this effect, so it always could (and did) reveal everything at once.
+
+**Fix**: the scheduling effect no longer returns a cleanup tied to `[active, stepsKey]` changing.
+Pending timers are only cleared (a) explicitly, right before a **new** sequence schedules its own
+timers (guarded by the existing `startedRef` re-entry check), and (b) on unmount, via a second
+effect with an empty dependency array. A new test
+(`hooks/__tests__/use-loadout-reveal.test.tsx`) reproduces the exact failure shape with a harness
+whose own `markRevealed()` flips `active` on the same tick, asserting the steps still fire - this is
+the only way to catch a regression here, since the "correct" code looks more suspicious (an effect
+with no `active`-keyed cleanup) than the buggy version did.
+
+**Lesson for any future effect that calls a callback capable of invalidating its own trigger
+condition**: don't return a cleanup tied to that same dependency. Clear stale side effects
+explicitly at the point a genuinely new run starts, not via the automatic cleanup-on-dependency-
+change machinery - that machinery fires on the transition the callback itself just caused.
+
+## Poder-a-poder reveal + Physical Form drawn first (2026-08-14, same pass)
+
+Two more owner reports from the same playtest, fixed together with the bug above:
+
+- **Reveal was one participant-card at a time (550ms each), never poder a poder.** Now each card's
+  loadout slots reveal individually after the card flips, in the exact order
+  `LoadoutBuilder.Build` draws them (see [[gameplay-domain-design]]'s Template Method entry for the
+  new draw order). `lib/loadout-reveal.ts`'s `revealSteps(snapshot, selfParticipantId)` flattens
+  `revealOrder` + per-participant `match-rules.ts`'s `loadoutSlots` into one global
+  `{ participantId, slot }` timeline (`slot: -1` = the card-flip step); `use-loadout-reveal.ts` walks
+  it with cumulative `flipStepMs`/`slotStepMs` delays (450ms/220ms, zeroed under reduced motion) and
+  returns `visibleSlotsById` alongside the existing `revealedIds`. `loadout-card.tsx` now builds its
+  own render rows from `loadoutSlots`, grouping consecutive scalar-chip slots into one flex-wrap row
+  while the Stand/DevilFruit art blocks stay their own full-width row - each block reserves its usual
+  fixed height (`110`/`90`) even before its slot is revealed, so a later slot popping in doesn't jump
+  the layout.
+- **"Only got a stand, physical form should come first."** Two independent causes: (a) the backend
+  drew Physical Form *last* - fixed, see [[gameplay-domain-design]]; (b) the card showed
+  Physical Form/Haki chips pinned at their `PRIVATE` floor even in a JoJo-only lobby (they have no
+  `NONE` member), which reads as "the game gave me nothing" instead of "this manga isn't in play".
+  `match-rules.ts`'s `loadoutTraits` was replaced by `loadoutSlots(loadout, mangas)`, which gates
+  every One Piece slot (physicalForm/devilFruit/fruitMastery/haki×3) on `mangas.includes('ONE_PIECE')`
+  and every JoJo slot (stand/hamon/spin) on `mangas.includes('JOJO')` - a single-manga lobby's card
+  now only ever shows slots that manga can actually produce.
+
+## Lobby manga selector moved out of "Lobby settings" (2026-08-14, same playtest)
+
+The owner also couldn't tell which manga(s) a lobby was playing without opening the collapsed
+config panel. The manga toggle (`MangaRow`, `components/presentational/manga-row.tsx`) moved to the
+main lobby screen, always visible, with a check-mark on the active chip (color alone wasn't a legible
+enough affordance) - removed entirely from `lobby-config-panel.tsx` rather than duplicated. Since
+every other field in that panel needs an explicit "Save", but this one has no separate save step, it
+autosaves: `lobby-room-container.tsx`'s `handleToggleConfigManga` computes the next `mangas` array
+and calls a new shared `submitConfigForm(next)` immediately, passing `next` explicitly rather than
+reading `form` state right after `setConfigForm` (which would still read the pre-toggle value, since
+React batches the state update). Same playtest also moved `NumberStepper` to
+`SettingRow`'s new `stacked` prop (label always above the control, not flipping to a wide row at
+`$md` inside the panel's narrow `flexBasis:320` columns, which is what put the "max players" label
+and its stepper at opposite ends of the row).
+
 ## Deliberately cut from this pass (§6's second half, not forgotten)
 
 Vote buttons, live vote counts, tiebreak-specific UI, round-resolved feedback, and the final result
