@@ -19,9 +19,13 @@ type Props = {
 // panel (team size, voting window) - promoted out of create-lobby-screen.tsx
 // so a second screen doesn't duplicate it. Built on `SettingRow` so its
 // label+control alignment matches every other field in both forms.
+// `stacked`: the owner reported the label sitting far from the stepper on
+// wide screens (`SettingRow`'s `$md` row layout spreads them to a
+// `flexBasis:320` column's two ends) - a stepper reads better with its
+// label directly above it at every breakpoint, unlike a row-style toggle.
 export function NumberStepper({ label, value, min, max, onChange, help }: Props) {
   return (
-    <SettingRow label={label} help={help}>
+    <SettingRow label={label} help={help} stacked>
       <XStack items="center" gap="$3">
         <GlossButton
           tone="glass"

@@ -1,4 +1,4 @@
-import { currentRound, hasAllLoadouts } from '@/features/game/lib/match-rules'
+import { currentRound, hasAllLoadouts, loadoutSlots } from '@/features/game/lib/match-rules'
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 
@@ -33,8 +33,46 @@ export function shouldReveal(live: LiveMatchState, snapshot: GameSnapshot): bool
   return round !== null && round.index === live.assignedRoundIndex
 }
 
-// revealStepMs is the delay between each card flipping, zeroed entirely
-// under reduced motion (an instant reveal, not a fast one).
-export function revealStepMs(reducedMotion: boolean): number {
-  return reducedMotion ? 0 : 550
+// A single tick of the reveal sequence: either "flip this participant's
+// card face-up" (slot === -1) or "show one more of that card's loadout
+// slots, in loadoutSlots' draw order" (slot === the slot's index). Flat
+// across every participant, in revealOrder, so use-loadout-reveal.ts can
+// walk one global timeline instead of per-card timers.
+export type RevealStep = { participantId: string; slot: number }
+
+// revealSteps expands revealOrder into the full poder-a-poder timeline: for
+// each participant in turn, a flip step followed by one step per loadout
+// slot they actually have (loadoutSlots already gates by
+// snapshot.config.mangas - a JoJo-only lobby never gets a physicalForm/
+// devilFruit/haki step, and vice versa). Assumes every included participant
+// already has a loadout, which shouldReveal's hasAllLoadouts check
+// guarantees by the time this is called.
+export function revealSteps(snapshot: GameSnapshot, selfParticipantId: string): RevealStep[] {
+  const order = revealOrder(snapshot, selfParticipantId)
+  const byId = new Map(snapshot.participants.map((p) => [p.id, p]))
+  const steps: RevealStep[] = []
+
+  for (const participantId of order) {
+    steps.push({ participantId, slot: -1 })
+    const loadout = byId.get(participantId)?.loadout
+    if (!loadout) continue
+    const slotCount = loadoutSlots(loadout, snapshot.config.mangas).length
+    for (let slot = 0; slot < slotCount; slot++) {
+      steps.push({ participantId, slot })
+    }
+  }
+
+  return steps
+}
+
+// flipStepMs/slotStepMs are the delay for a card-flip step vs. a
+// single-slot reveal step, both zeroed entirely under reduced motion (an
+// instant reveal, not a fast one). flipStepMs matches LoadoutCard's own
+// Reanimated flip duration (450ms) so the next step never fires mid-flip.
+export function flipStepMs(reducedMotion: boolean): number {
+  return reducedMotion ? 0 : 450
+}
+
+export function slotStepMs(reducedMotion: boolean): number {
+  return reducedMotion ? 0 : 220
 }

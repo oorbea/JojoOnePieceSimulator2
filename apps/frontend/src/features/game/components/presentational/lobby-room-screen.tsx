@@ -7,6 +7,7 @@ import { ConnectionBanner } from '@/features/game/components/presentational/conn
 import { JoinCodeCard } from '@/features/game/components/presentational/join-code-card'
 import { LobbyConfigPanel } from '@/features/game/components/presentational/lobby-config-panel'
 import { LobbyLockRow } from '@/features/game/components/presentational/lobby-lock-row'
+import { MangaRow } from '@/features/game/components/presentational/manga-row'
 import { MatchScreen } from '@/features/game/components/presentational/match/match-screen'
 import { SquadRoster } from '@/features/game/components/presentational/squad-roster'
 import { StartBar } from '@/features/game/components/presentational/start-bar'
@@ -74,6 +75,7 @@ type Props = {
   onSubmitConfig: () => void
   live: LiveMatchState
   revealedIds: Set<string>
+  visibleSlotsById: Record<string, number>
   isRevealing: boolean
   onSkipReveal: () => void
   reducedMotion: boolean
@@ -126,6 +128,7 @@ export function LobbyRoomScreen({
   onSubmitConfig,
   live,
   revealedIds,
+  visibleSlotsById,
   isRevealing,
   onSkipReveal,
   reducedMotion,
@@ -150,6 +153,14 @@ export function LobbyRoomScreen({
             isPublic={snapshot.config.visibility === 'PUBLIC'}
             onCopy={onCopyCode}
             onShare={onShareCode}
+          />
+
+          <MangaRow
+            mangas={configMangas}
+            isHost={you.isHost}
+            onToggle={onToggleConfigManga}
+            saving={configSaving}
+            saved={configSaved}
           />
 
           {snapshot.mode === 'VERSUS' ? (
@@ -195,7 +206,6 @@ export function LobbyRoomScreen({
               mode={configMode}
               onChangeMode={onChangeConfigMode}
               mangas={configMangas}
-              onToggleManga={onToggleConfigManga}
               teamSize={configTeamSize}
               teamSizeMin={configTeamSizeMin}
               teamSizeMax={configTeamSizeMax}
@@ -231,6 +241,7 @@ export function LobbyRoomScreen({
           onRetryNow={onRetryNow}
           live={live}
           revealedIds={revealedIds}
+          visibleSlotsById={visibleSlotsById}
           isRevealing={isRevealing}
           onSkipReveal={onSkipReveal}
           reducedMotion={reducedMotion}
