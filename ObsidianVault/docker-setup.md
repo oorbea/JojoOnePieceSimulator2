@@ -66,6 +66,28 @@ Prod image built + run standalone: `docker run` + curl confirmed `/`, `/manifest
 
 Also added a `backend` healthcheck to the base file (`wget -qO- http://localhost:${PORT:-8080}/health`, busybox wget already in the alpine runtime image) — needed by the CD pipeline to know when the new container is actually ready, see [[cicd-deployment]].
 
+## `EXPO_PUBLIC_SOCKET_URL` finally set (2026-08-14)
+
+Was blank in every `.env`/`.env.example` since the WS transport shipped ([[game-realtime-transport]])
+— the frontend socket client (`features/game/lib/socket-url.ts`) treated an empty value as "realtime
+unavailable" and silently fell back to REST polling. Now set to the same origin/path as
+`EXPO_PUBLIC_API_URL`, just `ws(s)://` instead of `http(s)://` (the socket route is
+`GET /api/v1/games/{id}/ws`, same host as the REST API):
+
+- `deployments/.env` / `apps/frontend/.env` (local): `ws://localhost:8080/api/v1`.
+- **Production**: `wss://jojo-one-piece-simulator.duckdns.org/api/v1` — set as a GitHub repo
+  **variable** (not secret) named `EXPO_PUBLIC_SOCKET_URL`, since `cd.yml` generates
+  `deployments/.env` from repo vars/secrets on every deploy (see [[cicd-deployment]]) rather than
+  reading a file committed to the server.
+- Also added to `.github/workflows/ci.yml`'s frontend image build args (`ws://localhost:8080/api/v1`)
+  so the CI-built bundle exercises the real socket path instead of an empty one.
+- **Two infra prerequisites, not code**: (1) Nginx Proxy Manager's proxy host for the domain needs
+  "Websockets Support" turned on, or the upgrade request 400s/502s. (2) the backend validates the
+  socket's `Origin` against `CORS_ALLOWED_ORIGINS` (`game_ws_endpoints.go`'s `originPatterns`) — prod
+  already sets that to the duckdns domain ([[docker-setup]] above), so no extra change needed there,
+  but a bare `expo start` dev session on port 8081 (instead of the dockerized 3000) would need its
+  own origin added or the handshake gets rejected.
+
 ## Docker-based test runners (2026-08-09)
 
 `deployments/docker-compose.test.yml` adds a `backend-test` service
