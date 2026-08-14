@@ -21,6 +21,13 @@ type GameEvent struct {
 	// compute VOTING_OPENED/TIEBREAK_OPENED's closesAt instead of the
 	// service-wide default, since each lobby may now configure its own.
 	VotingWindow time.Duration
+	// RevealMs is g.RevealDuration(g.Config().Mangas()) at the moment this
+	// event was published - the transport attaches it to LOADOUTS_ASSIGNED
+	// so every client can pace its reveal overlay to the exact same
+	// duration the server used to delay OpenVoting (see GameService.
+	// scheduleRevealDelay). Same "compute once here, transport just reads
+	// it" pattern as VotingWindow.
+	RevealMs time.Duration
 }
 
 // GameEventHub is an in-process, single-instance pub/sub for GameEvents,

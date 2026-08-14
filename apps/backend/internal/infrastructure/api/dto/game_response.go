@@ -2,6 +2,7 @@ package dto
 
 import (
 	"context"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
@@ -157,6 +158,9 @@ type GameSnapshotResponse struct {
 	Participants []GameParticipantResponse `json:"participants"`
 	Rounds       []GameRoundResponse       `json:"rounds"`
 	Result       *GameResultResponse       `json:"result,omitempty"`
+	// RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a
+	// pending reveal - see NewGameStateResponse's revealEndsAt param.
+	RevealEndsAt *string `json:"revealEndsAt,omitempty"`
 }
 
 // GameViewerResponse is the cheap, per-viewer convenience block - everything
@@ -180,6 +184,10 @@ type GameStateResponse struct {
 // NewGameStateResponse builds a GameStateResponse for self's point of view.
 // resolveStand/resolveFruit resolve a Stand/DevilFruit's picture key into a
 // URL, same signature as StandService.PictureURL/DevilFruitService.PictureURL.
+// revealEndsAt is the in-flight reveal deadline for g (see GameService.
+// RevealEndsAt) - nil unless g is currently ASSIGNING with a pending
+// reveal, which is what lets a (re)connecting client resume the countdown
+// instead of restarting the reveal animation from zero.
 func NewGameStateResponse(
 	ctx context.Context,
 	g *game.Game,
@@ -187,6 +195,7 @@ func NewGameStateResponse(
 	self game.ParticipantID,
 	resolveStand, resolveFruit, resolveStagePicture PictureURLResolver,
 	resolveStageDescription StageTextResolver,
+	revealEndsAt *time.Time,
 ) (GameStateResponse, error) {
 	teams := make([]GameTeamResponse, 0, len(g.Teams()))
 	for _, t := range g.Teams() {
@@ -285,6 +294,12 @@ func NewGameStateResponse(
 		}
 	}
 
+	var revealEndsAtStr *string
+	if revealEndsAt != nil {
+		s := revealEndsAt.Format(time.RFC3339)
+		revealEndsAtStr = &s
+	}
+
 	return GameStateResponse{
 		Game: GameSnapshotResponse{
 			ID:     g.ID().String(),
@@ -306,6 +321,7 @@ func NewGameStateResponse(
 			Participants: participants,
 			Rounds:       rounds,
 			Result:       result,
+			RevealEndsAt: revealEndsAtStr,
 		},
 		You: viewer,
 	}, nil
