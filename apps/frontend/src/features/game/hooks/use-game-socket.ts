@@ -15,10 +15,12 @@ export function useGameSocket(gameId: string | null) {
   const terminal = useGameSocketStore((s) => s.terminal)
   const lastError = useGameSocketStore((s) => s.lastError)
   const nextRetryAt = useGameSocketStore((s) => s.nextRetryAt)
+  const live = useGameSocketStore((s) => s.live)
   const send = useGameSocketStore((s) => s.send)
   const retryNow = useGameSocketStore((s) => s.retryNow)
   const attach = useGameSocketStore((s) => s.attach)
   const detach = useGameSocketStore((s) => s.detach)
+  const markAssignmentRevealed = useGameSocketStore((s) => s.markAssignmentRevealed)
 
   useEffect(() => {
     if (!gameId) return
@@ -42,7 +44,9 @@ export function useGameSocket(gameId: string | null) {
     terminal,
     lastError,
     nextRetryAt,
+    live,
     send,
     retryNow,
+    markAssignmentRevealed,
   }
 }

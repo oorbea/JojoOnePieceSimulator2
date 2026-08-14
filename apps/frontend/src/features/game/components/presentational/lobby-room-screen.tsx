@@ -7,16 +7,16 @@ import { ConnectionBanner } from '@/features/game/components/presentational/conn
 import { JoinCodeCard } from '@/features/game/components/presentational/join-code-card'
 import { LobbyConfigPanel } from '@/features/game/components/presentational/lobby-config-panel'
 import { LobbyLockRow } from '@/features/game/components/presentational/lobby-lock-row'
+import { MatchScreen } from '@/features/game/components/presentational/match/match-screen'
 import { SquadRoster } from '@/features/game/components/presentational/squad-roster'
 import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
 import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
 import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
-import type { SocketStatus } from '@/features/game/stores/game-socket.store'
+import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
-import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 
@@ -72,6 +72,11 @@ type Props = {
   configSaved: boolean
   configError?: string
   onSubmitConfig: () => void
+  live: LiveMatchState
+  revealedIds: Set<string>
+  isRevealing: boolean
+  onSkipReveal: () => void
+  reducedMotion: boolean
 }
 
 export function LobbyRoomScreen({
@@ -119,6 +124,11 @@ export function LobbyRoomScreen({
   configSaved,
   configError,
   onSubmitConfig,
+  live,
+  revealedIds,
+  isRevealing,
+  onSkipReveal,
+  reducedMotion,
 }: Props) {
   const { t } = useTranslation()
   const capacity = snapshot.config.teamSize
@@ -126,96 +136,106 @@ export function LobbyRoomScreen({
 
   return (
     <PageShell align="top" scroll maxWidth={1080}>
-      <ConnectionBanner status={socketStatus} nextRetryAt={nextRetryAt} onRetryNow={onRetryNow} />
+      {snapshot.state === 'LOBBY' ? (
+        <>
+          <ConnectionBanner status={socketStatus} nextRetryAt={nextRetryAt} onRetryNow={onRetryNow} />
 
-      <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$2">
-        <GlowText level="title">{t(`enums.gameMode.${snapshot.mode}`)}</GlowText>
-        <LobbyLockRow locked={snapshot.locked} isHost={you.isHost} onToggle={onToggleLock} />
-      </XStack>
+          <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$2">
+            <GlowText level="title">{t(`enums.gameMode.${snapshot.mode}`)}</GlowText>
+            <LobbyLockRow locked={snapshot.locked} isHost={you.isHost} onToggle={onToggleLock} />
+          </XStack>
 
-      <JoinCodeCard
-        code={snapshot.code}
-        isPublic={snapshot.config.visibility === 'PUBLIC'}
-        onCopy={onCopyCode}
-        onShare={onShareCode}
-      />
+          <JoinCodeCard
+            code={snapshot.code}
+            isPublic={snapshot.config.visibility === 'PUBLIC'}
+            onCopy={onCopyCode}
+            onShare={onShareCode}
+          />
 
-      {snapshot.mode === 'VERSUS' ? (
-        <YStack width="100%" gap="$3" $md={{ flexDirection: 'row' }}>
-          {snapshot.teams.map((team, index) => (
-            <TeamColumn
-              key={team.id}
-              team={team}
-              tone={teamTone(index)}
-              participants={snapshot.participants.filter((p) => p.teamId === team.id)}
+          {snapshot.mode === 'VERSUS' ? (
+            <YStack width="100%" gap="$3" $md={{ flexDirection: 'row' }}>
+              {snapshot.teams.map((team, index) => (
+                <TeamColumn
+                  key={team.id}
+                  team={team}
+                  tone={teamTone(index)}
+                  participants={snapshot.participants.filter((p) => p.teamId === team.id)}
+                  hostId={snapshot.hostId}
+                  selfId={you.participantId}
+                  capacity={capacity}
+                  canJoin={you.teamId !== team.id && snapshot.state === 'LOBBY'}
+                  isHost={you.isHost}
+                  onJoin={() => onJoinTeam(team.id)}
+                  onKick={onKick}
+                  onTransferHost={onTransferHost}
+                />
+              ))}
+            </YStack>
+          ) : (
+            <SquadRoster
+              participants={snapshot.participants}
               hostId={snapshot.hostId}
               selfId={you.participantId}
               capacity={capacity}
-              canJoin={you.teamId !== team.id && snapshot.state === 'LOBBY'}
               isHost={you.isHost}
-              onJoin={() => onJoinTeam(team.id)}
               onKick={onKick}
               onTransferHost={onTransferHost}
             />
-          ))}
-        </YStack>
-      ) : (
-        <SquadRoster
-          participants={snapshot.participants}
-          hostId={snapshot.hostId}
-          selfId={you.participantId}
-          capacity={capacity}
-          isHost={you.isHost}
-          onKick={onKick}
-          onTransferHost={onTransferHost}
-        />
-      )}
+          )}
 
-      <FilterDisclosure
-        label={t('game.config.title')}
-        activeCount={0}
-        expanded={configExpanded}
-        onToggle={() => setConfigExpanded((v) => !v)}
-        clearLabel=""
-      >
-        <LobbyConfigPanel
-          isHost={you.isHost}
-          mode={configMode}
-          onChangeMode={onChangeConfigMode}
-          mangas={configMangas}
-          onToggleManga={onToggleConfigManga}
-          teamSize={configTeamSize}
-          teamSizeMin={configTeamSizeMin}
-          teamSizeMax={configTeamSizeMax}
-          onChangeTeamSize={onChangeConfigTeamSize}
-          allowBots={configAllowBots}
-          onToggleAllowBots={onToggleConfigAllowBots}
-          visibility={configVisibility}
-          onToggleVisibility={onToggleConfigVisibility}
-          votingWindowSeconds={configVotingWindowSeconds}
-          onChangeVotingWindow={onChangeConfigVotingWindow}
-          poolFilter={configPoolFilter}
-          poolActiveCount={configPoolActiveCount}
-          banlistItems={configBanlistItems}
-          onAddBan={onAddConfigBan}
-          onRemoveBan={onRemoveConfigBan}
-          onBanMatching={onBanMatchingConfig}
-          onClearPoolFilter={onClearConfigPoolFilter}
-          saving={configSaving}
-          saved={configSaved}
-          error={configError}
-          onSubmit={onSubmitConfig}
-        />
-      </FilterDisclosure>
+          <FilterDisclosure
+            label={t('game.config.title')}
+            activeCount={0}
+            expanded={configExpanded}
+            onToggle={() => setConfigExpanded((v) => !v)}
+            clearLabel=""
+          >
+            <LobbyConfigPanel
+              isHost={you.isHost}
+              mode={configMode}
+              onChangeMode={onChangeConfigMode}
+              mangas={configMangas}
+              onToggleManga={onToggleConfigManga}
+              teamSize={configTeamSize}
+              teamSizeMin={configTeamSizeMin}
+              teamSizeMax={configTeamSizeMax}
+              onChangeTeamSize={onChangeConfigTeamSize}
+              allowBots={configAllowBots}
+              onToggleAllowBots={onToggleConfigAllowBots}
+              visibility={configVisibility}
+              onToggleVisibility={onToggleConfigVisibility}
+              votingWindowSeconds={configVotingWindowSeconds}
+              onChangeVotingWindow={onChangeConfigVotingWindow}
+              poolFilter={configPoolFilter}
+              poolActiveCount={configPoolActiveCount}
+              banlistItems={configBanlistItems}
+              onAddBan={onAddConfigBan}
+              onRemoveBan={onRemoveConfigBan}
+              onBanMatching={onBanMatchingConfig}
+              onClearPoolFilter={onClearConfigPoolFilter}
+              saving={configSaving}
+              saved={configSaved}
+              error={configError}
+              onSubmit={onSubmitConfig}
+            />
+          </FilterDisclosure>
 
-      {snapshot.state === 'LOBBY' ? (
-        <StartBar isHost={you.isHost} gate={gate} starting={starting} onStart={onStart} onLeave={onLeave} onAbort={onAbort} />
+          <StartBar isHost={you.isHost} gate={gate} starting={starting} onStart={onStart} onLeave={onLeave} onAbort={onAbort} />
+        </>
       ) : (
-        <GlassPanel tone="strong" width="100%" p="$4">
-          <GlowText level="label" align="center">
-            {t(`enums.gameState.${snapshot.state}`)}
-          </GlowText>
-        </GlassPanel>
+        <MatchScreen
+          snapshot={snapshot}
+          you={you}
+          socketStatus={socketStatus}
+          nextRetryAt={nextRetryAt}
+          onRetryNow={onRetryNow}
+          live={live}
+          revealedIds={revealedIds}
+          isRevealing={isRevealing}
+          onSkipReveal={onSkipReveal}
+          reducedMotion={reducedMotion}
+          onAbort={onAbort}
+        />
       )}
 
       <ConfirmSheet

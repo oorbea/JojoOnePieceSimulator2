@@ -67,9 +67,24 @@ export function canTransferHost(snapshot: GameSnapshot, you: GameViewer, targetP
 }
 
 const TEAM_TONES = ['blue', 'red', 'green', 'grape'] as const
+export type TeamTone = (typeof TEAM_TONES)[number]
 
 // teamTone maps a team's index onto a stable palette token, never a raw
 // color - the same tones ChannelTile/GlossButton already use.
-export function teamTone(index: number): (typeof TEAM_TONES)[number] {
+export function teamTone(index: number): TeamTone {
   return TEAM_TONES[index % TEAM_TONES.length]
+}
+
+// teamToneColor resolves a tone to its actual Tamagui token - extracted from
+// team-column.tsx's own TONE_BG map so both TeamColumn and the in-match
+// roster (match-roster.tsx) share one definition instead of duplicating it.
+const TONE_COLORS: Record<TeamTone, string> = {
+  blue: '$wiiBlue',
+  red: '$strawHatRed',
+  green: '$meadowGreen',
+  grape: '$grapeSoda',
+}
+
+export function teamToneColor(tone: TeamTone): string {
+  return TONE_COLORS[tone]
 }
