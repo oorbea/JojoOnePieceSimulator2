@@ -18,6 +18,29 @@ type FeedEntry = { id: number; type: string; at: number }
 
 type LastError = { code?: string; message: string; requestId?: string }
 
+// In-match live signal: not part of `snapshot` (which is replaced wholesale
+// on STATE and never touched anywhere else) - LOADOUTS_ASSIGNED/
+// VOTING_OPENED/TIEBREAK_OPENED/ROUND_RESOLVED arrive as their own frames,
+// often before their own pushCurrentState, so they're tracked separately and
+// the reveal gating (features/game/lib/loadout-reveal.ts) cross-checks both.
+export type LiveMatchState = {
+  assignmentSeq: number
+  revealedAssignmentSeq: number
+  assignedRoundIndex: number | null
+  votingRoundIndex: number | null
+  votingClosesAt: number | null
+  tiebreak: boolean
+}
+
+const INITIAL_LIVE: LiveMatchState = {
+  assignmentSeq: 0,
+  revealedAssignmentSeq: 0,
+  assignedRoundIndex: null,
+  votingRoundIndex: null,
+  votingClosesAt: null,
+  tiebreak: false,
+}
+
 type SocketFactory = (url: string) => WebSocket
 
 type GameSocketState = {
@@ -29,12 +52,14 @@ type GameSocketState = {
   feed: FeedEntry[]
   reconnectAttempts: number
   nextRetryAt: number | null
+  live: LiveMatchState
 
   attach: (gameId: string, socketFactory?: SocketFactory) => void
   detach: () => void
   send: (type: ClientCommandType, payload?: Record<string, unknown>) => string
   retryNow: () => void
   reset: () => void
+  markAssignmentRevealed: () => void
 }
 
 // Module-level (not zustand state, deliberately): a live WebSocket isn't
@@ -155,8 +180,54 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           get().send('RESYNC' as ClientCommandType)
           break
         case SERVER_FRAME.VOTE_CAST:
-          // High-frequency, self-describing, no snapshot impact - the
-          // in-match tanda will render live.votesCast from here.
+          // High-frequency, self-describing, no snapshot impact. Known
+          // backend bug: votesCast is always 0 (never set server-side), so
+          // this stays a no-op signal rather than rendering a live count.
+          break
+        case SERVER_FRAME.LOADOUTS_ASSIGNED: {
+          // Sent BEFORE its own pushCurrentState, so `snapshot` here may
+          // still be pre-assignment - never touch snapshot/feed from this
+          // case. hasAllLoadouts/currentRound (match-rules.ts) gate the
+          // actual reveal on the snapshot catching up.
+          const payload = frame.payload as { roundIndex?: number } | undefined
+          set((state) => ({
+            live: {
+              ...state.live,
+              assignmentSeq: state.live.assignmentSeq + 1,
+              assignedRoundIndex: payload?.roundIndex ?? null,
+            },
+          }))
+          break
+        }
+        case SERVER_FRAME.VOTING_OPENED: {
+          const payload = frame.payload as { roundIndex?: number; closesAt?: string } | undefined
+          set((state) => ({
+            live: {
+              ...state.live,
+              votingRoundIndex: payload?.roundIndex ?? null,
+              votingClosesAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
+              tiebreak: false,
+            },
+          }))
+          break
+        }
+        case SERVER_FRAME.TIEBREAK_OPENED: {
+          const payload = frame.payload as { roundIndex?: number; closesAt?: string } | undefined
+          set((state) => ({
+            live: {
+              ...state.live,
+              votingRoundIndex: payload?.roundIndex ?? null,
+              votingClosesAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
+              tiebreak: true,
+            },
+          }))
+          break
+        }
+        case SERVER_FRAME.ROUND_RESOLVED:
+          set((state) => ({
+            live: { ...state.live, votingRoundIndex: null, votingClosesAt: null },
+          }))
+          pushFeed(frame.type)
           break
         default:
           pushFeed(frame.type)
@@ -194,6 +265,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
     feed: [],
     reconnectAttempts: 0,
     nextRetryAt: null,
+    live: INITIAL_LIVE,
 
     attach: (gameId, socketFactory) => {
       if (socketFactory) socketFactoryRef = socketFactory
@@ -211,6 +283,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           feed: [],
           reconnectAttempts: 0,
           nextRetryAt: null,
+          live: INITIAL_LIVE,
         })
       }
       refCount += 1
@@ -252,7 +325,12 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         feed: [],
         reconnectAttempts: 0,
         nextRetryAt: null,
+        live: INITIAL_LIVE,
       })
+    },
+
+    markAssignmentRevealed: () => {
+      set((state) => ({ live: { ...state.live, revealedAssignmentSeq: state.live.assignmentSeq } }))
     },
   }
 })
