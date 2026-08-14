@@ -111,9 +111,22 @@ type GameService struct {
 	locks *gameLocks
 
 	timersMu sync.Mutex
-	// timers holds the pending voting-window (or revote-window) timer for
-	// each Game currently in VOTING/TIEBREAK, keyed by GameID.
+	// timers holds the pending timer for each Game currently in
+	// ASSIGNING/VOTING/TIEBREAK, keyed by GameID - either the reveal-delay
+	// timer (see openVotingAfterReveal) or the voting-window/revote timer
+	// (see scheduleVotingTimer). The two never coexist for the same GameID:
+	// the reveal timer fires, opens voting, and only then does the voting
+	// timer take its place in this same map - so cancelTimer's single
+	// Stop+delete already covers whichever one is currently pending.
 	timers map[game.GameID]Timer
+	// revealEnds holds the wall-clock deadline of the in-flight reveal
+	// animation for each Game currently in ASSIGNING with a pending reveal
+	// timer, keyed by GameID - read by RevealEndsAt so a client
+	// joining/reconnecting mid-reveal can resume the countdown instead of
+	// restarting it. Process memory only, like timers itself: a backend
+	// restart mid-reveal loses this (and its timer), the same known gap
+	// scheduleVotingTimer already has.
+	revealEnds map[game.GameID]time.Time
 }
 
 // NewGameService builds a GameService. history may be nil until an
@@ -138,9 +151,10 @@ func NewGameService(
 		store: store, gameIDs: gameIDs, partIDs: partIDs, teamIDs: teamIDs,
 		users: users, stages: stages, powers: powerPool, weights: weights,
 		tiebreak: tiebreak, history: history, rng: rng, hub: hub, clock: clock,
-		votingCfg: votingCfg,
-		locks:     newGameLocks(),
-		timers:    make(map[game.GameID]Timer),
+		votingCfg:  votingCfg,
+		locks:      newGameLocks(),
+		timers:     make(map[game.GameID]Timer),
+		revealEnds: make(map[game.GameID]time.Time),
 	}
 }
 
@@ -510,11 +524,16 @@ func (s *GameService) checkPoolSufficiency(ctx context.Context, g *game.Game) er
 }
 
 // beginRound resolves fresh Loadouts (when this is the first round, or the
-// mode reassigns every round - see game.IGameMode.ReassignsEachRound), opens
-// the round's Ballot, and starts its voting-window timer. Callers must
-// already hold g's lock (i.e. call this from inside withGame's fn).
+// mode reassigns every round - see game.IGameMode.ReassignsEachRound) and,
+// only when it just did, delays OpenVoting until the reveal animation every
+// client plays has had time to finish (see scheduleRevealDelay) - the Game
+// stays in ASSIGNING for that stretch. Rounds that don't reassign (Gauntlet
+// rounds after the first) have nothing new to reveal, so voting opens
+// immediately as before. Callers must already hold g's lock (i.e. call this
+// from inside withGame's fn).
 func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
-	if len(g.Rounds()) == 0 || g.Mode().ReassignsEachRound() {
+	assigned := len(g.Rounds()) == 0 || g.Mode().ReassignsEachRound()
+	if assigned {
 		weights, err := s.weights.Load(ctx)
 		if err != nil {
 			return err
@@ -543,11 +562,76 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 		}
 	}
 
+	if assigned {
+		s.scheduleRevealDelay(g)
+		return nil
+	}
 	if err := g.OpenVoting(s.rng); err != nil {
 		return err
 	}
 	s.scheduleVotingTimer(g)
 	return nil
+}
+
+// scheduleRevealDelay holds g in ASSIGNING for game.RevealDuration(mangas) -
+// every client computes that same duration locally (loadout-reveal.ts) to
+// pace its reveal overlay, so this is what keeps "voting opens" from ever
+// racing ahead of "everyone has seen their loadout". Once the delay elapses,
+// openVotingAfterReveal does what beginRound used to do immediately:
+// OpenVoting + scheduleVotingTimer. Uses the same s.timers map as the voting
+// timer (see its field doc) and records the deadline in s.revealEnds for
+// RevealEndsAt to serve to (re)connecting clients.
+func (s *GameService) scheduleRevealDelay(g *game.Game) {
+	id := g.ID()
+	d := game.RevealDuration(g.Config().Mangas())
+
+	s.timersMu.Lock()
+	s.revealEnds[id] = s.clock.Now().Add(d)
+	s.timersMu.Unlock()
+
+	timer := s.clock.AfterFunc(d, func() {
+		s.openVotingAfterReveal(context.Background(), id)
+	})
+	s.timersMu.Lock()
+	s.timers[id] = timer
+	s.timersMu.Unlock()
+}
+
+// openVotingAfterReveal is scheduleRevealDelay's callback: it re-acquires
+// g's lock via withGame and only then opens voting, so it never races a
+// concurrent AbortGame/CastVote against the same Game.
+func (s *GameService) openVotingAfterReveal(ctx context.Context, id game.GameID) {
+	s.timersMu.Lock()
+	delete(s.revealEnds, id)
+	s.timersMu.Unlock()
+
+	_, err := s.withGame(ctx, id, func(g *game.Game) error {
+		if err := g.OpenVoting(s.rng); err != nil {
+			return err
+		}
+		s.scheduleVotingTimer(g)
+		return nil
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, ports.ErrGameNotFound), errors.Is(err, game.ErrInvalidStateTransition):
+			// Benign: the Game was aborted/removed, or someone else already
+			// moved it out of ASSIGNING, before this timer fired.
+		default:
+			log.Printf("opening voting after reveal for game %s: %v", id, err)
+		}
+	}
+}
+
+// RevealEndsAt reports id's in-flight reveal deadline, if any - used to
+// serve a (re)connecting client the remaining time instead of restarting
+// the reveal from zero. The bool is false once the reveal has ended (or
+// never started).
+func (s *GameService) RevealEndsAt(id game.GameID) (time.Time, bool) {
+	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	t, ok := s.revealEnds[id]
+	return t, ok
 }
 
 // --- Voting ---
@@ -795,8 +879,9 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 // and fans them out over hub.
 func (s *GameService) publish(g *game.Game) {
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
+	revealMs := game.RevealDuration(g.Config().Mangas())
 	for _, e := range g.PullEvents() {
-		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window})
+		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window, RevealMs: revealMs})
 	}
 }
 
@@ -828,6 +913,7 @@ func (s *GameService) scheduleVotingTimer(g *game.Game) {
 func (s *GameService) cancelTimer(id game.GameID) {
 	s.timersMu.Lock()
 	defer s.timersMu.Unlock()
+	delete(s.revealEnds, id)
 	if t, ok := s.timers[id]; ok {
 		t.Stop()
 		delete(s.timers, id)
