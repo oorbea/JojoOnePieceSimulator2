@@ -40,19 +40,22 @@ start/assignment/voting-open have been complete and tested since
 
 ## The reveal-timing bug this avoided
 
-`GameService.StartGame` runs start → `beginRound` (assign + `OpenVoting`) inside **one** `withGame`
-call, and events publish only after it returns. So a client observes, strictly in order:
+**Superseded 2026-08-14 - see the "Sorteo redesign" section below.** Originally,
+`GameService.StartGame` ran start → `beginRound` (assign + `OpenVoting`) inside **one** `withGame`
+call, and events published only after it returned, so a client observed, strictly in order:
 `GAME_STARTED` → `STATE` (already `state=VOTING`, loadouts present) → `LOADOUTS_ASSIGNED` → `STATE`
-→ `VOTING_OPENED` → `STATE`. Two consequences baked into `lib/loadout-reveal.ts`'s `shouldReveal`:
+→ `VOTING_OPENED` → `STATE`. That made `ASSIGNING` genuinely unobservable (`OpenVoting` always ran
+before the client could ever see a `STATE` frame in between) - true then, **false now**:
+`GameService.scheduleRevealDelay` deliberately holds the Game in `ASSIGNING`, with zero Rounds, for
+the whole sorteo, and that window is exactly what the reveal overlay covers. The other consequence
+below still holds and is still handled the same way:
 
-1. **`ASSIGNING` is never realistically observable by a client** - no UI branches on it, and the
-   reveal is never gated on `snapshot.state`.
-2. **`LOADOUTS_ASSIGNED` arrives before its own `STATE` resend.** At the instant the frame bumps
-   `live.assignmentSeq`, `snapshot` may still be the pre-assignment one. `shouldReveal` gates on
-   *both* `assignmentSeq > revealedAssignmentSeq` *and* `hasAllLoadouts(snapshot)` *and* the
-   snapshot's current round index matching the assigned one - never on the frame alone. Getting
-   this wrong would have shown a reveal animation over stale/empty loadout data on the very first
-   assignment of every game.
+**`LOADOUTS_ASSIGNED` arrives before its own `STATE` resend.** At the instant the frame bumps
+`live.assignmentSeq`, `snapshot` may still be the pre-assignment one. `shouldReveal` gates on *both*
+`assignmentSeq > revealedAssignmentSeq` *and* `hasAllLoadouts(snapshot)` - never on the frame alone.
+Getting this wrong would have shown a reveal animation over stale/empty loadout data on the very
+first assignment of every game. (It no longer also gates on the round index matching - see the
+"Sorteo redesign" section's bug writeup for why that check itself became the problem.)
 
 ## Known backend bug worked around, not fixed
 
@@ -146,6 +149,68 @@ and its stepper at opposite ends of the row).
 Vote buttons, live vote counts, tiebreak-specific UI, round-resolved feedback, and the final result
 screen (`GAME_FINISHED` still just toasts and routes to `/play`, as before this tanda). See
 [[game-lobby-todo]]'s §6 for the reasoning on why that's a separate tanda.
+
+## Sorteo redesign: Wii Party-style ruleta, V1 tempo, voting waits for it (2026-08-14)
+
+A real playtest surfaced four more problems on top of the ones above (manga visibility, stepper
+layout - already covered elsewhere), all fixed together in one pass:
+
+1. **The reveal had zero suspense** - a 450ms flip + 220ms per slot, card by card, over almost
+   before it started.
+2. **Voting was already open while the reveal played.** `GameService.beginRound` called
+   `OpenVoting`+`scheduleVotingTimer` in the same synchronous call as `AssignLoadouts` - the
+   deadline started ticking before anyone had seen a single power.
+3. The owner wanted the tempo and ceremony of the original terminal-based
+   *JoJoOnePiece_Simulator* (`github.com/oorbea/JoJoOnePiece_Simulator`), which paced a `delay(2.5)`
+   hold after each power behind a `loadingScreen()` suspense beat.
+4. A Wii Party-style spinning ruleta per participant, landing on the real answer - not just an
+   instant pop-in.
+
+**What shipped**: `game.RevealDuration(mangas)` (`apps/backend/.../reveal.go`) is a pure function of
+a lobby's mangas alone - never of the actual random draws, so both backend and frontend
+(`lib/loadout-reveal.ts`'s `revealDurationMs`) compute the identical total without exchanging
+anything beyond `mangas` itself. `GameService.scheduleRevealDelay` (see
+[[gameplay-application-layer]]) holds the Game in `ASSIGNING` for exactly that long before calling
+`OpenVoting` - voting genuinely cannot open before the sorteo's own deadline, closing the gap in
+problem 2 for real (not just cosmetically, as the old "hide the countdown while revealing" UI did).
+`LOADOUTS_ASSIGNED`'s payload gained `revealMs`, the frontend's authoritative pacing input (see
+`useLoadoutReveal`) - a constants drift between the two sides degrades the ruleta's pacing rather
+than desyncing "reveal looks done" from "voting is actually open". `GameStateResponse` gained
+`revealEndsAt` so a (re)connecting client can resume the countdown.
+
+The reveal is now **poder a poder for every participant at once** (not participant a participant):
+slot N always means the same slot for the whole lobby, driven by one global phase index
+(`intro → [spin, land] × N slots → outro`), shown in a dedicated overlay (`match/reveal-stage.tsx`)
+instead of animating the roster cards directly - `RevealLane`/`PowerRoulette` render one Wii
+Party-style vertical slot-reel per participant, decorated with real catalog names (Stand/DevilFruit)
+or every enum member (scalar slots) as filler, always landing on that participant's own actual
+loadout value. `LoadoutCard` lost its flip animation and `visibleSlots` entirely - it only ever
+renders a finished loadout now, since the ceremony happens in the overlay before the card ever
+mounts. `loadoutSlots` (`match-rules.ts`) no longer omits a `NONE` spin/hamon/fruitMastery - every
+slot a manga can produce is now always included (with its NONE value if that's what it drew), which
+is what makes the slot **count** a pure function of `mangas` alone (mirrored on the backend as
+`RevealSlots`). Tempo, roughly modeled on V1's `loadingScreen`/`delay` pacing but with the 10s
+Stand-description hold trimmed to 4s (this card never renders a power's description - see the
+locale-gap note below): ~1.1s intro, ~1.65s spin per slot, 2.5s hold per scalar slot / 4s for the
+Stand/DevilFruit art blocks, ~3.3s outro. Full lobby (both mangas): ~45s. JoJo-only: ~18s.
+
+### The bug this uncovered: `shouldReveal` assumed a Round already existed
+
+`shouldReveal` used to require `currentRound(snapshot).index === live.assignedRoundIndex` as proof
+the snapshot had caught up to a specific assignment - a reasonable guard when `AssignLoadouts` and
+`OpenVoting` ran in the same synchronous call, since a Round (created inside `OpenVoting`) reliably
+existed the instant loadouts did. That's exactly what `scheduleRevealDelay` breaks: the Game now
+sits in `ASSIGNING` with **zero Rounds** for the whole sorteo. Gating on the round index made
+`shouldReveal` false for that entire window and only flip true the moment `OpenVoting` finally
+created the Round - i.e. exactly when voting had already opened, the one moment the sorteo must NOT
+still be starting. Symptom in a live playtest: the roster rendered fully-formed instantly on Start
+(no overlay at all), and the ruleta only appeared *after* the state label already said "Votación" -
+replaying the whole ~45s animation retroactively, well past its purpose. Fix: drop the round check
+entirely and gate on `snapshot.state === 'ASSIGNING'` instead - state is authoritative and needs no
+Round to exist. **Lesson**: a gating check built for one delivery order between two events silently
+breaks the moment either event's timing changes, even though the check itself never looked wrong in
+isolation - re-derive gates from primitives (`state`) rather than from a side effect (`a Round
+exists`) of the very event you're trying to delay.
 
 ## Verification
 
