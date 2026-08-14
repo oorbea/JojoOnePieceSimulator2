@@ -58,10 +58,10 @@ export function MatchScreen({
             tone="red"
             btnSize="sm"
             onPress={onAbort}
-            accessibilityLabel={t('game.abort.title')}
+            accessibilityLabel={t('game.abort.action')}
             tooltip={t('game.abort.title')}
           >
-            {t('game.abort.title')}
+            {t('game.abort.action')}
           </GlossButton>
         ) : null}
       </XStack>
