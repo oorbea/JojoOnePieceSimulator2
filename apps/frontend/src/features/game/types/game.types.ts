@@ -1,11 +1,19 @@
 import type {
   AbilitySource,
+  FruitMastery,
   GameMode,
   GameState,
+  HakiLevel,
+  HamonLevel,
   LobbyVisibility,
   Manga,
   ParticipantKind,
+  PhysicalForm,
+  PictureStatus,
+  SpinLevel,
 } from '@/shared/lib/zod'
+import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
+import type { StandResponse } from '@/features/stands/types/stands.types'
 
 // Mirrors dto.PoolFilterResponse (apps/backend .../api/dto/game_response.go).
 // Empty arrays mean "no restriction", exactly like the domain type.
@@ -35,10 +43,37 @@ export type GameTeam = {
   memberIds: string[]
 }
 
-// Mirrors dto.GameLoadoutResponse. Kept minimal - the in-match round UI
-// (loadout cards, vote timer) is the next tanda; the lobby only needs to
-// know a loadout exists, not render it.
-export type GameLoadout = Record<string, unknown>
+// Mirrors dto.GameLoadoutResponse. stand/devilFruit come straight off the
+// shared feature types - don't redeclare the power shapes here. Note:
+// stand.description/skills and devilFruit.description/skills are frozen in
+// enums.EnGB by RepoPowerPool, NOT re-resolved per viewer locale (unlike
+// GameStage below) - the loadout card must never render that text.
+export type GameLoadout = {
+  stand?: StandResponse
+  devilFruit?: DevilFruitResponse
+  spin: SpinLevel
+  hamon: HamonLevel
+  fruitMastery: FruitMastery
+  armamentHaki: HakiLevel
+  observationHaki: HakiLevel
+  conquerorHaki: HakiLevel
+  physicalForm: PhysicalForm
+}
+
+// Mirrors dto.GameStageResponse. Deliberately NOT imported from
+// @/features/stages - that would cross a feature boundary this codebase
+// keeps clean. description is re-resolved per viewer locale server-side
+// (fully localized, unlike a loadout's stand/devilFruit text above).
+export type GameStage = {
+  id: string
+  manga: Manga
+  order: number
+  name: string
+  description: string
+  picture: string
+  pictureThumb: string
+  pictureStatus: PictureStatus
+}
 
 // Mirrors dto.GameParticipantResponse.
 export type GameParticipant = {
@@ -56,6 +91,7 @@ export type GameParticipant = {
 // in-match tanda.
 export type GameRound = {
   index: number
+  stage: GameStage
   options: string[]
   tiebreakUsed: boolean
   votedParticipantIds: string[]

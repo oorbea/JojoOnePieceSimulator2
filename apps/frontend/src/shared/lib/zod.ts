@@ -39,6 +39,17 @@ export const gameStateSchema = z.enum([
 export const participantKindSchema = z.enum(['HUMAN', 'BOT'])
 // Mirrors the backend's enums.LobbyVisibility.
 export const lobbyVisibilitySchema = z.enum(['PUBLIC', 'PRIVATE'])
+// Mirrors the backend's enums.SpinLevel.
+export const spinLevelSchema = z.enum(['NONE', 'BASIC', 'ADVANCED', 'GOLDEN', 'INFINITE'])
+// Mirrors the backend's enums.HamonLevel.
+export const hamonLevelSchema = z.enum(['NONE', 'BASIC', 'ADVANCED', 'PERFECT'])
+// Mirrors the backend's enums.FruitMastery.
+export const fruitMasterySchema = z.enum(['NONE', 'REGULAR', 'ADVANCED', 'AWAKENED'])
+// Mirrors the backend's enums.HakiLevel - shared by Armament/Observation/Conqueror.
+export const hakiLevelSchema = z.enum(['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'])
+// Mirrors the backend's enums.PhysicalForm - same members as HakiLevel, kept
+// as a distinct type since the two Go enums are conceptually separate.
+export const physicalFormSchema = z.enum(['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'])
 
 export const errorResponseSchema = z.object({
   error: z.string(),
@@ -58,4 +69,9 @@ export type AbilitySource = z.infer<typeof abilitySourceSchema>
 export type GameState = z.infer<typeof gameStateSchema>
 export type ParticipantKind = z.infer<typeof participantKindSchema>
 export type LobbyVisibility = z.infer<typeof lobbyVisibilitySchema>
+export type SpinLevel = z.infer<typeof spinLevelSchema>
+export type HamonLevel = z.infer<typeof hamonLevelSchema>
+export type FruitMastery = z.infer<typeof fruitMasterySchema>
+export type HakiLevel = z.infer<typeof hakiLevelSchema>
+export type PhysicalForm = z.infer<typeof physicalFormSchema>
 export type ErrorResponse = z.infer<typeof errorResponseSchema>
