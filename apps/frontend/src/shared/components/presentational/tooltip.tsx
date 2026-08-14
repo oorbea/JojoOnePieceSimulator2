@@ -82,8 +82,14 @@ type TooltipBubbleProps = { visible: boolean; label?: string; anchor: Anchor | n
 export function TooltipBubble({ visible, label, anchor }: TooltipBubbleProps) {
   if (!visible || !label || !anchor) return null
 
+  // pointerEvents="none" on Modal itself (not just its children): RNW's Modal
+  // renders a fixed, full-viewport wrapper div with no pointer-events style of
+  // its own, so it swallows hover/click for the whole screen even though the
+  // bubble content underneath is already inert - that stole hover off the
+  // trigger button the instant the tooltip opened, flipping visible on/off
+  // forever and blocking every click behind it.
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent>
+    <Modal visible transparent animationType="none" statusBarTranslucent pointerEvents="none">
       <YStack flex={1} style={{ pointerEvents: 'none' }}>
         <YStack
           position="absolute"
