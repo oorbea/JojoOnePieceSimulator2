@@ -53,12 +53,24 @@ var (
 // so CreateGame takes one argument instead of a long positional list -
 // mirrors StandInput/DevilFruitInput.
 type CreateGameInput struct {
-	Mode          enums.GameModeKind
-	Mangas        []enums.Manga
-	AbilitySource enums.AbilitySource
-	TeamSize      int
-	AllowBots     bool
+	PoolFilter          game.PoolFilter
+	Mangas              []enums.Manga
+	TeamSize            int
+	VotingWindowSeconds int
+	Mode                enums.GameModeKind
+	AbilitySource       enums.AbilitySource
+	AllowBots           bool
+	// Visibility, VotingWindowSeconds, PoolFilter are all optional: a zero
+	// Visibility defaults to enums.Private, a zero VotingWindowSeconds
+	// defaults to VotingPolicy.Window, and a zero PoolFilter means "no
+	// restriction".
+	Visibility enums.LobbyVisibility
 }
+
+// ConfigUpdateInput is EditLobbyConfig's whole-replacement input - the same
+// shape as CreateGameInput, since an edit sends back the full config the
+// client has in hand rather than a sparse patch.
+type ConfigUpdateInput = CreateGameInput
 
 // VotingPolicy configures GameService's voting window.
 type VotingPolicy struct {
@@ -137,7 +149,7 @@ func NewGameService(
 // CreateGame builds a new Game in the LOBBY state, hosted by hostUserID, and
 // indexes it under a freshly generated join code.
 func (s *GameService) CreateGame(ctx context.Context, hostUserID user.UserID, input CreateGameInput) (*game.Game, string, error) {
-	cfg, err := game.NewConfig(input.Mode, input.Mangas, input.AbilitySource, input.TeamSize, input.AllowBots)
+	cfg, err := s.buildConfig(input)
 	if err != nil {
 		return nil, "", err
 	}
@@ -178,6 +190,24 @@ func (s *GameService) CreateGame(ctx context.Context, hostUserID user.UserID, in
 		return g, code, nil
 	}
 	return nil, "", ErrCodeGenerationFailed
+}
+
+// buildConfig turns a CreateGameInput/ConfigUpdateInput into a validated
+// game.Config, substituting service-level defaults for the zero-valued
+// optional fields.
+func (s *GameService) buildConfig(input CreateGameInput) (game.Config, error) {
+	visibility := input.Visibility
+	if !visibility.IsValid() {
+		visibility = enums.Private
+	}
+	votingWindowSeconds := input.VotingWindowSeconds
+	if votingWindowSeconds == 0 {
+		votingWindowSeconds = int(s.votingCfg.Window / time.Second)
+	}
+	return game.NewConfig(
+		input.Mode, input.Mangas, input.AbilitySource, input.TeamSize, input.AllowBots,
+		visibility, votingWindowSeconds, input.PoolFilter,
+	)
 }
 
 func (s *GameService) buildTeams(mode enums.GameModeKind) ([]*game.Team, error) {
@@ -244,21 +274,39 @@ func (s *GameService) JoinByCode(ctx context.Context, code string, userID user.U
 		return nil, err
 	}
 	return s.withGame(ctx, g.ID(), func(g *game.Game) error {
-		for _, p := range g.Participants() {
-			if p.UserID() != nil && *p.UserID() == userID {
-				return ErrAlreadyInGame
-			}
-		}
-		u, err := s.users.FindByID(ctx, userID)
-		if err != nil {
-			return err
-		}
-		p, err := game.NewHumanParticipant(s.partIDs.NewID(), userID, u.Username(), s.pickTeam(g))
-		if err != nil {
-			return err
-		}
-		return g.Join(p)
+		return s.joinLocked(ctx, g, userID)
 	})
+}
+
+// JoinByID seats userID in the Game identified by gameID, the public lobby
+// browser's join path. Unlike JoinByCode, it's reachable without knowing a
+// secret, so it's rejected outright for anything but a PUBLIC lobby.
+func (s *GameService) JoinByID(ctx context.Context, gameID game.GameID, userID user.UserID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		if g.Config().Visibility() != enums.Public {
+			return game.ErrLobbyPrivate
+		}
+		return s.joinLocked(ctx, g, userID)
+	})
+}
+
+// joinLocked is the shared body of JoinByCode/JoinByID. Callers must
+// already hold g's lock (i.e. call this from inside withGame's fn).
+func (s *GameService) joinLocked(ctx context.Context, g *game.Game, userID user.UserID) error {
+	for _, p := range g.Participants() {
+		if p.UserID() != nil && *p.UserID() == userID {
+			return ErrAlreadyInGame
+		}
+	}
+	u, err := s.users.FindByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	p, err := game.NewHumanParticipant(s.partIDs.NewID(), userID, u.Username(), s.pickTeam(g))
+	if err != nil {
+		return err
+	}
+	return g.Join(p)
 }
 
 // pickTeam returns the Team a new joiner should land on: the only Team in
@@ -314,6 +362,78 @@ func (s *GameService) RemoveBot(ctx context.Context, gameID game.GameID, callerI
 	})
 }
 
+// SwitchTeam moves targetID onto teamID. Any participant may move
+// themselves; moving someone else requires being the host.
+func (s *GameService) SwitchTeam(ctx context.Context, gameID game.GameID, callerID, targetID game.ParticipantID, teamID game.TeamID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		return g.SwitchTeam(callerID, targetID, teamID)
+	})
+}
+
+// KickParticipant removes targetID from the Game entirely. Host-only.
+func (s *GameService) KickParticipant(ctx context.Context, gameID game.GameID, callerID, targetID game.ParticipantID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		return g.Kick(callerID, targetID, s.rng)
+	})
+}
+
+// TransferHost hands the host role to targetID. Host-only.
+func (s *GameService) TransferHost(ctx context.Context, gameID game.GameID, callerID, targetID game.ParticipantID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		return g.TransferHost(callerID, targetID)
+	})
+}
+
+// SetLobbyLocked toggles whether new humans may join the lobby. Host-only.
+func (s *GameService) SetLobbyLocked(ctx context.Context, gameID game.GameID, callerID game.ParticipantID, locked bool) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		return g.SetLocked(callerID, locked)
+	})
+}
+
+// EditLobbyConfig replaces the lobby's whole Config while it is still in
+// LOBBY. Host-only. When the new mode differs from the current one, fresh
+// teams and the matching stage list are built first (mirroring CreateGame);
+// otherwise the existing teams/stages are reused as-is.
+func (s *GameService) EditLobbyConfig(ctx context.Context, gameID game.GameID, callerID game.ParticipantID, input ConfigUpdateInput) (*game.Game, error) {
+	next, err := s.buildConfig(input)
+	if err != nil {
+		return nil, err
+	}
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		if callerID != g.HostID() {
+			return game.ErrNotHost
+		}
+		teams := g.Teams()
+		stages := g.Stages()
+		if next.Mode() != g.Config().Mode() {
+			teams, err = s.buildTeams(next.Mode())
+			if err != nil {
+				return err
+			}
+		}
+		if next.Mode() != g.Config().Mode() || !mangasEqual(next.Mangas(), g.Config().Mangas()) {
+			stages, err = s.loadStages(ctx, next)
+			if err != nil {
+				return err
+			}
+		}
+		return g.Reconfigure(callerID, next, teams, stages)
+	})
+}
+
+func mangasEqual(a, b []enums.Manga) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *GameService) countBots(g *game.Game) int {
 	n := 0
 	for _, p := range g.Participants() {
@@ -331,6 +451,15 @@ func (s *GameService) countBots(g *game.Game) int {
 // opens voting. Host-only.
 func (s *GameService) StartGame(ctx context.Context, gameID game.GameID, callerID game.ParticipantID) (*game.Game, error) {
 	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		// Checked before g.Start so a too-small filtered pool leaves the
+		// Game untouched in LOBBY, instead of stranding it in ASSIGNING
+		// with no way back (Game has no "un-start").
+		if callerID != g.HostID() {
+			return game.ErrNotHost
+		}
+		if err := s.checkPoolSufficiency(ctx, g); err != nil {
+			return err
+		}
 		if err := g.Start(callerID); err != nil {
 			return err
 		}
@@ -343,6 +472,41 @@ func (s *GameService) AbortGame(ctx context.Context, gameID game.GameID, callerI
 	return s.withGame(ctx, gameID, func(g *game.Game) error {
 		return g.Abort(callerID)
 	})
+}
+
+// checkPoolSufficiency reports whether g's filtered power pool has enough
+// unique Stands/DevilFruits to seat every currently-seated team member once
+// for each selected manga. It checks actual occupancy (the largest current
+// Team.Size()), not Config.TeamSize()'s capacity ceiling - a lobby that
+// never fills up must not be blocked from starting by a pool sized for its
+// maximum, not its actual, headcount. Every round draws an identically-
+// sized pool (AvailablePowers is rebuilt from the same catalog each time -
+// see beginRound), so a check once at Start provably rules out
+// ErrPowerPoolExhausted mid-match rather than letting it surface
+// unpredictably on some later round.
+func (s *GameService) checkPoolSufficiency(ctx context.Context, g *game.Game) error {
+	stands, err := s.powers.Stands(ctx)
+	if err != nil {
+		return err
+	}
+	fruits, err := s.powers.DevilFruits(ctx)
+	if err != nil {
+		return err
+	}
+	stands, fruits = g.Config().PoolFilter().Apply(stands, fruits)
+	needed := 0
+	for _, t := range g.Teams() {
+		if t.Size() > needed {
+			needed = t.Size()
+		}
+	}
+	if g.Config().HasManga(enums.Jojo) && len(stands) < needed {
+		return game.ErrPoolTooSmall
+	}
+	if g.Config().HasManga(enums.OnePiece) && len(fruits) < needed {
+		return game.ErrPoolTooSmall
+	}
+	return nil
 }
 
 // beginRound resolves fresh Loadouts (when this is the first round, or the
@@ -363,6 +527,7 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 		if err != nil {
 			return err
 		}
+		stands, fruits = g.Config().PoolFilter().Apply(stands, fruits)
 
 		// Each Team gets its own AvailablePowers built from the same
 		// catalog snapshot - drawing on one Team's pool must never affect
@@ -381,7 +546,7 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 	if err := g.OpenVoting(s.rng); err != nil {
 		return err
 	}
-	s.scheduleVotingTimer(g.ID())
+	s.scheduleVotingTimer(g)
 	return nil
 }
 
@@ -428,7 +593,7 @@ func (s *GameService) closeVoting(ctx context.Context, g *game.Game) error {
 			// First tie for this round: game.Game already opened the
 			// revote window (state is now TIEBREAK) - give it its own
 			// timer and wait for that vote instead.
-			s.scheduleVotingTimer(g.ID())
+			s.scheduleVotingTimer(g)
 			return nil
 		}
 
@@ -504,6 +669,75 @@ func (s *GameService) GameCode(ctx context.Context, id game.GameID) (string, err
 	return s.store.Code(ctx, id)
 }
 
+// LobbyListing is the summary shape exposed by the public lobby browser and
+// by PreviewByCode - deliberately roster-free and loadout-free, so a
+// non-participant can never learn who's in a lobby or what they'll play as,
+// only whether it's worth joining.
+type LobbyListing struct {
+	HostDisplayName     string
+	Mangas              []enums.Manga
+	PlayerCount         int
+	MaxPlayers          int
+	VotingWindowSeconds int
+	GameID              game.GameID
+	Mode                enums.GameModeKind
+	AbilitySource       enums.AbilitySource
+	AllowBots           bool
+	Visibility          enums.LobbyVisibility
+	Locked              bool
+}
+
+func newLobbyListing(g *game.Game) LobbyListing {
+	cfg := g.Config()
+	maxPlayers := cfg.TeamSize()
+	if cfg.Mode() == enums.Versus {
+		maxPlayers = cfg.TeamSize() * game.VersusTeamCount
+	}
+	hostName := ""
+	if host, ok := g.Participant(g.HostID()); ok {
+		hostName = host.DisplayName()
+	}
+	return LobbyListing{
+		GameID:              g.ID(),
+		Mode:                cfg.Mode(),
+		HostDisplayName:     hostName,
+		PlayerCount:         len(g.Participants()),
+		MaxPlayers:          maxPlayers,
+		Mangas:              cfg.Mangas(),
+		AbilitySource:       cfg.AbilitySource(),
+		AllowBots:           cfg.AllowBots(),
+		Visibility:          cfg.Visibility(),
+		VotingWindowSeconds: cfg.VotingWindowSeconds(),
+		Locked:              g.Locked(),
+	}
+}
+
+// ListPublicLobbies returns up to limit lobbies currently joinable through
+// the public browser - see game.Game.IsPubliclyJoinable.
+func (s *GameService) ListPublicLobbies(ctx context.Context, limit int) ([]LobbyListing, error) {
+	games, err := s.store.ListPublic(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]LobbyListing, len(games))
+	for i, g := range games {
+		out[i] = newLobbyListing(g)
+	}
+	return out, nil
+}
+
+// PreviewByCode returns a LobbyListing for the Game indexed under code,
+// without requiring the caller to already be a participant - the code
+// itself is the credential, so this works for PRIVATE lobbies too, unlike
+// GetGameByCode (which 403s a non-participant; see game_endpoints.go).
+func (s *GameService) PreviewByCode(ctx context.Context, code string) (LobbyListing, error) {
+	g, err := s.store.GetByCode(ctx, code)
+	if err != nil {
+		return LobbyListing{}, err
+	}
+	return newLobbyListing(g), nil
+}
+
 // --- Internal plumbing ---
 
 // withGame serializes access to the Game identified by id: it locks that
@@ -560,13 +794,21 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 // publish drains every DomainEvent g has accumulated since the last call
 // and fans them out over hub.
 func (s *GameService) publish(g *game.Game) {
+	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
 	for _, e := range g.PullEvents() {
-		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e})
+		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window})
 	}
 }
 
-func (s *GameService) scheduleVotingTimer(id game.GameID) {
-	timer := s.clock.AfterFunc(s.votingCfg.Window, func() {
+// scheduleVotingTimer starts g's voting-window timer using its own
+// per-lobby Config.VotingWindowSeconds() (host-configurable at creation/
+// edit time) rather than the service-wide VotingPolicy.Window default,
+// which now only seeds new lobbies that don't specify one - see
+// buildConfig.
+func (s *GameService) scheduleVotingTimer(g *game.Game) {
+	id := g.ID()
+	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
+	timer := s.clock.AfterFunc(window, func() {
 		ctx := context.Background()
 		if _, err := s.CloseVotingWindow(ctx, id); err != nil {
 			switch {

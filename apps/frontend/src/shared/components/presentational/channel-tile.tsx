@@ -6,6 +6,7 @@ import { asToken } from '@/shared/lib/tamagui-token'
 
 import { GlossOverlay } from './gloss-overlay'
 import { GlowText } from './glow-text'
+import { TooltipBubble, useTooltipTrigger } from './tooltip'
 import { InsetRing } from './wii-card'
 
 export type ChannelTileTone = 'blue' | 'grape' | 'red' | 'yellow' | 'green' | 'pink'
@@ -54,50 +55,57 @@ export function ChannelTile({
   locked = false,
 }: ChannelTileProps) {
   const bg = locked ? '$plasticEdge' : TONE_BG[tone]
+  const tooltipLabel = locked ? `${label}, coming soon` : label
+  const { visible: tooltipVisible, anchor: tooltipAnchor, triggerRef, triggerProps } = useTooltipTrigger(tooltipLabel)
 
   return (
-    <YStack
-      width={96}
-      height={96}
-      $md={{ width: 112, height: 112 }}
-      $lg={{ width: 128, height: 128 }}
-      rounded="$card"
-      overflow="hidden"
-      position="relative"
-      items="center"
-      justify="center"
-      gap="$1.5"
-      bg={asToken(bg)}
-      borderWidth={1.5}
-      borderColor="$glassEdge"
-      shadowColor="$softShadow"
-      shadowOffset={{ width: 0, height: 8 }}
-      shadowRadius={18}
-      shadowOpacity={1}
-      elevation={5}
-      opacity={locked ? 0.65 : 1}
-      disabled={locked}
-      onPress={locked ? undefined : onPress}
-      transition={locked ? undefined : 'bouncy'}
-      hoverStyle={locked ? undefined : { scale: 1.05, y: -4 }}
-      pressStyle={locked ? undefined : { scale: 0.94, y: 2 }}
-      cursor={locked ? 'default' : 'pointer'}
-      {...a11yProps(
-        locked ? `${label}, coming soon` : label,
-        locked ? 'none' : 'button',
-        locked ? { disabled: true } : undefined
-      )}
-    >
-      <InsetRing rounded="$card" />
-      {!locked ? <GlossOverlay coverage="half" shape="card" /> : null}
-      {locked ? (
-        <Lock size={22} color="$panelTextSoft" />
-      ) : (
-        <Icon size={26} color="white" strokeWidth={2.5} />
-      )}
-      <GlowText level="label" tone={locked ? 'soft' : 'onColor'} align="center" fontSize="$2">
-        {label}
-      </GlowText>
-    </YStack>
+    <>
+      <YStack
+        ref={triggerRef as never}
+        {...triggerProps}
+        width={96}
+        height={96}
+        $md={{ width: 112, height: 112 }}
+        $lg={{ width: 128, height: 128 }}
+        rounded="$card"
+        overflow="hidden"
+        position="relative"
+        items="center"
+        justify="center"
+        gap="$1.5"
+        bg={asToken(bg)}
+        borderWidth={1.5}
+        borderColor="$glassEdge"
+        shadowColor="$softShadow"
+        shadowOffset={{ width: 0, height: 8 }}
+        shadowRadius={18}
+        shadowOpacity={1}
+        elevation={5}
+        opacity={locked ? 0.65 : 1}
+        disabled={locked}
+        onPress={locked ? undefined : onPress}
+        transition={locked ? undefined : 'bouncy'}
+        hoverStyle={locked ? undefined : { scale: 1.05, y: -4 }}
+        pressStyle={locked ? undefined : { scale: 0.94, y: 2 }}
+        cursor={locked ? 'default' : 'pointer'}
+        {...a11yProps(
+          locked ? `${label}, coming soon` : label,
+          locked ? 'none' : 'button',
+          locked ? { disabled: true } : undefined
+        )}
+      >
+        <InsetRing rounded="$card" />
+        {!locked ? <GlossOverlay coverage="half" shape="card" /> : null}
+        {locked ? (
+          <Lock size={22} color="$panelTextSoft" />
+        ) : (
+          <Icon size={26} color="white" strokeWidth={2.5} />
+        )}
+        <GlowText level="label" tone={locked ? 'soft' : 'onColor'} align="center" fontSize="$2">
+          {label}
+        </GlowText>
+      </YStack>
+      <TooltipBubble visible={tooltipVisible} label={tooltipLabel} anchor={tooltipAnchor} />
+    </>
   )
 }

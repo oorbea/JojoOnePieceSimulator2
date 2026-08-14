@@ -22,6 +22,16 @@ const (
 
 	// VersusRounds is the fixed number of rounds a Versus match plays.
 	VersusRounds = 3
+
+	// MinVotingWindowSeconds and MaxVotingWindowSeconds bound a lobby's
+	// configurable voting-window duration.
+	MinVotingWindowSeconds = 5
+	MaxVotingWindowSeconds = 180
+
+	// DefaultVotingWindowSeconds is the fallback used by Restore for a
+	// legacy (pre-per-game-window) Snapshot, and by the application layer
+	// when a CreateGame request doesn't specify one.
+	DefaultVotingWindowSeconds = 30
 )
 
 var (
@@ -31,18 +41,28 @@ var (
 	// ErrInvalidTeamSize is returned when Config's team size is outside
 	// the bounds for its GameModeKind.
 	ErrInvalidTeamSize = errors.New("invalid team size for this game mode")
+
+	// ErrInvalidVotingWindow is returned when Config's voting window falls
+	// outside [MinVotingWindowSeconds, MaxVotingWindowSeconds].
+	ErrInvalidVotingWindow = errors.New("invalid voting window")
 )
 
-// Config is a Game's immutable setup, fixed by the host at creation time:
-// which mode, which manga(s) abilities are drawn from, how abilities are
-// sourced, how many players per team, and whether bots may fill empty
-// Versus slots.
+// Config is a lobby's setup: which mode, which manga(s) abilities are drawn
+// from, how abilities are sourced, how many players per team, whether bots
+// may fill empty Versus slots, how long a round's voting window lasts,
+// whether the lobby is browsable, and which Stands/DevilFruits are eligible
+// to be drawn. Config itself is still a plain immutable value object - the
+// host changes it by having Game.Reconfigure swap in a whole new Config,
+// never by mutating one in place.
 type Config struct {
-	mode          enums.GameModeKind
-	mangas        []enums.Manga
-	abilitySource enums.AbilitySource
-	teamSize      int
-	allowBots     bool
+	poolFilter          PoolFilter
+	mangas              []enums.Manga
+	teamSize            int
+	votingWindowSeconds int
+	mode                enums.GameModeKind
+	abilitySource       enums.AbilitySource
+	allowBots           bool
+	visibility          enums.LobbyVisibility
 }
 
 // NewConfig validates and builds a Config.
@@ -52,6 +72,9 @@ func NewConfig(
 	abilitySource enums.AbilitySource,
 	teamSize int,
 	allowBots bool,
+	visibility enums.LobbyVisibility,
+	votingWindowSeconds int,
+	poolFilter PoolFilter,
 ) (Config, error) {
 	if !mode.IsValid() {
 		return Config{}, enums.ErrInvalidGameModeKind
@@ -61,6 +84,12 @@ func NewConfig(
 	}
 	if abilitySource == enums.Inventory {
 		return Config{}, ErrInventoryNotSupported
+	}
+	if !visibility.IsValid() {
+		return Config{}, enums.ErrInvalidLobbyVisibility
+	}
+	if votingWindowSeconds < MinVotingWindowSeconds || votingWindowSeconds > MaxVotingWindowSeconds {
+		return Config{}, ErrInvalidVotingWindow
 	}
 	if len(mangas) == 0 {
 		return Config{}, ErrEmptyMangas
@@ -95,11 +124,14 @@ func NewConfig(
 	}
 
 	return Config{
-		mode:          mode,
-		mangas:        uniqueMangas,
-		abilitySource: abilitySource,
-		teamSize:      teamSize,
-		allowBots:     allowBots,
+		mode:                mode,
+		mangas:              uniqueMangas,
+		abilitySource:       abilitySource,
+		teamSize:            teamSize,
+		allowBots:           allowBots,
+		visibility:          visibility,
+		votingWindowSeconds: votingWindowSeconds,
+		poolFilter:          poolFilter,
 	}, nil
 }
 
@@ -107,6 +139,9 @@ func (c Config) Mode() enums.GameModeKind           { return c.mode }
 func (c Config) AbilitySource() enums.AbilitySource { return c.abilitySource }
 func (c Config) TeamSize() int                      { return c.teamSize }
 func (c Config) AllowBots() bool                    { return c.allowBots }
+func (c Config) Visibility() enums.LobbyVisibility  { return c.visibility }
+func (c Config) VotingWindowSeconds() int           { return c.votingWindowSeconds }
+func (c Config) PoolFilter() PoolFilter             { return c.poolFilter }
 
 // Mangas returns a copy of the selected mangas, in enums.Mangas() order.
 func (c Config) Mangas() []enums.Manga {

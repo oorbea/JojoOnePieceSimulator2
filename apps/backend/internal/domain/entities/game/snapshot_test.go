@@ -31,7 +31,7 @@ func mustEvolvedStand(t *testing.T, id byte, name string, rarity enums.PowerRari
 func buildMidMatchVersusGame(t *testing.T) *game.Game {
 	t.Helper()
 
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.Random, 2, true)
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.Random, 2, true, enums.Public, 45, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

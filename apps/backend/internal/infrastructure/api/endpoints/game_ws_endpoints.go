@@ -19,10 +19,12 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
 
-// wsReadLimit bounds a single command frame - the largest legal command
-// (VOTE/REMOVE_BOT with a UUID payload) is a few dozen bytes; this is
-// generous headroom without letting a client send unbounded frames.
-const wsReadLimit = 4096
+// wsReadLimit bounds a single command frame. Most commands (VOTE/
+// REMOVE_BOT) are a few dozen bytes, but UPDATE_CONFIG can carry a
+// PoolFilter with a sizeable banned-PowerID list, so this is generous
+// headroom for that one command without letting a client send unbounded
+// frames.
+const wsReadLimit = 16384
 
 // wsWriteTimeout bounds each individual write (state frame or ping) so a
 // stalled TCP connection can't hang the write pump forever.
@@ -300,6 +302,73 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 		return e.svc.CastVote(ctx, gameID, self, game.OptionID(p.Option))
 	case dto.CommandResync:
 		return e.svc.GetGame(ctx, gameID)
+	case dto.CommandSwitchTeam:
+		var p dto.SwitchTeamPayload
+		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+		}
+		teamID, err := game.ParseTeamID(p.TeamID)
+		if err != nil {
+			return nil, err
+		}
+		target := self
+		if p.ParticipantID != "" {
+			target, err = game.ParseParticipantID(p.ParticipantID)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return e.svc.SwitchTeam(ctx, gameID, self, target, teamID)
+	case dto.CommandMovePlayer:
+		var p dto.MovePlayerPayload
+		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+		}
+		target, err := game.ParseParticipantID(p.ParticipantID)
+		if err != nil {
+			return nil, err
+		}
+		teamID, err := game.ParseTeamID(p.TeamID)
+		if err != nil {
+			return nil, err
+		}
+		return e.svc.SwitchTeam(ctx, gameID, self, target, teamID)
+	case dto.CommandKick:
+		var p dto.KickPayload
+		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+		}
+		target, err := game.ParseParticipantID(p.ParticipantID)
+		if err != nil {
+			return nil, err
+		}
+		return e.svc.KickParticipant(ctx, gameID, self, target)
+	case dto.CommandTransferHost:
+		var p dto.TransferHostPayload
+		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+		}
+		target, err := game.ParseParticipantID(p.ParticipantID)
+		if err != nil {
+			return nil, err
+		}
+		return e.svc.TransferHost(ctx, gameID, self, target)
+	case dto.CommandSetLock:
+		var p dto.SetLockPayload
+		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+		}
+		return e.svc.SetLobbyLocked(ctx, gameID, self, p.Locked)
+	case dto.CommandUpdateConfig:
+		var p dto.UpdateConfigPayload
+		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+		}
+		input, err := p.Validate()
+		if err != nil {
+			return nil, err
+		}
+		return e.svc.EditLobbyConfig(ctx, gameID, self, input)
 	default:
 		return nil, errUnknownCommand
 	}
@@ -320,13 +389,26 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 			if !ok {
 				return
 			}
-			frameType, payload, resendState := buildEventFrame(evt.Event, e.cfg.VotingWindow)
+			votingWindow := evt.VotingWindow
+			if votingWindow == 0 {
+				votingWindow = e.cfg.VotingWindow
+			}
+			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow)
 			if frameType == "" {
 				continue
 			}
 			data, err := json.Marshal(dto.ServerFrame{Type: frameType, Payload: payload})
 			if err == nil {
 				send(conn, outbound, data)
+			}
+			// A kicked participant's own connection is closed outright
+			// instead of getting the usual resend: resolveParticipant would
+			// 403 their next RESYNC anyway (they're no longer seated), and
+			// an explicit close gives the client a deterministic signal
+			// instead of a dangling socket waiting on a timeout.
+			if kicked, ok := evt.Event.(game.PlayerKicked); ok && kicked.ParticipantID == self {
+				_ = conn.Close(websocket.StatusNormalClosure, "kicked")
+				return
 			}
 			if resendState {
 				e.pushCurrentState(ctx, conn, outbound, gameID, self)
@@ -377,6 +459,16 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration) (frameTyp
 		}}, false
 	case game.GameAborted:
 		return dto.FrameGameAborted, dto.GameAbortedPayload{Reason: e.Reason}, false
+	case game.TeamChanged:
+		return dto.FrameTeamChanged, dto.TeamChangedPayload{
+			ParticipantID: e.ParticipantID.String(), FromTeamID: e.FromTeamID.String(), ToTeamID: e.ToTeamID.String(),
+		}, true
+	case game.PlayerKicked:
+		return dto.FramePlayerKicked, dto.PlayerKickedPayload{ParticipantID: e.ParticipantID.String()}, true
+	case game.LobbyLockChanged:
+		return dto.FrameLobbyLockChanged, dto.LobbyLockChangedPayload{Locked: e.Locked}, true
+	case game.ConfigUpdated:
+		return dto.FrameConfigUpdated, struct{}{}, true
 	default:
 		return "", nil, false
 	}

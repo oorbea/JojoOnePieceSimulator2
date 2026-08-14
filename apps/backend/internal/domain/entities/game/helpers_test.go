@@ -106,7 +106,7 @@ func someStages(t *testing.T) []game.Stage {
 // (players-1) additional joined human participants, all on the same team.
 func newGauntletGame(t *testing.T, stages []game.Stage, players int) (*game.Game, []*game.Participant) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

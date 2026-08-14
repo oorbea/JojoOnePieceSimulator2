@@ -9,5 +9,11 @@ export function HomeContainer() {
 
   if (!session) return null
 
-  return <HomeScreen user={session.user} onOpenProfile={() => router.navigate('/profile')} />
+  return (
+    <HomeScreen
+      user={session.user}
+      onOpenProfile={() => router.navigate('/profile')}
+      onOpenPlay={() => router.navigate('/play' as never)}
+    />
+  )
 }

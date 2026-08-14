@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -20,9 +22,11 @@ import (
 // GameWSConfig configures the parts of GameEndpoints that only the
 // WebSocket route needs.
 type GameWSConfig struct {
-	// VotingWindow mirrors services.VotingPolicy.Window - the transport uses
-	// it to compute a VOTING_OPENED/TIEBREAK_OPENED frame's closesAt, since
-	// the domain event itself carries no deadline.
+	// VotingWindow mirrors services.VotingPolicy.Window and is now only a
+	// fallback: the authoritative per-lobby window travels on
+	// services.GameEvent.VotingWindow (each lobby can configure its own),
+	// and this is only consulted if that value comes back zero (e.g. a
+	// pre-this-tanda event source in a test double).
 	VotingWindow time.Duration
 	// AllowedOrigins mirrors CORSConfig.AllowedOrigins - reused to build the
 	// WebSocket upgrade's origin allowlist (see originPatterns).
@@ -116,11 +120,18 @@ func (e *GameEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 		read := readRateLimit(rateCfg)
 		r.With(write).Post("/", Wrap(e.create))
 		r.With(write).Post("/join", Wrap(e.join))
+		r.With(read).Get("/public", Wrap(e.listPublic))
+		r.With(read).Get("/preview", Wrap(e.preview))
 		r.With(read).Get("/{id}", Wrap(e.get))
 		r.With(read).Get("/by-code/{code}", Wrap(e.getByCode))
+		r.With(write).Post("/{id}/join", Wrap(e.joinByID))
+		r.With(write).Patch("/{id}/config", Wrap(e.editConfig))
 	})
 	return r
 }
+
+const defaultPublicListLimit = 20
+const maxPublicListLimit = 50
 
 // resolveParticipant finds the ParticipantID seated in g for userID, the
 // same scan GameService.JoinByCode itself does. A caller who isn't seated
@@ -295,6 +306,159 @@ func (e *GameEndpoints) getByCode(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	self, err := resolveParticipant(g, claims.UserID)
+	if err != nil {
+		return err
+	}
+	return e.respondState(w, r, g, self, http.StatusOK)
+}
+
+// listPublic godoc
+//
+//	@Summary		Browse public lobbies
+//	@Description	Roster-free, join-code-free summaries of lobbies currently joinable through the public browser. Works for any authenticated caller, not just participants.
+//	@Tags			games
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			limit	query		int	false	"Max results (default 20, capped at 50)"
+//	@Success		200		{object}	dto.PublicLobbyListResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
+//	@Router			/games/public [get]
+func (e *GameEndpoints) listPublic(w http.ResponseWriter, r *http.Request) error {
+	if _, ok := ClaimsFromRequest(r); !ok {
+		return ports.ErrUnauthenticated
+	}
+	limit := defaultPublicListLimit
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if limit > maxPublicListLimit {
+		limit = maxPublicListLimit
+	}
+	listings, err := e.svc.ListPublicLobbies(r.Context(), limit)
+	if err != nil {
+		return err
+	}
+	items := make([]dto.PublicLobbyResponse, len(listings))
+	for i, l := range listings {
+		items[i] = dto.NewPublicLobbyResponse(l)
+	}
+	writeJSON(w, http.StatusOK, dto.PublicLobbyListResponse{Items: items})
+	return nil
+}
+
+// preview godoc
+//
+//	@Summary		Preview a lobby by its join code
+//	@Description	Roster-free summary reachable without being a participant - the code itself is the credential, so this also works for PRIVATE lobbies. Not roster/loadout-bearing, unlike GET /games/by-code/{code}.
+//	@Tags			games
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			code	query		string	true	"Join code"
+//	@Success		200		{object}	dto.LobbyPreviewResponse
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
+//	@Router			/games/preview [get]
+func (e *GameEndpoints) preview(w http.ResponseWriter, r *http.Request) error {
+	if _, ok := ClaimsFromRequest(r); !ok {
+		return ports.ErrUnauthenticated
+	}
+	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("code")))
+	if code == "" {
+		return &dto.ValidationError{Errors: []string{"code is required"}}
+	}
+	listing, err := e.svc.PreviewByCode(r.Context(), code)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.NewLobbyPreviewResponse(code, listing))
+	return nil
+}
+
+// joinByID godoc
+//
+//	@Summary		Join a public lobby by id
+//	@Description	Only reachable for a PUBLIC, unlocked lobby - see POST /games/join for the code-based path, which also works for PRIVATE lobbies.
+//	@Tags			games
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string	true	"Game id (UUID)"
+//	@Success		200	{object}	dto.GameStateResponse
+//	@Failure		400	{object}	dto.ErrorResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		409	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/games/{id}/join [post]
+func (e *GameEndpoints) joinByID(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := ClaimsFromRequest(r)
+	if !ok {
+		return ports.ErrUnauthenticated
+	}
+	id, err := game.ParseGameID(chi.URLParam(r, "id"))
+	if err != nil {
+		return err
+	}
+	g, err := e.svc.JoinByID(r.Context(), id, claims.UserID)
+	if err != nil {
+		return err
+	}
+	self, err := resolveParticipant(g, claims.UserID)
+	if err != nil {
+		return err
+	}
+	return e.respondState(w, r, g, self, http.StatusOK)
+}
+
+// editConfig godoc
+//
+//	@Summary		Edit a lobby's configuration
+//	@Description	Host-only, LOBBY-only. Replaces the whole Config, exactly like POST /games's body.
+//	@Tags			games
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		string					true	"Game id (UUID)"
+//	@Param			request	body		dto.UpdateConfigPayload	true	"New configuration"
+//	@Success		200		{object}	dto.GameStateResponse
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		403		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		409		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
+//	@Router			/games/{id}/config [patch]
+func (e *GameEndpoints) editConfig(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := ClaimsFromRequest(r)
+	if !ok {
+		return ports.ErrUnauthenticated
+	}
+	id, err := game.ParseGameID(chi.URLParam(r, "id"))
+	if err != nil {
+		return err
+	}
+	var req dto.UpdateConfigPayload
+	if err := decode(w, r, &req); err != nil {
+		return err
+	}
+	input, err := req.Validate()
+	if err != nil {
+		return err
+	}
+	g, err := e.svc.GetGame(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	self, err := resolveParticipant(g, claims.UserID)
+	if err != nil {
+		return err
+	}
+	g, err = e.svc.EditLobbyConfig(r.Context(), id, self, input)
 	if err != nil {
 		return err
 	}

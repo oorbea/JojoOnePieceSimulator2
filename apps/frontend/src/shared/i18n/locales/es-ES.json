@@ -35,6 +35,7 @@
   },
   "nav": {
     "home": "Inicio",
+    "play": "Jugar",
     "profile": "Perfil",
     "admin": "Admin",
     "logOut": "Cerrar sesión"
@@ -42,6 +43,7 @@
   "home": {
     "pickChannel": "Elige un canal",
     "channels": {
+      "play": "Jugar",
       "profile": "Perfil",
       "stands": "Stands",
       "devilFruits": "Frutas del Diablo",
@@ -161,6 +163,169 @@
     "deleteConfirmButton": "Eliminar Etapa",
     "deleteConfirmMessage": "\"{{name}}\" se eliminará de forma permanente. No se puede deshacer."
   },
+  "game": {
+    "hub": {
+      "title": "Jugar",
+      "subtitle": "Crea una sala, únete con un código, o mira las salas abiertas.",
+      "create": "Crear sala",
+      "join": "Unirse con código",
+      "browse": "Salas abiertas"
+    },
+    "create": {
+      "title": "Crear sala",
+      "modeGauntletHint": "Cooperativo. Avanza en la historia hasta caer o completarla.",
+      "modeVersusHint": "Competitivo. Dos equipos iguales, tres rondas.",
+      "mangasLabel": "Manga",
+      "teamSizeLabel": "Tamaño de equipo",
+      "teamSizeGauntletLabel": "Jugadores máximos",
+      "votingSecondsLabel": "Ventana de votación (segundos)",
+      "privacyLabel": "Privacidad",
+      "allowBotsLabel": "Permitir bots",
+      "allowBotsOn": "Con bots",
+      "allowBotsOff": "Sin bots",
+      "allowBotsGauntletHint": "Los bots no están permitidos en Gauntlet.",
+      "submit": "Crear sala",
+      "creating": "Creando…",
+      "help": {
+        "modeGauntlet": "Cooperativo contra la historia. Todo el escuadrón gana o cae junto.",
+        "modeVersus": "Competitivo. Dos equipos iguales se enfrentan en tres rondas.",
+        "mangas": "De qué universos saca esta sala los Stands y las Frutas del Diablo.",
+        "teamSize": "Cuántos jugadores caben en cada equipo (Versus) o en el escuadrón (Gauntlet).",
+        "votingSeconds": "Cuánto tiempo tienen los jugadores para votar en cada ronda.",
+        "privacy": "Las salas públicas aparecen en Salas abiertas. Las privadas solo se unen con código.",
+        "allowBots": "Rellena los huecos vacíos con bots. No disponible en Gauntlet.",
+        "pool": "Bloquea Stands o Frutas del Diablo concretas para que nunca salgan en esta sala."
+      }
+    },
+    "config": {
+      "title": "Ajustes de la sala",
+      "readOnly": "Solo lectura",
+      "hostOnly": "Solo el anfitrión puede cambiar estos ajustes.",
+      "saving": "Guardando…",
+      "saved": "Guardado"
+    },
+    "pool": {
+      "title": "Poderes bloqueados",
+      "bannedHint": "Los poderes bloqueados no saldrán en esta sala. Si no bloqueas ninguno, entran todos.",
+      "banlist": "Poderes prohibidos",
+      "banlistSearch": "Buscar Stands y Frutas del Diablo",
+      "banlistEmpty": "Todavía no hay poderes prohibidos",
+      "removeBan": "Quitar {{name}} de la lista de prohibidos",
+      "clearAll": "Quitar todo",
+      "banByFilter": {
+        "title": "Banear por filtro",
+        "rarities": "Rareza",
+        "fruitTypes": "Tipo de fruta",
+        "standStats": "Stats del Stand",
+        "banMatching": "Banear coincidencias",
+        "matchCount": "{{count}} poderes coinciden"
+      }
+    },
+    "join": {
+      "title": "Unirse con código",
+      "codeLabel": "Código de sala",
+      "codePlaceholder": "ABCDEF",
+      "notFound": "No se ha encontrado ninguna sala con ese código.",
+      "submit": "Unirse a la sala",
+      "joining": "Uniéndote…"
+    },
+    "preview": {
+      "host": "Organizada por {{name}}",
+      "lockedBadge": "Bloqueada"
+    },
+    "browse": {
+      "title": "Salas abiertas",
+      "refresh": "Actualizar",
+      "hostedBy": "Organizada por {{name}}",
+      "join": "Unirse",
+      "empty": "No hay salas abiertas ahora mismo.",
+      "emptyCta": "Crea una",
+      "error": "No se han podido cargar las salas abiertas.",
+      "retry": "Reintentar"
+    },
+    "lobby": {
+      "host": "Anfitrión",
+      "you": "Tú",
+      "connected": "Conectado",
+      "disconnected": "Desconectado",
+      "playersCount": "{{count}}/{{max}} jugadores",
+      "switchTeam": "Cambiar a {{name}}",
+      "emptySlot": "Toca para unirte",
+      "teamFull": "Equipo lleno",
+      "waitingForHost": "Esperando a que el anfitrión empiece…",
+      "reasonNotHost": "Solo el anfitrión puede hacer eso.",
+      "reasonNotInLobby": "No disponible ahora mismo.",
+      "reasonNotFound": "No se ha encontrado a ese jugador.",
+      "reasonTeamFull": "Ese equipo está lleno.",
+      "ready": "Listo"
+    },
+    "code": {
+      "title": "Código de sala",
+      "copy": "Copiar código",
+      "copied": "Código copiado",
+      "share": "Compartir código",
+      "shared": "Código compartido",
+      "shareMessage": "Únete a mi sala de JoJo x One Piece Simulator con el código {{code}}",
+      "publicHint": "Pública: cualquiera puede encontrar y unirse a esta sala.",
+      "privateHint": "Privada: solo puede unirse quien tenga el código."
+    },
+    "lock": {
+      "locked": "Bloqueada",
+      "lockAction": "Bloquear sala",
+      "unlockAction": "Desbloquear sala"
+    },
+    "start": {
+      "start": "Empezar",
+      "starting": "Empezando…",
+      "ready": "Lista para empezar",
+      "reasonNotHost": "Solo el anfitrión puede empezar la partida.",
+      "reasonAlreadyStarted": "Esta partida ya ha empezado.",
+      "reasonNoMangas": "Selecciona al menos un manga.",
+      "reasonNeedsTwoTeams": "Versus necesita exactamente dos equipos.",
+      "reasonEmptyTeam": "Ambos equipos necesitan al menos un jugador.",
+      "reasonUnequalTeams": "Ambos equipos necesitan el mismo número de jugadores ({{a}} contra {{b}}).",
+      "reasonNoPlayers": "No hay suficientes jugadores para empezar."
+    },
+    "abort": {
+      "action": "Cancelar partida",
+      "title": "¿Cancelar esta partida?",
+      "message": "Se eliminará a todos los jugadores y la sala se cerrará. Esto no se puede deshacer.",
+      "confirm": "Cancelar partida"
+    },
+    "leave": {
+      "action": "Abandonar sala",
+      "title": "¿Abandonar esta sala?",
+      "message": "Podrás volver a unirte más tarde con el código de sala, mientras siga abierta.",
+      "confirm": "Abandonar sala"
+    },
+    "kick": {
+      "action": "Expulsar a {{name}}",
+      "title": "¿Expulsar a este jugador?",
+      "message": "Se eliminará de la sala de inmediato.",
+      "confirm": "Expulsar",
+      "reasonSelf": "No puedes expulsarte a ti mismo."
+    },
+    "transferHost": {
+      "action": "Hacer anfitrión a {{name}}",
+      "title": "¿Transferir el anfitrión?",
+      "message": "Obtendrá el control total de la configuración y el botón de empezar de esta sala.",
+      "confirm": "Transferir anfitrión",
+      "reasonBot": "Un bot no puede ser anfitrión."
+    },
+    "connection": {
+      "reconnecting": "Reconectando en {{seconds}} s…",
+      "unavailable": "Las actualizaciones en vivo no están disponibles ahora mismo.",
+      "retryNow": "Reintentar ahora"
+    },
+    "terminal": {
+      "kicked": "Se te ha expulsado de esta sala.",
+      "abortedByHost": "El anfitrión ha cancelado esta partida.",
+      "finished": "Esta partida ha terminado."
+    },
+    "a11y": {
+      "playerRow": "{{name}}"
+    }
+  },
   "locale": {
     "required": "obligatorio",
     "hasError": "tiene un error"
@@ -236,8 +401,33 @@
       "ADMIN": "Admin"
     },
     "manga": {
-      "JOJO": "Las bizarras aventuras de JoJo",
+      "JOJO": "JoJo's Bizarre Adventure",
       "ONE_PIECE": "One Piece"
+    },
+    "gameMode": {
+      "GAUNTLET": "Gauntlet",
+      "VERSUS": "Versus"
+    },
+    "gameState": {
+      "LOBBY": "Sala",
+      "ASSIGNING": "Repartiendo poderes",
+      "VOTING": "Votación",
+      "TIEBREAK": "Voto de desempate",
+      "RESOLVING": "Resolviendo ronda",
+      "FINISHED": "Terminada",
+      "ABORTED": "Cancelada"
+    },
+    "abilitySource": {
+      "RANDOM": "Aleatorio",
+      "INVENTORY": "Inventario"
+    },
+    "participantKind": {
+      "HUMAN": "Jugador",
+      "BOT": "Bot"
+    },
+    "lobbyVisibility": {
+      "PUBLIC": "Pública",
+      "PRIVATE": "Privada"
     }
   },
   "errors": {
@@ -300,6 +490,14 @@
     "INVALID_PARTICIPANT_KIND": "Ese tipo de participante no es válido.",
     "INVALID_SQUAD_VERDICT": "Ese veredicto de escuadrón no es válido.",
     "UNKNOWN_COMMAND": "Esa acción no está soportada.",
+    "LOBBY_LOCKED": "Esta sala está bloqueada.",
+    "CONFIG_WOULD_EVICT_PLAYERS": "Ese cambio eliminaría jugadores ya sentados. Reduce el tamaño después de que salgan.",
+    "CANNOT_KICK_SELF": "No puedes expulsarte a ti mismo.",
+    "POOL_TOO_SMALL": "No hay suficientes poderes permitidos para empezar con tantos jugadores.",
+    "INVALID_VOTING_WINDOW": "Esa ventana de votación no es válida.",
+    "INVALID_POOL_FILTER": "Esa restricción del repertorio de poderes no es válida.",
+    "INVALID_LOBBY_VISIBILITY": "Esa configuración de privacidad no es válida.",
+    "LOBBY_PRIVATE": "Esta sala es privada. Pide el código de sala al anfitrión.",
     "INTERNAL": "Algo ha ido mal por nuestra parte."
   }
 }

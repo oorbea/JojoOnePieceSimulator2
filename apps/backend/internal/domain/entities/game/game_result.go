@@ -20,18 +20,18 @@ type ParticipantOutcome struct {
 // GameResult is the final outcome of a finished or aborted Game, handed to
 // ports.IGameHistory.Record by the application layer.
 type GameResult struct {
-	GameID GameID
-	Mode   enums.GameModeKind
 	// Winner is enums.Survive/enums.Fall's string form for Gauntlet, or the
 	// winning TeamID's string form for Versus. Empty if Aborted before any
 	// round resolved.
-	Winner       OptionID
-	RoundsPlayed int
-	Aborted      bool
+	Winner OptionID
 	// Participants is every seat in the Game at the moment it ended, in
 	// join order - added so IGameHistory can answer "what did I play",
 	// not just "what happened".
 	Participants []ParticipantOutcome
+	RoundsPlayed int
+	GameID       GameID
+	Mode         enums.GameModeKind
+	Aborted      bool
 }
 
 // participantOutcomes builds every ParticipantOutcome for g, in join order.
