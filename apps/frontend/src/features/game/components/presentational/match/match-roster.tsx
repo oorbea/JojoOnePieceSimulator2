@@ -10,16 +10,15 @@ import type { GameSnapshot } from '@/features/game/types/game.types'
 type Props = {
   snapshot: GameSnapshot
   selfId: string
-  revealedIds: Set<string>
-  visibleSlotsById: Record<string, number>
-  reducedMotion: boolean
 }
 
 // VERSUS: two tone-colored columns (reusing the lobby's team tone mapping).
 // GAUNTLET: one wrapped row of cards. The caller's own loadout renders
 // inline, highlighted by LoadoutCard's isSelf prop, rather than in a
-// separate section.
-export function MatchRoster({ snapshot, selfId, revealedIds, visibleSlotsById, reducedMotion }: Props) {
+// separate section. Only rendered once the sorteo overlay (RevealStage) has
+// finished, so every card here already has its full loadout - no reveal
+// state to thread through anymore.
+export function MatchRoster({ snapshot, selfId }: Props) {
   const { t } = useTranslation()
   const mangas = snapshot.config.mangas
 
@@ -36,15 +35,7 @@ export function MatchRoster({ snapshot, selfId, revealedIds, visibleSlotsById, r
               </GlowText>
               <XStack flexWrap="wrap" gap="$2.5">
                 {participants.map((p) => (
-                  <LoadoutCard
-                    key={p.id}
-                    participant={p}
-                    isSelf={p.id === selfId}
-                    revealed={revealedIds.has(p.id)}
-                    visibleSlots={visibleSlotsById[p.id] ?? 0}
-                    mangas={mangas}
-                    reducedMotion={reducedMotion}
-                  />
+                  <LoadoutCard key={p.id} participant={p} isSelf={p.id === selfId} mangas={mangas} />
                 ))}
               </XStack>
             </GlassPanel>
@@ -59,15 +50,7 @@ export function MatchRoster({ snapshot, selfId, revealedIds, visibleSlotsById, r
       <GlowText level="heading">{t('game.match.title')}</GlowText>
       <XStack flexWrap="wrap" gap="$2.5">
         {snapshot.participants.map((p) => (
-          <LoadoutCard
-            key={p.id}
-            participant={p}
-            isSelf={p.id === selfId}
-            revealed={revealedIds.has(p.id)}
-            visibleSlots={visibleSlotsById[p.id] ?? 0}
-            mangas={mangas}
-            reducedMotion={reducedMotion}
-          />
+          <LoadoutCard key={p.id} participant={p} isSelf={p.id === selfId} mangas={mangas} />
         ))}
       </XStack>
     </GlassPanel>

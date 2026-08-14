@@ -1,4 +1,13 @@
-import { flipStepMs, revealOrder, revealSteps, slotStepMs, shouldReveal } from '@/features/game/lib/loadout-reveal'
+import {
+  REVEAL_HOLD_BLOCK_MS,
+  REVEAL_HOLD_SCALAR_MS,
+  REVEAL_INTRO_MS,
+  REVEAL_OUTRO_MS,
+  REVEAL_SPIN_MS,
+  revealDurationMs,
+  revealPhases,
+  shouldReveal,
+} from '@/features/game/lib/loadout-reveal'
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameLoadout, GameParticipant, GameSnapshot } from '@/features/game/types/game.types'
 
@@ -55,6 +64,8 @@ function live(overrides: Partial<LiveMatchState> = {}): LiveMatchState {
     assignmentSeq: 0,
     revealedAssignmentSeq: 0,
     assignedRoundIndex: null,
+    revealMs: null,
+    revealEndsAt: null,
     votingRoundIndex: null,
     votingClosesAt: null,
     tiebreak: false,
@@ -62,130 +73,89 @@ function live(overrides: Partial<LiveMatchState> = {}): LiveMatchState {
   }
 }
 
-describe('revealOrder', () => {
-  it('GAUNTLET: uses roster order with self moved last', () => {
-    const snap = snapshot({
-      mode: 'GAUNTLET',
-      participants: [
-        participant({ id: 'p1' }),
-        participant({ id: 'p2' }),
-        participant({ id: 'p3' }),
-      ],
-    })
-    expect(revealOrder(snap, 'p2')).toEqual(['p1', 'p3', 'p2'])
-  })
-
-  it('VERSUS: groups by team order with self moved last', () => {
-    const snap = snapshot({
-      mode: 'VERSUS',
-      teams: [
-        { id: 'tA', name: 'A', color: 0, memberIds: ['p1', 'p2'] },
-        { id: 'tB', name: 'B', color: 0, memberIds: ['p3', 'p4'] },
-      ],
-      participants: [
-        participant({ id: 'p1', teamId: 'tA' }),
-        participant({ id: 'p2', teamId: 'tA' }),
-        participant({ id: 'p3', teamId: 'tB' }),
-        participant({ id: 'p4', teamId: 'tB' }),
-      ],
-    })
-    expect(revealOrder(snap, 'p3')).toEqual(['p1', 'p2', 'p4', 'p3'])
-  })
-})
-
 describe('shouldReveal', () => {
+  // No rounds exist yet - a Game sits in ASSIGNING with zero Rounds for the
+  // whole sorteo delay (see game.RevealDuration/GameService.
+  // scheduleRevealDelay), since OpenVoting (which creates the Round) only
+  // runs once the delay elapses. shouldReveal must not depend on a Round
+  // existing - see its doc for the bug this replaced.
   const snap = snapshot({
+    state: 'ASSIGNING',
     participants: [
       participant({ id: 'p1', loadout: loadout() }),
       participant({ id: 'p2', loadout: loadout() }),
     ],
-    rounds: [{ index: 0, stage: {} as never, options: [], tiebreakUsed: false, votedParticipantIds: [] }],
+    rounds: [],
   })
 
   it('is false when assignmentSeq equals revealedAssignmentSeq', () => {
-    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 1, assignedRoundIndex: 0 }), snap)).toBe(
-      false
-    )
+    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 1 }), snap)).toBe(false)
   })
 
   it('is false when the frame arrived before the snapshot caught up (race)', () => {
     const staleSnap = snapshot({
+      state: 'ASSIGNING',
       participants: [participant({ id: 'p1', loadout: loadout() }), participant({ id: 'p2' })],
+      rounds: [],
+    })
+    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0 }), staleSnap)).toBe(false)
+  })
+
+  it('is false once voting has actually opened, even if this assignment was never revealed', () => {
+    const votingSnap = snapshot({
+      ...snap,
+      state: 'VOTING',
       rounds: [{ index: 0, stage: {} as never, options: [], tiebreakUsed: false, votedParticipantIds: [] }],
     })
-    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0, assignedRoundIndex: 0 }), staleSnap)).toBe(
-      false
-    )
+    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0 }), votingSnap)).toBe(false)
   })
 
-  it('is false when the current round index does not match the assigned round', () => {
-    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0, assignedRoundIndex: 1 }), snap)).toBe(
-      false
-    )
-  })
-
-  it('is true when a new assignment landed, all loadouts are present, and the round matches', () => {
-    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0, assignedRoundIndex: 0 }), snap)).toBe(
-      true
-    )
-  })
-
-  it('is unaffected by reduced motion (a purely gating function)', () => {
-    // shouldReveal takes no reducedMotion param - verifying it stays true
-    // regardless of what the caller intends to do with the result.
-    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0, assignedRoundIndex: 0 }), snap)).toBe(
-      true
-    )
+  it('is true when a new assignment landed, all loadouts are present, and the game is still ASSIGNING', () => {
+    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0 }), snap)).toBe(true)
   })
 })
 
-describe('flipStepMs / slotStepMs', () => {
-  it('are zero under reduced motion', () => {
-    expect(flipStepMs(true)).toBe(0)
-    expect(slotStepMs(true)).toBe(0)
+describe('revealPhases', () => {
+  it('both mangas: intro, 9 slots (spin+land each), outro', () => {
+    const phases = revealPhases(['JOJO', 'ONE_PIECE'])
+    expect(phases[0].phase).toEqual({ kind: 'intro' })
+    expect(phases[0].durationMs).toBe(REVEAL_INTRO_MS)
+    expect(phases[phases.length - 1].phase).toEqual({ kind: 'outro' })
+    expect(phases[phases.length - 1].durationMs).toBe(REVEAL_OUTRO_MS)
+    // intro + 9 * (spin, land) + outro
+    expect(phases).toHaveLength(1 + 9 * 2 + 1)
   })
 
-  it('are a positive delay otherwise', () => {
-    expect(flipStepMs(false)).toBeGreaterThan(0)
-    expect(slotStepMs(false)).toBeGreaterThan(0)
+  it('stand/devilFruit slots hold longer than scalar slots (they carry art + a stat grid)', () => {
+    const phases = revealPhases(['JOJO', 'ONE_PIECE'])
+    const standSlotIndex = 1 // physicalForm(0), stand(1)
+    const standLand = phases.find((p) => p.phase.kind === 'land' && p.phase.slot === standSlotIndex)
+    expect(standLand?.durationMs).toBe(REVEAL_HOLD_BLOCK_MS)
+    const physicalFormLand = phases.find((p) => p.phase.kind === 'land' && p.phase.slot === 0)
+    expect(physicalFormLand?.durationMs).toBe(REVEAL_HOLD_SCALAR_MS)
+  })
+
+  it('every spin phase holds REVEAL_SPIN_MS regardless of slot kind', () => {
+    const phases = revealPhases(['JOJO', 'ONE_PIECE'])
+    const spins = phases.filter((p) => p.phase.kind === 'spin')
+    expect(spins).toHaveLength(9)
+    spins.forEach((s) => expect(s.durationMs).toBe(REVEAL_SPIN_MS))
   })
 })
 
-describe('revealSteps', () => {
-  it('GAUNTLET: one flip step per participant (self last), no slot steps for an ONE_PIECE-only lobby with a JOJO-only loadout', () => {
-    const snap = snapshot({
-      mode: 'GAUNTLET',
-      config: { ...snapshot().config, mangas: ['ONE_PIECE'] },
-      participants: [
-        participant({ id: 'p1', loadout: loadout({ physicalForm: 'VICE_ADMIRAL' }) }),
-        participant({ id: 'p2', loadout: loadout({ physicalForm: 'VICE_ADMIRAL' }) }),
-      ],
-    })
-    const steps = revealSteps(snap, 'p1')
-    // p2 flips first (self last), then its ONE_PIECE slots (physicalForm,
-    // devilFruit block, 3 haki = 5; fruitMastery omitted since NONE), then
-    // p1 flips + its own 5 slots.
-    expect(steps).toEqual([
-      { participantId: 'p2', slot: -1 },
-      { participantId: 'p2', slot: 0 },
-      { participantId: 'p2', slot: 1 },
-      { participantId: 'p2', slot: 2 },
-      { participantId: 'p2', slot: 3 },
-      { participantId: 'p2', slot: 4 },
-      { participantId: 'p1', slot: -1 },
-      { participantId: 'p1', slot: 0 },
-      { participantId: 'p1', slot: 1 },
-      { participantId: 'p1', slot: 2 },
-      { participantId: 'p1', slot: 3 },
-      { participantId: 'p1', slot: 4 },
-    ])
+// revealDurationMs is the frontend half of the backend/frontend agreement
+// pinned by TestRevealDuration_PinnedTotals (reveal_test.go) - keep both in
+// sync if either side's constants or slot list ever change.
+describe('revealDurationMs', () => {
+  it('both mangas: 44750ms', () => {
+    expect(revealDurationMs(['JOJO', 'ONE_PIECE'])).toBe(44750)
   })
 
-  it('a participant with no loadout only contributes its flip step', () => {
-    const snap = snapshot({
-      mode: 'GAUNTLET',
-      participants: [participant({ id: 'p1' })],
-    })
-    expect(revealSteps(snap, 'p2')).toEqual([{ participantId: 'p1', slot: -1 }])
+  it('jojo only: 18350ms', () => {
+    expect(revealDurationMs(['JOJO'])).toBe(18350)
+  })
+
+  it('one piece only: 30800ms', () => {
+    expect(revealDurationMs(['ONE_PIECE'])).toBe(30800)
   })
 })

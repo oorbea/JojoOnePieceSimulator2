@@ -313,7 +313,17 @@
         "armamentHaki": "Haki del Armamento",
         "observationHaki": "Haki de la Observación",
         "conquerorHaki": "Haki del Conquistador",
-        "physicalForm": "Forma física"
+        "physicalForm": "Forma física",
+        "stand": "Stand",
+        "devilFruit": "Fruta del Diablo"
+      },
+      "reveal": {
+        "title": "Sorteo de poderes",
+        "intro": "Preparados…",
+        "progress": "{{current}}/{{total}}",
+        "skip": "Saltar",
+        "skipA11y": "Saltar la animación del sorteo de poderes",
+        "votingIn": "La votación empieza en {{seconds}}s"
       }
     },
     "leave": {

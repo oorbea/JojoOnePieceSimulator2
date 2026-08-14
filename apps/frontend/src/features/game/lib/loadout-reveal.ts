@@ -1,78 +1,85 @@
-import { currentRound, hasAllLoadouts, loadoutSlots } from '@/features/game/lib/match-rules'
+import { hasAllLoadouts, revealSlotKinds } from '@/features/game/lib/match-rules'
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameSnapshot } from '@/features/game/types/game.types'
+import type { Manga } from '@/shared/lib/zod'
 
-// revealOrder lists participant ids in the order their loadout card should
-// flip face-up, with the caller's own id always moved to the end (self
-// revealed last, for the "climax" reveal). VERSUS groups by team (iterating
-// snapshot.teams so the two columns fill in team order); GAUNTLET just uses
-// the roster order as-is. Pure and deterministic - no randomness, no
-// dependency on render state.
-export function revealOrder(snapshot: GameSnapshot, selfParticipantId: string): string[] {
-  const ids: string[] =
-    snapshot.mode === 'VERSUS'
-      ? snapshot.teams.flatMap((team) =>
-          snapshot.participants.filter((p) => p.teamId === team.id).map((p) => p.id)
-        )
-      : snapshot.participants.map((p) => p.id)
-
-  const withoutSelf = ids.filter((id) => id !== selfParticipantId)
-  return ids.includes(selfParticipantId) ? [...withoutSelf, selfParticipantId] : withoutSelf
-}
-
-// shouldReveal gates the reveal on BOTH "an assignment frame arrived since
-// the last reveal" AND "the snapshot has actually caught up" - LOADOUTS_
-// ASSIGNED is sent before its own pushCurrentState, so the frame alone is
-// not proof the snapshot carries the new loadouts yet (see game-socket.store
-// .ts's LOADOUTS_ASSIGNED case).
+// shouldReveal gates the sorteo on "an assignment frame arrived since the
+// last reveal" AND "the snapshot has actually caught up" AND "the game is
+// still ASSIGNING" - LOADOUTS_ASSIGNED is sent before its own
+// pushCurrentState, so the frame alone is not proof the snapshot carries the
+// new loadouts yet (see game-socket.store.ts's LOADOUTS_ASSIGNED case).
+//
+// The ASSIGNING check replaced an earlier "does the current round's index
+// match what was assigned" check (fixed 2026-08-14, same pass as the sorteo
+// redesign - see game-match-assignment-frontend.md). That check assumed a
+// Round already existed the moment loadouts were assigned - true when
+// OpenVoting ran in the same synchronous call as AssignLoadouts, which is
+// exactly what changed: GameService.scheduleRevealDelay now holds the Game
+// in ASSIGNING, with ZERO Rounds yet, for the whole sorteo. Gating on the
+// round index made shouldReveal false for that entire window and only flip
+// true once OpenVoting finally created the round - i.e. exactly when voting
+// had already opened, the one moment the sorteo must NOT still be starting.
+// snapshot.state is authoritative and needs no Round to exist.
 export function shouldReveal(live: LiveMatchState, snapshot: GameSnapshot): boolean {
   if (live.assignmentSeq <= live.revealedAssignmentSeq) return false
-  if (!hasAllLoadouts(snapshot)) return false
-  if (live.assignedRoundIndex === null) return true
-  const round = currentRound(snapshot)
-  return round !== null && round.index === live.assignedRoundIndex
+  if (snapshot.state !== 'ASSIGNING') return false
+  return hasAllLoadouts(snapshot)
 }
 
-// A single tick of the reveal sequence: either "flip this participant's
-// card face-up" (slot === -1) or "show one more of that card's loadout
-// slots, in loadoutSlots' draw order" (slot === the slot's index). Flat
-// across every participant, in revealOrder, so use-loadout-reveal.ts can
-// walk one global timeline instead of per-card timers.
-export type RevealStep = { participantId: string; slot: number }
+// Reveal timing constants (ms), deliberately fixed regardless of which
+// value a slot's draw actually landed on - even a NONE/PRIVATE floor value
+// still plays out its full spin+hold. Mirrors the backend's reveal.go
+// EXACTLY (RevealIntroMs/RevealSpinMs/RevealHoldScalarMs/RevealHoldBlockMs/
+// RevealOutroMs) so both sides compute the identical total duration without
+// sharing code - loosely modeled on the original terminal-based
+// JoJoOnePiece_Simulator's loadingScreen/delay pacing (github.com/oorbea/
+// JoJoOnePiece_Simulator).
+export const REVEAL_INTRO_MS = 1100
+export const REVEAL_SPIN_MS = 1650
+export const REVEAL_HOLD_SCALAR_MS = 2500
+export const REVEAL_HOLD_BLOCK_MS = 4000
+export const REVEAL_OUTRO_MS = 3300
 
-// revealSteps expands revealOrder into the full poder-a-poder timeline: for
-// each participant in turn, a flip step followed by one step per loadout
-// slot they actually have (loadoutSlots already gates by
-// snapshot.config.mangas - a JoJo-only lobby never gets a physicalForm/
-// devilFruit/haki step, and vice versa). Assumes every included participant
-// already has a loadout, which shouldReveal's hasAllLoadouts check
-// guarantees by the time this is called.
-export function revealSteps(snapshot: GameSnapshot, selfParticipantId: string): RevealStep[] {
-  const order = revealOrder(snapshot, selfParticipantId)
-  const byId = new Map(snapshot.participants.map((p) => [p.id, p]))
-  const steps: RevealStep[] = []
+const BLOCK_SLOTS = new Set(['stand', 'devilFruit'])
 
-  for (const participantId of order) {
-    steps.push({ participantId, slot: -1 })
-    const loadout = byId.get(participantId)?.loadout
-    if (!loadout) continue
-    const slotCount = loadoutSlots(loadout, snapshot.config.mangas).length
-    for (let slot = 0; slot < slotCount; slot++) {
-      steps.push({ participantId, slot })
-    }
-  }
+export type RevealPhaseKind = 'intro' | 'spin' | 'land' | 'outro'
 
-  return steps
+// A single tick of the sorteo timeline: 'intro' (nothing spinning yet,
+// "preparados"), 'spin' (every participant's carril spins for slot N),
+// 'land' (slot N's real value is visible and holding, before the next
+// slot's spin starts), 'outro' (dissolve into the filled-in roster). Unlike
+// the old per-participant reveal, this is poder-a-poder for EVERY
+// participant at once - slot N always means the same slot for the whole
+// lobby, so one global timeline (not one per participant) drives the
+// overlay.
+export type RevealPhase = { kind: RevealPhaseKind; slot?: number }
+
+// revealPhases expands a lobby's mangas into the full sorteo timeline, each
+// phase paired with how long it holds. A pure function of mangas alone
+// (never of any actual loadout/draw), matching game.RevealDuration's own
+// doc on the backend for why that's the point: both sides can compute the
+// identical total without exchanging anything beyond mangas.
+export function revealPhases(mangas: Manga[]): { phase: RevealPhase; durationMs: number }[] {
+  const kinds = revealSlotKinds(mangas)
+  const phases: { phase: RevealPhase; durationMs: number }[] = [
+    { phase: { kind: 'intro' }, durationMs: REVEAL_INTRO_MS },
+  ]
+  kinds.forEach((kind, index) => {
+    phases.push({ phase: { kind: 'spin', slot: index }, durationMs: REVEAL_SPIN_MS })
+    phases.push({
+      phase: { kind: 'land', slot: index },
+      durationMs: BLOCK_SLOTS.has(kind) ? REVEAL_HOLD_BLOCK_MS : REVEAL_HOLD_SCALAR_MS,
+    })
+  })
+  phases.push({ phase: { kind: 'outro' }, durationMs: REVEAL_OUTRO_MS })
+  return phases
 }
 
-// flipStepMs/slotStepMs are the delay for a card-flip step vs. a
-// single-slot reveal step, both zeroed entirely under reduced motion (an
-// instant reveal, not a fast one). flipStepMs matches LoadoutCard's own
-// Reanimated flip duration (450ms) so the next step never fires mid-flip.
-export function flipStepMs(reducedMotion: boolean): number {
-  return reducedMotion ? 0 : 450
-}
-
-export function slotStepMs(reducedMotion: boolean): number {
-  return reducedMotion ? 0 : 220
+// revealDurationMs is the total sorteo duration for mangas - the same
+// number GameService.scheduleRevealDelay uses server-side to delay
+// OpenVoting (see game.RevealDuration). Exposed so a client can compute it
+// independently (e.g. for a reconnecting client with no revealMs from a
+// LOADOUTS_ASSIGNED frame to trust).
+export function revealDurationMs(mangas: Manga[]): number {
+  return revealPhases(mangas).reduce((sum, p) => sum + p.durationMs, 0)
 }

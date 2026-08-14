@@ -54,6 +54,31 @@ const SLOT_ORDER: LoadoutSlotKind[] = [
   'spin',
 ]
 
+function hasSlotManga(key: LoadoutSlotKind, jojo: boolean, onePiece: boolean): boolean {
+  switch (key) {
+    case 'stand':
+    case 'hamon':
+    case 'spin':
+      return jojo
+    default:
+      return onePiece
+  }
+}
+
+// revealSlotKinds lists which slot KINDS a reveal shows for a lobby playing
+// mangas, in draw order - mirrors the backend's game.RevealSlots exactly
+// (apps/backend/.../reveal.go), gated the same way loadoutSlots is (see its
+// doc). Pure function of mangas alone, independent of any actual loadout -
+// this is what lets the reveal overlay (which shows every participant's
+// slot at once, before any card exists) and the backend's own delay timer
+// agree on how many slots there are without exchanging anything beyond
+// mangas itself. Kept in sync with SLOT_ORDER/hasSlotManga below.
+export function revealSlotKinds(mangas: Manga[]): LoadoutSlotKind[] {
+  const jojo = mangas.includes('JOJO')
+  const onePiece = mangas.includes('ONE_PIECE')
+  return SLOT_ORDER.filter((key) => hasSlotManga(key, jojo, onePiece))
+}
+
 // loadoutSlots lists every slot a loadout card should render, gated by
 // which manga(s) the lobby actually plays - a One Piece-only lobby never
 // gets a stand/spin/hamon slot (PRIVATE/NONE is just LoadoutBuilder's
@@ -62,50 +87,46 @@ const SLOT_ORDER: LoadoutSlotKind[] = [
 // gate a single-manga lobby's card showed every One Piece stat pinned at
 // its floor value (PRIVATE has no NONE member) alongside a real Stand,
 // which reads as "the game only gave me a stand" instead of "physical form
-// doesn't apply to this lobby". spin/hamon/fruitMastery are additionally
-// omitted when NONE even inside a gated manga - a real "didn't draw this
-// ability" result, already communicated by the stand/devilFruit block
-// itself. Haki/physicalForm have no NONE member (PRIVATE is their floor),
-// so within a One Piece lobby they're never filtered.
+// doesn't apply to this lobby". Unlike an earlier pass, a NONE spin/hamon/
+// fruitMastery is still INCLUDED (with its NONE value) rather than omitted -
+// that's what makes a gated manga's slot COUNT depend only on mangas, never
+// on the actual draw (see revealSlotKinds' doc for why that matters), and a
+// "you didn't draw this one" is itself worth revealing during the sorteo.
+// TraitChip renders the NONE case as a dimmed chip.
 export function loadoutSlots(loadout: GameLoadout, mangas: Manga[]): LoadoutSlot[] {
   const jojo = mangas.includes('JOJO')
   const onePiece = mangas.includes('ONE_PIECE')
   const slots: LoadoutSlot[] = []
 
   for (const key of SLOT_ORDER) {
+    if (!hasSlotManga(key, jojo, onePiece)) continue
     switch (key) {
       case 'physicalForm':
-        if (onePiece) slots.push({ key, i18nKey: 'game.match.trait.physicalForm', value: loadout.physicalForm })
+        slots.push({ key, i18nKey: 'game.match.trait.physicalForm', value: loadout.physicalForm })
         break
       case 'stand':
-        if (jojo) slots.push({ key })
+        slots.push({ key })
         break
       case 'devilFruit':
-        if (onePiece) slots.push({ key })
+        slots.push({ key })
         break
       case 'fruitMastery':
-        if (onePiece && loadout.fruitMastery !== 'NONE') {
-          slots.push({ key, i18nKey: 'game.match.trait.fruitMastery', value: loadout.fruitMastery })
-        }
+        slots.push({ key, i18nKey: 'game.match.trait.fruitMastery', value: loadout.fruitMastery })
         break
       case 'hamon':
-        if (jojo && loadout.hamon !== 'NONE') {
-          slots.push({ key, i18nKey: 'game.match.trait.hamon', value: loadout.hamon })
-        }
+        slots.push({ key, i18nKey: 'game.match.trait.hamon', value: loadout.hamon })
         break
       case 'armamentHaki':
-        if (onePiece) slots.push({ key, i18nKey: 'game.match.trait.armamentHaki', value: loadout.armamentHaki })
+        slots.push({ key, i18nKey: 'game.match.trait.armamentHaki', value: loadout.armamentHaki })
         break
       case 'observationHaki':
-        if (onePiece) slots.push({ key, i18nKey: 'game.match.trait.observationHaki', value: loadout.observationHaki })
+        slots.push({ key, i18nKey: 'game.match.trait.observationHaki', value: loadout.observationHaki })
         break
       case 'conquerorHaki':
-        if (onePiece) slots.push({ key, i18nKey: 'game.match.trait.conquerorHaki', value: loadout.conquerorHaki })
+        slots.push({ key, i18nKey: 'game.match.trait.conquerorHaki', value: loadout.conquerorHaki })
         break
       case 'spin':
-        if (jojo && loadout.spin !== 'NONE') {
-          slots.push({ key, i18nKey: 'game.match.trait.spin', value: loadout.spin })
-        }
+        slots.push({ key, i18nKey: 'game.match.trait.spin', value: loadout.spin })
         break
     }
   }

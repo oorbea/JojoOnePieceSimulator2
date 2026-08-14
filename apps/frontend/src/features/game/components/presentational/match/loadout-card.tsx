@@ -1,8 +1,6 @@
-import { Sparkles, UserRound } from '@tamagui/lucide-icons-2'
-import { useEffect } from 'react'
+import { Sparkles } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { Image } from 'react-native'
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { XStack, YStack } from 'tamagui'
 
 import { TraitChip } from '@/features/game/components/presentational/match/trait-chips'
@@ -18,13 +16,7 @@ import type { Manga } from '@/shared/lib/zod'
 type Props = {
   participant: GameParticipant
   isSelf: boolean
-  revealed: boolean
-  /** How many of this card's `loadoutSlots` (in draw order) are shown so
-   * far - drives the poder-a-poder reveal, one slot at a time, once the
-   * card itself has flipped. */
-  visibleSlots: number
   mangas: Manga[]
-  reducedMotion: boolean
 }
 
 const STAND_STAT_KEYS = ['attackPower', 'speed', 'attackRange', 'endurance', 'precision', 'potential'] as const
@@ -61,30 +53,11 @@ function buildRows(slots: LoadoutSlot[]): Row[] {
   return rows
 }
 
-// Two-sided flip card: back face is a face-down "drawing" placeholder, front
-// face is the actual stand/devilFruit/trait breakdown. Y-axis rotateY,
-// backfaceVisibility hidden on both faces, perspective on the parent so the
-// flip reads as a physical card rather than a squash. Reduced motion (or
-// `!revealed`, e.g. resync) jumps straight to the end state with duration 0.
-export function LoadoutCard({ participant, isSelf, revealed, visibleSlots, mangas, reducedMotion }: Props) {
+// Renders one participant's finished loadout - the sorteo ceremony (spin,
+// reveal, suspense) happens entirely in RevealStage before this card ever
+// mounts, so there's nothing left for this card to animate.
+export function LoadoutCard({ participant, isSelf, mangas }: Props) {
   const { t } = useTranslation()
-  const progress = useSharedValue(revealed ? 1 : 0)
-
-  useEffect(() => {
-    const duration = reducedMotion ? 0 : 450
-    progress.value = withTiming(revealed ? 1 : 0, { duration })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- progress is a stable shared value, not a reactive dep
-  }, [revealed, reducedMotion])
-
-  const backStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1200 }, { rotateY: `${progress.value * 180}deg` }],
-    opacity: progress.value < 0.5 ? 1 : 0,
-  }))
-  const frontStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1200 }, { rotateY: `${180 + progress.value * 180}deg` }],
-    opacity: progress.value >= 0.5 ? 1 : 0,
-  }))
-
   const loadout = participant.loadout
   const slots = loadout ? loadoutSlots(loadout, mangas) : []
   const rows = buildRows(slots)
@@ -108,53 +81,23 @@ export function LoadoutCard({ participant, isSelf, revealed, visibleSlots, manga
         ) : null}
       </XStack>
 
-      <YStack position="relative" style={{ perspective: 1200 } as never}>
-        <Animated.View style={[{ width: '100%' }, backStyle]}>
-          <YStack
-            width="100%"
-            height={200}
-            rounded="$card"
-            overflow="hidden"
-            items="center"
-            justify="center"
-            gap="$2"
-            bg="$plasticEdge"
-            style={{ backfaceVisibility: 'hidden' } as never}
-          >
-            <InsetRing rounded="$card" />
-            <UserRound size={32} color="$panelTextSoft" />
-            <GlowText level="label" tone="soft">
-              {t('game.match.drawing')}
-            </GlowText>
-          </YStack>
-        </Animated.View>
-
-        <Animated.View
-          style={[{ width: '100%', position: 'absolute', top: 0, left: 0 }, frontStyle]}
-          pointerEvents={revealed ? 'auto' : 'none'}
-        >
-          <YStack width="100%" gap="$2.5" style={{ backfaceVisibility: 'hidden' } as never}>
-            {rows.map((row, i) => {
-              if (row.kind === 'block') {
-                const visible = row.index < visibleSlots
-                return row.key === 'stand' ? (
-                  <StandBlock key="stand" stand={loadout?.stand} visible={visible} t={t} />
-                ) : (
-                  <DevilFruitBlock key="devilFruit" devilFruit={loadout?.devilFruit} visible={visible} t={t} />
-                )
-              }
-              const visibleChips = row.entries.filter((e) => e.index < visibleSlots)
-              if (visibleChips.length === 0) return null
-              return (
-                <XStack key={`chips-${i}`} gap="$1.5" flexWrap="wrap">
-                  {visibleChips.map((e) => (
-                    <TraitChip key={e.slot.key} slot={e.slot} />
-                  ))}
-                </XStack>
-              )
-            })}
-          </YStack>
-        </Animated.View>
+      <YStack width="100%" gap="$2.5">
+        {rows.map((row, i) => {
+          if (row.kind === 'block') {
+            return row.key === 'stand' ? (
+              <StandBlock key="stand" stand={loadout?.stand} visible t={t} />
+            ) : (
+              <DevilFruitBlock key="devilFruit" devilFruit={loadout?.devilFruit} visible t={t} />
+            )
+          }
+          return (
+            <XStack key={`chips-${i}`} gap="$1.5" flexWrap="wrap">
+              {row.entries.map((e) => (
+                <TraitChip key={e.slot.key} slot={e.slot} />
+              ))}
+            </XStack>
+          )
+        })}
       </YStack>
     </WiiCard>
   )

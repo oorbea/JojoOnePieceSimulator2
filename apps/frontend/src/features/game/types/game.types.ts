@@ -119,6 +119,10 @@ export type GameSnapshot = {
   participants: GameParticipant[]
   rounds: GameRound[]
   result?: GameResult
+  /** RFC3339, present only while ASSIGNING with a pending reveal - lets a
+   * (re)connecting client resume the sorteo countdown instead of restarting
+   * it (see dto.GameSnapshotResponse.RevealEndsAt). */
+  revealEndsAt?: string
 }
 
 // Mirrors dto.GameViewerResponse.
