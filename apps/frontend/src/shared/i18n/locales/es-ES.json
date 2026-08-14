@@ -292,6 +292,27 @@
       "message": "Se eliminará a todos los jugadores y la sala se cerrará. Esto no se puede deshacer.",
       "confirm": "Cancelar partida"
     },
+    "match": {
+      "title": "Partida",
+      "roundBadge": "Ronda {{index}}",
+      "drawing": "Repartiendo poderes…",
+      "revealing": "Revelando poderes…",
+      "skipReveal": "Saltar",
+      "skipRevealA11y": "Saltar la revelación de poderes",
+      "tiebreakOpen": "Voto de desempate abierto",
+      "closesIn": "Cierra en {{seconds}}s",
+      "noStand": "Sin Stand",
+      "noFruit": "Sin Fruta del Diablo",
+      "trait": {
+        "spin": "Spin",
+        "hamon": "Hamon",
+        "fruitMastery": "Maestría de fruta",
+        "armamentHaki": "Haki del Armamento",
+        "observationHaki": "Haki de la Observación",
+        "conquerorHaki": "Haki del Conquistador",
+        "physicalForm": "Forma física"
+      }
+    },
     "leave": {
       "action": "Abandonar sala",
       "title": "¿Abandonar esta sala?",
@@ -416,6 +437,37 @@
       "RESOLVING": "Resolviendo ronda",
       "FINISHED": "Terminada",
       "ABORTED": "Cancelada"
+    },
+    "spinLevel": {
+      "NONE": "Ninguno",
+      "BASIC": "Básico",
+      "ADVANCED": "Avanzado",
+      "GOLDEN": "Dorado",
+      "INFINITE": "Infinito"
+    },
+    "hamonLevel": {
+      "NONE": "Ninguno",
+      "BASIC": "Básico",
+      "ADVANCED": "Avanzado",
+      "PERFECT": "Perfecto"
+    },
+    "fruitMastery": {
+      "NONE": "Ninguna",
+      "REGULAR": "Regular",
+      "ADVANCED": "Avanzada",
+      "AWAKENED": "Despertada"
+    },
+    "hakiLevel": {
+      "PRIVATE": "Soldado",
+      "VICE_ADMIRAL": "Vicealmirante",
+      "YONKO_COMMANDER": "Comandante Yonko",
+      "YONKO_PLUS": "Yonko+"
+    },
+    "physicalForm": {
+      "PRIVATE": "Soldado",
+      "VICE_ADMIRAL": "Vicealmirante",
+      "YONKO_COMMANDER": "Comandante Yonko",
+      "YONKO_PLUS": "Yonko+"
     },
     "abilitySource": {
       "RANDOM": "Aleatorio",
