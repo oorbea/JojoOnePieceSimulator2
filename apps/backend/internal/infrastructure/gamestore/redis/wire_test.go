@@ -24,6 +24,7 @@ func buildTestGame(t *testing.T) *game.Game {
 	if err != nil {
 		t.Fatalf("NewHumanParticipant: %v", err)
 	}
+	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg")
 	team, err := game.NewTeam(game.TeamID{10}, "Squad", 0)
 	if err != nil {
 		t.Fatalf("NewTeam: %v", err)
@@ -99,6 +100,62 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 	parent := loadout.Stand().EvolvesFrom()
 	if parent == nil || parent.Name() != "Star Platinum" {
 		t.Fatalf("EvolvesFrom chain lost across decode: got %+v", parent)
+	}
+	if host.AvatarThumbKey() != "avatars/host/thumb.webp" {
+		t.Errorf("avatar thumb key lost across decode: got %q", host.AvatarThumbKey())
+	}
+	if host.GooglePicture() != "https://accounts.google.com/host.jpg" {
+		t.Errorf("google picture lost across decode: got %q", host.GooglePicture())
+	}
+}
+
+// TestDecodeToleratesMissingAvatarFields confirms a payload written before
+// avatarThumbKey/googlePicture existed still decodes cleanly - the
+// additive-omitempty-field rule documented on wire.go's snapshotVersion,
+// exercised here rather than just asserted in a comment.
+func TestDecodeToleratesMissingAvatarFields(t *testing.T) {
+	g := buildTestGame(t)
+	payload, err := encode(g, time.Now())
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+
+	var env map[string]any
+	if err := json.Unmarshal(payload, &env); err != nil {
+		t.Fatalf("unmarshal into map: %v", err)
+	}
+	gameObj, ok := env["game"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected envelope shape, no game object: %+v", env)
+	}
+	participants, ok := gameObj["participants"].([]any)
+	if !ok || len(participants) == 0 {
+		t.Fatalf("unexpected game shape, no participants: %+v", gameObj)
+	}
+	for _, p := range participants {
+		pm, ok := p.(map[string]any)
+		if !ok {
+			continue
+		}
+		delete(pm, "avatarThumbKey")
+		delete(pm, "googlePicture")
+	}
+	legacy, err := json.Marshal(env)
+	if err != nil {
+		t.Fatalf("re-marshal: %v", err)
+	}
+
+	restored, err := decode(legacy)
+	if err != nil {
+		t.Fatalf("decode legacy (avatar-less) payload: %v", err)
+	}
+	host, ok := restored.Participant(game.ParticipantID{1})
+	if !ok {
+		t.Fatal("host missing after decode")
+	}
+	if host.AvatarThumbKey() != "" || host.GooglePicture() != "" {
+		t.Errorf("expected empty avatar fields on a legacy payload, got thumb=%q google=%q",
+			host.AvatarThumbKey(), host.GooglePicture())
 	}
 }
 

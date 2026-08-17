@@ -138,6 +138,14 @@ el vacío/error de `/play/browse` pasó de `SpeechBubble` a la misma `GlassPanel
 vacío de Stands en admin (`stands-screen.tsx`) - una tarjeta plana con icono se lee mejor ahí que un
 bocadillo con cola apuntando a la nada.
 
+## Manga selector moved out of "Lobby settings", stepper label stacked (2026-08-14)
+
+Superseded by a later playtest pass - the manga field described above (inside the config panel,
+column-only, no `InfoHint`) moved to the main lobby screen as its own always-visible `MangaRow`
+component, and `NumberStepper` gained a `stacked` `SettingRow` layout. Full rationale in
+[[game-match-assignment-frontend]]'s "Lobby manga selector moved out of Lobby settings" section -
+not re-derived here.
+
 Related: [[game-lobby-management]], [[gameplay-game-modes]], [[frontend-stack]],
 [[frontend-responsive-frutiger-aero]], [[i18n-multi-language]], [[zettelkasten-workflow]],
-[[norma-tooltips-y-ayuda-contextual]].
+[[norma-tooltips-y-ayuda-contextual]], [[game-match-assignment-frontend]].

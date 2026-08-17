@@ -90,6 +90,68 @@ func TestLoadoutBuilder_NoFruitForcesNoMastery(t *testing.T) {
 	}
 }
 
+// recordingRandom is a game.RandomSource that always returns the top of the
+// requested range (n-1) while recording the `n` passed to each IntN call, in
+// call order. Since every draw step uses a distinct pool size or
+// level-table length, the recorded sequence of `n`s is a fingerprint of the
+// exact step order LoadoutBuilder.Build executed - this is what makes
+// TestLoadoutBuilder_DrawOrder able to fail on an accidental reordering even
+// though every other test here is order-agnostic (they use fakeRandom with a
+// constant value applied regardless of which step is calling). Returning
+// n-1 (rather than 0) matters here specifically: 0 would land every
+// stand/devilFruit draw on their "none drawn" sentinel weight (always the
+// first bucket), which short-circuits FruitMastery's draw entirely
+// (loadout_builder.go's drawFruitMastery returns early when devilFruit is
+// nil) and would silently drop a step from the recorded sequence.
+type recordingRandom struct{ ns []int }
+
+func (r *recordingRandom) IntN(n int) int {
+	r.ns = append(r.ns, n)
+	if n <= 0 {
+		return 0
+	}
+	return n - 1
+}
+
+// TestLoadoutBuilder_DrawOrder pins the owner-mandated step order: Physical
+// Form -> Stand -> Devil Fruit -> Fruit Mastery -> Hamon -> Armament Haki ->
+// Observation Haki -> Conqueror Haki -> Spin (RequiresSpin4 is a post-pass,
+// not a draw, so it never shows up here). Pool sizes (2 stands, 3 fruits)
+// are chosen so stand's IntN(3) and devilFruit's IntN(4) can't be confused
+// with each other or with the 4-level enum tables.
+func TestLoadoutBuilder_DrawOrder(t *testing.T) {
+	standA := mustStand(t, 1, "Star Platinum", enums.Legendary)
+	standB := mustStand(t, 2, "The World", enums.Legendary)
+	fruitA := mustDevilFruit(t, 1, "Gomu Gomu no Mi", enums.Legendary, enums.Paramecia)
+	fruitB := mustDevilFruit(t, 2, "Mera Mera no Mi", enums.Legendary, enums.Paramecia)
+	fruitC := mustDevilFruit(t, 3, "Yami Yami no Mi", enums.Legendary, enums.Paramecia)
+	pool := game.NewAvailablePowers(
+		[]*powers.Stand{standA, standB},
+		[]*powers.DevilFruit{fruitA, fruitB, fruitC},
+	)
+	weights := game.DefaultAssignmentWeights()
+	rng := &recordingRandom{}
+	builder := game.NewLoadoutBuilder(enums.Mangas(), weights, rng)
+
+	if _, err := builder.Build(pool); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	// n is the *total* weight weightedPick sums to for that draw, not the
+	// raw option count - ConquerorHakiWeights is deliberately skewed
+	// (weights.go), so its total (10) differs from Armament/Observation's
+	// (4) even though all three share the same 4-level table.
+	want := []int{4, 3, 4, 3, 4, 4, 4, 10, 5}
+	if len(rng.ns) != len(want) {
+		t.Fatalf("expected %d draws, got %d: %v", len(want), len(rng.ns), rng.ns)
+	}
+	for i, n := range want {
+		if rng.ns[i] != n {
+			t.Fatalf("draw order mismatch at step %d: want IntN(%d), got IntN(%d) (full sequence %v)", i, n, rng.ns[i], rng.ns)
+		}
+	}
+}
+
 func TestLoadoutBuilder_DoesNotRepeatStandWithinTeam(t *testing.T) {
 	standA := mustStand(t, 1, "Star Platinum", enums.Legendary)
 	standB := mustStand(t, 2, "The World", enums.Legendary)

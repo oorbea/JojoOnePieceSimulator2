@@ -1,4 +1,5 @@
 import type { GameLoadout, GameRound, GameSnapshot } from '@/features/game/types/game.types'
+import type { Manga } from '@/shared/lib/zod'
 
 // currentRound mirrors "the round a client should be looking at right now" -
 // the backend never sends a round index explicitly for this, it's simply
@@ -20,31 +21,117 @@ export function hasAllLoadouts(snapshot: GameSnapshot): boolean {
     .every((p) => !!p.loadout)
 }
 
-export type LoadoutTrait = { key: string; i18nKey: string; value: string }
+// LoadoutSlotKind is every distinct thing a loadout card can reveal, in the
+// exact order the owner asked for (2026-08-14): PhysicalForm -> Stand ->
+// DevilFruit -> FruitMastery -> Hamon -> ArmamentHaki -> ObservationHaki ->
+// ConquerorHaki -> Spin - the same order LoadoutBuilder.Build draws them in
+// (apps/backend/.../loadout_builder.go), so the reveal walks the draw order
+// a player actually experienced. 'stand'/'devilFruit' are the two big art
+// blocks (rendered specially by LoadoutCard); every other slot is a scalar
+// chip.
+export type LoadoutSlotKind =
+  | 'physicalForm'
+  | 'stand'
+  | 'devilFruit'
+  | 'fruitMastery'
+  | 'hamon'
+  | 'armamentHaki'
+  | 'observationHaki'
+  | 'conquerorHaki'
+  | 'spin'
 
-// loadoutTraits lists the six scalar loadout fields in a stable order.
-// spin/hamon/fruitMastery are omitted entirely when NONE - a real "didn't
-// draw this ability" state already communicated by the absent stand/
-// devilFruit card, not worth a redundant chip. Haki/physicalForm have no
-// NONE member (PRIVATE is their floor), so they're never filtered.
-export function loadoutTraits(loadout: GameLoadout): LoadoutTrait[] {
-  const traits: LoadoutTrait[] = []
-  if (loadout.physicalForm) {
-    traits.push({ key: 'physicalForm', i18nKey: 'game.match.trait.physicalForm', value: loadout.physicalForm })
+export type LoadoutSlot = { key: LoadoutSlotKind; i18nKey?: string; value?: string }
+
+const SLOT_ORDER: LoadoutSlotKind[] = [
+  'physicalForm',
+  'stand',
+  'devilFruit',
+  'fruitMastery',
+  'hamon',
+  'armamentHaki',
+  'observationHaki',
+  'conquerorHaki',
+  'spin',
+]
+
+function hasSlotManga(key: LoadoutSlotKind, jojo: boolean, onePiece: boolean): boolean {
+  switch (key) {
+    case 'stand':
+    case 'hamon':
+    case 'spin':
+      return jojo
+    default:
+      return onePiece
   }
-  traits.push({ key: 'armamentHaki', i18nKey: 'game.match.trait.armamentHaki', value: loadout.armamentHaki })
-  traits.push({ key: 'observationHaki', i18nKey: 'game.match.trait.observationHaki', value: loadout.observationHaki })
-  traits.push({ key: 'conquerorHaki', i18nKey: 'game.match.trait.conquerorHaki', value: loadout.conquerorHaki })
-  if (loadout.spin !== 'NONE') {
-    traits.push({ key: 'spin', i18nKey: 'game.match.trait.spin', value: loadout.spin })
+}
+
+// revealSlotKinds lists which slot KINDS a reveal shows for a lobby playing
+// mangas, in draw order - mirrors the backend's game.RevealSlots exactly
+// (apps/backend/.../reveal.go), gated the same way loadoutSlots is (see its
+// doc). Pure function of mangas alone, independent of any actual loadout -
+// this is what lets the reveal overlay (which shows every participant's
+// slot at once, before any card exists) and the backend's own delay timer
+// agree on how many slots there are without exchanging anything beyond
+// mangas itself. Kept in sync with SLOT_ORDER/hasSlotManga below.
+export function revealSlotKinds(mangas: Manga[]): LoadoutSlotKind[] {
+  const jojo = mangas.includes('JOJO')
+  const onePiece = mangas.includes('ONE_PIECE')
+  return SLOT_ORDER.filter((key) => hasSlotManga(key, jojo, onePiece))
+}
+
+// loadoutSlots lists every slot a loadout card should render, gated by
+// which manga(s) the lobby actually plays - a One Piece-only lobby never
+// gets a stand/spin/hamon slot (PRIVATE/NONE is just LoadoutBuilder's
+// unreached default, not a real "you got nothing" result), and a JoJo-only
+// lobby never gets physicalForm/devilFruit/fruitMastery/haki. Without this
+// gate a single-manga lobby's card showed every One Piece stat pinned at
+// its floor value (PRIVATE has no NONE member) alongside a real Stand,
+// which reads as "the game only gave me a stand" instead of "physical form
+// doesn't apply to this lobby". Unlike an earlier pass, a NONE spin/hamon/
+// fruitMastery is still INCLUDED (with its NONE value) rather than omitted -
+// that's what makes a gated manga's slot COUNT depend only on mangas, never
+// on the actual draw (see revealSlotKinds' doc for why that matters), and a
+// "you didn't draw this one" is itself worth revealing during the sorteo.
+// TraitChip renders the NONE case as a dimmed chip.
+export function loadoutSlots(loadout: GameLoadout, mangas: Manga[]): LoadoutSlot[] {
+  const jojo = mangas.includes('JOJO')
+  const onePiece = mangas.includes('ONE_PIECE')
+  const slots: LoadoutSlot[] = []
+
+  for (const key of SLOT_ORDER) {
+    if (!hasSlotManga(key, jojo, onePiece)) continue
+    switch (key) {
+      case 'physicalForm':
+        slots.push({ key, i18nKey: 'game.match.trait.physicalForm', value: loadout.physicalForm })
+        break
+      case 'stand':
+        slots.push({ key })
+        break
+      case 'devilFruit':
+        slots.push({ key })
+        break
+      case 'fruitMastery':
+        slots.push({ key, i18nKey: 'game.match.trait.fruitMastery', value: loadout.fruitMastery })
+        break
+      case 'hamon':
+        slots.push({ key, i18nKey: 'game.match.trait.hamon', value: loadout.hamon })
+        break
+      case 'armamentHaki':
+        slots.push({ key, i18nKey: 'game.match.trait.armamentHaki', value: loadout.armamentHaki })
+        break
+      case 'observationHaki':
+        slots.push({ key, i18nKey: 'game.match.trait.observationHaki', value: loadout.observationHaki })
+        break
+      case 'conquerorHaki':
+        slots.push({ key, i18nKey: 'game.match.trait.conquerorHaki', value: loadout.conquerorHaki })
+        break
+      case 'spin':
+        slots.push({ key, i18nKey: 'game.match.trait.spin', value: loadout.spin })
+        break
+    }
   }
-  if (loadout.hamon !== 'NONE') {
-    traits.push({ key: 'hamon', i18nKey: 'game.match.trait.hamon', value: loadout.hamon })
-  }
-  if (loadout.fruitMastery !== 'NONE') {
-    traits.push({ key: 'fruitMastery', i18nKey: 'game.match.trait.fruitMastery', value: loadout.fruitMastery })
-  }
-  return traits
+
+  return slots
 }
 
 // secondsUntil clamps to zero rather than going negative once a countdown

@@ -43,7 +43,28 @@ One mutex per `GameID`, not a global lock, so unrelated lobbies never contend.
   `ports.IAssignmentWeights`, builds one fresh `game.AvailablePowers` **per Team** from
   `ports.IGamePowerPool` (only when it's the first round, or the mode's
   `IGameMode.ReassignsEachRound()` — i.e. every round for Versus, once for Gauntlet), calls
-  `Game.AssignLoadouts`, then `Game.OpenVoting`, then starts that round's voting-window timer.
+  `Game.AssignLoadouts`, then... **changed 2026-08-14** (see [[game-match-assignment-frontend]]'s
+  sorteo redesign): only when loadouts were actually (re)assigned this call, `beginRound` now defers
+  `Game.OpenVoting` behind `scheduleRevealDelay` instead of calling it inline. That method computes
+  `game.RevealDuration(g.Config().Mangas())` — a pure function of the lobby's mangas, independent of
+  the actual random draws, so every client can compute the identical number without the server
+  sharing anything beyond `mangas` — records the deadline in `s.revealEnds[gameID]` (read by the new
+  `RevealEndsAt` accessor, served to a (re)connecting client as `GameStateResponse.RevealEndsAt` so
+  it can resume the countdown instead of restarting from zero), and schedules a `Clock.AfterFunc`
+  timer that, on firing, calls `openVotingAfterReveal` — which re-acquires the lock via `withGame`
+  and *only then* does what `beginRound` used to do inline: `Game.OpenVoting` +
+  `scheduleVotingTimer`. Rounds that don't reassign (Gauntlet after round 1) skip the delay entirely
+  and call `OpenVoting` immediately, same as before — there's nothing new to reveal.
+  **Consequence worth knowing**: the Game now sits in `ASSIGNING` with **zero `Rounds()`** for the
+  whole reveal delay, since a `Round` is only created inside `OpenVoting` itself. Any code that
+  assumed "loadouts assigned ⇒ a Round already exists" (the frontend's old `shouldReveal` did) breaks
+  under this design — see [[game-match-assignment-frontend]] for the bug that caused and its fix.
+  The reveal-delay timer shares `s.timers`/`cancelTimer` with the voting-window timer (they never
+  coexist for the same `GameID`: the reveal timer fires, opens voting, and only *then* does the
+  voting timer take its place) — so `AbortGame`/`finalizeLocked` cancelling during the reveal already
+  works with no changes. `s.revealEnds` is process memory only, same known gap as `s.timers` itself:
+  a backend restart mid-reveal loses the timer and the game gets stuck in `ASSIGNING` — not fixed
+  this tanda, same category as the pre-existing voting-timer gap.
 - `CastVote` — records the vote; if `Game.VotingComplete()` goes true (every connected human has
   voted), closes the window immediately instead of waiting out the timer.
 - `CloseVotingWindow` — what the timer calls on expiry; also directly invocable. Shared private

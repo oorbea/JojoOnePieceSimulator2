@@ -34,9 +34,14 @@ endpoints, no migrations.
   Loadouts reassign each round, which Stage backs a round, how a resolved round affects the game,
   the final outcome) is delegated. Both mode structs are stateless — they read/derive everything
   from the `*Game` passed in, so there's no per-mode state to keep in sync with `Game` itself.
-- **Template Method** — `game.LoadoutBuilder.Build`: the step *order* is fixed (Stand → Spin →
-  Hamon → Devil Fruit → Fruit Mastery → the three Hakis → Physical Form → apply invariant rules),
-  and which steps run at all is fixed by the selected manga(s), but each concrete draw is a
+- **Template Method** — `game.LoadoutBuilder.Build`: the step *order* is fixed (**changed
+  2026-08-14, owner request**: Physical Form → Stand → Devil Fruit → Fruit Mastery → Hamon →
+  Armament Haki → Observation Haki → Conqueror Haki → Spin → apply invariant rules — was Stand →
+  Spin → Hamon → Devil Fruit → Fruit Mastery → the three Hakis → Physical Form; see
+  `TestLoadoutBuilder_DrawOrder` in `loadout_builder_test.go` for the pinned sequence, a
+  `recordingRandom` fingerprinting the exact `IntN(n)` calls made so an accidental reordering fails
+  loudly), and which steps run at all is fixed by the selected manga(s) — Physical Form stays
+  One Piece-only, just moved first. Each concrete draw is a
   weighted random pick (`RandomSource` + `AssignmentWeights`, both swappable). `NewLoadout`
   re-validates the hard invariants independently at the end, so the template method's correctness
   doesn't rely on getting the draw order right — a second implementation of ability sourcing
