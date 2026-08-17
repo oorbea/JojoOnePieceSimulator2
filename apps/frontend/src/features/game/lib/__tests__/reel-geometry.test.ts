@@ -1,6 +1,7 @@
 import {
   buildReel,
   finalLabelIndex,
+  landingTiming,
   restRows,
   tickCount,
   WINDOW_ROWS,
@@ -55,5 +56,32 @@ describe('reel geometry', () => {
     const reel = buildReel(candidates, 'FINAL')
     expect(reel).toHaveLength(finalLabelIndex(reel.length) + 2)
     expect(reel[reel.length - 1]).not.toBe('FINAL')
+  })
+})
+
+// This is the invariant that broke with a physics withSpring catch: at
+// REVEAL_SPIN_MS=1650 and a realistic CATCH_MS, a spring needs far longer
+// than the budget left after a long stagger delay to settle, so the phase
+// machine's fixed timers cut to 'land' and hard-reset translateY mid-bounce
+// - read as "still spinning toward another power." landingTiming's two
+// bounded withTiming legs must never exceed the reel's own spin budget, for
+// every lane a reveal can realistically have.
+describe('landingTiming', () => {
+  const REVEAL_SPIN_MS = 1650
+  const CATCH_MS = 180
+
+  it.each([0, 1, 2, 3, 4, 8])('lane %i finishes delay+decel+catch within spinMs', (laneIndex) => {
+    const { delayMs, decelMs, catchMs } = landingTiming(REVEAL_SPIN_MS, laneIndex, CATCH_MS)
+    expect(delayMs + decelMs + catchMs).toBeLessThanOrEqual(REVEAL_SPIN_MS)
+    expect(catchMs).toBe(CATCH_MS)
+    expect(decelMs).toBeGreaterThan(0)
+  })
+
+  it('a longer spin budget scales the same way', () => {
+    const spinMs = 3000
+    for (let laneIndex = 0; laneIndex < 10; laneIndex++) {
+      const { delayMs, decelMs, catchMs } = landingTiming(spinMs, laneIndex, CATCH_MS)
+      expect(delayMs + decelMs + catchMs).toBeLessThanOrEqual(spinMs)
+    }
   })
 })
