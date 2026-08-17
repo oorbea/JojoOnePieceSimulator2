@@ -19,8 +19,17 @@ type Props = {
   mangas: Manga[]
 }
 
-const STAND_STAT_KEYS = ['attackPower', 'speed', 'attackRange', 'endurance', 'precision', 'potential'] as const
-const STAND_STAT_LABELS: Record<(typeof STAND_STAT_KEYS)[number], string> = {
+// Exported for LoadoutModal, which renders the same stat grid at a larger
+// size rather than duplicating the key/label table.
+export const STAND_STAT_KEYS = [
+  'attackPower',
+  'speed',
+  'attackRange',
+  'endurance',
+  'precision',
+  'potential',
+] as const
+export const STAND_STAT_LABELS: Record<(typeof STAND_STAT_KEYS)[number], string> = {
   attackPower: 'PWR',
   speed: 'SPD',
   attackRange: 'RNG',
@@ -112,12 +121,22 @@ type TFunc = (key: string) => string
 function StandBlock({ stand, visible, t }: { stand?: StandResponse; visible: boolean; t: TFunc }) {
   return (
     <YStack gap="$1.5">
-      <YStack width="100%" height={110} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
+      <YStack
+        width="100%"
+        height={110}
+        rounded="$card"
+        overflow="hidden"
+        position="relative"
+        bg="$plasticEdge"
+      >
         <InsetRing rounded="$card" />
         {visible ? (
           stand ? (
             stand.pictureThumb || null ? (
-              <Image source={{ uri: stand.pictureThumb }} style={{ width: '100%', height: '100%' }} />
+              <Image
+                source={{ uri: stand.pictureThumb }}
+                style={{ width: '100%', height: '100%' }}
+              />
             ) : (
               <YStack flex={1} items="center" justify="center">
                 <Sparkles size={26} color="$standPurple" />
@@ -163,15 +182,33 @@ function StandBlock({ stand, visible, t }: { stand?: StandResponse; visible: boo
   )
 }
 
-function DevilFruitBlock({ devilFruit, visible, t }: { devilFruit?: DevilFruitResponse; visible: boolean; t: TFunc }) {
+function DevilFruitBlock({
+  devilFruit,
+  visible,
+  t,
+}: {
+  devilFruit?: DevilFruitResponse
+  visible: boolean
+  t: TFunc
+}) {
   return (
     <YStack gap="$1.5">
-      <YStack width="100%" height={90} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
+      <YStack
+        width="100%"
+        height={90}
+        rounded="$card"
+        overflow="hidden"
+        position="relative"
+        bg="$plasticEdge"
+      >
         <InsetRing rounded="$card" />
         {visible ? (
           devilFruit ? (
             devilFruit.pictureThumb || null ? (
-              <Image source={{ uri: devilFruit.pictureThumb }} style={{ width: '100%', height: '100%' }} />
+              <Image
+                source={{ uri: devilFruit.pictureThumb }}
+                style={{ width: '100%', height: '100%' }}
+              />
             ) : (
               <YStack flex={1} items="center" justify="center">
                 <Sparkles size={22} color="$tangerine" />

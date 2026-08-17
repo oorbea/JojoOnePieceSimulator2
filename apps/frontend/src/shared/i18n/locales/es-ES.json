@@ -324,6 +324,10 @@
         "skip": "Saltar",
         "skipA11y": "Saltar la animación del sorteo de poderes",
         "votingIn": "La votación empieza en {{seconds}}s"
+      },
+      "loadout": {
+        "viewA11y": "Ver los poderes de {{name}}",
+        "closeA11y": "Cerrar el desglose de poderes"
       }
     },
     "leave": {
