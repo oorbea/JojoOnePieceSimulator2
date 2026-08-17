@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { XStack } from 'tamagui'
 
 import { RevealLane } from '@/features/game/components/presentational/match/reveal-lane'
+import { useRevealSpinSound } from '@/features/game/hooks/use-reveal-spin-sound'
 import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import { revealSlotKinds } from '@/features/game/lib/match-rules'
 import type { GameSnapshot } from '@/features/game/types/game.types'
@@ -26,7 +27,11 @@ type Props = {
 // Party-style. Fetches the Stand/DevilFruit catalogs itself (rather than
 // having them threaded down from the container) purely for the roulette's
 // decorative filler names - the actual answer per lane always comes from
-// that participant's own loadout (see RevealLane).
+// that participant's own loadout (see RevealLane). Also owns the reel-spin
+// loop sound (see useRevealSpinSound) - this component is mounted for
+// exactly the reveal's duration (match-screen.tsx only renders it while
+// isRevealing), so its own mount/unmount lifecycle is the sound's start/stop
+// signal.
 export function RevealStage({
   snapshot,
   selfId,
@@ -37,6 +42,7 @@ export function RevealStage({
   reducedMotion,
 }: Props) {
   const { t } = useTranslation()
+  useRevealSpinSound(!reducedMotion)
   const standsQuery = useStands()
   const devilFruitsQuery = useDevilFruits()
   const standNames = (standsQuery.data ?? []).map((s) => s.name)
