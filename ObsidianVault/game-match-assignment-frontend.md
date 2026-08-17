@@ -262,5 +262,53 @@ card; a tap/click opens `LoadoutModal`, a near-fullscreen breakdown with the des
 old card never had room for, one column on phones and Stand | Devil Fruit side by side from `$md`
 up.
 
+## Follow-up polish pass, from actual owner usage (2026-08-17, same day)
+
+Four more fixes, all from the owner actually playing with the redesign above:
+
+1. **The landing bounce still looked like it was sliding to another power.** Two compounding
+   causes, both root-caused by reading the reanimated code rather than guessing: (a) the land-beat
+   `scale` pop was applied to the *whole scrolling strip* (`Animated.View` carrying `translateY`),
+   whose transform origin is the strip's own centre - for a 25+-row Stand/DevilFruit reel the
+   visible window sits far from that centre, so scaling by 1.16 displaced the landed answer
+   sideways-in-time by up to ~1.8 rows before settling back. Fixed by moving `scale` to a new outer
+   `Animated.View` wrapping the whole fixed-size window (whose own centre *is* the highlight
+   band's centre), leaving `translateY` on the inner strip alone. (b) The `withSpring` catch leg
+   needed ~900ms to settle at its damping/stiffness, but `delay + duration` always equalled
+   `spinMs` exactly, leaving as little as ~250ms - the phase machine's own fixed timers cut to
+   'land' on schedule regardless and hard-reset `translateY`, snapping a still-mid-bounce reel to
+   rest. Replaced the spring with two bounded `withTiming` legs (`landingTiming`,
+   `lib/reel-geometry.ts`) whose total duration is provably `<= spinMs` for every lane - unit
+   tested directly (`reel-geometry.test.ts`'s `landingTiming` describe block) rather than trusted
+   by inspection, since this is exactly the kind of timing invariant that silently breaks if
+   `MAX_STAGGER_MS`/`CATCH_MS` are ever retuned. `OVERSHOOT_PX` also shrunk (0.35→0.2 of a row) -
+   it alone was large enough to bleed a neighbour's label into the highlight band.
+2. **Hover-card delay**: 1.5s → 0.5s (`roster-participant.tsx`'s `HOVER_CARD_DELAY_MS`).
+3. **The hover card ran off-screen.** `tooltip.tsx`'s `usePositionedOverlay` only clamped
+   horizontally, only on web (native's measuring ref callback always early-returned), and never
+   checked whether the card's *height* fit the room in whichever direction the above/below flip
+   picked - a ~450px `LoadoutCard` is routinely taller than the space above or below a roster tile.
+   Rewritten to measure via `onLayout` (fires on both platforms, unlike the old web-only
+   `.offsetWidth` ref-callback trick) and position with explicit `top`/`left` pixel values clamped
+   against `Dimensions.get('window')` on both platforms, dropping the web-only
+   `translateX/Y`-percentage transform hack entirely. The clamping math itself is a pure
+   `clampOverlayPosition` (new `shared/lib/overlay-position.ts`) so "an oversized overlay always
+   stays fully on-screen, even when it's too tall for either side" is unit-tested directly instead
+   of only exercised by hand.
+4. **Added a spin sound.** One continuous loop for the whole reveal (not restarted per slot),
+   synthesized locally via a one-off Python script (no external/copyrighted audio) into
+   `assets/audio/reel-spin.wav`, played through `expo-audio`'s `useAudioPlayer`. Owned by
+   `RevealStage` itself via a small `useRevealSpinSound` hook - `RevealStage` is mounted for
+   exactly the reveal's duration (`match-screen.tsx` only renders it while `isRevealing`), so its
+   own mount/unmount lifecycle already is the correct start/stop signal, no extra prop threading
+   needed. Gated on `!reducedMotion` only (no new mute/settings store - not requested): reduced
+   motion already skips every visual spin straight to rest, so the sound playing over a static
+   reel would be misleading rather than just superfluous.
+
+All four verified live via `local-up` + `claude-in-chrome` after a docker rebuild (the new
+`expo-audio` dependency and the bundled `.wav` needed the frontend image rebuilt, not just a code
+reload) - recorded GIFs of a landing on a scalar slot and confirmed the hover card clamping to the
+top edge instead of running off past it near the bottom of the roster.
+
 Related: [[game-lobby-todo]], [[game-lobby-frontend]], [[gameplay-application-layer]],
 [[game-realtime-transport]], [[docker-setup]], [[frontend-stack]], [[i18n-multi-language]].
