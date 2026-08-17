@@ -42,3 +42,28 @@ export function finalLabelIndex(reelLength: number): number {
 export function restRows(reelLength: number): number {
   return -(reelLength - WINDOW_ROWS)
 }
+
+// Per-lane stagger so every carril doesn't stop on the exact same frame -
+// capped at 30% of the spin budget so even the last lane's landing timeline
+// still fits inside spinMs.
+const MAX_STAGGER_MS = 70
+const MAX_STAGGER_SHARE = 0.3
+
+export type LandingTiming = { delayMs: number; decelMs: number; catchMs: number }
+
+// The reel's landing timeline: decelerate-past-target then a short bounded
+// catch, split out so "does the WHOLE animated sequence (delay + decel +
+// catch) finish before spinMs elapses" is unit-testable without rendering
+// reanimated. This is exactly the invariant a physics withSpring catch used
+// to violate: at ~900ms to settle, it routinely outlived the ~250ms budget
+// left after a long stagger delay, so the phase machine's fixed timers cut
+// to 'land' and hard-reset translateY mid-bounce - read as "still moving."
+// Both legs here are bounded withTiming calls, so the total is exact and
+// deterministic; catchMs is a fixed constant, decelMs absorbs whatever
+// budget remains after delay and catchMs are accounted for.
+export function landingTiming(spinMs: number, laneIndex: number, catchMs: number): LandingTiming {
+  const delayMs = Math.min(laneIndex * MAX_STAGGER_MS, spinMs * MAX_STAGGER_SHARE)
+  const duration = Math.max(spinMs - delayMs, spinMs * 0.5)
+  const decelMs = Math.max(duration - catchMs, duration * 0.5)
+  return { delayMs, decelMs, catchMs }
+}
