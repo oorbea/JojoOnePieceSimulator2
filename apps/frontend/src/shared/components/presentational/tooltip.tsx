@@ -1,8 +1,9 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
-import { Modal } from 'react-native'
+import { Dimensions, Modal, type LayoutChangeEvent } from 'react-native'
 import { createPortal } from 'react-dom'
 import { YStack } from 'tamagui'
 
+import { clampOverlayPosition } from '@/shared/lib/overlay-position'
 import { isWeb } from '@/shared/lib/web-blur'
 
 import { GlassPanel } from './glass-panel'
@@ -132,44 +133,59 @@ export function useTooltipTrigger(label?: string, opts?: { delayMs?: number }) {
   return hover
 }
 
-// Shared "where does the bubble/card go" logic for both TooltipBubble and
-// TooltipCard below - centres on the anchor's midpoint, clamped to the
-// viewport, flipping above/below when there isn't room. See TooltipBubble's
-// doc for why this needs the bubble's own rendered size (a ref callback,
-// not a `useLayoutEffect`, to avoid the `react-hooks/set-state-in-effect`
-// cascading-render lint rule).
-function usePositionedOverlay(visible: boolean, anchor: Anchor | null) {
-  const [clampedCenterX, setClampedCenterX] = useState<number | null>(null)
-  const [placement, setPlacement] = useState<'above' | 'below'>('above')
+type Size = { width: number; height: number }
 
-  const measureAndPosition = useCallback(
-    (el: HTMLElement | null) => {
-      if (!isWeb || !visible || !anchor || !el) {
-        setClampedCenterX(null)
-        setPlacement('above')
-        return
-      }
-      const width = el.offsetWidth
-      const height = el.offsetHeight
-      if (!width || !height) return
-      const half = width / 2
-      const centerX = anchor.x + anchor.width / 2
-      const min = half + VIEWPORT_EDGE_MARGIN
-      const max = window.innerWidth - half - VIEWPORT_EDGE_MARGIN
-      setClampedCenterX(Math.min(Math.max(centerX, min), max))
-      setPlacement(anchor.y - 8 - height < VIEWPORT_EDGE_MARGIN ? 'below' : 'above')
-    },
-    [visible, anchor?.x, anchor?.y, anchor?.width, anchor?.height]
+// Shared "where does the bubble/card go" logic for both TooltipBubble and
+// TooltipCard below: measures the overlay's own rendered size via
+// `onLayout` (fires on web AND native, unlike the old web-only
+// `.offsetWidth` ref-callback trick this replaced), then computes an
+// explicit `top`/`left` pixel position clamped to the viewport - flipping
+// above/below the anchor when there isn't room, and clamping the far edge
+// too so a card taller than the space on EITHER side still stays fully
+// on-screen instead of running off whichever edge it flipped away from
+// (the bug: a ~450px LoadoutCard hover-card is routinely taller than the
+// room above or below a roster tile, and the old logic only ever checked
+// the near edge, never the far one). `Dimensions.get('window')` (not
+// `window.innerWidth/innerHeight`) so the exact same math runs on both
+// platforms - native previously got no clamping at all.
+function usePositionedOverlay(visible: boolean, anchor: Anchor | null) {
+  const [measured, setMeasured] = useState<Size | null>(null)
+  const [wasVisible, setWasVisible] = useState(visible)
+
+  // A stale size from a previous open must not position the very first
+  // frame of a new one - reset it the moment this overlay hides. Compared
+  // and reset during render (state, not a ref - `react-hooks/refs` flags
+  // reading/writing a ref's `.current` during render) rather than in an
+  // effect, which would trip `react-hooks/set-state-in-effect`'s
+  // cascading-render warning for an unconditional setState in an effect
+  // body - same "reset state when a derived value changes" pattern
+  // use-loadout-reveal.ts's `seededKey` already documents.
+  if (wasVisible !== visible) {
+    setWasVisible(visible)
+    if (!visible && measured !== null) setMeasured(null)
+  }
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout
+    setMeasured((prev) =>
+      prev && prev.width === width && prev.height === height ? prev : { width, height }
+    )
+  }, [])
+
+  if (!anchor) return { onLayout, left: 0, top: 0 }
+
+  // Before the first onLayout, fall back to a reasonable guess - corrects
+  // to the real clamp on the very next frame once measured, the same
+  // one-tick tolerance the previous approach already had.
+  const size = { width: measured?.width ?? anchor.width, height: measured?.height ?? 40 }
+  const { top, left } = clampOverlayPosition(
+    anchor,
+    size,
+    Dimensions.get('window'),
+    VIEWPORT_EDGE_MARGIN
   )
 
-  const centerX = anchor ? (clampedCenterX ?? anchor.x + anchor.width / 2) : 0
-  const topY = anchor
-    ? placement === 'below'
-      ? anchor.y + anchor.height + 8
-      : Math.max(anchor.y - 8, 4)
-    : 0
-
-  return { measureAndPosition, centerX, topY, placement }
+  return { onLayout, left, top }
 }
 
 // Web skips RN's `Modal`: RNW's implementation wraps content in a fixed,
@@ -200,35 +216,24 @@ function OverlayPortal({ children }: { children: ReactNode }) {
 type TooltipBubbleProps = { visible: boolean; label?: string; anchor: Anchor | null }
 
 // Floats above EVERYTHING (its own `Modal` layer), anchored to the
-// trigger's measured screen position. Centering above the anchor uses a
-// web-only `transform` (RN's native transform doesn't take percentage
-// values, so native anchors from the trigger's top-left corner instead -
-// fine for the short labels these carry). Inert to the pointer throughout,
-// so it never eats the hover/press meant for the button underneath.
+// trigger's measured screen position via explicit `top`/`left` (identical
+// math on web and native - see usePositionedOverlay's doc). Inert to the
+// pointer throughout, so it never eats the hover/press meant for the
+// button underneath.
 export function TooltipBubble({ visible, label, anchor }: TooltipBubbleProps) {
-  const { measureAndPosition, centerX, topY, placement } = usePositionedOverlay(visible, anchor)
+  const { onLayout, left, top } = usePositionedOverlay(visible, anchor)
 
   if (!visible || !label || !anchor) return null
 
   return (
     <OverlayPortal>
       <YStack
-        ref={measureAndPosition as never}
+        onLayout={onLayout}
         position="absolute"
-        t={topY}
-        l={centerX}
+        t={top}
+        l={left}
         maxW={220}
-        style={{
-          pointerEvents: 'none',
-          ...(isWeb
-            ? {
-                transform: [
-                  { translateX: '-50%' },
-                  { translateY: placement === 'below' ? '0%' : '-100%' },
-                ],
-              }
-            : null),
-        }}
+        style={{ pointerEvents: 'none' }}
       >
         <GlassPanel tone="strong" elevate={2} px="$2.5" py="$1.5" rounded="$pill">
           <GlowText level="label" fontSize="$1" numberOfLines={2}>
@@ -247,28 +252,18 @@ type TooltipCardProps = { visible: boolean; anchor: Anchor | null; children: Rea
 // one-line label - no `maxW`/`numberOfLines` squeeze, the content dictates
 // its own size.
 export function TooltipCard({ visible, anchor, children }: TooltipCardProps) {
-  const { measureAndPosition, centerX, topY, placement } = usePositionedOverlay(visible, anchor)
+  const { onLayout, left, top } = usePositionedOverlay(visible, anchor)
 
   if (!visible || !anchor) return null
 
   return (
     <OverlayPortal>
       <YStack
-        ref={measureAndPosition as never}
+        onLayout={onLayout}
         position="absolute"
-        t={topY}
-        l={centerX}
-        style={{
-          pointerEvents: 'none',
-          ...(isWeb
-            ? {
-                transform: [
-                  { translateX: '-50%' },
-                  { translateY: placement === 'below' ? '0%' : '-100%' },
-                ],
-              }
-            : null),
-        }}
+        t={top}
+        l={left}
+        style={{ pointerEvents: 'none' }}
       >
         {children}
       </YStack>

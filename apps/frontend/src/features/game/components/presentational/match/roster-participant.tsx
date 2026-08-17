@@ -6,7 +6,7 @@ import type { GameParticipant } from '@/features/game/types/game.types'
 import type { Manga } from '@/shared/lib/zod'
 import { TooltipCard, useHoverTrigger } from '@/shared/components/presentational/tooltip'
 
-const HOVER_CARD_DELAY_MS = 1500
+const HOVER_CARD_DELAY_MS = 500
 
 type Props = {
   participant: GameParticipant
@@ -18,7 +18,7 @@ type Props = {
 // One roster tile plus its own hover-card trigger - a per-participant hook
 // instance, which is why this is its own component rather than inline in
 // MatchRoster's .map (hooks can't live inside a loop body). Hover (web,
-// after HOVER_CARD_DELAY_MS) or long-press (native) reveals the full
+// after HOVER_CARD_DELAY_MS, 0.5s) or long-press (native) reveals the full
 // LoadoutCard as a floating card; a tap/click opens the bigger modal
 // instead - see useHoverTrigger's `nativeAutoHideMs: null` for why native
 // dismisses the card on release rather than on a timer.
