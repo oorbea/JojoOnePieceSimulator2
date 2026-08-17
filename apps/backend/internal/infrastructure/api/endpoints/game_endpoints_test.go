@@ -222,6 +222,85 @@ func (fakeGameStageRepository) UpdatePicture(context.Context, game.StageID, *str
 
 var _ ports.IStageRepository = fakeGameStageRepository{}
 
+// fakeGameStandRepository/fakeGameDevilFruitRepository are minimal
+// in-memory ports.IStandRepository/IDevilFruitRepository - GameEndpoints
+// only ever calls Translations (via standTextResolver/devilFruitTextResolver);
+// the rest of each interface is unused by these tests but must still be
+// satisfied to build a *GameEndpoints. translations is nil-safe: an id with
+// no entry resolves to ports.PowerTranslations{}, i.e. every locale falls
+// back all the way to "" (fine for tests not exercising a specific locale).
+type fakeGameStandRepository struct {
+	translations map[powers.PowerID]ports.PowerTranslations
+}
+
+func (fakeGameStandRepository) FindByID(context.Context, powers.PowerID, enums.Locale) (*powers.Stand, error) {
+	return nil, ports.ErrStandNotFound
+}
+
+func (fakeGameStandRepository) FindByName(context.Context, string, enums.Locale) (*powers.Stand, error) {
+	return nil, ports.ErrStandNotFound
+}
+
+func (fakeGameStandRepository) GetAll(context.Context, enums.Locale) ([]*powers.Stand, error) {
+	return nil, nil
+}
+
+func (fakeGameStandRepository) Filter(context.Context, ports.StandFilters, enums.Locale) ([]*powers.Stand, error) {
+	return nil, nil
+}
+
+func (fakeGameStandRepository) Save(context.Context, *powers.Stand, ports.PowerTranslations) error {
+	return nil
+}
+
+func (fakeGameStandRepository) Delete(context.Context, powers.PowerID) error { return nil }
+
+func (fakeGameStandRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, enums.PictureStatus) error {
+	return nil
+}
+
+func (f fakeGameStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	return f.translations[id], nil
+}
+
+var _ ports.IStandRepository = fakeGameStandRepository{}
+
+type fakeGameDevilFruitRepository struct {
+	translations map[powers.PowerID]ports.PowerTranslations
+}
+
+func (fakeGameDevilFruitRepository) FindByID(context.Context, powers.PowerID, enums.Locale) (*powers.DevilFruit, error) {
+	return nil, ports.ErrDevilFruitNotFound
+}
+
+func (fakeGameDevilFruitRepository) FindByName(context.Context, string, enums.Locale) (*powers.DevilFruit, error) {
+	return nil, ports.ErrDevilFruitNotFound
+}
+
+func (fakeGameDevilFruitRepository) GetAll(context.Context, enums.Locale) ([]*powers.DevilFruit, error) {
+	return nil, nil
+}
+
+func (fakeGameDevilFruitRepository) Filter(context.Context, ports.DevilFruitFilters, enums.Locale) ([]*powers.DevilFruit, error) {
+	return nil, nil
+}
+
+func (fakeGameDevilFruitRepository) Save(context.Context, *powers.DevilFruit, ports.PowerTranslations) error {
+	return nil
+}
+
+func (fakeGameDevilFruitRepository) Delete(context.Context, powers.PowerID) error { return nil }
+
+func (fakeGameDevilFruitRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, enums.PictureStatus) error {
+	return nil
+}
+
+func (f fakeGameDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
+	return f.translations[id], nil
+}
+
+var _ ports.IDevilFruitRepository = fakeGameDevilFruitRepository{}
+
 // fakeGameStageCatalog is ports.IStageCatalog, feeding GameService's own
 // stage selection at create/reconfigure time - mirrors game_service_test.go's
 // fakeStageCatalog.
@@ -352,6 +431,13 @@ type gameEndpointsTestDeps struct {
 // newGameTestServer builds a full router with a real GameService (real
 // idgen.UUIDGenerator, real gamestore.NewMemoryGameStore) wired to local
 // fakes for everything else, per game-lobby-todo.md's §2 instructions.
+// fakeGameStandRepository/fakeGameDevilFruitRepository carry no translations
+// here - GameEndpoints' per-viewer Stand/DevilFruit text resolution
+// (standTextResolver/devilFruitTextResolver) is covered directly against
+// dto.NewGameStateResponse in dto/game_response_test.go instead of through
+// this HTTP harness, since the harness's weighted-random draw (see
+// LoadoutBuilder.drawStand) can't be steered to a specific Stand without a
+// dedicated RandomSource fake.
 func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 	t.Helper()
 
@@ -382,7 +468,9 @@ func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 		services.VotingPolicy{Window: 30_000_000_000},
 	)
 
-	gameEndpoints := endpoints.NewGameEndpoints(svc, services.NewGameEventHub(), fakeGameStageRepository{}, users, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	gameEndpoints := endpoints.NewGameEndpoints(svc, services.NewGameEventHub(), fakeGameStageRepository{},
+		fakeGameStandRepository{}, fakeGameDevilFruitRepository{},
+		users, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
 	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})

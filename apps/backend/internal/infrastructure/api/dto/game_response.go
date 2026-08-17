@@ -6,7 +6,9 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
 // GameConfigResponse mirrors game.Config.
@@ -79,7 +81,9 @@ type GameLoadoutResponse struct {
 	PhysicalForm    string              `json:"physicalForm"`
 }
 
-// GameParticipantResponse mirrors game.Participant.
+// GameParticipantResponse mirrors game.Participant. AvatarThumb is resolved
+// at serialization time (own upload if the participant's user has one, else
+// their Google-synced picture, "" for a bot) - see resolveParticipantAvatar.
 type GameParticipantResponse struct {
 	ID          string               `json:"id"`
 	UserID      *string              `json:"userId,omitempty"`
@@ -87,6 +91,7 @@ type GameParticipantResponse struct {
 	TeamID      string               `json:"teamId"`
 	Kind        string               `json:"kind"`
 	Connected   bool                 `json:"connected"`
+	AvatarThumb string               `json:"avatarThumb"`
 	Loadout     *GameLoadoutResponse `json:"loadout,omitempty"`
 }
 
@@ -113,6 +118,15 @@ type GameStageResponse struct {
 // to whichever locale that viewer has configured on their account -
 // unrelated to PictureURLResolver, which never depends on locale.
 type StageTextResolver func(ctx context.Context, id game.StageID) (string, error)
+
+// PowerTextResolver is StageTextResolver's analogue for a loadout's
+// Stand/DevilFruit: a live Game's Loadout freezes its Stand/DevilFruit at
+// whatever locale RepoPowerPool drew them in (en-GB - see
+// infrastructure/game/repo_power_pool.go), since the Game is one instance
+// shared by every participant. This resolver re-derives the description and
+// skills per viewer at serialization time instead, bound by the caller (see
+// endpoints.GameEndpoints.powerTextResolver) to that viewer's own locale.
+type PowerTextResolver func(ctx context.Context, id powers.PowerID) (ports.PowerContent, error)
 
 // GameRoundResultResponse mirrors game.RoundResult.
 type GameRoundResultResponse struct {
@@ -184,17 +198,23 @@ type GameStateResponse struct {
 // NewGameStateResponse builds a GameStateResponse for self's point of view.
 // resolveStand/resolveFruit resolve a Stand/DevilFruit's picture key into a
 // URL, same signature as StandService.PictureURL/DevilFruitService.PictureURL.
-// revealEndsAt is the in-flight reveal deadline for g (see GameService.
-// RevealEndsAt) - nil unless g is currently ASSIGNING with a pending
-// reveal, which is what lets a (re)connecting client resume the countdown
-// instead of restarting the reveal animation from zero.
+// resolveStandText/resolveFruitText re-resolve a loadout's Stand/DevilFruit
+// description+skills in self's own locale (see PowerTextResolver).
+// resolveAvatarPicture resolves a participant's avatar thumb key into a URL,
+// same signature as UserService.AvatarURL - "" resolves to "" without being
+// called (see resolveParticipantAvatar). revealEndsAt is the in-flight
+// reveal deadline for g (see GameService.RevealEndsAt) - nil unless g is
+// currently ASSIGNING with a pending reveal, which is what lets a
+// (re)connecting client resume the countdown instead of restarting the
+// reveal animation from zero.
 func NewGameStateResponse(
 	ctx context.Context,
 	g *game.Game,
 	code string,
 	self game.ParticipantID,
-	resolveStand, resolveFruit, resolveStagePicture PictureURLResolver,
+	resolveStand, resolveFruit, resolveStagePicture, resolveAvatarPicture PictureURLResolver,
 	resolveStageDescription StageTextResolver,
+	resolveStandText, resolveFruitText PowerTextResolver,
 	revealEndsAt *time.Time,
 ) (GameStateResponse, error) {
 	teams := make([]GameTeamResponse, 0, len(g.Teams()))
@@ -222,8 +242,13 @@ func NewGameStateResponse(
 			s := uid.String()
 			pr.UserID = &s
 		}
+		avatarThumb, err := resolveParticipantAvatar(ctx, p.AvatarThumbKey(), p.GooglePicture(), resolveAvatarPicture)
+		if err != nil {
+			return GameStateResponse{}, err
+		}
+		pr.AvatarThumb = avatarThumb
 		if l := p.Loadout(); l != nil {
-			lr, err := newGameLoadoutResponse(ctx, l, resolveStand, resolveFruit)
+			lr, err := newGameLoadoutResponse(ctx, l, resolveStand, resolveFruit, resolveStandText, resolveFruitText)
 			if err != nil {
 				return GameStateResponse{}, err
 			}
@@ -347,7 +372,18 @@ func newGameStageResponse(ctx context.Context, s game.Stage, resolvePicture Pict
 	}, nil
 }
 
-func newGameLoadoutResponse(ctx context.Context, l *game.Loadout, resolveStand, resolveFruit PictureURLResolver) (GameLoadoutResponse, error) {
+// newGameLoadoutResponse builds a GameLoadoutResponse for one viewer.
+// resolveStandText/resolveFruitText override the Stand/DevilFruit's
+// description+skills - RepoPowerPool freezes those to en-GB when the
+// loadout was drawn (see repo_power_pool.go), so without this override
+// every viewer would see the loadout's power text in English regardless of
+// their own configured language.
+func newGameLoadoutResponse(
+	ctx context.Context,
+	l *game.Loadout,
+	resolveStand, resolveFruit PictureURLResolver,
+	resolveStandText, resolveFruitText PowerTextResolver,
+) (GameLoadoutResponse, error) {
 	lr := GameLoadoutResponse{
 		Spin:            l.Spin().String(),
 		Hamon:           l.Hamon().String(),
@@ -362,6 +398,12 @@ func newGameLoadoutResponse(ctx context.Context, l *game.Loadout, resolveStand, 
 		if err != nil {
 			return GameLoadoutResponse{}, err
 		}
+		content, err := resolveStandText(ctx, s.ID())
+		if err != nil {
+			return GameLoadoutResponse{}, err
+		}
+		sr.Description = content.Description
+		sr.Skills = nonNilSkills(content.Skills)
 		lr.Stand = &sr
 	}
 	if f := l.DevilFruit(); f != nil {
@@ -369,9 +411,36 @@ func newGameLoadoutResponse(ctx context.Context, l *game.Loadout, resolveStand, 
 		if err != nil {
 			return GameLoadoutResponse{}, err
 		}
+		content, err := resolveFruitText(ctx, f.ID())
+		if err != nil {
+			return GameLoadoutResponse{}, err
+		}
+		fr.Description = content.Description
+		fr.Skills = nonNilSkills(content.Skills)
 		lr.DevilFruit = &fr
 	}
 	return lr, nil
+}
+
+func nonNilSkills(skills []string) []string {
+	if skills == nil {
+		return []string{}
+	}
+	return skills
+}
+
+// resolveParticipantAvatar resolves a game participant's avatar: their own
+// uploaded thumbnail (presigned through resolve, an object-storage key) if
+// one exists, else their Google-synced picture (already a full external
+// URL - never passed through resolve), else "" for a bot or a human with
+// neither. Unlike dto.resolveAvatar (the profile endpoint's version), there
+// is no separate main/thumb pair here - game.Participant only carries the
+// thumb key, since that's the only rendition the roster/reveal ever show.
+func resolveParticipantAvatar(ctx context.Context, avatarThumbKey, googlePicture string, resolve PictureURLResolver) (string, error) {
+	if avatarThumbKey == "" {
+		return googlePicture, nil
+	}
+	return resolve(ctx, avatarThumbKey)
 }
 
 // PublicLobbyResponse is one entry in the public lobby browser - a
