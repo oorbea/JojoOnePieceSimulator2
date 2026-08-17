@@ -28,10 +28,10 @@ type Props = {
 // having them threaded down from the container) purely for the roulette's
 // decorative filler names - the actual answer per lane always comes from
 // that participant's own loadout (see RevealLane). Also owns the reel-spin
-// loop sound (see useRevealSpinSound) - this component is mounted for
-// exactly the reveal's duration (match-screen.tsx only renders it while
-// isRevealing), so its own mount/unmount lifecycle is the sound's start/stop
-// signal.
+// tick/land chime sounds (see useRevealSpinSound), driven straight off the
+// same `phase` prop the reels themselves animate on, so the audio and the
+// visual deceleration are the same timeline, not a separate loop guessing
+// at it.
 export function RevealStage({
   snapshot,
   selfId,
@@ -42,7 +42,7 @@ export function RevealStage({
   reducedMotion,
 }: Props) {
   const { t } = useTranslation()
-  useRevealSpinSound(!reducedMotion)
+  useRevealSpinSound(phase, !reducedMotion)
   const standsQuery = useStands()
   const devilFruitsQuery = useDevilFruits()
   const standNames = (standsQuery.data ?? []).map((s) => s.name)
