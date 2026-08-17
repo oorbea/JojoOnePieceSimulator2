@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { PowerRoulette } from '@/features/game/components/presentational/match/power-roulette'
@@ -19,6 +20,9 @@ type Props = {
   standNames: string[]
   fruitNames: string[]
   reducedMotion: boolean
+  /** This lane's position among its siblings - drives PowerRoulette's
+   * landing stagger only, never which value is drawn. */
+  laneIndex: number
 }
 
 const SCALAR_NAMESPACE: Record<string, string> = {
@@ -46,11 +50,27 @@ const SCALAR_VALUES: Record<string, string[]> = {
 // decorative (real catalog names for Stand/DevilFruit, every enum member for
 // a scalar slot) - the value it lands on always comes straight from this
 // participant's own loadout, never from the candidate pool.
-export function RevealLane({ participant, isSelf, slotKind, spinning, standNames, fruitNames, reducedMotion }: Props) {
+export function RevealLane({
+  participant,
+  isSelf,
+  slotKind,
+  spinning,
+  standNames,
+  fruitNames,
+  reducedMotion,
+  laneIndex,
+}: Props) {
   const { t } = useTranslation()
   const loadout = participant.loadout
 
-  const { candidates, finalLabel } = slotFor(t, loadout, slotKind, standNames, fruitNames)
+  // Memoised so PowerRoulette's reel useMemo doesn't invalidate every render
+  // (slotFor otherwise returns a fresh candidates array each time) - matters
+  // more now that the reel is mid-animation (stagger/overshoot) far more
+  // often than the old instant-cut version was.
+  const { candidates, finalLabel } = useMemo(
+    () => slotFor(t, loadout, slotKind, standNames, fruitNames),
+    [t, loadout, slotKind, standNames, fruitNames]
+  )
 
   return (
     <GlassPanel
@@ -72,6 +92,7 @@ export function RevealLane({ participant, isSelf, slotKind, spinning, standNames
         spinning={spinning}
         reducedMotion={reducedMotion}
         spinMs={REVEAL_SPIN_MS}
+        laneIndex={laneIndex}
       />
     </GlassPanel>
   )
@@ -90,7 +111,10 @@ function slotFor(
     return { candidates: standNames, finalLabel: loadout.stand?.name ?? t('game.match.noStand') }
   }
   if (slotKind === 'devilFruit') {
-    return { candidates: fruitNames, finalLabel: loadout.devilFruit?.name ?? t('game.match.noFruit') }
+    return {
+      candidates: fruitNames,
+      finalLabel: loadout.devilFruit?.name ?? t('game.match.noFruit'),
+    }
   }
 
   const namespace = SCALAR_NAMESPACE[slotKind]
