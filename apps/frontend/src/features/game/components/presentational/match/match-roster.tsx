@@ -17,7 +17,7 @@ type Props = {
 // VERSUS: two tone-colored columns (reusing the lobby's team tone mapping).
 // GAUNTLET: one wrapped row. The roster itself only shows avatar + username
 // per participant (RosterParticipant/ParticipantTile) - the full loadout
-// breakdown that used to render inline here (LoadoutCard) is now a 1.5s
+// breakdown that used to render inline here (LoadoutCard) is now a 0.5s
 // hover card or a tap-opened LoadoutModal, both driven by this component
 // since it's the one that owns "which participant's modal is open" and has
 // `mangas` in hand. Only rendered once the sorteo overlay (RevealStage) has
