@@ -64,15 +64,13 @@ sets it. Harmless for this tanda (no vote UI was in scope), but blocks a live vo
 later without a small backend fix first (set `VotesCast` from `Ballot.Count()` when building the
 frame).
 
-## Locale gap, worth knowing before touching loadout card copy
+## Locale gap - CLOSED 2026-08-17, see the new section below
 
-`RepoPowerPool` resolves stand/devil-fruit data at a **fixed `enums.EnGB`**, unlike a Stage's
-`description` (re-resolved per viewer locale server-side via `StageTextResolver`). So
-`loadout.stand`/`loadout.devilFruit`'s `description`/`skills` text is always English, not the
-viewer's locale - deliberately **not rendered** on `loadout-card.tsx` (only name, picture, rarity,
-stat grid, fruit type, all locale-independent or numeric). If localized power text is ever wanted
-on this card, look the power up by `id` in `useStands()`/`useDevilFruits()`'s already-viewer-locale
-cache instead of trusting the loadout payload - don't patch `RepoPowerPool` for this alone.
+~~`RepoPowerPool` resolves stand/devil-fruit data at a fixed `enums.EnGB`... deliberately not
+rendered on `loadout-card.tsx`~~ - no longer true. `GameEndpoints` now re-resolves a loadout's
+Stand/DevilFruit `description`/`skills` per viewer locale at serialization time
+(`standTextResolver`/`devilFruitTextResolver`, the exact analogue of `StageTextResolver`), so both
+are safe to render directly. See "Loadout power text goes per-locale + roster redesign" below.
 
 ## Reveal never actually played, and only revealed one card at a time (fixed 2026-08-14)
 
@@ -220,6 +218,49 @@ and on immediate re-run; unrelated to this tanda's files, not chased further). N
 `lib/__tests__/{match-rules,loadout-reveal}.test.ts`, extended `game-socket.store.test.ts`. No new
 native render tests (consistent with prior lobby tandas - manual `local-up` walkthrough is the
 gate for the animated/visual half).
+
+## Reel geometry bug (the ruleta landed blank) + redesign, loadout power text per-locale, voting roster redesign (2026-08-17)
+
+Owner report: the sorteo ruleta looked like every candidate flew past and it "landed on an empty
+row" - every single spin, not intermittently.
+
+**Root cause**: `power-roulette.tsx`'s clipping window used `justify="center"` on a strip taller
+than the window. Flex centred the strip *before* any transform ran, so `translateY=0` showed the
+strip's **middle** row, not its top one, and the old `restY = -(N-1)*ITEM_HEIGHT` (which assumed
+row 0 starts flush with the window top) landed the window past the strip's actual end for any pool
+bigger than 3 candidates - which every real reel is (10-25 rows). The landing frame was *always*
+blank. Confirmed live via `local-up` + `claude-in-chrome`: every slot across a full both-mangas
+sorteo (physicalForm, fruitMastery, spin, Stand) now lands centred with real neighbours visible
+above/below, never blank.
+
+**Fix + redesign** (`power-roulette.tsx`, `reveal-lane.tsx`, `reveal-stage.tsx`): dropped
+`justify="center"`; moved to a 3-row window (`lib/reel-geometry.ts`'s `restRows`/`buildReel`/
+`finalLabelIndex`, unit-tested directly - see `lib/__tests__/reel-geometry.test.ts` - so this exact
+invariant can't silently regress again) with the landed value centred and a highlighted band;
+overshoot-then-spring landing instead of a dead stop; a `@tamagui/linear-gradient` top/bottom fade
+instead of a hard clip; a small per-lane stagger (capped at 30% of `REVEAL_SPIN_MS`) so lanes don't
+all stop on the same frame. None of `loadout-reveal.ts`'s phase-timing constants changed - the
+backend's `scheduleRevealDelay` is keyed to them, only the visuals inside each phase moved.
+
+**Haki labels reworded** (es-ES/ca-ES only, owner-specified): "Haki de Armadura"/"Haki de
+Observación"/"Haki del Rey" (ca-ES: "Haki d'Armadura"/"Haki d'Observació"/"Haki del Rei") -
+`game.match.trait.*` in the two locale JSONs.
+
+**Loadout power text goes per-locale**: see the "Locale gap" note above, now closed - backend
+change in [[gameplay-application-layer]]/[[backend-contract]]'s update. `game.types.ts`'s comment
+warning against rendering `stand`/`devilFruit` description+skills is stale and was corrected.
+
+**Voting-round roster redesigned**: `MatchRoster` no longer renders the full `LoadoutCard` per
+participant (art blocks, stat grid, every chip - too much at a glance during actual voting). New
+`ParticipantTile` (avatar or colour-circle initial or robot icon + username only,
+`participant-avatar.tsx` shared with the modal header) is what renders now.
+`useHoverTrigger`/`TooltipCard` (generalized from `tooltip.tsx`'s existing
+`useTooltipTrigger`/`TooltipBubble` - see [[a11y-web-leak]]'s sibling doc for the original
+anchoring rationale, unchanged here) show the old `LoadoutCard` as a 1.5s hover (web) / long-press
+(native, dismissed on release instead of a timer - a card is read while still pressing, not after)
+card; a tap/click opens `LoadoutModal`, a near-fullscreen breakdown with the description/skills the
+old card never had room for, one column on phones and Stand | Devil Fruit side by side from `$md`
+up.
 
 Related: [[game-lobby-todo]], [[game-lobby-frontend]], [[gameplay-application-layer]],
 [[game-realtime-transport]], [[docker-setup]], [[frontend-stack]], [[i18n-multi-language]].
