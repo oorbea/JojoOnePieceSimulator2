@@ -17,7 +17,7 @@ func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
 	stageRepo := newFakeStageRepository()
 	stageSvc := services.NewStageService(stageRepo, &fakeStageIDGenerator{}, newFakePictureStorage(), &fakeImageProcessor{}, fullQueueEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})

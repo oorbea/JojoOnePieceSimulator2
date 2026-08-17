@@ -36,6 +36,7 @@ func buildMidMatchVersusGame(t *testing.T) *game.Game {
 		t.Fatalf("NewConfig: %v", err)
 	}
 	host := mustHumanParticipant(t, 1, 1, 10)
+	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg")
 	teamA := mustTeam(t, 10, "Team A")
 	teamB := mustTeam(t, 20, "Team B")
 	g, err := game.NewGame(game.GameID{9}, cfg, host, []*game.Team{teamA, teamB}, someStages(t))
@@ -173,6 +174,10 @@ func TestSnapshotRestoreRoundTrip(t *testing.T) {
 		}
 		if got.Connected() != want.Connected() || got.Kind() != want.Kind() || got.TeamID() != want.TeamID() {
 			t.Errorf("participant %s mismatch: got %+v want %+v", want.ID(), got, want)
+		}
+		if got.AvatarThumbKey() != want.AvatarThumbKey() || got.GooglePicture() != want.GooglePicture() {
+			t.Errorf("participant %s avatar mismatch: got thumb=%q google=%q want thumb=%q google=%q",
+				want.ID(), got.AvatarThumbKey(), got.GooglePicture(), want.AvatarThumbKey(), want.GooglePicture())
 		}
 		wl, gl := want.Loadout(), got.Loadout()
 		if (wl == nil) != (gl == nil) {

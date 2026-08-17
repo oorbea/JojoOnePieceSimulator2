@@ -230,12 +230,13 @@ func main() {
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: cfg.GameVotingWindow},
 	)
-	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepository, userRepo, tokenIssuer, ctx, endpoints.GameWSConfig{
+	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepository, standRepo, devilFruitRepo, userRepo, tokenIssuer, ctx, endpoints.GameWSConfig{
 		VotingWindow:             cfg.GameVotingWindow,
 		AllowedOrigins:           cfg.CORSAllowedOrigins,
 		ResolveStandPicture:      standService.PictureURL,
 		ResolveDevilFruitPicture: devilFruitService.PictureURL,
 		ResolveStagePicture:      stageService.PictureURL,
+		ResolveAvatarPicture:     userService.AvatarURL,
 	})
 
 	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit

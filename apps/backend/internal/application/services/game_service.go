@@ -187,6 +187,7 @@ func (s *GameService) CreateGame(ctx context.Context, hostUserID user.UserID, in
 	if err != nil {
 		return nil, "", err
 	}
+	host.SetAvatar(hostUser.AvatarThumbKey(), hostUser.GooglePicture())
 
 	g, err := game.NewGame(s.gameIDs.NewID(), cfg, host, teams, stages)
 	if err != nil {
@@ -320,6 +321,7 @@ func (s *GameService) joinLocked(ctx context.Context, g *game.Game, userID user.
 	if err != nil {
 		return err
 	}
+	p.SetAvatar(u.AvatarThumbKey(), u.GooglePicture())
 	return g.Join(p)
 }
 
