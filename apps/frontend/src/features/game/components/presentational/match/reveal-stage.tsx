@@ -27,7 +27,15 @@ type Props = {
 // having them threaded down from the container) purely for the roulette's
 // decorative filler names - the actual answer per lane always comes from
 // that participant's own loadout (see RevealLane).
-export function RevealStage({ snapshot, selfId, phase, slotIndex, totalSlots, onSkip, reducedMotion }: Props) {
+export function RevealStage({
+  snapshot,
+  selfId,
+  phase,
+  slotIndex,
+  totalSlots,
+  onSkip,
+  reducedMotion,
+}: Props) {
   const { t } = useTranslation()
   const standsQuery = useStands()
   const devilFruitsQuery = useDevilFruits()
@@ -50,7 +58,9 @@ export function RevealStage({ snapshot, selfId, phase, slotIndex, totalSlots, on
 
   return (
     <GlassPanel tone="strong" width="100%" p="$4" gap="$3" items="center">
-      <GlowText level="heading">{phase === 'intro' ? t('game.match.reveal.intro') : title}</GlowText>
+      <GlowText level="heading">
+        {phase === 'intro' ? t('game.match.reveal.intro') : title}
+      </GlowText>
       {currentKind && phase !== 'outro' ? (
         <GlowText level="label" tone="soft">
           {t('game.match.reveal.progress', { current: slotIndex + 1, total: totalSlots })}
@@ -58,7 +68,7 @@ export function RevealStage({ snapshot, selfId, phase, slotIndex, totalSlots, on
       ) : null}
 
       <XStack flexWrap="wrap" gap="$2.5" justify="center" width="100%">
-        {orderedParticipants.map((p) => (
+        {orderedParticipants.map((p, i) => (
           <RevealLane
             key={p.id}
             participant={p}
@@ -68,6 +78,7 @@ export function RevealStage({ snapshot, selfId, phase, slotIndex, totalSlots, on
             standNames={standNames}
             fruitNames={fruitNames}
             reducedMotion={reducedMotion}
+            laneIndex={i}
           />
         ))}
       </XStack>
