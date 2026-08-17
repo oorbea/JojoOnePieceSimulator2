@@ -46,8 +46,10 @@ export type GameTeam = {
 // Mirrors dto.GameLoadoutResponse. stand/devilFruit come straight off the
 // shared feature types - don't redeclare the power shapes here. Note:
 // stand.description/skills and devilFruit.description/skills are frozen in
-// enums.EnGB by RepoPowerPool, NOT re-resolved per viewer locale (unlike
-// GameStage below) - the loadout card must never render that text.
+// enums.EnGB by RepoPowerPool at draw time, but GameEndpoints re-resolves
+// both to the viewer's own locale at serialization (standTextResolver/
+// devilFruitTextResolver, mirroring GameStage's description below) - safe to
+// render both directly, same as any other server-localized text.
 export type GameLoadout = {
   stand?: StandResponse
   devilFruit?: DevilFruitResponse
@@ -75,7 +77,10 @@ export type GameStage = {
   pictureStatus: PictureStatus
 }
 
-// Mirrors dto.GameParticipantResponse.
+// Mirrors dto.GameParticipantResponse. avatarThumb is "" for a bot or a
+// human with neither a self-uploaded avatar nor a Google-synced picture -
+// never absent, so a falsy check is enough to fall back to the initial/
+// robot-icon placeholder (see ParticipantTile).
 export type GameParticipant = {
   id: string
   userId?: string
@@ -83,6 +88,7 @@ export type GameParticipant = {
   teamId: string
   kind: ParticipantKind
   connected: boolean
+  avatarThumb: string
   loadout?: GameLoadout
 }
 

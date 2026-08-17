@@ -1,5 +1,16 @@
-import { currentRound, hasAllLoadouts, loadoutSlots, revealSlotKinds, secondsUntil } from '@/features/game/lib/match-rules'
-import type { GameLoadout, GameParticipant, GameRound, GameSnapshot } from '@/features/game/types/game.types'
+import {
+  currentRound,
+  hasAllLoadouts,
+  loadoutSlots,
+  revealSlotKinds,
+  secondsUntil,
+} from '@/features/game/lib/match-rules'
+import type {
+  GameLoadout,
+  GameParticipant,
+  GameRound,
+  GameSnapshot,
+} from '@/features/game/types/game.types'
 import type { Manga } from '@/shared/lib/zod'
 
 function participant(overrides: Partial<GameParticipant> = {}): GameParticipant {
@@ -9,6 +20,7 @@ function participant(overrides: Partial<GameParticipant> = {}): GameParticipant 
     teamId: 't1',
     kind: 'HUMAN',
     connected: true,
+    avatarThumb: '',
     ...overrides,
   }
 }
@@ -102,7 +114,10 @@ describe('loadoutSlots', () => {
   const BOTH: Manga[] = ['JOJO', 'ONE_PIECE']
 
   it('orders slots physicalForm, stand, devilFruit, fruitMastery, hamon, armamentHaki, observationHaki, conquerorHaki, spin', () => {
-    const slots = loadoutSlots(loadout({ spin: 'BASIC', hamon: 'BASIC', fruitMastery: 'REGULAR' }), BOTH)
+    const slots = loadoutSlots(
+      loadout({ spin: 'BASIC', hamon: 'BASIC', fruitMastery: 'REGULAR' }),
+      BOTH
+    )
     expect(slots.map((s) => s.key)).toEqual([
       'physicalForm',
       'stand',
@@ -144,7 +159,12 @@ describe('loadoutSlots', () => {
 
   it('a JOJO-only lobby never gets a One Piece slot, even with a fully-drawn loadout', () => {
     const slots = loadoutSlots(
-      loadout({ hamon: 'BASIC', spin: 'BASIC', fruitMastery: 'REGULAR', physicalForm: 'VICE_ADMIRAL' }),
+      loadout({
+        hamon: 'BASIC',
+        spin: 'BASIC',
+        fruitMastery: 'REGULAR',
+        physicalForm: 'VICE_ADMIRAL',
+      }),
       ['JOJO']
     )
     expect(slots.map((s) => s.key)).toEqual(['stand', 'hamon', 'spin'])

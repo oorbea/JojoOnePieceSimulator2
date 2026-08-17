@@ -18,6 +18,7 @@ function participant(overrides: Partial<GameParticipant> = {}): GameParticipant 
     teamId: 't1',
     kind: 'HUMAN',
     connected: true,
+    avatarThumb: '',
     ...overrides,
   }
 }
@@ -98,16 +99,22 @@ describe('shouldReveal', () => {
       participants: [participant({ id: 'p1', loadout: loadout() }), participant({ id: 'p2' })],
       rounds: [],
     })
-    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0 }), staleSnap)).toBe(false)
+    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0 }), staleSnap)).toBe(
+      false
+    )
   })
 
   it('is false once voting has actually opened, even if this assignment was never revealed', () => {
     const votingSnap = snapshot({
       ...snap,
       state: 'VOTING',
-      rounds: [{ index: 0, stage: {} as never, options: [], tiebreakUsed: false, votedParticipantIds: [] }],
+      rounds: [
+        { index: 0, stage: {} as never, options: [], tiebreakUsed: false, votedParticipantIds: [] },
+      ],
     })
-    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0 }), votingSnap)).toBe(false)
+    expect(shouldReveal(live({ assignmentSeq: 1, revealedAssignmentSeq: 0 }), votingSnap)).toBe(
+      false
+    )
   })
 
   it('is true when a new assignment landed, all loadouts are present, and the game is still ASSIGNING', () => {
