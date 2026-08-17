@@ -24,7 +24,16 @@ function baseSnapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
     locked: false,
     config: baseConfig(),
     teams: [{ id: 't1', name: 'Squad', color: 0, memberIds: ['p1'] }],
-    participants: [{ id: 'p1', displayName: 'host', teamId: 't1', kind: 'HUMAN', connected: true }],
+    participants: [
+      {
+        id: 'p1',
+        displayName: 'host',
+        teamId: 't1',
+        kind: 'HUMAN',
+        connected: true,
+        avatarThumb: '',
+      },
+    ],
     rounds: [],
     ...overrides,
   }
@@ -32,7 +41,7 @@ function baseSnapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
 
 function resolves(key: string): boolean {
   const parts = key.split('.')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- walking a plain JSON tree
+
   let node: any = enGB
   for (const part of parts) {
     if (node == null || typeof node !== 'object' || !(part in node)) return false
@@ -125,8 +134,22 @@ describe('canSwitchTeam', () => {
   it('rejects a non-host moving someone else', () => {
     const snap = baseSnapshot({
       participants: [
-        { id: 'p1', displayName: 'me', teamId: 't1', kind: 'HUMAN', connected: true },
-        { id: 'p2', displayName: 'other', teamId: 't1', kind: 'HUMAN', connected: true },
+        {
+          id: 'p1',
+          displayName: 'me',
+          teamId: 't1',
+          kind: 'HUMAN',
+          connected: true,
+          avatarThumb: '',
+        },
+        {
+          id: 'p2',
+          displayName: 'other',
+          teamId: 't1',
+          kind: 'HUMAN',
+          connected: true,
+          avatarThumb: '',
+        },
       ],
     })
     const gate = canSwitchTeam(snap, you, 'p2', 't1')
@@ -160,8 +183,22 @@ describe('canKick', () => {
   it('allows a host kicking someone else', () => {
     const snap = baseSnapshot({
       participants: [
-        { id: 'p1', displayName: 'host', teamId: 't1', kind: 'HUMAN', connected: true },
-        { id: 'p2', displayName: 'other', teamId: 't1', kind: 'HUMAN', connected: true },
+        {
+          id: 'p1',
+          displayName: 'host',
+          teamId: 't1',
+          kind: 'HUMAN',
+          connected: true,
+          avatarThumb: '',
+        },
+        {
+          id: 'p2',
+          displayName: 'other',
+          teamId: 't1',
+          kind: 'HUMAN',
+          connected: true,
+          avatarThumb: '',
+        },
       ],
     })
     expect(canKick(snap, host, 'p2').ok).toBe(true)
@@ -174,8 +211,22 @@ describe('canTransferHost', () => {
   it('rejects transferring to a bot', () => {
     const snap = baseSnapshot({
       participants: [
-        { id: 'p1', displayName: 'host', teamId: 't1', kind: 'HUMAN', connected: true },
-        { id: 'bot1', displayName: 'Bot 1', teamId: 't1', kind: 'BOT', connected: true },
+        {
+          id: 'p1',
+          displayName: 'host',
+          teamId: 't1',
+          kind: 'HUMAN',
+          connected: true,
+          avatarThumb: '',
+        },
+        {
+          id: 'bot1',
+          displayName: 'Bot 1',
+          teamId: 't1',
+          kind: 'BOT',
+          connected: true,
+          avatarThumb: '',
+        },
       ],
     })
     const gate = canTransferHost(snap, host, 'bot1')
