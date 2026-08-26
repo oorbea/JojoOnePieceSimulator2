@@ -194,13 +194,16 @@ func (e *GameEndpoints) respondState(w http.ResponseWriter, r *http.Request, g *
 		return err
 	}
 	locale := e.viewerLocale(r.Context(), g, self)
-	var revealEndsAt *time.Time
+	var deadlines dto.GameStateDeadlines
 	if t, ok := e.svc.RevealEndsAt(g.ID()); ok {
-		revealEndsAt = &t
+		deadlines.RevealEndsAt = &t
+	}
+	if t, ok := e.svc.VotingEndsAt(g.ID()); ok {
+		deadlines.VotingEndsAt = &t
 	}
 	resp, err := dto.NewGameStateResponse(r.Context(), g, code, self,
 		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
-		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), revealEndsAt)
+		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), deadlines)
 	if err != nil {
 		return err
 	}

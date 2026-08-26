@@ -253,13 +253,18 @@ type TiebreakOpenedPayload struct {
 	ClosesAt   string `json:"closesAt"`
 }
 
-// VoteCastPayload is deliberately anonymized: it carries only that a vote
-// was cast, not who cast it or for what option, so the transport doesn't
-// leak a live round's votes ahead of GameStateResponse's own votes-hidden-
-// until-resolved rule.
+// VoteCastPayload carries the round's human-vote progress and nothing else:
+// no participant, no option, even though the domain event has both -
+// GameStateResponse's own votes-hidden-until-resolved rule still holds.
+// VotesCast/Voters count connected humans only (bots vote instantly when a
+// window opens and are never waited on - see game.Game.humanVoteProgress),
+// so votesCast == voters is precisely the condition that closes the window
+// early. Both are aggregates over the whole lobby, so neither reveals who
+// voted or what they voted for.
 type VoteCastPayload struct {
 	RoundIndex int `json:"roundIndex"`
 	VotesCast  int `json:"votesCast"`
+	Voters     int `json:"voters"`
 }
 
 type PlayerJoinedPayload struct {

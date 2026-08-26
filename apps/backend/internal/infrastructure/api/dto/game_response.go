@@ -173,8 +173,13 @@ type GameSnapshotResponse struct {
 	Rounds       []GameRoundResponse       `json:"rounds"`
 	Result       *GameResultResponse       `json:"result,omitempty"`
 	// RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a
-	// pending reveal - see NewGameStateResponse's revealEndsAt param.
+	// pending reveal - see NewGameStateResponse's deadlines param.
 	RevealEndsAt *string `json:"revealEndsAt,omitempty"`
+	// VotingEndsAt is set (RFC3339) only while the game is VOTING/TIEBREAK
+	// with a pending window - the deadline a client reconnecting mid-vote
+	// needs, since the VOTING_OPENED/TIEBREAK_OPENED frames that carry
+	// closesAt are one-shot and long gone by then.
+	VotingEndsAt *string `json:"votingEndsAt,omitempty"`
 }
 
 // GameViewerResponse is the cheap, per-viewer convenience block - everything
@@ -195,6 +200,23 @@ type GameStateResponse struct {
 	You  GameViewerResponse   `json:"you"`
 }
 
+// GameStateDeadlines carries the in-process wall-clock deadlines GameService
+// keeps for a Game, so a (re)connecting client resumes a countdown instead
+// of restarting it. Each is nil unless that phase is actually in flight,
+// and at most one is ever set (the reveal and voting timers never coexist
+// for the same GameID - see GameService's timers field doc). Grouped in a
+// struct rather than passed as two adjacent *time.Time parameters: two
+// same-typed pointers in a positional call are silently swappable, and the
+// swap would still compile and still produce a plausible response.
+type GameStateDeadlines struct {
+	// RevealEndsAt is set only while the Game is ASSIGNING with a pending
+	// reveal - see GameService.RevealEndsAt.
+	RevealEndsAt *time.Time
+	// VotingEndsAt is set only while the Game is VOTING/TIEBREAK with a
+	// pending window - see GameService.VotingEndsAt.
+	VotingEndsAt *time.Time
+}
+
 // NewGameStateResponse builds a GameStateResponse for self's point of view.
 // resolveStand/resolveFruit resolve a Stand/DevilFruit's picture key into a
 // URL, same signature as StandService.PictureURL/DevilFruitService.PictureURL.
@@ -202,11 +224,10 @@ type GameStateResponse struct {
 // description+skills in self's own locale (see PowerTextResolver).
 // resolveAvatarPicture resolves a participant's avatar thumb key into a URL,
 // same signature as UserService.AvatarURL - "" resolves to "" without being
-// called (see resolveParticipantAvatar). revealEndsAt is the in-flight
-// reveal deadline for g (see GameService.RevealEndsAt) - nil unless g is
-// currently ASSIGNING with a pending reveal, which is what lets a
-// (re)connecting client resume the countdown instead of restarting the
-// reveal animation from zero.
+// called (see resolveParticipantAvatar). deadlines carries the in-flight
+// reveal/voting deadlines for g (see GameStateDeadlines) - each nil unless
+// that phase is actually in progress, which is what lets a (re)connecting
+// client resume the countdown instead of restarting it from zero.
 func NewGameStateResponse(
 	ctx context.Context,
 	g *game.Game,
@@ -215,7 +236,7 @@ func NewGameStateResponse(
 	resolveStand, resolveFruit, resolveStagePicture, resolveAvatarPicture PictureURLResolver,
 	resolveStageDescription StageTextResolver,
 	resolveStandText, resolveFruitText PowerTextResolver,
-	revealEndsAt *time.Time,
+	deadlines GameStateDeadlines,
 ) (GameStateResponse, error) {
 	teams := make([]GameTeamResponse, 0, len(g.Teams()))
 	for _, t := range g.Teams() {
@@ -319,10 +340,14 @@ func NewGameStateResponse(
 		}
 	}
 
-	var revealEndsAtStr *string
-	if revealEndsAt != nil {
-		s := revealEndsAt.Format(time.RFC3339)
+	var revealEndsAtStr, votingEndsAtStr *string
+	if deadlines.RevealEndsAt != nil {
+		s := deadlines.RevealEndsAt.Format(time.RFC3339)
 		revealEndsAtStr = &s
+	}
+	if deadlines.VotingEndsAt != nil {
+		s := deadlines.VotingEndsAt.Format(time.RFC3339)
+		votingEndsAtStr = &s
 	}
 
 	return GameStateResponse{
@@ -347,6 +372,7 @@ func NewGameStateResponse(
 			Rounds:       rounds,
 			Result:       result,
 			RevealEndsAt: revealEndsAtStr,
+			VotingEndsAt: votingEndsAtStr,
 		},
 		You: viewer,
 	}, nil
