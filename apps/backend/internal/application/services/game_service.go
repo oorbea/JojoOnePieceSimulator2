@@ -127,6 +127,16 @@ type GameService struct {
 	// restart mid-reveal loses this (and its timer), the same known gap
 	// scheduleVotingTimer already has.
 	revealEnds map[game.GameID]time.Time
+	// votingEnds holds the wall-clock deadline of the open voting (or
+	// revote) window for each Game currently in VOTING/TIEBREAK with a
+	// pending voting timer, keyed by GameID - read by VotingEndsAt so a
+	// client joining/reconnecting mid-vote gets the real remaining time
+	// instead of a full window (or no countdown at all). The twin of
+	// revealEnds, and just as much process memory only: a backend restart
+	// mid-vote loses this and the timer that owns it, the same known gap
+	// scheduleVotingTimer has always had. The reveal and voting deadlines
+	// never coexist for the same GameID (see the timers field doc).
+	votingEnds map[game.GameID]time.Time
 }
 
 // NewGameService builds a GameService. history may be nil until an
@@ -155,6 +165,7 @@ func NewGameService(
 		locks:      newGameLocks(),
 		timers:     make(map[game.GameID]Timer),
 		revealEnds: make(map[game.GameID]time.Time),
+		votingEnds: make(map[game.GameID]time.Time),
 	}
 }
 
@@ -636,6 +647,19 @@ func (s *GameService) RevealEndsAt(id game.GameID) (time.Time, bool) {
 	return t, ok
 }
 
+// VotingEndsAt reports id's open voting-window deadline, if any - the same
+// role RevealEndsAt plays for the reveal: a client joining or reconnecting
+// mid-vote resumes the real countdown instead of assuming a full window.
+// The bool is false once the window has closed (or never opened), and
+// false during the reveal phase, since the reveal and voting timers never
+// coexist for the same Game (see the timers field doc).
+func (s *GameService) VotingEndsAt(id game.GameID) (time.Time, bool) {
+	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	t, ok := s.votingEnds[id]
+	return t, ok
+}
+
 // --- Voting ---
 
 // CastVote records participantID's vote and force-closes the window early
@@ -895,6 +919,11 @@ func (s *GameService) publish(g *game.Game) {
 func (s *GameService) scheduleVotingTimer(g *game.Game) {
 	id := g.ID()
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
+
+	s.timersMu.Lock()
+	s.votingEnds[id] = s.clock.Now().Add(window)
+	s.timersMu.Unlock()
+
 	timer := s.clock.AfterFunc(window, func() {
 		ctx := context.Background()
 		if _, err := s.CloseVotingWindow(ctx, id); err != nil {
@@ -916,6 +945,7 @@ func (s *GameService) cancelTimer(id game.GameID) {
 	s.timersMu.Lock()
 	defer s.timersMu.Unlock()
 	delete(s.revealEnds, id)
+	delete(s.votingEnds, id)
 	if t, ok := s.timers[id]; ok {
 		t.Stop()
 		delete(s.timers, id)

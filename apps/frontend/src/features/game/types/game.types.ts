@@ -129,6 +129,11 @@ export type GameSnapshot = {
    * (re)connecting client resume the sorteo countdown instead of restarting
    * it (see dto.GameSnapshotResponse.RevealEndsAt). */
   revealEndsAt?: string
+  /** RFC3339, present only while VOTING/TIEBREAK with a pending window -
+   * lets a (re)connecting client resume the vote countdown instead of
+   * showing a dead bar (see dto.GameSnapshotResponse.VotingEndsAt). At most
+   * one of revealEndsAt/votingEndsAt is ever set. */
+  votingEndsAt?: string
 }
 
 // Mirrors dto.GameViewerResponse.

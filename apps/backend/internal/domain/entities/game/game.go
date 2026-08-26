@@ -653,6 +653,10 @@ func (g *Game) castBotVotes(roundIndex int) {
 	options := g.mode.BallotOptions(g)
 	scores := g.optionScores(options)
 	voter := NewBotVoter(g.evaluator)
+	// Computed once, outside the loop: a bot ballot never moves the
+	// human-only counters (see humanVoteProgress), so every bot's VoteCast
+	// emitted in this batch carries the same progress snapshot.
+	cast, total := g.humanVoteProgress()
 	for _, pid := range g.order {
 		p := g.participants[pid]
 		if p.Kind() != enums.Bot || !p.Connected() {
@@ -660,7 +664,10 @@ func (g *Game) castBotVotes(roundIndex int) {
 		}
 		choice := voter.Vote(options, scores)
 		if err := round.Ballot.Cast(pid, choice); err == nil {
-			g.emit(VoteCast{RoundIndex: roundIndex, ParticipantID: pid, Option: choice})
+			g.emit(VoteCast{
+				RoundIndex: roundIndex, ParticipantID: pid, Option: choice,
+				HumanVotesCast: cast, HumanVoters: total,
+			})
 		}
 	}
 }
@@ -682,8 +689,40 @@ func (g *Game) CastVote(id ParticipantID, o OptionID) error {
 	if err := round.Ballot.Cast(id, o); err != nil {
 		return err
 	}
-	g.emit(VoteCast{RoundIndex: round.Index, ParticipantID: id, Option: o})
+	cast, total := g.humanVoteProgress()
+	g.emit(VoteCast{
+		RoundIndex: round.Index, ParticipantID: id, Option: o,
+		HumanVotesCast: cast, HumanVoters: total,
+	})
 	return nil
+}
+
+// humanVoteProgress reports how many connected humans have voted in the
+// current round (cast) out of how many are eligible to (total) - the single
+// definition of "the population a voting window waits on". VotingComplete
+// is exactly cast == total, and every VoteCast event's HumanVotesCast/
+// HumanVoters is exactly this pair, so a progress bar built from the event
+// can never disagree with the condition that closes the window. Bots are
+// excluded even though they cast real ballots (see castBotVotes), as are
+// disconnected humans (a disconnect counts as a null vote, never a
+// blocker - see checkAbortConditions/Disconnect). Returns 0, 0 when there
+// is no current round.
+func (g *Game) humanVoteProgress() (cast, total int) {
+	round := g.currentRound()
+	if round == nil {
+		return 0, 0
+	}
+	for _, pid := range g.order {
+		p := g.participants[pid]
+		if p == nil || p.Kind() != enums.Human || !p.Connected() {
+			continue
+		}
+		total++
+		if round.Ballot.HasVoted(pid) {
+			cast++
+		}
+	}
+	return cast, total
 }
 
 // VotingComplete reports whether every connected human has cast a vote in
@@ -696,17 +735,11 @@ func (g *Game) VotingComplete() bool {
 	if g.state != enums.Voting && g.state != enums.Tiebreak {
 		return false
 	}
-	round := g.currentRound()
-	if round == nil {
+	if g.currentRound() == nil {
 		return false
 	}
-	for _, pid := range g.order {
-		p := g.participants[pid]
-		if p.Kind() == enums.Human && p.Connected() && !round.Ballot.HasVoted(pid) {
-			return false
-		}
-	}
-	return true
+	cast, total := g.humanVoteProgress()
+	return cast == total
 }
 
 // CloseVoting tallies the current round's Ballot. A clear winner resolves
@@ -732,7 +765,15 @@ func (g *Game) CloseVoting() (tied bool, err error) {
 	if !round.TiebreakUsed {
 		round.TiebreakUsed = true
 		g.state = enums.Tiebreak
+		// The revote must start from a genuinely empty ballot - without
+		// this, every vote from the tied round would still stand, so the
+		// window would open already reporting cast==total (VotingComplete
+		// true) and the very first changed vote would close it instantly.
+		// Bots are re-cast immediately, same as the first OpenVoting, so a
+		// Versus revote isn't missing its bot votes.
+		round.Ballot.Reset()
 		g.emit(TiebreakOpened{RoundIndex: round.Index})
+		g.castBotVotes(round.Index)
 	}
 	return true, nil
 }

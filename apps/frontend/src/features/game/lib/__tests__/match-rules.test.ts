@@ -4,7 +4,9 @@ import {
   loadoutSlots,
   revealSlotKinds,
   secondsUntil,
+  voteProgress,
 } from '@/features/game/lib/match-rules'
+import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type {
   GameLoadout,
   GameParticipant,
@@ -12,6 +14,39 @@ import type {
   GameSnapshot,
 } from '@/features/game/types/game.types'
 import type { Manga } from '@/shared/lib/zod'
+
+const INITIAL_LIVE: LiveMatchState = {
+  assignmentSeq: 0,
+  revealedAssignmentSeq: 0,
+  assignedRoundIndex: null,
+  revealMs: null,
+  revealEndsAt: null,
+  votingRoundIndex: null,
+  votingClosesAt: null,
+  tiebreak: false,
+  votesCast: null,
+  voters: null,
+}
+
+function round(overrides: Partial<GameRound> = {}): GameRound {
+  return {
+    index: 0,
+    stage: {
+      id: 's1',
+      manga: 'JOJO',
+      order: 0,
+      name: 'Phantom Blood',
+      description: '',
+      picture: '',
+      pictureThumb: '',
+      pictureStatus: 'READY',
+    },
+    options: ['SURVIVE', 'FALL'],
+    tiebreakUsed: false,
+    votedParticipantIds: [],
+    ...overrides,
+  }
+}
 
 function participant(overrides: Partial<GameParticipant> = {}): GameParticipant {
   return {
@@ -211,6 +246,66 @@ describe('revealSlotKinds', () => {
       'observationHaki',
       'conquerorHaki',
     ])
+  })
+})
+
+describe('voteProgress', () => {
+  it('prefers the live frame when it is for the current round', () => {
+    const snap = snapshot({
+      participants: [participant({ id: 'p1' }), participant({ id: 'p2' }), participant({ id: 'p3' })],
+      rounds: [round({ index: 0 })],
+    })
+    const live: LiveMatchState = { ...INITIAL_LIVE, votingRoundIndex: 0, votesCast: 1, voters: 3 }
+    expect(voteProgress(snap, live)).toEqual({ cast: 1, total: 3 })
+  })
+
+  it('falls back to the snapshot when no frame has landed for this round yet (a reconnect)', () => {
+    const snap = snapshot({
+      participants: [
+        participant({ id: 'p1' }),
+        participant({ id: 'p2' }),
+        participant({ id: 'p3' }),
+      ],
+      rounds: [round({ index: 0, votedParticipantIds: ['p1'] })],
+    })
+    expect(voteProgress(snap, INITIAL_LIVE)).toEqual({ cast: 1, total: 3 })
+  })
+
+  it('ignores a frame for a stale round, falling back to the snapshot instead', () => {
+    const snap = snapshot({
+      participants: [participant({ id: 'p1' }), participant({ id: 'p2' })],
+      rounds: [round({ index: 1, votedParticipantIds: ['p1'] })],
+    })
+    // A late VOTE_CAST from round 0, after round 1 already opened.
+    const live: LiveMatchState = { ...INITIAL_LIVE, votingRoundIndex: 0, votesCast: 0, voters: 2 }
+    expect(voteProgress(snap, live)).toEqual({ cast: 1, total: 2 })
+  })
+
+  it('excludes bots from both cast and total', () => {
+    const snap = snapshot({
+      participants: [
+        participant({ id: 'p1' }),
+        participant({ id: 'bot1', kind: 'BOT' }),
+      ],
+      rounds: [round({ index: 0, votedParticipantIds: ['p1', 'bot1'] })],
+    })
+    expect(voteProgress(snap, INITIAL_LIVE)).toEqual({ cast: 1, total: 1 })
+  })
+
+  it('excludes a disconnected human from both cast and total', () => {
+    const snap = snapshot({
+      participants: [
+        participant({ id: 'p1' }),
+        participant({ id: 'p2', connected: false }),
+      ],
+      rounds: [round({ index: 0, votedParticipantIds: ['p1'] })],
+    })
+    expect(voteProgress(snap, INITIAL_LIVE)).toEqual({ cast: 1, total: 1 })
+  })
+
+  it('returns 0/0 with no current round', () => {
+    const snap = snapshot({ rounds: [] })
+    expect(voteProgress(snap, INITIAL_LIVE)).toEqual({ cast: 0, total: 0 })
   })
 })
 

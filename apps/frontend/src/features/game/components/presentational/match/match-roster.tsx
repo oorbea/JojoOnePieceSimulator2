@@ -7,6 +7,7 @@ import { RosterParticipant } from '@/features/game/components/presentational/mat
 import { teamTone, teamToneColor } from '@/features/game/lib/lobby-rules'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { useRovingGroup } from '@/shared/hooks/use-roving-group'
 import type { GameParticipant, GameSnapshot } from '@/features/game/types/game.types'
 
 type Props = {
@@ -27,15 +28,33 @@ export function MatchRoster({ snapshot, selfId }: Props) {
   const mangas = snapshot.config.mangas
   const [modalParticipant, setModalParticipant] = useState<GameParticipant | null>(null)
 
-  const renderTile = (p: GameParticipant) => (
-    <RosterParticipant
-      key={p.id}
-      participant={p}
-      isSelf={p.id === selfId}
-      mangas={mangas}
-      onOpenModal={setModalParticipant}
-    />
-  )
+  // Render order (teams flattened in VERSUS, snapshot order in GAUNTLET) is
+  // the same order arrow-key roving moves through - one flat group across
+  // the whole roster rather than a per-team one, simple and predictable
+  // even though VERSUS renders it as two visual columns.
+  const orderedParticipants =
+    snapshot.mode === 'VERSUS'
+      ? snapshot.teams.flatMap((team) => snapshot.participants.filter((p) => p.teamId === team.id))
+      : snapshot.participants
+  const { getItemProps } = useRovingGroup({
+    groupId: 'roster-tile',
+    count: orderedParticipants.length,
+    onActivate: (index) => setModalParticipant(orderedParticipants[index]),
+  })
+
+  const renderTile = (p: GameParticipant) => {
+    const index = orderedParticipants.findIndex((op) => op.id === p.id)
+    return (
+      <RosterParticipant
+        key={p.id}
+        participant={p}
+        isSelf={p.id === selfId}
+        mangas={mangas}
+        onOpenModal={setModalParticipant}
+        itemProps={getItemProps(index)}
+      />
+    )
+  }
 
   const modal = (
     <LoadoutModal

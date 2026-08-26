@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -5,9 +6,11 @@ import { YStack } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
 
-import { GlassPanel } from './glass-panel'
+import { GlassPanel, isWebPlatform } from './glass-panel'
 import { GlossButton } from './gloss-button'
 import { GlowText } from './glow-text'
+
+const CONFIRM_BUTTON_ID = 'confirm-sheet-confirm-button'
 
 type ConfirmSheetProps = {
   visible: boolean
@@ -17,6 +20,10 @@ type ConfirmSheetProps = {
   isConfirming?: boolean
   onConfirm: () => void
   onCancel: () => void
+  /** Confirm button tone - defaults to 'red' (every existing caller is a
+   * destructive action). Pass 'blue' or similar for a non-destructive
+   * confirmation, e.g. changing an already-cast vote. */
+  tone?: 'red' | 'blue' | 'glass'
 }
 
 // Shared destructive-action confirmation — promoted out of the profile
@@ -33,9 +40,25 @@ export function ConfirmSheet({
   isConfirming = false,
   onConfirm,
   onCancel,
+  tone = 'red',
 }: ConfirmSheetProps) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
+
+  // Web-only: a keyboard user opening this sheet via Enter/Space on a
+  // GlossButton would otherwise land with focus nowhere in particular
+  // (Modal doesn't move it) and have to Tab in blind. GlossButton owns its
+  // own internal ref (for the tooltip's .measure() anchoring) and doesn't
+  // forward an external one, so this focuses via the DOM id instead - the
+  // same escape hatch use-roving-group.ts uses for the same reason. A
+  // short timeout lets the Modal's own mount/animation settle first (an
+  // immediate focus() call can be swallowed mid-transition on some
+  // browsers).
+  useEffect(() => {
+    if (!isWebPlatform || !visible || typeof document === 'undefined') return
+    const id = setTimeout(() => document.getElementById(CONFIRM_BUTTON_ID)?.focus(), 50)
+    return () => clearTimeout(id)
+  }, [visible])
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} statusBarTranslucent>
@@ -68,7 +91,8 @@ export function ConfirmSheet({
           </GlowText>
           <YStack gap="$2">
             <GlossButton
-              tone="red"
+              id={isWebPlatform ? CONFIRM_BUTTON_ID : undefined}
+              tone={tone}
               btnSize="md"
               disabled={isConfirming}
               onPress={onConfirm}

@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack } from 'tamagui'
 
@@ -6,6 +5,7 @@ import { secondsUntil } from '@/features/game/lib/match-rules'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { useNow } from '@/shared/hooks/use-now'
 
 type Props = {
   isRevealing: boolean
@@ -24,17 +24,12 @@ type Props = {
 // all. Once the player has locally skipped/finished but the server's own
 // sorteo deadline hasn't passed yet, a "voting opens in Xs" countdown -
 // nobody can vote early just because their own animation finished first.
-// Once voting has genuinely opened: the current game state label, with the
-// real countdown.
+// Once voting has genuinely opened: just the current game state label - the
+// countdown itself now lives in VoteBar (which owns the vote buttons right
+// below it), so it isn't shown twice.
 export function VotingStatusBar({ isRevealing, onSkip, tiebreak, votingClosesAt, revealEndsAt, gameState }: Props) {
   const { t } = useTranslation()
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (votingClosesAt === null && revealEndsAt === null) return
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [votingClosesAt, revealEndsAt])
+  const now = useNow(1000, votingClosesAt !== null || revealEndsAt !== null)
 
   if (isRevealing) {
     return (
@@ -66,19 +61,11 @@ export function VotingStatusBar({ isRevealing, onSkip, tiebreak, votingClosesAt,
     )
   }
 
-  const seconds = secondsUntil(votingClosesAt, now)
   const label = tiebreak ? t('game.match.tiebreakOpen') : t(`enums.gameState.${gameState}`)
 
   return (
     <GlassPanel tone="strong" rounded="$pill" px="$4" py="$2.5" width="100%">
-      <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
-        <GlowText level="label">{label}</GlowText>
-        {seconds !== null ? (
-          <GlowText level="label" tone="soft">
-            {t('game.match.closesIn', { seconds })}
-          </GlowText>
-        ) : null}
-      </XStack>
+      <GlowText level="label">{label}</GlowText>
     </GlassPanel>
   )
 }

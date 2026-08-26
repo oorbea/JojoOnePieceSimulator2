@@ -1,0 +1,17 @@
+- [CI/CD must build vips-tagged path](cicd_picture_pipeline.md) — resolved 2026-08-02, `.github/workflows/ci.yml` now covers `-tags vips` test + Dockerfile build
+- [Project context](project_context.md) — solo hobby project; prod CI/CD to a self-hosted server set up 2026-08-02, vips pipeline + auth flow are known weak spots
+- [Obsidian workflow rule](feedback_obsidian_workflow.md) — always read vault before implementing, write learnings/decisions back to vault
+- [Local .env points to prod](local_env_points_to_prod.md) — deployments/.env's EXPO_PUBLIC_API_URL defaulted to prod domain, caused CORS on local runs; fixed to localhost:8080
+- [Tamagui a11y/pointerEvents props leak to DOM on web](a11y_web_leak.md) — use a11yProps() helper, put pointerEvents inside style{}, not as top-level prop
+- [UI/UX design always via skills](feedback_uiux_skills_norm.md) — load frontend-design + ui-ux-pro-max before any UI/UX work; norm also recorded in project's own ObsidianVault
+- [Frontend test infra added](frontend_test_infra.md) — jest-expo since 2026-08-04, jest@29 pinned, two-project split (logic/native), gotchas in vault frontend-stack.md
+- [i18n status](project_i18n_status.md) — en-GB/es-ES/ca-ES fully closed 2026-08-06 (infra+admin UI+copy+error codes); 1 minor follow-up, vault i18n-multi-language.md
+- [GitHub Actions outage 2026-08-06](github_actions_outage_2026-08-06.md) — CI silently didn't trigger, was GH-side incident not repo config; check githubstatus.com first next time
+- [Game domain layer built 2026-08-10](game_domain_layer_2026-08-10.md) — Gauntlet/Versus modes, domain-only, rules+design in vault (gameplay-game-modes.md, gameplay-domain-design.md); most follow-ups since done, see stages_admin_crud memory
+- [Stage admin CRUD shipped 2026-08-11](stages_admin_crud_2026-08-11.md) — backend tests + full frontend feature, 3 deliberate deviations from Stand's pattern, caught SSE dispatch bug
+- [Admin search/filters shipped 2026-08-11](admin_search_filters_2026-08-11.md) — server-side ?q= search across Stands/Devil Fruits/Stages; cache-key and recursive-CTE traps documented
+- [Game lobby feature closed 2026-08-13](game_lobby_feature_closed_2026-08-13.md) — backend tests + config-edit UI + power-pool UI all committed/green; §5/§6 left for later
+- [Tooltip norma 2026-08-13](feedback_tooltips_norma.md) — every UI button gets a tooltip going forward; use GlossButton's `tooltip` prop / `useTooltipTrigger`, not ad-hoc per-button code
+- [No co-author, atomic commits](feedback_no_coauthor_atomic_commits.md) — 2026-08-14: never add Co-Authored-By trailer, split unrelated changes into separate commits
+- [Sorteo reel + roster redesign shipped 2026-08-17](sorteo_roster_redesign_2026-08-17.md) — reel geometry bug fixed (justify="center" landed past strip end), haki wording, per-locale loadout text, roster shows only avatar+username with hover card/modal
+- [Backend tests must run via Docker](feedback_backend_tests_via_docker.md) — Windows App Control blocks host `go test` binaries on this machine; use `docker compose ... backend-test go test ./...`, not a workaround

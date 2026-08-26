@@ -1054,17 +1054,20 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 		t.Fatalf("tiebreak calls = %d, want 0 before the revote", deps.tiebreak.calls)
 	}
 
-	// Second close (the revote): the joiner's round-1 vote (teamB) is still
-	// on file for this same Ballot - Ballot.Cast never resets votes between
-	// a tie and its revote (see ballot.go's doc, "overwriting any previous
-	// vote... the last vote before the window closes is the one that
-	// counts"). So the moment the host recasts, VotingComplete is already
-	// true from the joiner's still-standing vote, and this single CastVote
-	// resolves the tie via the tiebreaker and starts round 2 all by itself -
-	// there is no separate "joiner votes again" step.
+	// Second close (the revote): the tie opening the TIEBREAK window reset
+	// the round's Ballot (see game.Ballot.Reset / Game.CloseVoting), so both
+	// the host and the joiner must recast for VotingComplete to go true
+	// again - a single recast is no longer enough to resolve it.
 	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), teamA)
 	if err != nil {
 		t.Fatalf("host vote 2: %v", err)
+	}
+	if g.State() != enums.Tiebreak {
+		t.Fatalf("state after host's lone revote cast = %v, want still TIEBREAK", g.State())
+	}
+	g, err = svc.CastVote(context.Background(), g.ID(), joinerParticipant, teamB)
+	if err != nil {
+		t.Fatalf("joiner vote 2: %v", err)
 	}
 	// The revote just resolved via the tiebreaker, moving Versus into round
 	// 2 - which reassigns Loadouts and so schedules its own reveal delay
