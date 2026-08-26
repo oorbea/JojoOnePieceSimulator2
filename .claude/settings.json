@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$(git rev-parse --show-toplevel 2>/dev/null)\" 2>/dev/null || exit 0; base=$(git merge-base HEAD origin/develop 2>/dev/null || git merge-base HEAD develop 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null); files=$( { git status --porcelain 2>/dev/null | awk '{print $2}'; [ -n \"$base\" ] && git diff --name-only \"$base\" HEAD 2>/dev/null; } | sort -u); [ -z \"$files\" ] && exit 0; backend=$(printf '%s\\n' \"$files\" | grep -c '^apps/backend/'); frontend=$(printf '%s\\n' \"$files\" | grep -c '^apps/frontend/'); [ \"$backend\" = 0 ] && [ \"$frontend\" = 0 ] && exit 0; msg='Unverified changes -- run the CI-equivalent Docker checks before calling this done (see ObsidianVault/norma-verificacion-docker.md):'; [ \"$backend\" != 0 ] && msg=\"$msg\\n- Backend: docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.test.yml run --rm backend-test go test ./...\"; [ \"$frontend\" != 0 ] && msg=\"$msg\\n- Frontend (node:22-alpine in Docker): pnpm typecheck && pnpm lint && pnpm test:ci\"; printf '%b' \"$msg\" | node -e \"let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>console.log(JSON.stringify({systemMessage:s})))\"",
+            "timeout": 15,
+            "shell": "bash"
+          }
+        ]
+      }
+    ]
+  }
+}
