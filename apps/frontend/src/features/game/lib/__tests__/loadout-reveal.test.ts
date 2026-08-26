@@ -70,6 +70,8 @@ function live(overrides: Partial<LiveMatchState> = {}): LiveMatchState {
     votingRoundIndex: null,
     votingClosesAt: null,
     tiebreak: false,
+    votesCast: null,
+    voters: null,
     ...overrides,
   }
 }

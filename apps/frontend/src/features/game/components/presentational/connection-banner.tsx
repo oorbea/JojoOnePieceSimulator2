@@ -1,5 +1,4 @@
 import { WifiOff } from '@tamagui/lucide-icons-2'
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack } from 'tamagui'
 
@@ -7,6 +6,7 @@ import type { SocketStatus } from '@/features/game/stores/game-socket.store'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { useNow } from '@/shared/hooks/use-now'
 
 type Props = {
   status: SocketStatus
@@ -16,13 +16,7 @@ type Props = {
 
 export function ConnectionBanner({ status, nextRetryAt, onRetryNow }: Props) {
   const { t } = useTranslation()
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (status !== 'reconnecting') return
-    const id = setInterval(() => setNow(Date.now()), 500)
-    return () => clearInterval(id)
-  }, [status])
+  const now = useNow(500, status === 'reconnecting')
 
   if (status === 'open' || status === 'idle') return null
 

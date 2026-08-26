@@ -1,3 +1,4 @@
+import type { AccessibilityRole } from 'react-native'
 import { Button, YStack, type ButtonProps } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
@@ -57,6 +58,15 @@ type GlossButtonProps = Omit<ButtonProps, 'size'> & {
    * to opt a specific button out (e.g. it already has visible text and an
    * adjacent hint). */
   tooltip?: string | null
+  /** Overrides the a11y role applied via a11yProps - defaults to 'button'.
+   * Needed for a GlossButton used as a radio-group option (role="radio"),
+   * since a11yProps is applied AFTER ...rest here and would otherwise
+   * silently clobber a `role` passed through rest. */
+  a11yRole?: AccessibilityRole
+  /** Sets aria-checked (web) / accessibilityState.checked (native) - for a
+   * GlossButton used as a radio option. Omit entirely outside a
+   * radio/checkbox context. */
+  a11yChecked?: boolean
 }
 
 // Physical 3D Wii/iOS button: a hard offset "lip" in the tone's deep shade
@@ -73,6 +83,8 @@ export function GlossButton({
   disabled,
   accessibilityLabel,
   tooltip,
+  a11yRole = 'button',
+  a11yChecked,
   ...rest
 }: GlossButtonProps) {
   const toneStyle = TONE_STYLES[tone]
@@ -120,7 +132,11 @@ export function GlossButton({
         pressStyle={{ scale: 0.94, y: 3, borderBottomWidth: 2, shadowRadius: 6 }}
         focusStyle={{ outlineColor: '$channelActive', outlineWidth: 3, outlineStyle: 'solid' }}
         disabledStyle={{ opacity: 0.55, borderBottomWidth: 3 }}
-        {...a11yProps(accessibilityLabel as string | undefined, 'button')}
+        {...a11yProps(
+          accessibilityLabel as string | undefined,
+          a11yRole,
+          a11yChecked !== undefined ? { checked: a11yChecked } : undefined
+        )}
       >
         <GlossOverlay coverage="half" shape={shape === 'circle' ? 'circle' : 'pill'} />
         {children}

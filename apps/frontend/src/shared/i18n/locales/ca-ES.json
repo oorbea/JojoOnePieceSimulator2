@@ -330,6 +330,24 @@
         "closeA11y": "Tancar el desglossament de poders"
       }
     },
+    "vote": {
+      "progress": "{{cast}}/{{total}} han votat",
+      "youVoted": "Has votat",
+      "timeLeftA11y": "Temps restant per votar",
+      "tiebreakHint": "Empat - revotació",
+      "groupA11y": "Votació",
+      "yourTeam": "El teu equip",
+      "hint": {
+        "keys": "Tecles: 1-9 per votar, Esc per tancar"
+      },
+      "changeTitle": "Vols canviar el teu vot?",
+      "changeMessage": "Vols canviar el teu vot a \"{{option}}\"?",
+      "changeConfirm": "Canvia el vot",
+      "gauntlet": {
+        "SURVIVE": "Sobrevivim",
+        "FALL": "Caiem"
+      }
+    },
     "leave": {
       "action": "Abandona la sala",
       "title": "Vols abandonar aquesta sala?",
