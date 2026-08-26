@@ -31,7 +31,10 @@ export function CreateLobbyContainer() {
   const devilFruitsQuery = useDevilFruits()
 
   const [mode, setMode] = useState<GameMode>('GAUNTLET')
-  const [mangas, setMangas] = useState<Manga[]>(['JOJO'])
+  // Both mangas on by default - a new host most likely wants the full pool,
+  // not a JoJo-only lobby by accident just because it's first in the toggle
+  // row.
+  const [mangas, setMangas] = useState<Manga[]>(['JOJO', 'ONE_PIECE'])
   const [teamSize, setTeamSize] = useState(5)
   const [allowBots, setAllowBots] = useState(false)
   const [visibility, setVisibility] = useState<LobbyVisibility>('PRIVATE')

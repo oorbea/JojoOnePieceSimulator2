@@ -56,15 +56,18 @@ type PoolFilterSnapshot struct {
 	Banned        []powers.PowerID
 }
 
-// ParticipantSnapshot mirrors Participant.
+// ParticipantSnapshot mirrors Participant. AvatarThumbKey/GooglePicture are
+// "" for a bot and for a human who never called SetAvatar.
 type ParticipantSnapshot struct {
-	ID          ParticipantID
-	UserID      *user.UserID // nil for bots
-	DisplayName string
-	TeamID      TeamID
-	Kind        string
-	Connected   bool
-	Loadout     *LoadoutSnapshot // nil before AssignLoadouts
+	ID             ParticipantID
+	UserID         *user.UserID // nil for bots
+	DisplayName    string
+	TeamID         TeamID
+	Kind           string
+	Connected      bool
+	Loadout        *LoadoutSnapshot // nil before AssignLoadouts
+	AvatarThumbKey string
+	GooglePicture  string
 }
 
 // TeamSnapshot mirrors Team.
@@ -158,12 +161,14 @@ func (g *Game) Snapshot() Snapshot {
 	for _, pid := range g.order {
 		p := g.participants[pid]
 		ps := ParticipantSnapshot{
-			ID:          p.id,
-			UserID:      p.userID,
-			DisplayName: p.displayName,
-			TeamID:      p.teamID,
-			Kind:        p.kind.String(),
-			Connected:   p.connected,
+			ID:             p.id,
+			UserID:         p.userID,
+			DisplayName:    p.displayName,
+			TeamID:         p.teamID,
+			Kind:           p.kind.String(),
+			Connected:      p.connected,
+			AvatarThumbKey: p.avatarThumbKey,
+			GooglePicture:  p.googlePicture,
 		}
 		if p.loadout != nil {
 			ls := snapshotLoadout(p.loadout)
@@ -412,12 +417,14 @@ func Restore(s Snapshot) (*Game, error) {
 			return nil, err
 		}
 		p := &Participant{
-			id:          ps.ID,
-			userID:      ps.UserID,
-			displayName: ps.DisplayName,
-			teamID:      ps.TeamID,
-			kind:        kind,
-			connected:   ps.Connected,
+			id:             ps.ID,
+			userID:         ps.UserID,
+			displayName:    ps.DisplayName,
+			teamID:         ps.TeamID,
+			kind:           kind,
+			connected:      ps.Connected,
+			avatarThumbKey: ps.AvatarThumbKey,
+			googlePicture:  ps.GooglePicture,
 		}
 		if ps.Loadout != nil {
 			loadout, err := restoreLoadout(*ps.Loadout)

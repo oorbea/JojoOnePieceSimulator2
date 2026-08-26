@@ -310,10 +310,24 @@
         "spin": "Spin",
         "hamon": "Hamon",
         "fruitMastery": "Maestría de fruta",
-        "armamentHaki": "Haki del Armamento",
-        "observationHaki": "Haki de la Observación",
-        "conquerorHaki": "Haki del Conquistador",
-        "physicalForm": "Forma física"
+        "armamentHaki": "Haki de Armadura",
+        "observationHaki": "Haki de Observación",
+        "conquerorHaki": "Haki del Rey",
+        "physicalForm": "Forma física",
+        "stand": "Stand",
+        "devilFruit": "Fruta del Diablo"
+      },
+      "reveal": {
+        "title": "Sorteo de poderes",
+        "intro": "Preparados…",
+        "progress": "{{current}}/{{total}}",
+        "skip": "Saltar",
+        "skipA11y": "Saltar la animación del sorteo de poderes",
+        "votingIn": "La votación empieza en {{seconds}}s"
+      },
+      "loadout": {
+        "viewA11y": "Ver los poderes de {{name}}",
+        "closeA11y": "Cerrar el desglose de poderes"
       }
     },
     "leave": {

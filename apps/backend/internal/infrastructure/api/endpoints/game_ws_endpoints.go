@@ -393,7 +393,7 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 			if votingWindow == 0 {
 				votingWindow = e.cfg.VotingWindow
 			}
-			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow)
+			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealMs)
 			if frameType == "" {
 				continue
 			}
@@ -426,7 +426,7 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 // from the store, so a fresh STATE fetch would race ErrGameNotFound: the
 // event itself already carries everything a client needs to render the
 // terminal screen.
-func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration) (frameType string, payload any, resendState bool) {
+func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs time.Duration) (frameType string, payload any, resendState bool) {
 	switch e := evt.(type) {
 	case game.PlayerJoined:
 		return dto.FramePlayerJoined, dto.PlayerJoinedPayload{ParticipantID: e.ParticipantID.String()}, true
@@ -437,7 +437,9 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration) (frameTyp
 	case game.GameStarted:
 		return dto.FrameGameStarted, struct{}{}, true
 	case game.LoadoutsAssigned:
-		return dto.FrameLoadoutsAssigned, dto.LoadoutsAssignedPayload{RoundIndex: e.RoundIndex}, true
+		return dto.FrameLoadoutsAssigned, dto.LoadoutsAssignedPayload{
+			RoundIndex: e.RoundIndex, RevealMs: revealMs.Milliseconds(),
+		}, true
 	case game.VotingOpened:
 		return dto.FrameVotingOpened, dto.VotingOpenedPayload{
 			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(votingWindow).Format(time.RFC3339),
@@ -491,9 +493,13 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 		return
 	}
 	locale := e.viewerLocale(ctx, g, self)
+	var revealEndsAt *time.Time
+	if t, ok := e.svc.RevealEndsAt(g.ID()); ok {
+		revealEndsAt = &t
+	}
 	resp, err := dto.NewGameStateResponse(ctx, g, code, self,
-		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture,
-		e.stageTextResolver(locale))
+		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
+		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), revealEndsAt)
 	if err != nil {
 		log.Printf("game ws: building state for %s: %v", g.ID(), err)
 		return

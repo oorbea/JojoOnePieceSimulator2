@@ -144,5 +144,12 @@ Two submodes for how Versus draws abilities, selected per game:
   today against an **in-memory** `ports.IGameStore` and exposes no transport at all (no HTTP/WS
   routes). See [[gameplay-application-layer]] and [[backend-contract]] for the current state.
 
+**2026-08-14**: a round that (re)assigns Loadouts (every Versus round; Gauntlet's first) no longer
+opens voting immediately after — `GameService.scheduleRevealDelay` holds the Game in `ASSIGNING`
+until the frontend's sorteo overlay would plausibly have finished, so voting can never open before
+anyone has seen their loadout. Rounds that don't reassign (Gauntlet after round 1) still open voting
+immediately, since there's nothing new to reveal. See [[gameplay-application-layer]] for the
+mechanism and [[game-match-assignment-frontend]] for the frontend half.
+
 Related: [[gameplay-domain-design]] (technical design, patterns, file map), [[backend-contract]],
-[[ADR]]
+[[gameplay-application-layer]], [[game-match-assignment-frontend]], [[ADR]]

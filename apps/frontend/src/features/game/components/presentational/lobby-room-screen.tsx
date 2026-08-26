@@ -7,11 +7,13 @@ import { ConnectionBanner } from '@/features/game/components/presentational/conn
 import { JoinCodeCard } from '@/features/game/components/presentational/join-code-card'
 import { LobbyConfigPanel } from '@/features/game/components/presentational/lobby-config-panel'
 import { LobbyLockRow } from '@/features/game/components/presentational/lobby-lock-row'
+import { MangaRow } from '@/features/game/components/presentational/manga-row'
 import { MatchScreen } from '@/features/game/components/presentational/match/match-screen'
 import { SquadRoster } from '@/features/game/components/presentational/squad-roster'
 import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
+import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
 import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
@@ -73,7 +75,9 @@ type Props = {
   configError?: string
   onSubmitConfig: () => void
   live: LiveMatchState
-  revealedIds: Set<string>
+  revealPhase: RevealPhaseKind
+  revealSlotIndex: number
+  revealTotalSlots: number
   isRevealing: boolean
   onSkipReveal: () => void
   reducedMotion: boolean
@@ -125,7 +129,9 @@ export function LobbyRoomScreen({
   configError,
   onSubmitConfig,
   live,
-  revealedIds,
+  revealPhase,
+  revealSlotIndex,
+  revealTotalSlots,
   isRevealing,
   onSkipReveal,
   reducedMotion,
@@ -150,6 +156,14 @@ export function LobbyRoomScreen({
             isPublic={snapshot.config.visibility === 'PUBLIC'}
             onCopy={onCopyCode}
             onShare={onShareCode}
+          />
+
+          <MangaRow
+            mangas={configMangas}
+            isHost={you.isHost}
+            onToggle={onToggleConfigManga}
+            saving={configSaving}
+            saved={configSaved}
           />
 
           {snapshot.mode === 'VERSUS' ? (
@@ -195,7 +209,6 @@ export function LobbyRoomScreen({
               mode={configMode}
               onChangeMode={onChangeConfigMode}
               mangas={configMangas}
-              onToggleManga={onToggleConfigManga}
               teamSize={configTeamSize}
               teamSizeMin={configTeamSizeMin}
               teamSizeMax={configTeamSizeMax}
@@ -230,7 +243,9 @@ export function LobbyRoomScreen({
           nextRetryAt={nextRetryAt}
           onRetryNow={onRetryNow}
           live={live}
-          revealedIds={revealedIds}
+          revealPhase={revealPhase}
+          revealSlotIndex={revealSlotIndex}
+          revealTotalSlots={revealTotalSlots}
           isRevealing={isRevealing}
           onSkipReveal={onSkipReveal}
           reducedMotion={reducedMotion}

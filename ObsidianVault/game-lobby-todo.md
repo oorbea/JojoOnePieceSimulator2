@@ -143,6 +143,14 @@ round-resolved feedback, and the final result screen (`GAME_FINISHED` still just
 to `/play`). If the owner asks for this, treat it as a fresh planning pass (new Explore + Plan
 agents) - it's a different scale of work, and the backend bug needs fixing first.
 
+**Roster redesign + sorteo reel fix - DONE (2026-08-17)**, see
+[[game-match-assignment-frontend]]'s dated section for the full writeup: the ruleta's landing
+frame was always blank (a `justify="center"` geometry bug, now unit-tested against regression),
+redesigned with an overshoot landing + fade + stagger; the voting roster now shows only
+avatar+username per participant (`ParticipantTile`) with a 1.5s-hover/long-press card and a
+tap-opened full breakdown modal; a loadout's Stand/DevilFruit description+skills are now resolved
+per viewer locale server-side instead of frozen to en-GB.
+
 ## How to verify when done
 
 - Backend: `cd apps/backend && go build ./... && go vet ./... && go test ./...`

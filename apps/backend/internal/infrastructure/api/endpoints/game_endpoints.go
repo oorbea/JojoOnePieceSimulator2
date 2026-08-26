@@ -13,6 +13,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
@@ -38,6 +39,9 @@ type GameWSConfig struct {
 	ResolveStandPicture      dto.PictureURLResolver
 	ResolveDevilFruitPicture dto.PictureURLResolver
 	ResolveStagePicture      dto.PictureURLResolver
+	// ResolveAvatarPicture resolves a participant's avatar thumb key into a
+	// URL - same function UserEndpoints already uses (UserService.AvatarURL).
+	ResolveAvatarPicture dto.PictureURLResolver
 }
 
 // GameEndpoints wires the game feature's HTTP surface (creation, discovery,
@@ -45,11 +49,13 @@ type GameWSConfig struct {
 // GameService. See router.go for why /games/{id}/ws is mounted outside the
 // normal Timeout+RequireAuth group.
 type GameEndpoints struct {
-	svc    *services.GameService
-	hub    *services.GameEventHub
-	stages ports.IStageRepository
-	users  ports.IUserRepository
-	issuer ports.ITokenIssuer
+	svc         *services.GameService
+	hub         *services.GameEventHub
+	stages      ports.IStageRepository
+	stands      ports.IStandRepository
+	devilFruits ports.IDevilFruitRepository
+	users       ports.IUserRepository
+	issuer      ports.ITokenIssuer
 	// ctx is the application's root context (cancelled on SIGINT/SIGTERM),
 	// watched by every open WebSocket so it can exit promptly on shutdown -
 	// same reasoning as EventsEndpoints.ctx.
@@ -64,9 +70,11 @@ type GameEndpoints struct {
 // instance shared by every participant, so a Stage frozen into a Round
 // can't carry an already-resolved description for each viewer - each
 // response instead looks up the viewer's own configured user.Language() and
-// re-resolves the description at serialize time.
-func NewGameEndpoints(svc *services.GameService, hub *services.GameEventHub, stages ports.IStageRepository, users ports.IUserRepository, issuer ports.ITokenIssuer, ctx context.Context, cfg GameWSConfig) *GameEndpoints {
-	return &GameEndpoints{svc: svc, hub: hub, stages: stages, users: users, issuer: issuer, ctx: ctx, cfg: cfg, conns: newConnRegistry()}
+// re-resolves the description at serialize time. stands/devilFruits back the
+// same re-resolution for a loadout's Stand/DevilFruit text (see
+// powerTextResolver).
+func NewGameEndpoints(svc *services.GameService, hub *services.GameEventHub, stages ports.IStageRepository, stands ports.IStandRepository, devilFruits ports.IDevilFruitRepository, users ports.IUserRepository, issuer ports.ITokenIssuer, ctx context.Context, cfg GameWSConfig) *GameEndpoints {
+	return &GameEndpoints{svc: svc, hub: hub, stages: stages, stands: stands, devilFruits: devilFruits, users: users, issuer: issuer, ctx: ctx, cfg: cfg, conns: newConnRegistry()}
 }
 
 // viewerLocale resolves self's preferred locale from their user record,
@@ -101,6 +109,40 @@ func (e *GameEndpoints) stageTextResolver(locale enums.Locale) dto.StageTextReso
 			}
 		}
 		return "", nil
+	}
+}
+
+// standTextResolver/devilFruitTextResolver are stageTextResolver's analogue
+// for a loadout's Stand/DevilFruit (see dto.PowerTextResolver) - same
+// enums.FallbackChain walk, over ports.PowerTranslations instead of a plain
+// description string.
+func (e *GameEndpoints) standTextResolver(locale enums.Locale) dto.PowerTextResolver {
+	return func(ctx context.Context, id powers.PowerID) (ports.PowerContent, error) {
+		translations, err := e.stands.Translations(ctx, id)
+		if err != nil {
+			return ports.PowerContent{}, err
+		}
+		for _, l := range enums.FallbackChain(locale) {
+			if content, ok := translations[l]; ok {
+				return content, nil
+			}
+		}
+		return ports.PowerContent{}, nil
+	}
+}
+
+func (e *GameEndpoints) devilFruitTextResolver(locale enums.Locale) dto.PowerTextResolver {
+	return func(ctx context.Context, id powers.PowerID) (ports.PowerContent, error) {
+		translations, err := e.devilFruits.Translations(ctx, id)
+		if err != nil {
+			return ports.PowerContent{}, err
+		}
+		for _, l := range enums.FallbackChain(locale) {
+			if content, ok := translations[l]; ok {
+				return content, nil
+			}
+		}
+		return ports.PowerContent{}, nil
 	}
 }
 
@@ -152,9 +194,13 @@ func (e *GameEndpoints) respondState(w http.ResponseWriter, r *http.Request, g *
 		return err
 	}
 	locale := e.viewerLocale(r.Context(), g, self)
+	var revealEndsAt *time.Time
+	if t, ok := e.svc.RevealEndsAt(g.ID()); ok {
+		revealEndsAt = &t
+	}
 	resp, err := dto.NewGameStateResponse(r.Context(), g, code, self,
-		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture,
-		e.stageTextResolver(locale))
+		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
+		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), revealEndsAt)
 	if err != nil {
 		return err
 	}

@@ -310,10 +310,24 @@
         "spin": "Spin",
         "hamon": "Hamon",
         "fruitMastery": "Mestratge de fruita",
-        "armamentHaki": "Haki de l'Armament",
-        "observationHaki": "Haki de l'Observació",
-        "conquerorHaki": "Haki del Conqueridor",
-        "physicalForm": "Forma física"
+        "armamentHaki": "Haki d'Armadura",
+        "observationHaki": "Haki d'Observació",
+        "conquerorHaki": "Haki del Rei",
+        "physicalForm": "Forma física",
+        "stand": "Stand",
+        "devilFruit": "Fruita del Diable"
+      },
+      "reveal": {
+        "title": "Sorteig de poders",
+        "intro": "Preparats…",
+        "progress": "{{current}}/{{total}}",
+        "skip": "Salta",
+        "skipA11y": "Salta l'animació del sorteig de poders",
+        "votingIn": "La votació comença en {{seconds}}s"
+      },
+      "loadout": {
+        "viewA11y": "Veure els poders de {{name}}",
+        "closeA11y": "Tancar el desglossament de poders"
       }
     },
     "leave": {

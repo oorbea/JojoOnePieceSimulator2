@@ -12,21 +12,29 @@ type Props = {
   onSkip: () => void
   tiebreak: boolean
   votingClosesAt: number | null
+  /** The server's own sorteo deadline (live.revealEndsAt) - still set for a
+   * beat after the player has locally skipped the animation, since the
+   * server doesn't actually open voting until this passes. */
+  revealEndsAt: number | null
   gameState: string
 }
 
-// While the loadout reveal is playing: a "revealing" label plus a Skip
-// button. Once revealed: the current game state label (voting/tiebreak),
-// with an optional countdown once the server has told us when it closes.
-export function VotingStatusBar({ isRevealing, onSkip, tiebreak, votingClosesAt, gameState }: Props) {
+// Three states: while RevealStage is showing (isRevealing, handled by the
+// caller instead of here now - see MatchScreen), this bar isn't rendered at
+// all. Once the player has locally skipped/finished but the server's own
+// sorteo deadline hasn't passed yet, a "voting opens in Xs" countdown -
+// nobody can vote early just because their own animation finished first.
+// Once voting has genuinely opened: the current game state label, with the
+// real countdown.
+export function VotingStatusBar({ isRevealing, onSkip, tiebreak, votingClosesAt, revealEndsAt, gameState }: Props) {
   const { t } = useTranslation()
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    if (votingClosesAt === null) return
+    if (votingClosesAt === null && revealEndsAt === null) return
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [votingClosesAt])
+  }, [votingClosesAt, revealEndsAt])
 
   if (isRevealing) {
     return (
@@ -43,6 +51,17 @@ export function VotingStatusBar({ isRevealing, onSkip, tiebreak, votingClosesAt,
             {t('game.match.skipReveal')}
           </GlossButton>
         </XStack>
+      </GlassPanel>
+    )
+  }
+
+  if (votingClosesAt === null && revealEndsAt !== null) {
+    const seconds = secondsUntil(revealEndsAt, now)
+    return (
+      <GlassPanel tone="strong" rounded="$pill" px="$4" py="$2.5" width="100%">
+        <GlowText level="label" tone="soft">
+          {seconds !== null ? t('game.match.reveal.votingIn', { seconds }) : t('game.match.reveal.title')}
+        </GlowText>
       </GlassPanel>
     )
   }
