@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react-native'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Text } from 'react-native'
 
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
@@ -90,11 +90,13 @@ describe('useLoadoutReveal', () => {
 
   it('skip jumps straight to done', async () => {
     const mangas: Manga[] = ['JOJO', 'ONE_PIECE']
-    let skip: (() => void) | null = null
+    const skipRef: { current: (() => void) | null } = { current: null }
 
     function SkipHarness() {
       const result = useLoadoutReveal({ mangas, active: true, markRevealed: () => {}, serverRevealMs: null })
-      skip = result.skip
+      useEffect(() => {
+        skipRef.current = result.skip
+      }, [result.skip])
       return <Text testID="state">{JSON.stringify({ isRevealing: result.isRevealing })}</Text>
     }
 
@@ -102,7 +104,7 @@ describe('useLoadoutReveal', () => {
     expect(readState().isRevealing).toBe(true)
 
     await act(async () => {
-      skip?.()
+      skipRef.current?.()
     })
     expect(readState().isRevealing).toBe(false)
   })
