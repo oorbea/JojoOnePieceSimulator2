@@ -466,6 +466,17 @@ func hostOf(t *testing.T, g *game.Game) game.ParticipantID {
 	return g.HostID()
 }
 
+// advanceReveal fires the reveal-delay timer scheduleRevealDelay starts
+// whenever a round (re)assigns Loadouts - StartGame, and every Versus round
+// after it - by advancing deps.clock past game.RevealDuration(mangas). Until
+// this timer fires the Game sits in ASSIGNING, not VOTING, so any test that
+// needs to actually cast a vote must call this (then re-fetch via GetGame,
+// since the timer's own openVotingAfterReveal runs asynchronously against
+// the fake clock, not inline with the call that scheduled it).
+func advanceReveal(deps *gameTestDeps, mangas []enums.Manga) {
+	deps.clock.Advance(game.RevealDuration(mangas))
+}
+
 // --- creation / membership ---
 
 func TestCreateGame_Gauntlet_Success(t *testing.T) {
@@ -743,11 +754,96 @@ func TestStartGame_Gauntlet_OpensFirstRoundVoting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
+	if g.State() != enums.Assigning {
+		t.Fatalf("state right after StartGame = %v, want ASSIGNING (reveal in progress)", g.State())
+	}
+
+	advanceReveal(deps, gauntletInput().Mangas)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame after reveal: %v", err)
+	}
 	if g.State() != enums.Voting {
 		t.Fatalf("state = %v, want VOTING", g.State())
 	}
 	if len(g.Rounds()) != 1 {
 		t.Fatalf("rounds = %d, want 1", len(g.Rounds()))
+	}
+}
+
+// TestStartGame_RevealEndsAt_TracksThenClearsOnVotingOpen checks
+// GameService.RevealEndsAt end to end: absent before the reveal starts,
+// present with the expected deadline while ASSIGNING, and gone again the
+// moment voting actually opens - the seam a (re)connecting client relies on
+// (see dto.NewGameStateResponse's revealEndsAt param).
+func TestStartGame_RevealEndsAt_TracksThenClearsOnVotingOpen(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if _, ok := svc.RevealEndsAt(g.ID()); ok {
+		t.Fatalf("RevealEndsAt before StartGame: want not-ok")
+	}
+
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+	want := deps.clock.Now().Add(game.RevealDuration(gauntletInput().Mangas))
+	got, ok := svc.RevealEndsAt(g.ID())
+	if !ok {
+		t.Fatalf("RevealEndsAt during reveal: want ok")
+	}
+	if !got.Equal(want) {
+		t.Fatalf("RevealEndsAt = %v, want %v", got, want)
+	}
+
+	advanceReveal(deps, gauntletInput().Mangas)
+	if _, ok := svc.RevealEndsAt(g.ID()); ok {
+		t.Fatalf("RevealEndsAt after voting opens: want not-ok")
+	}
+}
+
+// TestAbortGame_DuringReveal_NeverOpensVoting guards the exact bug the
+// reveal delay could otherwise introduce: aborting a Game while its reveal
+// timer is still pending must cancel that timer outright, not just let it
+// fire into a Game that no longer exists. Advancing the clock well past the
+// reveal duration after the abort proves openVotingAfterReveal's own
+// ErrGameNotFound tolerance is never even exercised here - the timer is
+// gone, not merely harmless.
+func TestAbortGame_DuringReveal_NeverOpensVoting(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+	if g.State() != enums.Assigning {
+		t.Fatalf("state right after StartGame = %v, want ASSIGNING", g.State())
+	}
+
+	if _, err := svc.AbortGame(context.Background(), g.ID(), g.HostID()); err != nil {
+		t.Fatalf("AbortGame: %v", err)
+	}
+	if _, ok := svc.RevealEndsAt(g.ID()); ok {
+		t.Fatalf("RevealEndsAt after abort: want not-ok, the reveal timer should be cancelled")
+	}
+
+	// Advance well past the reveal duration - if the timer had survived the
+	// abort, this is where it would fire and try to reopen voting on a Game
+	// that finalizeLocked already deleted from the store.
+	advanceReveal(deps, gauntletInput().Mangas)
+
+	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
+		t.Fatalf("GetGame after abort+advance: err = %v, want ErrGameNotFound", err)
 	}
 }
 
@@ -762,6 +858,11 @@ func TestGauntlet_FallMajority_FinishesAndFinalizes(t *testing.T) {
 	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
+	}
+	advanceReveal(deps, gauntletInput().Mangas)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame after reveal: %v", err)
 	}
 
 	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), game.OptionID("FALL"))
@@ -796,6 +897,11 @@ func TestGauntlet_ClearAllStages_Victory(t *testing.T) {
 	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
+	}
+	advanceReveal(deps, gauntletInput().Mangas)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame after reveal: %v", err)
 	}
 
 	// gauntletInput selects only Jojo, which has 2 fixture stages - two
@@ -839,6 +945,11 @@ func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
+	advanceReveal(deps, versusInput(1).Mangas)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame after reveal: %v", err)
+	}
 
 	teamA := g.Teams()[0].ID()
 	optionA := game.OptionID(teamA.String())
@@ -858,6 +969,16 @@ func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
 		g, err = svc.CastVote(context.Background(), g.ID(), joinerParticipant, optionA)
 		if err != nil {
 			t.Fatalf("round %d joiner vote: %v", round, err)
+		}
+		// Versus reassigns Loadouts every round (see VersusMode.
+		// ReassignsEachRound), so every round but the last one just
+		// resolved schedules its own reveal delay before voting reopens.
+		if round < game.VersusRounds-1 {
+			advanceReveal(deps, versusInput(1).Mangas)
+			g, err = svc.GetGame(context.Background(), g.ID())
+			if err != nil {
+				t.Fatalf("GetGame after round %d reveal: %v", round, err)
+			}
 		}
 	}
 
@@ -886,6 +1007,11 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
+	}
+	advanceReveal(deps, versusInput(1).Mangas)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame after reveal: %v", err)
 	}
 
 	teamA := game.OptionID(g.Teams()[0].ID().String())
@@ -928,14 +1054,25 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 		t.Fatalf("tiebreak calls = %d, want 0 before the revote", deps.tiebreak.calls)
 	}
 
-	// Second close (the revote): still tied, so the tiebreaker decides.
+	// Second close (the revote): the joiner's round-1 vote (teamB) is still
+	// on file for this same Ballot - Ballot.Cast never resets votes between
+	// a tie and its revote (see ballot.go's doc, "overwriting any previous
+	// vote... the last vote before the window closes is the one that
+	// counts"). So the moment the host recasts, VotingComplete is already
+	// true from the joiner's still-standing vote, and this single CastVote
+	// resolves the tie via the tiebreaker and starts round 2 all by itself -
+	// there is no separate "joiner votes again" step.
 	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), teamA)
 	if err != nil {
 		t.Fatalf("host vote 2: %v", err)
 	}
-	g, err = svc.CastVote(context.Background(), g.ID(), joinerParticipant, teamB)
+	// The revote just resolved via the tiebreaker, moving Versus into round
+	// 2 - which reassigns Loadouts and so schedules its own reveal delay
+	// before voting reopens (see VersusMode.ReassignsEachRound).
+	advanceReveal(deps, versusInput(1).Mangas)
+	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
-		t.Fatalf("joiner vote 2: %v", err)
+		t.Fatalf("GetGame after round 2 reveal: %v", err)
 	}
 
 	unsub()
@@ -979,6 +1116,7 @@ func TestCloseVotingWindow_TimerExpiry_ResolvesWithEmittedVotes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
+	advanceReveal(deps, gauntletInput().Mangas)
 
 	// Host never votes - the window expiring must resolve with zero votes,
 	// which is a tie (see game.Ballot.Tally), opening a revote instead of
@@ -1084,6 +1222,11 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
+	advanceReveal(deps, versusInput(2).Mangas)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame after reveal: %v", err)
+	}
 
 	optionA := game.OptionID(g.Teams()[0].ID().String())
 	participants := g.Participants()
@@ -1099,6 +1242,11 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 		}(p.ID())
 	}
 	wg.Wait()
+
+	// A unanimous vote resolves round 1 immediately, moving Versus into
+	// round 2 - which reassigns Loadouts and so schedules its own reveal
+	// delay before voting reopens (see VersusMode.ReassignsEachRound).
+	advanceReveal(deps, versusInput(2).Mangas)
 
 	final, err := svc.GetGame(context.Background(), g.ID())
 	if err != nil {

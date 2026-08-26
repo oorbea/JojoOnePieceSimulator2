@@ -274,8 +274,16 @@ type HostReassignedPayload struct {
 	NewHostID string `json:"newHostId"`
 }
 
+// LoadoutsAssignedPayload carries revealMs - the transport-computed
+// duration (game.RevealDuration for the lobby's own mangas) every client
+// should spend on its reveal overlay before voting can open. See
+// GameService.scheduleRevealDelay: the server itself waits exactly this
+// long before calling OpenVoting, so a client that paces its animation to
+// anything else either finishes early (and just waits) or late (and misses
+// nothing, since voting genuinely hasn't opened yet).
 type LoadoutsAssignedPayload struct {
-	RoundIndex int `json:"roundIndex"`
+	RoundIndex int   `json:"roundIndex"`
+	RevealMs   int64 `json:"revealMs"`
 }
 
 type RoundResolvedPayload struct {

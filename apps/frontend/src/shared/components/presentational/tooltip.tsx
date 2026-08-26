@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from 'react'
-import { Modal } from 'react-native'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { Dimensions, Modal, type LayoutChangeEvent } from 'react-native'
 import { createPortal } from 'react-dom'
 import { YStack } from 'tamagui'
 
+import { clampOverlayPosition } from '@/shared/lib/overlay-position'
 import { isWeb } from '@/shared/lib/web-blur'
 
 import { GlassPanel } from './glass-panel'
@@ -15,32 +16,54 @@ type Anchor = { x: number; y: number; width: number; height: number }
 
 type Measurable = {
   measure?: (
-    callback: (x: number, y: number, width: number, height: number, pageX: number, pageY: number) => void
+    callback: (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      pageX: number,
+      pageY: number
+    ) => void
   ) => void
 }
 
-// Cross-platform tooltip trigger: web shows on hover or keyboard focus (a
-// mouse/keyboard user has no long-press affordance); native has no hover at
-// all, so it shows on long-press with an auto-hide timer instead.
-//
-// The bubble itself renders through a root-level `Modal` (see
-// `TooltipBubble` below), anchored to the trigger's on-screen position via
-// `.measure()` - NOT a nested `position:absolute` inside the trigger's own
-// tree. RN only compares z-index between direct siblings (the exact reason
-// `ConfirmSheet` is a real `Modal` instead of an absolute overlay, per
-// ObsidianVault/frontend-responsive-frutiger-aero.md) - a tooltip a few
-// levels deep inside a form would otherwise render clipped by an ancestor's
-// `overflow:hidden` or painted over by a later, unrelated sibling.
-export function useTooltipTrigger(label?: string) {
+type HoverTriggerOptions = {
+  /** Web only: how long the pointer must hover before `visible` flips true.
+   * Native has no hover, so this only delays `onHoverIn`/`onFocus`. */
+  delayMs?: number
+  /** Native only: auto-hide after this many ms once a long-press reveals it
+   * (the default bubble behaviour - lift your finger, still get a moment to
+   * read it). Pass `null` to disable the timer and dismiss on `onPressOut`
+   * instead - what a hover CARD wants, since a card is read while still
+   * pressing/hovering, not after release. */
+  nativeAutoHideMs?: number | null
+}
+
+// The cross-platform show/hide/anchor mechanics shared by every tooltip-like
+// overlay in this file (the plain text bubble AND the bigger hover card):
+// web shows on hover/focus (optionally after `delayMs`), native has no
+// hover at all so it shows on long-press instead. Anchoring is via
+// `.measure()`, not a nested `position:absolute`, for the same reason
+// `useTooltipTrigger` always has: RN only compares z-index between direct
+// siblings, so a trigger a few levels deep would otherwise render clipped
+// or painted over - see `TooltipBubble`'s doc for the full explanation.
+export function useHoverTrigger(opts?: HoverTriggerOptions) {
+  const delayMs = opts?.delayMs ?? 0
+  const nativeAutoHideMs =
+    opts?.nativeAutoHideMs === undefined ? NATIVE_AUTO_HIDE_MS : opts.nativeAutoHideMs
+
   const ref = useRef<Measurable | null>(null)
   const [visible, setVisible] = useState(false)
   const [anchor, setAnchor] = useState<Anchor | null>(null)
+  const showTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  if (!label) {
-    return { visible: false, anchor: null, triggerRef: ref, triggerProps: {} as Record<string, unknown> }
+  const clearShowTimer = () => {
+    if (showTimer.current) {
+      clearTimeout(showTimer.current)
+      showTimer.current = null
+    }
   }
-
   const clearHideTimer = () => {
     if (hideTimer.current) {
       clearTimeout(hideTimer.current)
@@ -48,130 +71,202 @@ export function useTooltipTrigger(label?: string) {
     }
   }
 
-  const show = () => {
+  const show = useCallback(() => {
     ref.current?.measure?.((_x, _y, width, height, pageX, pageY) => {
       setAnchor({ x: pageX, y: pageY, width, height })
       setVisible(true)
     })
-  }
+  }, [])
+
+  const hide = useCallback(() => {
+    clearShowTimer()
+    setVisible(false)
+  }, [])
+
+  const scheduleShow = useCallback(() => {
+    clearShowTimer()
+    if (delayMs > 0) {
+      showTimer.current = setTimeout(show, delayMs)
+    } else {
+      show()
+    }
+  }, [delayMs, show])
 
   const triggerProps = isWeb
     ? {
-        onHoverIn: show,
-        onHoverOut: () => setVisible(false),
-        onFocus: show,
-        onBlur: () => setVisible(false),
+        onHoverIn: scheduleShow,
+        onHoverOut: hide,
+        onFocus: scheduleShow,
+        onBlur: hide,
       }
     : {
         onLongPress: () => {
           show()
-          clearHideTimer()
-          hideTimer.current = setTimeout(() => setVisible(false), NATIVE_AUTO_HIDE_MS)
+          if (nativeAutoHideMs !== null) {
+            clearHideTimer()
+            hideTimer.current = setTimeout(hide, nativeAutoHideMs)
+          }
         },
+        // Only the auto-hide-less (card) variant dismisses on release -
+        // the plain bubble relies on its timer so lifting your finger
+        // doesn't instantly hide the thing you just long-pressed to read.
+        onPressOut: nativeAutoHideMs === null ? hide : undefined,
       }
 
   return { visible, anchor, triggerRef: ref, triggerProps }
 }
 
-type TooltipBubbleProps = { visible: boolean; label?: string; anchor: Anchor | null }
+// useTooltipTrigger is useHoverTrigger specialised for a short text label -
+// every existing call site (GlossButton, InfoHint, ...) passes a label and
+// gets the original bubble behaviour unchanged. `delayMs` defaults to 0 so
+// none of them start hovering-with-a-delay by accident.
+export function useTooltipTrigger(label?: string, opts?: { delayMs?: number }) {
+  const hover = useHoverTrigger({ delayMs: opts?.delayMs })
+  if (!label) {
+    return {
+      visible: false,
+      anchor: null,
+      triggerRef: hover.triggerRef,
+      triggerProps: {} as Record<string, unknown>,
+    }
+  }
+  return hover
+}
 
-// Floats above EVERYTHING (its own `Modal` layer), anchored to the
-// trigger's measured screen position. Centering above the anchor uses a
-// web-only `transform` (RN's native transform doesn't take percentage
-// values, so native anchors from the trigger's top-left corner instead -
-// fine for the short labels these carry). Inert to the pointer throughout,
-// so it never eats the hover/press meant for the button underneath.
-export function TooltipBubble({ visible, label, anchor }: TooltipBubbleProps) {
-  // Centering the bubble on the anchor's midpoint (via `translateX(-50%)`)
-  // pushes it straight off-screen for any trigger near a screen edge (e.g.
-  // "Admin" in the top-right nav) - `left`/`right` never clamped to the
-  // viewport. Same edge problem vertically: a trigger flush against the top
-  // of the viewport (the nav bar's own buttons) has no room above it, so
-  // anchoring above and translating up by the bubble's own height
-  // (`translateY(-100%)`) pushed the whole thing off the top of the screen.
-  const [clampedCenterX, setClampedCenterX] = useState<number | null>(null)
-  const [placement, setPlacement] = useState<'above' | 'below'>('above')
+type Size = { width: number; height: number }
 
-  // Both corrections need the bubble's REAL rendered size, which only exists
-  // after it's painted - a `useLayoutEffect` doing the measure-then-setState
-  // dance is the obvious way to get it, but `react-hooks/set-state-in-effect`
-  // flags any unconditional `setState` in an effect body as a cascading-render
-  // risk (see `join-lobby-container.tsx`/`use-loadout-reveal.ts` for the
-  // render-time-setState escape hatch this project otherwise uses for that
-  // rule - doesn't apply here since it only works for state derivable from
-  // props, and DOM layout isn't available until after commit). A ref
-  // callback runs at that same post-paint point in the commit, but isn't an
-  // effect the rule's static check recognizes, so it's the standard React
-  // pattern for exactly this ("measuring a node", react.dev) without
-  // tripping the lint rule.
-  const measureAndPosition = useCallback(
-    (el: HTMLElement | null) => {
-      if (!isWeb || !visible || !anchor || !el) {
-        setClampedCenterX(null)
-        setPlacement('above')
-        return
-      }
-      const width = el.offsetWidth
-      const height = el.offsetHeight
-      if (!width || !height) return
-      const half = width / 2
-      const centerX = anchor.x + anchor.width / 2
-      const min = half + VIEWPORT_EDGE_MARGIN
-      const max = window.innerWidth - half - VIEWPORT_EDGE_MARGIN
-      setClampedCenterX(Math.min(Math.max(centerX, min), max))
-      setPlacement(anchor.y - 8 - height < VIEWPORT_EDGE_MARGIN ? 'below' : 'above')
-    },
-    [visible, anchor?.x, anchor?.y, anchor?.width, anchor?.height, label]
+// Shared "where does the bubble/card go" logic for both TooltipBubble and
+// TooltipCard below: measures the overlay's own rendered size via
+// `onLayout` (fires on web AND native, unlike the old web-only
+// `.offsetWidth` ref-callback trick this replaced), then computes an
+// explicit `top`/`left` pixel position clamped to the viewport - flipping
+// above/below the anchor when there isn't room, and clamping the far edge
+// too so a card taller than the space on EITHER side still stays fully
+// on-screen instead of running off whichever edge it flipped away from
+// (the bug: a ~450px LoadoutCard hover-card is routinely taller than the
+// room above or below a roster tile, and the old logic only ever checked
+// the near edge, never the far one). `Dimensions.get('window')` (not
+// `window.innerWidth/innerHeight`) so the exact same math runs on both
+// platforms - native previously got no clamping at all.
+function usePositionedOverlay(visible: boolean, anchor: Anchor | null) {
+  const [measured, setMeasured] = useState<Size | null>(null)
+  const [wasVisible, setWasVisible] = useState(visible)
+
+  // A stale size from a previous open must not position the very first
+  // frame of a new one - reset it the moment this overlay hides. Compared
+  // and reset during render (state, not a ref - `react-hooks/refs` flags
+  // reading/writing a ref's `.current` during render) rather than in an
+  // effect, which would trip `react-hooks/set-state-in-effect`'s
+  // cascading-render warning for an unconditional setState in an effect
+  // body - same "reset state when a derived value changes" pattern
+  // use-loadout-reveal.ts's `seededKey` already documents.
+  if (wasVisible !== visible) {
+    setWasVisible(visible)
+    if (!visible && measured !== null) setMeasured(null)
+  }
+
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout
+    setMeasured((prev) =>
+      prev && prev.width === width && prev.height === height ? prev : { width, height }
+    )
+  }, [])
+
+  if (!anchor) return { onLayout, left: 0, top: 0 }
+
+  // Before the first onLayout, fall back to a reasonable guess - corrects
+  // to the real clamp on the very next frame once measured, the same
+  // one-tick tolerance the previous approach already had.
+  const size = { width: measured?.width ?? anchor.width, height: measured?.height ?? 40 }
+  const { top, left } = clampOverlayPosition(
+    anchor,
+    size,
+    Dimensions.get('window'),
+    VIEWPORT_EDGE_MARGIN
   )
 
-  if (!visible || !label || !anchor) return null
+  return { onLayout, left, top }
+}
 
-  const centerX = clampedCenterX ?? anchor.x + anchor.width / 2
-  const topY = placement === 'below' ? anchor.y + anchor.height + 8 : Math.max(anchor.y - 8, 4)
-
-  const bubble = (
-    <YStack
-      ref={measureAndPosition as never}
-      position="absolute"
-      t={topY}
-      l={centerX}
-      maxW={220}
-      style={{
-        pointerEvents: 'none',
-        ...(isWeb
-          ? { transform: [{ translateX: '-50%' }, { translateY: placement === 'below' ? '0%' : '-100%' }] }
-          : null),
-      }}
-    >
-      <GlassPanel tone="strong" elevate={2} px="$2.5" py="$1.5" rounded="$pill">
-        <GlowText level="label" fontSize="$1" numberOfLines={2}>
-          {label}
-        </GlowText>
-      </GlassPanel>
-    </YStack>
-  )
-
-  // Web skips RN's `Modal`: RNW's implementation wraps content in a fixed,
-  // full-viewport div (`ModalAnimation`'s own wrapper, not the one holding our
-  // content) that has no `pointer-events` style of its own and no prop to set
-  // one - it swallows hover/click for the whole screen for as long as ANY
-  // tooltip is visible. That stole hover off the trigger the instant the
-  // tooltip opened, flipping visible on/off forever and blocking every click
-  // behind it. A plain fixed-position portal to `document.body` gives the
-  // same "floats above everything, anchored to a measured screen position"
-  // behavior without that wrapper.
+// Web skips RN's `Modal`: RNW's implementation wraps content in a fixed,
+// full-viewport div (`ModalAnimation`'s own wrapper, not the one holding our
+// content) that has no `pointer-events` style of its own and no prop to set
+// one - it swallows hover/click for the whole screen for as long as ANY
+// overlay is visible. That stole hover off the trigger the instant the
+// overlay opened, flipping visible on/off forever and blocking every click
+// behind it. A plain fixed-position portal to `document.body` gives the
+// same "floats above everything, anchored to a measured screen position"
+// behavior without that wrapper.
+function OverlayPortal({ children }: { children: ReactNode }) {
   if (isWeb) {
     return createPortal(
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}>{bubble}</div>,
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}>{children}</div>,
       document.body
     )
   }
-
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
       <YStack flex={1} style={{ pointerEvents: 'none' }}>
-        {bubble}
+        {children}
       </YStack>
     </Modal>
+  )
+}
+
+type TooltipBubbleProps = { visible: boolean; label?: string; anchor: Anchor | null }
+
+// Floats above EVERYTHING (its own `Modal` layer), anchored to the
+// trigger's measured screen position via explicit `top`/`left` (identical
+// math on web and native - see usePositionedOverlay's doc). Inert to the
+// pointer throughout, so it never eats the hover/press meant for the
+// button underneath.
+export function TooltipBubble({ visible, label, anchor }: TooltipBubbleProps) {
+  const { onLayout, left, top } = usePositionedOverlay(visible, anchor)
+
+  if (!visible || !label || !anchor) return null
+
+  return (
+    <OverlayPortal>
+      <YStack
+        onLayout={onLayout}
+        position="absolute"
+        t={top}
+        l={left}
+        maxW={220}
+        style={{ pointerEvents: 'none' }}
+      >
+        <GlassPanel tone="strong" elevate={2} px="$2.5" py="$1.5" rounded="$pill">
+          <GlowText level="label" fontSize="$1" numberOfLines={2}>
+            {label}
+          </GlowText>
+        </GlassPanel>
+      </YStack>
+    </OverlayPortal>
+  )
+}
+
+type TooltipCardProps = { visible: boolean; anchor: Anchor | null; children: ReactNode }
+
+// TooltipBubble's bigger sibling: same anchoring/portal/inert-to-pointer
+// contract, but hosts arbitrary content (a full LoadoutCard) instead of a
+// one-line label - no `maxW`/`numberOfLines` squeeze, the content dictates
+// its own size.
+export function TooltipCard({ visible, anchor, children }: TooltipCardProps) {
+  const { onLayout, left, top } = usePositionedOverlay(visible, anchor)
+
+  if (!visible || !anchor) return null
+
+  return (
+    <OverlayPortal>
+      <YStack
+        onLayout={onLayout}
+        position="absolute"
+        t={top}
+        l={left}
+        style={{ pointerEvents: 'none' }}
+      >
+        {children}
+      </YStack>
+    </OverlayPortal>
   )
 }

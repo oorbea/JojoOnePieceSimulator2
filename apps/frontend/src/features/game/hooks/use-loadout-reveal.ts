@@ -1,35 +1,58 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { revealStepMs } from '@/features/game/lib/loadout-reveal'
+import { revealPhases, type RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
+import { revealSlotKinds } from '@/features/game/lib/match-rules'
+import type { Manga } from '@/shared/lib/zod'
 
 type Params = {
-  order: string[]
+  mangas: Manga[]
   active: boolean
-  reducedMotion: boolean
   markRevealed: () => void
+  /** The backend's own revealMs for this assignment (LOADOUTS_ASSIGNED's
+   * payload, via the socket store's live.revealMs) - authoritative over the
+   * locally-computed total, since GameService.scheduleRevealDelay is what
+   * actually decides when voting opens. null before that frame has arrived
+   * (e.g. a client still on the very first STATE fetch). */
+  serverRevealMs: number | null
 }
 
 type Result = {
-  revealedIds: Set<string>
   isRevealing: boolean
+  phase: RevealPhaseKind
+  /** The slot currently spinning/holding, index into revealSlotKinds(mangas)
+   * - -1 during 'intro'. */
+  slotIndex: number
+  totalSlots: number
   skip: () => void
 }
 
-// Drives the one-card-at-a-time loadout flip. markRevealed() is called as
-// soon as the reveal STARTS, not when it finishes - the "has this assignment
-// been revealed" bookkeeping in the socket store is per-assignment-seq, not
-// per-animation-completion, so a remount mid-reveal (e.g. a re-render from an
-// unrelated STATE frame) must not restart the whole sequence from scratch.
+// Drives the sorteo overlay: one global timeline (not one per participant -
+// every participant's carril spins for the SAME slot at the same time),
+// paced by revealPhases(mangas) and scaled to serverRevealMs so a
+// constants drift between backend and frontend degrades the pacing rather
+// than desyncing "reveal done" from "voting actually open" (the backend's
+// own timer, not this hook, is what truly gates OpenVoting).
 //
-// That same markRevealed() call flips `active` back to false on the very
-// next render (it catches revealedAssignmentSeq up to assignmentSeq in the
-// store), so `active` itself cannot be used to decide whether a reveal is
-// still in flight - only whether a NEW one should start. Progress is tracked
-// with its own `revealing` state instead, set true when a reveal starts and
-// false only once every card has actually flipped (or skip() is called).
-export function useLoadoutReveal({ order, active, reducedMotion, markRevealed }: Params): Result {
-  const orderKey = order.join(',')
-  const [revealedCount, setRevealedCount] = useState(0)
+// The bug this hook's predecessor had (fixed 2026-08-14, see
+// game-match-assignment-frontend.md): the scheduling effect returned
+// `clearTimers` as its cleanup, keyed on `[active, ...]`. But
+// `markRevealed()` flips `active` back to `false` on the very next render
+// (it catches `revealedAssignmentSeq` up to `assignmentSeq` in the store) -
+// so React ran that cleanup one render after scheduling, cancelling every
+// timer before the first one could ever fire. Fix, preserved here: this
+// effect never returns a cleanup tied to `active` flipping - pending timers
+// are only cleared (a) right before a genuinely NEW sequence schedules its
+// own timers, and (b) on unmount, via a separate effect with an empty
+// dependency array.
+export function useLoadoutReveal({ mangas, active, markRevealed, serverRevealMs }: Params): Result {
+  const mangasKey = mangas.slice().sort().join(',')
+  const phases = revealPhases(mangas)
+  const totalSlots = revealSlotKinds(mangas).length
+  const localTotalMs = phases.reduce((sum, p) => sum + p.durationMs, 0)
+  const scale = serverRevealMs && localTotalMs > 0 ? serverRevealMs / localTotalMs : 1
+  const runKey = `${mangasKey}:${serverRevealMs ?? 'local'}`
+
+  const [phaseIndex, setPhaseIndex] = useState(0)
   const [revealing, setRevealing] = useState(false)
   const [seededKey, setSeededKey] = useState<string | null>(null)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -40,57 +63,58 @@ export function useLoadoutReveal({ order, active, reducedMotion, markRevealed }:
     timers.current = []
   }
 
-  // Resets the count the moment a genuinely new reveal starts, during
+  // Resets the phase index the moment a genuinely new reveal starts, during
   // render rather than inside an effect (React's own recommended pattern for
-  // "reset state when a derived key changes") - lands before paint (no
-  // stale-count flash) and avoids react-hooks/set-state-in-effect's
-  // cascading-render warning for an unconditional setState in an effect body.
-  if (active && orderKey !== seededKey) {
-    setSeededKey(orderKey)
-    if (!reducedMotion && order.length > 0) {
-      setRevealedCount(0)
+  // "reset state when a derived key changes") - lands before paint and
+  // avoids react-hooks/set-state-in-effect's cascading-render warning for an
+  // unconditional setState in an effect body.
+  if (active && runKey !== seededKey) {
+    setSeededKey(runKey)
+    if (phases.length > 0) {
+      setPhaseIndex(0)
       setRevealing(true)
     }
   }
 
   useEffect(() => {
-    if (!active || startedRef.current === orderKey) return clearTimers
-    startedRef.current = orderKey
+    if (!active || startedRef.current === runKey) return
+    startedRef.current = runKey
 
     markRevealed()
+    // Clear any timers left over from a previous sequence before scheduling
+    // this one - NOT returned as this effect's cleanup (see the file-level
+    // comment above for why that distinction is the actual fix).
     clearTimers()
 
-    if (reducedMotion || order.length === 0) return clearTimers
+    if (phases.length === 0) return
 
-    const step = revealStepMs(false)
-    order.forEach((_, index) => {
-      const timer = setTimeout(
-        () => {
-          setRevealedCount((current) => Math.max(current, index + 1))
-          if (index === order.length - 1) setRevealing(false)
-        },
-        step * (index + 1)
-      )
+    let elapsedMs = 0
+    phases.forEach((p, index) => {
+      elapsedMs += p.durationMs * scale
+      const timer = setTimeout(() => {
+        setPhaseIndex((current) => Math.max(current, index + 1))
+        if (index === phases.length - 1) setRevealing(false)
+      }, elapsedMs)
       timers.current.push(timer)
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startedRef (keyed on runKey) guards re-entry; phases/scale/markRevealed are read fresh on the run they gate, not meant to re-trigger it on their own
+  }, [active, runKey])
 
-    return clearTimers
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- startedRef (keyed on orderKey) guards re-entry; order/reducedMotion/markRevealed are read fresh on the run they gate, not meant to re-trigger it on their own
-  }, [active, orderKey])
+  // Only clears pending timers on unmount - deliberately not tied to
+  // `active`/`runKey` changing (that's the bug described above).
+  useEffect(() => clearTimers, [])
 
   const skip = () => {
     clearTimers()
-    setRevealedCount(order.length)
+    setPhaseIndex(phases.length)
     setRevealing(false)
   }
 
-  if (reducedMotion || !revealing) {
-    return { revealedIds: new Set(order), isRevealing: false, skip: () => {} }
+  if (!revealing) {
+    return { isRevealing: false, phase: 'outro', slotIndex: totalSlots - 1, totalSlots, skip: () => {} }
   }
 
-  return {
-    revealedIds: new Set(order.slice(0, revealedCount)),
-    isRevealing: true,
-    skip,
-  }
+  const current = phases[Math.min(phaseIndex, phases.length - 1)]
+  const slotIndex = current.phase.slot ?? (current.phase.kind === 'outro' ? totalSlots - 1 : -1)
+  return { isRevealing: true, phase: current.phase.kind, slotIndex, totalSlots, skip }
 }

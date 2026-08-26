@@ -27,6 +27,15 @@ export type LiveMatchState = {
   assignmentSeq: number
   revealedAssignmentSeq: number
   assignedRoundIndex: number | null
+  /** The sorteo's own duration for this assignment, straight off
+   * LOADOUTS_ASSIGNED's revealMs - authoritative pacing input for
+   * useLoadoutReveal (see its doc). null until that frame arrives. */
+  revealMs: number | null
+  /** Epoch ms deadline for the in-flight sorteo - derived locally
+   * (Date.now() + revealMs) on LOADOUTS_ASSIGNED, or adopted from a STATE
+   * frame's game.revealEndsAt for a client that missed that frame (a
+   * reconnect mid-reveal). null once voting has actually opened. */
+  revealEndsAt: number | null
   votingRoundIndex: number | null
   votingClosesAt: number | null
   tiebreak: boolean
@@ -36,6 +45,8 @@ const INITIAL_LIVE: LiveMatchState = {
   assignmentSeq: 0,
   revealedAssignmentSeq: 0,
   assignedRoundIndex: null,
+  revealMs: null,
+  revealEndsAt: null,
   votingRoundIndex: null,
   votingClosesAt: null,
   tiebreak: false,
@@ -142,9 +153,25 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
       if (!frame || typeof frame.type !== 'string') return
 
       switch (frame.type) {
-        case SERVER_FRAME.STATE:
-          set({ snapshot: frame.payload as GameStateResponse })
+        case SERVER_FRAME.STATE: {
+          const payload = frame.payload as GameStateResponse
+          set((state) => {
+            // Adopt a snapshot's own revealEndsAt only when we aren't
+            // already tracking one locally - a genuine reconnect mid-sorteo
+            // (missed the LOADOUTS_ASSIGNED frame entirely), not the normal
+            // STATE resend that follows every frame we DID see.
+            if (state.live.revealEndsAt !== null || !payload.game.revealEndsAt) {
+              return { snapshot: payload }
+            }
+            const revealEndsAt = Date.parse(payload.game.revealEndsAt) || null
+            if (revealEndsAt === null) return { snapshot: payload }
+            return {
+              snapshot: payload,
+              live: { ...state.live, revealEndsAt, revealMs: Math.max(0, revealEndsAt - Date.now()) },
+            }
+          })
           break
+        }
         case SERVER_FRAME.PLAYER_KICKED: {
           const payload = frame.payload as { participantId?: string } | undefined
           const self = get().snapshot?.you.participantId
@@ -189,12 +216,15 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           // still be pre-assignment - never touch snapshot/feed from this
           // case. hasAllLoadouts/currentRound (match-rules.ts) gate the
           // actual reveal on the snapshot catching up.
-          const payload = frame.payload as { roundIndex?: number } | undefined
+          const payload = frame.payload as { roundIndex?: number; revealMs?: number } | undefined
+          const revealMs = payload?.revealMs ?? null
           set((state) => ({
             live: {
               ...state.live,
               assignmentSeq: state.live.assignmentSeq + 1,
               assignedRoundIndex: payload?.roundIndex ?? null,
+              revealMs,
+              revealEndsAt: revealMs !== null ? Date.now() + revealMs : null,
             },
           }))
           break
@@ -207,6 +237,8 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               votingRoundIndex: payload?.roundIndex ?? null,
               votingClosesAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
               tiebreak: false,
+              revealMs: null,
+              revealEndsAt: null,
             },
           }))
           break
@@ -219,6 +251,8 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               votingRoundIndex: payload?.roundIndex ?? null,
               votingClosesAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
               tiebreak: true,
+              revealMs: null,
+              revealEndsAt: null,
             },
           }))
           break

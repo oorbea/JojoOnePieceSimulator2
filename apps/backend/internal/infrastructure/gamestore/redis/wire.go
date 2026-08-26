@@ -78,14 +78,20 @@ type wirePoolFilter struct {
 	Banned        [][16]byte `json:"banned,omitempty"`
 }
 
+// AvatarThumbKey/GooglePicture are additive `omitempty` fields with a safe
+// empty-string default - see snapshotVersion's doc for why that means no
+// version bump: a payload written before this field existed just decodes
+// with both as "", exactly like a participant who never called SetAvatar.
 type wireParticipant struct {
-	ID          [16]byte     `json:"id"`
-	UserID      *[16]byte    `json:"userId,omitempty"`
-	DisplayName string       `json:"displayName"`
-	TeamID      [16]byte     `json:"teamId"`
-	Kind        string       `json:"kind"`
-	Connected   bool         `json:"connected"`
-	Loadout     *wireLoadout `json:"loadout,omitempty"`
+	ID             [16]byte     `json:"id"`
+	UserID         *[16]byte    `json:"userId,omitempty"`
+	DisplayName    string       `json:"displayName"`
+	TeamID         [16]byte     `json:"teamId"`
+	Kind           string       `json:"kind"`
+	Connected      bool         `json:"connected"`
+	Loadout        *wireLoadout `json:"loadout,omitempty"`
+	AvatarThumbKey string       `json:"avatarThumbKey,omitempty"`
+	GooglePicture  string       `json:"googlePicture,omitempty"`
 }
 
 type wireTeam struct {
@@ -166,11 +172,13 @@ func toWire(s game.Snapshot) wireGame {
 
 	for _, p := range s.Participants {
 		wp := wireParticipant{
-			ID:          p.ID,
-			DisplayName: p.DisplayName,
-			TeamID:      p.TeamID,
-			Kind:        p.Kind,
-			Connected:   p.Connected,
+			ID:             p.ID,
+			DisplayName:    p.DisplayName,
+			TeamID:         p.TeamID,
+			Kind:           p.Kind,
+			Connected:      p.Connected,
+			AvatarThumbKey: p.AvatarThumbKey,
+			GooglePicture:  p.GooglePicture,
 		}
 		if p.UserID != nil {
 			id := [16]byte(*p.UserID)
@@ -303,11 +311,13 @@ func fromWire(w wireGame) game.Snapshot {
 
 	for _, wp := range w.Participants {
 		p := game.ParticipantSnapshot{
-			ID:          wp.ID,
-			DisplayName: wp.DisplayName,
-			TeamID:      wp.TeamID,
-			Kind:        wp.Kind,
-			Connected:   wp.Connected,
+			ID:             wp.ID,
+			DisplayName:    wp.DisplayName,
+			TeamID:         wp.TeamID,
+			Kind:           wp.Kind,
+			Connected:      wp.Connected,
+			AvatarThumbKey: wp.AvatarThumbKey,
+			GooglePicture:  wp.GooglePicture,
 		}
 		if wp.UserID != nil {
 			uid := user.UserID(*wp.UserID)

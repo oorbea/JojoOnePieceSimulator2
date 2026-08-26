@@ -1,5 +1,17 @@
-import { currentRound, hasAllLoadouts, loadoutTraits, secondsUntil } from '@/features/game/lib/match-rules'
-import type { GameLoadout, GameParticipant, GameRound, GameSnapshot } from '@/features/game/types/game.types'
+import {
+  currentRound,
+  hasAllLoadouts,
+  loadoutSlots,
+  revealSlotKinds,
+  secondsUntil,
+} from '@/features/game/lib/match-rules'
+import type {
+  GameLoadout,
+  GameParticipant,
+  GameRound,
+  GameSnapshot,
+} from '@/features/game/types/game.types'
+import type { Manga } from '@/shared/lib/zod'
 
 function participant(overrides: Partial<GameParticipant> = {}): GameParticipant {
   return {
@@ -8,6 +20,7 @@ function participant(overrides: Partial<GameParticipant> = {}): GameParticipant 
     teamId: 't1',
     kind: 'HUMAN',
     connected: true,
+    avatarThumb: '',
     ...overrides,
   }
 }
@@ -97,38 +110,107 @@ describe('hasAllLoadouts', () => {
   })
 })
 
-describe('loadoutTraits', () => {
-  it('orders traits physicalForm, armamentHaki, observationHaki, conquerorHaki, spin, hamon, fruitMastery', () => {
-    const traits = loadoutTraits(
-      loadout({ spin: 'BASIC', hamon: 'BASIC', fruitMastery: 'REGULAR' })
+describe('loadoutSlots', () => {
+  const BOTH: Manga[] = ['JOJO', 'ONE_PIECE']
+
+  it('orders slots physicalForm, stand, devilFruit, fruitMastery, hamon, armamentHaki, observationHaki, conquerorHaki, spin', () => {
+    const slots = loadoutSlots(
+      loadout({ spin: 'BASIC', hamon: 'BASIC', fruitMastery: 'REGULAR' }),
+      BOTH
     )
-    expect(traits.map((t) => t.key)).toEqual([
+    expect(slots.map((s) => s.key)).toEqual([
       'physicalForm',
+      'stand',
+      'devilFruit',
+      'fruitMastery',
+      'hamon',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',
       'spin',
-      'hamon',
-      'fruitMastery',
     ])
   })
 
-  it('omits spin/hamon/fruitMastery when NONE', () => {
-    const traits = loadoutTraits(loadout())
-    expect(traits.map((t) => t.key)).toEqual([
+  it('includes spin/hamon/fruitMastery even when NONE - the slot count depends only on mangas, never the draw', () => {
+    const slots = loadoutSlots(loadout(), BOTH)
+    expect(slots.map((s) => s.key)).toEqual([
       'physicalForm',
+      'stand',
+      'devilFruit',
+      'fruitMastery',
+      'hamon',
+      'armamentHaki',
+      'observationHaki',
+      'conquerorHaki',
+      'spin',
+    ])
+    expect(slots.find((s) => s.key === 'fruitMastery')?.value).toBe('NONE')
+    expect(slots.find((s) => s.key === 'hamon')?.value).toBe('NONE')
+    expect(slots.find((s) => s.key === 'spin')?.value).toBe('NONE')
+  })
+
+  it('never filters haki/physicalForm even at their floor value', () => {
+    const slots = loadoutSlots(loadout(), BOTH)
+    expect(slots.find((s) => s.key === 'physicalForm')).toBeTruthy()
+    expect(slots.find((s) => s.key === 'armamentHaki')).toBeTruthy()
+    expect(slots.find((s) => s.key === 'observationHaki')).toBeTruthy()
+    expect(slots.find((s) => s.key === 'conquerorHaki')).toBeTruthy()
+  })
+
+  it('a JOJO-only lobby never gets a One Piece slot, even with a fully-drawn loadout', () => {
+    const slots = loadoutSlots(
+      loadout({
+        hamon: 'BASIC',
+        spin: 'BASIC',
+        fruitMastery: 'REGULAR',
+        physicalForm: 'VICE_ADMIRAL',
+      }),
+      ['JOJO']
+    )
+    expect(slots.map((s) => s.key)).toEqual(['stand', 'hamon', 'spin'])
+  })
+
+  it('a ONE_PIECE-only lobby never gets a JoJo slot', () => {
+    const slots = loadoutSlots(loadout({ fruitMastery: 'REGULAR' }), ['ONE_PIECE'])
+    expect(slots.map((s) => s.key)).toEqual([
+      'physicalForm',
+      'devilFruit',
+      'fruitMastery',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',
     ])
   })
+})
 
-  it('never filters haki/physicalForm even at their floor value', () => {
-    const traits = loadoutTraits(loadout())
-    expect(traits.find((t) => t.key === 'physicalForm')).toBeTruthy()
-    expect(traits.find((t) => t.key === 'armamentHaki')).toBeTruthy()
-    expect(traits.find((t) => t.key === 'observationHaki')).toBeTruthy()
-    expect(traits.find((t) => t.key === 'conquerorHaki')).toBeTruthy()
+describe('revealSlotKinds', () => {
+  it('both mangas: all 9 slots in draw order', () => {
+    expect(revealSlotKinds(['JOJO', 'ONE_PIECE'])).toEqual([
+      'physicalForm',
+      'stand',
+      'devilFruit',
+      'fruitMastery',
+      'hamon',
+      'armamentHaki',
+      'observationHaki',
+      'conquerorHaki',
+      'spin',
+    ])
+  })
+
+  it('jojo only: stand, hamon, spin', () => {
+    expect(revealSlotKinds(['JOJO'])).toEqual(['stand', 'hamon', 'spin'])
+  })
+
+  it('one piece only: physicalForm, devilFruit, fruitMastery, the three hakis', () => {
+    expect(revealSlotKinds(['ONE_PIECE'])).toEqual([
+      'physicalForm',
+      'devilFruit',
+      'fruitMastery',
+      'armamentHaki',
+      'observationHaki',
+      'conquerorHaki',
+    ])
   })
 })
 

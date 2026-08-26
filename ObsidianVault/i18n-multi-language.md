@@ -161,4 +161,14 @@ translated:
 - Validation `details` (see above) — needs a structured per-field DTO on
   the backend, not just a code on the top-level error.
 
-Related: [[ADR]], [[frontend-stack]], [[backend-contract]]
+## Follow-up: game loadout power text closed the last per-request gap (2026-08-17)
+
+A live `game.Game`'s Loadout froze its Stand/DevilFruit `description`/`skills` to `en-GB` at draw
+time (`infrastructure/game/repo_power_pool.go`) — a real exception to "power content, resolved
+server-side per request" above, since the domain object is shared by every participant and can
+only ever carry one baked-in locale. `GameEndpoints` now re-resolves both per viewer at
+serialization time (`standTextResolver`/`devilFruitTextResolver`), the same pattern
+`StageTextResolver` already used for a Round's Stage. See [[game-match-assignment-frontend]] for
+the full writeup (also covers the same pass's haki wording fix in es-ES/ca-ES).
+
+Related: [[ADR]], [[frontend-stack]], [[backend-contract]], [[game-match-assignment-frontend]]

@@ -261,7 +261,7 @@ func newWSLobby(t *testing.T) *wsLobby {
 		}
 	}
 
-	e := NewGameEndpoints(svc, services.NewGameEventHub(), nil, nil, nil, context.Background(), GameWSConfig{})
+	e := NewGameEndpoints(svc, services.NewGameEventHub(), nil, nil, nil, nil, nil, context.Background(), GameWSConfig{})
 
 	return &wsLobby{
 		endpoints: e,
@@ -514,7 +514,7 @@ func TestDispatch_UnknownCommand(t *testing.T) {
 // that connection with StatusNormalClosure and return, instead of the usual
 // resend-STATE-and-keep-going path every other event takes.
 func TestForwardEvents_KickedParticipant_ClosesOwnSocket(t *testing.T) {
-	e := NewGameEndpoints(nil, nil, nil, nil, nil, context.Background(), GameWSConfig{})
+	e := NewGameEndpoints(nil, nil, nil, nil, nil, nil, nil, context.Background(), GameWSConfig{})
 
 	var self game.ParticipantID
 	self[15] = 7
