@@ -27,6 +27,9 @@ export type ConfirmSheetState = {
   message: string
   confirmLabel: string
   onConfirm: () => void
+  /** Defaults to 'red' in ConfirmSheet itself - only a non-destructive
+   * confirmation (e.g. changing an already-cast vote) needs to override it. */
+  tone?: 'red' | 'blue' | 'glass'
 } | null
 
 type Props = {
@@ -81,6 +84,7 @@ type Props = {
   isRevealing: boolean
   onSkipReveal: () => void
   reducedMotion: boolean
+  onVote: (optionId: string) => void
 }
 
 export function LobbyRoomScreen({
@@ -135,6 +139,7 @@ export function LobbyRoomScreen({
   isRevealing,
   onSkipReveal,
   reducedMotion,
+  onVote,
 }: Props) {
   const { t } = useTranslation()
   const capacity = snapshot.config.teamSize
@@ -250,6 +255,7 @@ export function LobbyRoomScreen({
           onSkipReveal={onSkipReveal}
           reducedMotion={reducedMotion}
           onAbort={onAbort}
+          onVote={onVote}
         />
       )}
 
@@ -261,6 +267,7 @@ export function LobbyRoomScreen({
         isConfirming={confirming}
         onConfirm={confirmSheet?.onConfirm ?? (() => {})}
         onCancel={onCancelConfirm}
+        tone={confirmSheet?.tone}
       />
     </PageShell>
   )

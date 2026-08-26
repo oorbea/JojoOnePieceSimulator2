@@ -330,6 +330,24 @@
         "closeA11y": "Cerrar el desglose de poderes"
       }
     },
+    "vote": {
+      "progress": "{{cast}}/{{total}} han votado",
+      "youVoted": "Has votado",
+      "timeLeftA11y": "Tiempo restante para votar",
+      "tiebreakHint": "Empate - revotación",
+      "groupA11y": "Votación",
+      "yourTeam": "Tu equipo",
+      "hint": {
+        "keys": "Teclas: 1-9 para votar, Esc para cerrar"
+      },
+      "changeTitle": "¿Cambiar tu voto?",
+      "changeMessage": "¿Cambiar tu voto a \"{{option}}\"?",
+      "changeConfirm": "Cambiar voto",
+      "gauntlet": {
+        "SURVIVE": "Sobrevivimos",
+        "FALL": "Caemos"
+      }
+    },
     "leave": {
       "action": "Abandonar sala",
       "title": "¿Abandonar esta sala?",

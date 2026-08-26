@@ -1,3 +1,4 @@
+import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameLoadout, GameRound, GameSnapshot } from '@/features/game/types/game.types'
 import type { Manga } from '@/shared/lib/zod'
 
@@ -132,6 +133,35 @@ export function loadoutSlots(loadout: GameLoadout, mangas: Manga[]): LoadoutSlot
   }
 
   return slots
+}
+
+// voteProgress reports how many connected humans have voted in the current
+// round versus how many are eligible to - the frontend's own definition of
+// exactly what the backend's Game.humanVoteProgress computes, so a
+// reconnecting client with no live frame yet renders the same numbers a
+// connected one already has. `total` prefers live.voters (from the latest
+// VOTE_CAST, absolute per LiveMatchState's doc); when that's not known yet
+// (no frame has landed for this round - true right after a reconnect, or in
+// the instant between VOTING_OPENED and the first VOTE_CAST) it falls back
+// to counting connected, non-bot participants off the snapshot directly.
+// `cast` follows the same rule via live.votesCast, falling back to
+// round.votedParticipantIds intersected with that same connected-human set
+// (bots are never in votedParticipantIds's *meaning*, but the intersection
+// guards it anyway in case a bot's id ever appeared there).
+export function voteProgress(snapshot: GameSnapshot, live: LiveMatchState): { cast: number; total: number } {
+  const round = currentRound(snapshot)
+  const connectedHumanIds = new Set(
+    snapshot.participants.filter((p) => p.kind !== 'BOT' && p.connected !== false).map((p) => p.id)
+  )
+  const frameIsForCurrentRound = round !== null && live.votingRoundIndex === round.index
+
+  const total = frameIsForCurrentRound && live.voters !== null ? live.voters : connectedHumanIds.size
+
+  if (frameIsForCurrentRound && live.votesCast !== null) {
+    return { cast: live.votesCast, total }
+  }
+  const cast = round ? round.votedParticipantIds.filter((id) => connectedHumanIds.has(id)).length : 0
+  return { cast, total }
 }
 
 // secondsUntil clamps to zero rather than going negative once a countdown

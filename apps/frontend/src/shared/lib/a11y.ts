@@ -10,7 +10,7 @@ const ARIA_ROLE: Partial<Record<AccessibilityRole, string>> = {
   none: 'presentation',
 }
 
-type A11yState = { disabled?: boolean }
+type A11yState = { disabled?: boolean; checked?: boolean; selected?: boolean }
 
 // Add every other RN `accessibility*` prop here as it's needed — none of
 // them are DOM attributes and Tamagui forwards whatever it doesn't
@@ -22,6 +22,8 @@ export function a11yProps(label?: string, role?: AccessibilityRole, state?: A11y
       ...(label ? { 'aria-label': label } : null),
       ...(role ? { role: (ARIA_ROLE[role] ?? role) as never } : null),
       ...(state?.disabled !== undefined ? { 'aria-disabled': state.disabled } : null),
+      ...(state?.checked !== undefined ? { 'aria-checked': state.checked } : null),
+      ...(state?.selected !== undefined ? { 'aria-selected': state.selected } : null),
     }
   }
   return {
