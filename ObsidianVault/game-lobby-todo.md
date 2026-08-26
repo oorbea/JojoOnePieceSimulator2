@@ -137,11 +137,32 @@ animated sequential loadout reveal) once `snapshot.state` leaves `LOBBY`, on the
 route - no new screen/route. `EXPO_PUBLIC_SOCKET_URL` was also finally set (was blank since the WS
 transport shipped), see [[docker-setup]].
 
-**Still open, separate future tanda**: voting UI (vote buttons, live vote counts - blocked on a
-backend bug, `VOTE_CAST.votesCast` is always 0, never set in `game_ws_endpoints.go`), tiebreak flow,
-round-resolved feedback, and the final result screen (`GAME_FINISHED` still just toasts and bounces
-to `/play`). If the owner asks for this, treat it as a fresh planning pass (new Explore + Plan
-agents) - it's a different scale of work, and the backend bug needs fixing first.
+**Vote buttons + live count + tiebreak revote — DONE (2026-08-26)**, see
+[[game-vote-buttons-2026-08-26]] for the full writeup: both backend blockers fixed
+(`VOTE_CAST.votesCast`/new `voters` field now carry a real connected-humans-only count;
+`votingEndsAt` added to the snapshot mirroring `revealEndsAt`), plus an owner decision found mid-fix
+(the revote now clears the ballot instead of carrying every vote over). Frontend: `vote-bar.tsx`
+wired to the pre-existing `commands.vote(...)` sender, changing a cast vote confirms via
+`ConfirmSheet`, full keyboard nav (new `norma-teclado.md` — roving-tabindex radio group, roster
+tiles now Tab-reachable, `1`-`9`/`S` hotkeys). Verified: backend `go test` green, frontend
+`typecheck`/`lint`/`test:ci` green (429/429) — **not yet done**: the live two-browser `local-up` +
+`claude-in-chrome` walkthrough and a real keyboard-only manual pass, both flagged as next-session
+follow-up rather than skipped silently.
+
+**Still open, separate future tanda(s)**:
+- Round-resolved feedback (who won, was it a coin flip — nothing renders `ROUND_RESOLVED` beyond
+  clearing the countdown) and the final result screen (`GAME_FINISHED` still just toasts and bounces
+  to `/play`).
+- `LoadoutModal`'s open state isn't wired into the new hotkey `blocked` guard yet (lives inside
+  `MatchRoster`, not the container) — small, documented gap, see [[norma-teclado.md]].
+- No automated test for `use-roving-group.ts`'s web-only keyboard branch — `hooks/__tests__` always
+  runs under jest's native project per the current `jest.config.js` split, where the web branch
+  never engages. Needs either a new jsdom hooks lane or relocating this one test.
+- `VOTING_OPENED`/`TIEBREAK_OPENED`'s `closesAt` is still transport-synthesized separately from the
+  new authoritative `votingEndsAt` (can drift by hub-delivery latency) — clean follow-up, not folded
+  in this tanda.
+- If the owner asks for the rest of this, treat it as a fresh planning pass (new Explore + Plan
+  agents) - it's a different scale of work than what shipped here.
 
 **Roster redesign + sorteo reel fix - DONE (2026-08-17)**, see
 [[game-match-assignment-frontend]]'s dated section for the full writeup: the ruleta's landing
