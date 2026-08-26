@@ -320,6 +320,8 @@ describe('useGameSocketStore', () => {
       votingRoundIndex: null,
       votingClosesAt: null,
       tiebreak: false,
+      votesCast: null,
+      voters: null,
     })
   })
 
@@ -350,5 +352,88 @@ describe('useGameSocketStore', () => {
     ws2.open()
 
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
+  })
+
+  it('VOTE_CAST writes absolute votesCast/voters when it matches the current voting round', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+
+    ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1, voters: 3 } })
+    expect(useGameSocketStore.getState().live.votesCast).toBe(1)
+    expect(useGameSocketStore.getState().live.voters).toBe(3)
+
+    // A second frame overwrites, never accumulates - bots can emit several
+    // in a row right after the window opens.
+    ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 2, voters: 3 } })
+    expect(useGameSocketStore.getState().live.votesCast).toBe(2)
+  })
+
+  it('VOTE_CAST for a round that is not the current voting round is ignored', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 1, closesAt: '2100-01-01T00:00:10.000Z' } })
+
+    ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1, voters: 3 } })
+
+    expect(useGameSocketStore.getState().live.votesCast).toBe(0)
+  })
+
+  it('VOTING_OPENED/TIEBREAK_OPENED reset votesCast to 0 and voters to null', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 2, voters: 3 } })
+
+    ws.receive({ type: 'TIEBREAK_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+
+    const live = useGameSocketStore.getState().live
+    expect(live.votesCast).toBe(0)
+    expect(live.voters).toBeNull()
+  })
+
+  it('ROUND_RESOLVED clears votesCast/voters to null', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1, voters: 2 } })
+
+    ws.receive({ type: 'ROUND_RESOLVED', payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false } })
+
+    const live = useGameSocketStore.getState().live
+    expect(live.votesCast).toBeNull()
+    expect(live.voters).toBeNull()
+  })
+
+  it('STATE adopts game.votingEndsAt when no voting deadline is already tracked (reconnect mid-vote)', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    ws.receive({
+      type: 'STATE',
+      payload: { game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:10.000Z' }, you: { participantId: 'p1' } },
+    })
+
+    expect(useGameSocketStore.getState().live.votingClosesAt).toBe(Date.parse('2100-01-01T00:00:10.000Z'))
+  })
+
+  it('STATE does not override an already-tracked voting deadline from VOTING_OPENED', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    const votingClosesAtBefore = useGameSocketStore.getState().live.votingClosesAt
+
+    ws.receive({
+      type: 'STATE',
+      payload: { game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:20.000Z' }, you: { participantId: 'p1' } },
+    })
+
+    expect(useGameSocketStore.getState().live.votingClosesAt).toBe(votingClosesAtBefore)
   })
 })

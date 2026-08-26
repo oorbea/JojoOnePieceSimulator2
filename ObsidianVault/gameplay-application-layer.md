@@ -99,6 +99,13 @@ a real timer — the same reason `PictureWorker` exposes `RunOnce` alongside `St
 Window time.Duration }` carries the configured duration in; `config.GameVotingWindow` (default 30s,
 `GAME_VOTING_WINDOW` env var) feeds it from `main.go`.
 
+**2026-08-26**: `scheduleVotingTimer` now also records the window's absolute deadline in
+`s.votingEnds[gameID]`, read by a new `VotingEndsAt(id) (time.Time, bool)` accessor — an exact
+mirror of `RevealEndsAt`/`s.revealEnds` above, serving `GameSnapshotResponse.VotingEndsAt` to a
+(re)connecting client so it resumes the real countdown instead of a dead bar. `cancelTimer` clears
+both `revealEnds` and `votingEnds` in the same place, so every teardown path (`closeVoting`,
+`finalizeLocked`) already covers it with no extra code. See [[game-vote-buttons-2026-08-26]].
+
 ## Events (`game_event_hub.go`)
 
 `GameEventHub` is `services.PictureEventHub`'s pattern ([[picture-events-sse]]) generalized to be

@@ -4,14 +4,17 @@ import { XStack } from 'tamagui'
 import { MatchRoster } from '@/features/game/components/presentational/match/match-roster'
 import { RevealStage } from '@/features/game/components/presentational/match/reveal-stage'
 import { StageBanner } from '@/features/game/components/presentational/match/stage-banner'
+import { VoteBar } from '@/features/game/components/presentational/match/vote-bar'
 import { VotingStatusBar } from '@/features/game/components/presentational/match/voting-status-bar'
 import { ConnectionBanner } from '@/features/game/components/presentational/connection-banner'
-import { currentRound } from '@/features/game/lib/match-rules'
+import { currentRound, voteProgress } from '@/features/game/lib/match-rules'
 import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
+import { voteOptions } from '@/features/game/lib/vote-options'
 import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
 import type { GameSnapshot, GameViewer } from '@/features/game/types/game.types'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { useNow } from '@/shared/hooks/use-now'
 
 type Props = {
   snapshot: GameSnapshot
@@ -27,6 +30,7 @@ type Props = {
   onSkipReveal: () => void
   reducedMotion: boolean
   onAbort: () => void
+  onVote: (optionId: string) => void
 }
 
 // Renders once the lobby has moved past LOBBY. While isRevealing, the
@@ -47,9 +51,14 @@ export function MatchScreen({
   onSkipReveal,
   reducedMotion,
   onAbort,
+  onVote,
 }: Props) {
   const { t } = useTranslation()
   const round = currentRound(snapshot)
+  const votingOpen = snapshot.state === 'VOTING' || snapshot.state === 'TIEBREAK'
+  const now = useNow(1000, votingOpen && live.votingClosesAt !== null)
+  const options = votingOpen ? voteOptions(snapshot, you) : []
+  const progress = voteProgress(snapshot, live)
 
   return (
     <>
@@ -96,6 +105,20 @@ export function MatchScreen({
           />
 
           <MatchRoster snapshot={snapshot} selfId={you.participantId} />
+
+          {votingOpen ? (
+            <VoteBar
+              options={options}
+              selectedOptionId={you.vote ?? null}
+              cast={progress.cast}
+              total={progress.total}
+              closesAt={live.votingClosesAt}
+              windowMs={snapshot.config.votingWindowSeconds * 1000}
+              now={now}
+              tiebreak={live.tiebreak}
+              onVote={onVote}
+            />
+          ) : null}
         </>
       )}
     </>

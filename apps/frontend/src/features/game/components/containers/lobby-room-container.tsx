@@ -10,10 +10,12 @@ import { useGameCommands } from '@/features/game/hooks/use-game-commands'
 import { useGameDetail } from '@/features/game/hooks/use-game-detail'
 import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
+import { useMatchHotkeys } from '@/features/game/hooks/use-match-hotkeys'
 import { formatCode } from '@/features/game/lib/game-code'
 import { startGate } from '@/features/game/lib/lobby-rules'
 import { shouldReveal } from '@/features/game/lib/loadout-reveal'
 import { shareJoinCode } from '@/features/game/lib/share'
+import { voteOptions } from '@/features/game/lib/vote-options'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
@@ -106,6 +108,32 @@ export function LobbyRoomContainer() {
   const you = socket.you ?? detail.data?.you ?? null
   const reducedMotion = useReducedMotion()
 
+  // Defined unconditionally (before the !snapshot early return below) so
+  // useMatchHotkeys - itself called before that same return, hooks can't be
+  // conditional - can safely close over it regardless of render order.
+  // Guards internally: nothing to vote for before snapshot/you exist.
+  const handleVote = (optionId: string) => {
+    if (!snapshot || !you) return
+    if (!you.vote) {
+      commands.vote(optionId)
+      return
+    }
+    if (you.vote === optionId) return
+    const options = voteOptions(snapshot, you)
+    const chosen = options.find((o) => o.id === optionId)
+    const label = chosen ? (chosen.labelKey ? t(chosen.labelKey) : (chosen.label ?? optionId)) : optionId
+    setConfirmSheet({
+      title: t('game.vote.changeTitle'),
+      message: t('game.vote.changeMessage', { option: label }),
+      confirmLabel: t('game.vote.changeConfirm'),
+      tone: 'blue',
+      onConfirm: () => {
+        commands.vote(optionId)
+        setConfirmSheet(null)
+      },
+    })
+  }
+
   // Computed unconditionally (before the !snapshot early return below) since
   // hooks can't be called conditionally - mangas/active fall back to safe
   // empty/false values until snapshot actually arrives.
@@ -116,6 +144,27 @@ export function LobbyRoomContainer() {
     active: revealActive,
     markRevealed: socket.markAssignmentRevealed,
     serverRevealMs: socket.live.revealMs,
+  })
+
+  // Computed unconditionally for the same reason as revealMangas/revealActive
+  // above - useMatchHotkeys must be called before the early return.
+  const votingOpen = !!snapshot && (snapshot.state === 'VOTING' || snapshot.state === 'TIEBREAK')
+  const hotkeyOptions = snapshot && you ? voteOptions(snapshot, you) : []
+  useMatchHotkeys({
+    votingOpen,
+    optionCount: hotkeyOptions.length,
+    revealing: loadoutReveal.isRevealing,
+    // ConfirmSheet is the one overlay this container itself owns and can
+    // check synchronously. LoadoutModal's open/closed state lives inside
+    // MatchRoster (deliberately - it's the component that already has
+    // `mangas` in hand for the modal's content), so hotkeys aren't
+    // suppressed while it's open yet - a small known gap, not a silent one.
+    blocked: !!confirmSheet,
+    onVote: (index) => {
+      const option = hotkeyOptions[index]
+      if (option) handleVote(option.id)
+    },
+    onSkipReveal: loadoutReveal.skip,
   })
 
   // Reseed the edit form whenever a fresh CONFIG_UPDATED/STATE snapshot
@@ -372,6 +421,7 @@ export function LobbyRoomContainer() {
       isRevealing={loadoutReveal.isRevealing}
       onSkipReveal={loadoutReveal.skip}
       reducedMotion={reducedMotion}
+      onVote={handleVote}
     />
   )
 }

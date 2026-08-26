@@ -95,6 +95,12 @@ Ties can be changed freely, same as the first vote. If it's still tied after the
 round is decided externally: today, a 50/50 coin flip; later, an LLM call. Both live behind the
 same seam (`ports.ITiebreaker`) so swapping the implementation touches nothing else.
 
+**2026-08-26**: the revote window now starts from a genuinely empty ballot — `Game.CloseVoting`
+resets the round's `Ballot` (and re-casts every bot's vote for it) the moment the first tie opens
+`TIEBREAK`, instead of leaving every vote from the tied round still on file. Before this, a revote
+opened already reading "everyone voted" and the very first changed vote resolved the whole thing —
+see [[game-vote-buttons-2026-08-26]] for the fix and why.
+
 ## Host
 
 The game's creator is the host: they set the config (mode, manga selection, ability source, team

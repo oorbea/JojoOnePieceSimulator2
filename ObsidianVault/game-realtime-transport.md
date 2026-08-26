@@ -56,9 +56,12 @@ from the store, so a fresh `STATE` fetch would just race `ErrGameNotFound`.
 
 ## Votes hidden until a round resolves (the owner's explicit call)
 
-- `VOTE_CAST` carries only `{roundIndex}` over the wire — no participant, no option — even though
-  the domain event carries both. The domain itself was **not** changed to hide anything; this is a
-  transport-only redaction.
+- `VOTE_CAST` carries only `{roundIndex, votesCast, voters}` over the wire — no participant, no
+  option — even though the domain event carries both. `votesCast`/`voters` are an anonymous
+  human-vote-progress count (connected humans only, bots excluded), added 2026-08-26 — see
+  [[game-vote-buttons-2026-08-26]]. The domain itself was **not** changed to hide who/what voted;
+  this is a transport-only redaction, and the two counters leak strictly less than
+  `GameRoundResponse`'s own `votedParticipantIds` already does while a round is live.
 - In `GameStateResponse`, a round still voting exposes `votedParticipantIds` (who voted, not what)
   plus the caller's own `you.vote`; once `Result` is set the full `votes` map is revealed. Both
   derive from the new `Ballot.Votes()` getter (see [[game-lobby-persistence]]).

@@ -330,6 +330,24 @@
         "closeA11y": "Close power breakdown"
       }
     },
+    "vote": {
+      "progress": "{{cast}}/{{total}} have voted",
+      "youVoted": "You voted",
+      "timeLeftA11y": "Time left to vote",
+      "tiebreakHint": "Tie - revote",
+      "groupA11y": "Vote",
+      "yourTeam": "Your team",
+      "hint": {
+        "keys": "Keys: 1-9 to vote, Esc to close"
+      },
+      "changeTitle": "Change your vote?",
+      "changeMessage": "Change your vote to \"{{option}}\"?",
+      "changeConfirm": "Change vote",
+      "gauntlet": {
+        "SURVIVE": "We survive",
+        "FALL": "We fall"
+      }
+    },
     "leave": {
       "action": "Leave lobby",
       "title": "Leave this lobby?",

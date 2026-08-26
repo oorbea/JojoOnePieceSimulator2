@@ -39,6 +39,13 @@ export type LiveMatchState = {
   votingRoundIndex: number | null
   votingClosesAt: number | null
   tiebreak: boolean
+  /** Absolute values off the latest VOTE_CAST for votingRoundIndex, never
+   * an increment - bots cast the instant a window opens, so several frames
+   * can read 0/N in a row. null until the first frame for this round
+   * arrives (see lib/match-rules.ts's voteProgress for the snapshot-derived
+   * fallback that covers that gap, e.g. right after a reconnect). */
+  votesCast: number | null
+  voters: number | null
 }
 
 const INITIAL_LIVE: LiveMatchState = {
@@ -50,6 +57,8 @@ const INITIAL_LIVE: LiveMatchState = {
   votingRoundIndex: null,
   votingClosesAt: null,
   tiebreak: false,
+  votesCast: null,
+  voters: null,
 }
 
 type SocketFactory = (url: string) => WebSocket
@@ -156,19 +165,30 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         case SERVER_FRAME.STATE: {
           const payload = frame.payload as GameStateResponse
           set((state) => {
+            let live = state.live
+
             // Adopt a snapshot's own revealEndsAt only when we aren't
             // already tracking one locally - a genuine reconnect mid-sorteo
             // (missed the LOADOUTS_ASSIGNED frame entirely), not the normal
             // STATE resend that follows every frame we DID see.
-            if (state.live.revealEndsAt !== null || !payload.game.revealEndsAt) {
-              return { snapshot: payload }
+            if (live.revealEndsAt === null && payload.game.revealEndsAt) {
+              const revealEndsAt = Date.parse(payload.game.revealEndsAt) || null
+              if (revealEndsAt !== null) {
+                live = { ...live, revealEndsAt, revealMs: Math.max(0, revealEndsAt - Date.now()) }
+              }
             }
-            const revealEndsAt = Date.parse(payload.game.revealEndsAt) || null
-            if (revealEndsAt === null) return { snapshot: payload }
-            return {
-              snapshot: payload,
-              live: { ...state.live, revealEndsAt, revealMs: Math.max(0, revealEndsAt - Date.now()) },
+            // Same shape and reasoning as revealEndsAt above: only adopt a
+            // reconnecting client's votingEndsAt when nothing local is
+            // already tracking it, so a live deadline is never overwritten
+            // by a slightly-later STATE resend.
+            if (live.votingClosesAt === null && payload.game.votingEndsAt) {
+              const votingClosesAt = Date.parse(payload.game.votingEndsAt) || null
+              if (votingClosesAt !== null) {
+                live = { ...live, votingClosesAt }
+              }
             }
+
+            return live === state.live ? { snapshot: payload } : { snapshot: payload, live }
           })
           break
         }
@@ -206,11 +226,22 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         case SERVER_FRAME.RESYNC_REQUIRED:
           get().send('RESYNC' as ClientCommandType)
           break
-        case SERVER_FRAME.VOTE_CAST:
-          // High-frequency, self-describing, no snapshot impact. Known
-          // backend bug: votesCast is always 0 (never set server-side), so
-          // this stays a no-op signal rather than rendering a live count.
+        case SERVER_FRAME.VOTE_CAST: {
+          // Absolute values, never an increment - see LiveMatchState's doc.
+          // Ignored when it's for a round we're no longer voting on (a late
+          // frame arriving after ROUND_RESOLVED already cleared
+          // votingRoundIndex, or for a stale previous round).
+          const payload = frame.payload as { roundIndex?: number; votesCast?: number; voters?: number } | undefined
+          set((state) => {
+            if (payload?.roundIndex === undefined || payload.roundIndex !== state.live.votingRoundIndex) {
+              return {}
+            }
+            return {
+              live: { ...state.live, votesCast: payload.votesCast ?? null, voters: payload.voters ?? null },
+            }
+          })
           break
+        }
         case SERVER_FRAME.LOADOUTS_ASSIGNED: {
           // Sent BEFORE its own pushCurrentState, so `snapshot` here may
           // still be pre-assignment - never touch snapshot/feed from this
@@ -239,6 +270,12 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               tiebreak: false,
               revealMs: null,
               revealEndsAt: null,
+              // Reset, not cleared to null: the fresh window has cast=0 of
+              // an as-yet-unknown total, covered by voteProgress's
+              // snapshot-derived fallback until the first VOTE_CAST (or a
+              // bot's, which fires immediately) lands.
+              votesCast: 0,
+              voters: null,
             },
           }))
           break
@@ -253,13 +290,15 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               tiebreak: true,
               revealMs: null,
               revealEndsAt: null,
+              votesCast: 0,
+              voters: null,
             },
           }))
           break
         }
         case SERVER_FRAME.ROUND_RESOLVED:
           set((state) => ({
-            live: { ...state.live, votingRoundIndex: null, votingClosesAt: null },
+            live: { ...state.live, votingRoundIndex: null, votingClosesAt: null, votesCast: null, voters: null },
           }))
           pushFeed(frame.type)
           break
