@@ -561,3 +561,52 @@ func TestForwardEvents_KickedParticipant_ClosesOwnSocket(t *testing.T) {
 		t.Fatal("forwardEvents did not return after closing the kicked participant's socket")
 	}
 }
+
+func TestBuildEventFrame_VoteCast_CarriesHumanVoteProgress(t *testing.T) {
+	pid := game.ParticipantID{7}
+	evt := game.VoteCast{
+		RoundIndex: 2, ParticipantID: pid, Option: "SURVIVE",
+		HumanVotesCast: 1, HumanVoters: 3,
+	}
+	frameType, payload, resendState := buildEventFrame(evt, 30*time.Second, 0)
+
+	if frameType != dto.FrameVoteCast {
+		t.Fatalf("frameType = %q, want %q", frameType, dto.FrameVoteCast)
+	}
+	if resendState {
+		t.Fatal("resendState = true, want false (VOTE_CAST never triggers a resend)")
+	}
+	got, ok := payload.(dto.VoteCastPayload)
+	if !ok {
+		t.Fatalf("payload type = %T, want dto.VoteCastPayload", payload)
+	}
+	want := dto.VoteCastPayload{RoundIndex: 2, VotesCast: 1, Voters: 3}
+	if got != want {
+		t.Fatalf("payload = %+v, want %+v", got, want)
+	}
+}
+
+// TestBuildEventFrame_VoteCast_StaysAnonymous is the executable form of the
+// anonymity contract dto.VoteCastPayload's doc comment claims: the marshaled
+// frame must reveal neither who voted nor what they voted for, even though
+// the domain event carries both.
+func TestBuildEventFrame_VoteCast_StaysAnonymous(t *testing.T) {
+	pid := game.ParticipantID{9}
+	evt := game.VoteCast{
+		RoundIndex: 0, ParticipantID: pid, Option: "FALL",
+		HumanVotesCast: 1, HumanVoters: 1,
+	}
+	_, payload, _ := buildEventFrame(evt, 30*time.Second, 0)
+
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	s := string(raw)
+	if strings.Contains(s, "participantId") || strings.Contains(s, "option") {
+		t.Fatalf("VOTE_CAST payload leaked participant/option keys: %s", s)
+	}
+	if strings.Contains(s, pid.String()) || strings.Contains(s, "FALL") {
+		t.Fatalf("VOTE_CAST payload leaked the participant id or option value: %s", s)
+	}
+}

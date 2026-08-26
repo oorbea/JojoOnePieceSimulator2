@@ -75,6 +75,14 @@ func (b *Ballot) Votes() map[ParticipantID]OptionID {
 	return out
 }
 
+// Reset clears every cast vote while keeping the fixed option set - used by
+// Game.CloseVoting when a tie opens a revote window, so the revote starts
+// from a genuinely empty ballot instead of carrying every vote over (which
+// would let a single changed vote resolve the whole revote instantly).
+func (b *Ballot) Reset() {
+	b.votes = make(map[ParticipantID]OptionID, len(b.options))
+}
+
 // Tally applies plurality over emitted votes only - a participant who
 // never votes (disconnected, or too slow) simply does not count towards
 // the total. Zero emitted votes, or two-or-more options tied for the

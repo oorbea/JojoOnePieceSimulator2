@@ -33,10 +33,20 @@ type VotingOpened struct{ RoundIndex int }
 
 func (VotingOpened) Name() string { return "VOTING_OPENED" }
 
+// VoteCast is emitted once per recorded ballot - by CastVote for a human,
+// and by castBotVotes for each bot the instant a window (or revote window)
+// opens. HumanVotesCast/HumanVoters are the round's human-vote progress at
+// emit time (see Game.humanVoteProgress): connected humans only, never
+// bots, exactly the population VotingComplete waits on - so they are
+// correct and human-only even on a bot's own VoteCast. ParticipantID/Option
+// are for the history/audit side; the websocket transport deliberately
+// drops both (see dto.VoteCastPayload) and forwards only the two counters.
 type VoteCast struct {
-	RoundIndex    int
-	ParticipantID ParticipantID
-	Option        OptionID
+	RoundIndex     int
+	ParticipantID  ParticipantID
+	Option         OptionID
+	HumanVotesCast int
+	HumanVoters    int
 }
 
 func (VoteCast) Name() string { return "VOTE_CAST" }

@@ -2,7 +2,10 @@ package dto_test
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
@@ -95,13 +98,13 @@ func TestNewGameStateResponse_LoadoutStandText_PerViewerLocale(t *testing.T) {
 
 	esResp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
-		noStageText, esResolver, noFruitText, nil)
+		noStageText, esResolver, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse (es-ES): %v", err)
 	}
 	caResp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
-		noStageText, caResolver, noFruitText, nil)
+		noStageText, caResolver, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse (ca-ES): %v", err)
 	}
@@ -144,7 +147,7 @@ func TestNewGameStateResponse_LoadoutStandText_FallsBackOnMissingTranslation(t *
 
 	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
-		noStageText, empty, empty, nil)
+		noStageText, empty, empty, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse: %v", err)
 	}
@@ -220,7 +223,7 @@ func TestNewGameStateResponse_ParticipantAvatar(t *testing.T) {
 
 	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, presignThumb,
-		noStageText, noFruitText, noFruitText, nil)
+		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse: %v", err)
 	}
@@ -237,5 +240,53 @@ func TestNewGameStateResponse_ParticipantAvatar(t *testing.T) {
 	}
 	if got := byID[bot.ID().String()]; got != "" {
 		t.Errorf("bot avatar = %q, want empty", got)
+	}
+}
+
+// TestNewGameStateResponse_Deadlines guards GameStateDeadlines end to end:
+// each field round-trips to its own RFC3339 response field, independently
+// of the other, and a zero-value GameStateDeadlines marshals neither key at
+// all (the omitempty on both).
+func TestNewGameStateResponse_Deadlines(t *testing.T) {
+	g, _ := buildLoadoutTestGame(t)
+	host := g.Participants()[0]
+	noFruitText := func(_ context.Context, _ powers.PowerID) (ports.PowerContent, error) {
+		return ports.PowerContent{}, nil
+	}
+
+	votingEndsAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
+		noPictures, noPictures, noPictures, noPictures,
+		noStageText, noFruitText, noFruitText,
+		dto.GameStateDeadlines{VotingEndsAt: &votingEndsAt})
+	if err != nil {
+		t.Fatalf("NewGameStateResponse: %v", err)
+	}
+	if resp.Game.RevealEndsAt != nil {
+		t.Errorf("RevealEndsAt = %v, want nil (only VotingEndsAt was set)", *resp.Game.RevealEndsAt)
+	}
+	if resp.Game.VotingEndsAt == nil || *resp.Game.VotingEndsAt != votingEndsAt.Format(time.RFC3339) {
+		t.Errorf("VotingEndsAt = %v, want %v", resp.Game.VotingEndsAt, votingEndsAt.Format(time.RFC3339))
+	}
+
+	raw, err := json.Marshal(resp.Game)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	empty, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
+		noPictures, noPictures, noPictures, noPictures,
+		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
+	if err != nil {
+		t.Fatalf("NewGameStateResponse (zero deadlines): %v", err)
+	}
+	emptyRaw, err := json.Marshal(empty.Game)
+	if err != nil {
+		t.Fatalf("Marshal (zero deadlines): %v", err)
+	}
+	if strings.Contains(string(emptyRaw), "revealEndsAt") || strings.Contains(string(emptyRaw), "votingEndsAt") {
+		t.Fatalf("zero-value GameStateDeadlines marshaled a deadline key: %s", emptyRaw)
+	}
+	if !strings.Contains(string(raw), "votingEndsAt") {
+		t.Fatalf("expected votingEndsAt in the marshaled response: %s", raw)
 	}
 }

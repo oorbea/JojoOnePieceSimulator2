@@ -419,8 +419,9 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 
 // buildEventFrame maps one domain event onto its wire frame, reusing
 // events.go's wire names verbatim. VOTE_CAST carries no participant/option
-// (votes stay hidden until a round resolves - see GameRoundResponse) and
-// never triggers a resend, since it's high-frequency and self-describing.
+// (votes stay hidden until a round resolves - see GameRoundResponse), only
+// an anonymous human-vote count, and never triggers a resend, since it's
+// high-frequency and self-describing.
 // GAME_FINISHED/GAME_ABORTED also skip the resend: by the time these fire,
 // GameService.finalizeLocked has already (or is about to) delete the game
 // from the store, so a fresh STATE fetch would race ErrGameNotFound: the
@@ -445,7 +446,9 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(votingWindow).Format(time.RFC3339),
 		}, true
 	case game.VoteCast:
-		return dto.FrameVoteCast, dto.VoteCastPayload{RoundIndex: e.RoundIndex}, false
+		return dto.FrameVoteCast, dto.VoteCastPayload{
+			RoundIndex: e.RoundIndex, VotesCast: e.HumanVotesCast, Voters: e.HumanVoters,
+		}, false
 	case game.TiebreakOpened:
 		return dto.FrameTiebreakOpened, dto.TiebreakOpenedPayload{
 			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(votingWindow).Format(time.RFC3339),
@@ -493,13 +496,16 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 		return
 	}
 	locale := e.viewerLocale(ctx, g, self)
-	var revealEndsAt *time.Time
+	var deadlines dto.GameStateDeadlines
 	if t, ok := e.svc.RevealEndsAt(g.ID()); ok {
-		revealEndsAt = &t
+		deadlines.RevealEndsAt = &t
+	}
+	if t, ok := e.svc.VotingEndsAt(g.ID()); ok {
+		deadlines.VotingEndsAt = &t
 	}
 	resp, err := dto.NewGameStateResponse(ctx, g, code, self,
 		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
-		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), revealEndsAt)
+		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), deadlines)
 	if err != nil {
 		log.Printf("game ws: building state for %s: %v", g.ID(), err)
 		return
