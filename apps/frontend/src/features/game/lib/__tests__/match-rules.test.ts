@@ -69,7 +69,8 @@ function snapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
     hostId: 'p1',
     locked: false,
     config: {
-      mangas: ['ONE_PIECE'],
+      stageMangas: ['ONE_PIECE'],
+      powerMangas: ['ONE_PIECE'],
       abilitySource: 'RANDOM',
       teamSize: 4,
       allowBots: false,

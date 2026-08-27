@@ -4,7 +4,8 @@ import type { GameConfig, GameSnapshot, GameViewer } from '@/features/game/types
 
 function baseConfig(): GameConfig {
   return {
-    mangas: ['JOJO'],
+    stageMangas: ['JOJO'],
+    powerMangas: ['JOJO'],
     abilitySource: 'RANDOM',
     teamSize: 5,
     allowBots: false,
@@ -109,6 +110,18 @@ describe('startGate', () => {
       ],
     })
     expect(startGate(snap, host).ok).toBe(true)
+  })
+
+  it('rejects an empty stage mangas axis', () => {
+    const gate = startGate(baseSnapshot({ config: { ...baseConfig(), stageMangas: [] } }), host)
+    expect(gate.reasonKey).toBe('game.start.reasonNoStageMangas')
+    expect(resolves(gate.reasonKey)).toBe(true)
+  })
+
+  it('rejects an empty power mangas axis', () => {
+    const gate = startGate(baseSnapshot({ config: { ...baseConfig(), powerMangas: [] } }), host)
+    expect(gate.reasonKey).toBe('game.start.reasonNoPowerMangas')
+    expect(resolves(gate.reasonKey)).toBe(true)
   })
 
   it('rejects an empty Gauntlet lobby', () => {

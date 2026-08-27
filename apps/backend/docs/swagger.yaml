@@ -11,14 +11,21 @@ definitions:
         type: string
       allowBots:
         type: boolean
-      mangas:
-        items:
-          type: string
-        type: array
       mode:
         type: string
       poolFilter:
         $ref: '#/definitions/dto.PoolFilterPayload'
+      powerMangas:
+        items:
+          type: string
+        type: array
+      stageMangas:
+        description: |-
+          StageMangas and PowerMangas are independent - see game.Config's doc
+          comment.
+        items:
+          type: string
+        type: array
       teamSize:
         type: integer
       visibility:
@@ -79,12 +86,19 @@ definitions:
         type: string
       allowBots:
         type: boolean
-      mangas:
+      poolFilter:
+        $ref: '#/definitions/dto.PoolFilterResponse'
+      powerMangas:
         items:
           type: string
         type: array
-      poolFilter:
-        $ref: '#/definitions/dto.PoolFilterResponse'
+      stageMangas:
+        description: |-
+          StageMangas and PowerMangas are independent - see game.Config's doc
+          comment.
+        items:
+          type: string
+        type: array
       teamSize:
         type: integer
       visibility:
@@ -541,14 +555,21 @@ definitions:
         type: string
       allowBots:
         type: boolean
-      mangas:
-        items:
-          type: string
-        type: array
       mode:
         type: string
       poolFilter:
         $ref: '#/definitions/dto.PoolFilterPayload'
+      powerMangas:
+        items:
+          type: string
+        type: array
+      stageMangas:
+        description: |-
+          StageMangas and PowerMangas are independent - see game.Config's doc
+          comment.
+        items:
+          type: string
+        type: array
       teamSize:
         type: integer
       visibility:

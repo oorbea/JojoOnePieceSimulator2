@@ -60,9 +60,15 @@ type wireGame struct {
 	Rounds       []wireRound       `json:"rounds"`
 }
 
+// Mangas is a legacy field - see game.ConfigSnapshot's doc comment. A
+// freshly-saved wireConfig never sets it, only StageMangas/PowerMangas;
+// game.Restore falls back to it for either axis that decodes empty, so a
+// payload written before the split still restores across a deploy.
 type wireConfig struct {
 	Mode                string         `json:"mode"`
-	Mangas              []string       `json:"mangas"`
+	Mangas              []string       `json:"mangas,omitempty"`
+	StageMangas         []string       `json:"stageMangas,omitempty"`
+	PowerMangas         []string       `json:"powerMangas,omitempty"`
 	AbilitySource       string         `json:"abilitySource"`
 	TeamSize            int            `json:"teamSize"`
 	AllowBots           bool           `json:"allowBots"`
@@ -156,7 +162,8 @@ func toWire(s game.Snapshot) wireGame {
 		Locked: s.Locked,
 		Config: wireConfig{
 			Mode:                s.Config.Mode,
-			Mangas:              append([]string(nil), s.Config.Mangas...),
+			StageMangas:         append([]string(nil), s.Config.StageMangas...),
+			PowerMangas:         append([]string(nil), s.Config.PowerMangas...),
 			AbilitySource:       s.Config.AbilitySource,
 			TeamSize:            s.Config.TeamSize,
 			AllowBots:           s.Config.AllowBots,
@@ -296,6 +303,8 @@ func fromWire(w wireGame) game.Snapshot {
 		Config: game.ConfigSnapshot{
 			Mode:                w.Config.Mode,
 			Mangas:              append([]string(nil), w.Config.Mangas...),
+			StageMangas:         append([]string(nil), w.Config.StageMangas...),
+			PowerMangas:         append([]string(nil), w.Config.PowerMangas...),
 			AbilitySource:       w.Config.AbilitySource,
 			TeamSize:            w.Config.TeamSize,
 			AllowBots:           w.Config.AllowBots,

@@ -31,7 +31,7 @@ func mustEvolvedStand(t *testing.T, id byte, name string, rarity enums.PowerRari
 func buildMidMatchVersusGame(t *testing.T) *game.Game {
 	t.Helper()
 
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.Random, 2, true, enums.Public, 45, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo, enums.OnePiece}, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.Random, 2, true, enums.Public, 45, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -76,7 +76,7 @@ func buildMidMatchVersusGame(t *testing.T) *game.Game {
 	// seq{1} biases weightedPick away from index 0 ("no stand"/"no devil
 	// fruit") so the assigned loadouts actually carry a Stand/DevilFruit to
 	// round-trip.
-	builder := game.NewLoadoutBuilder(cfg.Mangas(), game.DefaultAssignmentWeights(), &fakeRandom{seq: []int{1}})
+	builder := game.NewLoadoutBuilder(cfg.PowerMangas(), game.DefaultAssignmentWeights(), &fakeRandom{seq: []int{1}})
 
 	// Round 0: assign (Team A draws the evolved Stand, Team B the Devil
 	// Fruit), vote with a clear winner, resolve.
@@ -256,11 +256,29 @@ func TestRestoreRejectsUnknownEnums(t *testing.T) {
 		}
 	})
 
-	t.Run("unknown manga", func(t *testing.T) {
+	t.Run("unknown stage manga", func(t *testing.T) {
 		s := base
+		s.Config.StageMangas = []string{"NARUTO"}
+		if _, err := game.Restore(s); err == nil {
+			t.Fatal("expected error for unknown stage manga")
+		}
+	})
+
+	t.Run("unknown power manga", func(t *testing.T) {
+		s := base
+		s.Config.PowerMangas = []string{"NARUTO"}
+		if _, err := game.Restore(s); err == nil {
+			t.Fatal("expected error for unknown power manga")
+		}
+	})
+
+	t.Run("unknown legacy manga fallback", func(t *testing.T) {
+		s := base
+		s.Config.StageMangas = nil
+		s.Config.PowerMangas = nil
 		s.Config.Mangas = []string{"NARUTO"}
 		if _, err := game.Restore(s); err == nil {
-			t.Fatal("expected error for unknown manga")
+			t.Fatal("expected error for unknown legacy manga")
 		}
 	})
 
@@ -298,4 +316,100 @@ func TestSnapshotDoesNotDrainEvents(t *testing.T) {
 	if len(g.PullEvents()) == 0 {
 		t.Fatal("Snapshot must not drain PullEvents")
 	}
+}
+
+// TestSnapshotRoundTrip_SplitMangaAxes pins that StageMangas/PowerMangas
+// round-trip independently through Snapshot/Restore - a Snapshot never
+// populates the legacy Mangas field, only the split ones.
+func TestSnapshotRoundTrip_SplitMangaAxes(t *testing.T) {
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo, enums.OnePiece}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	host := mustHumanParticipant(t, 1, 1, 10)
+	team := mustTeam(t, 10, "Squad")
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{team}, oneStage(t))
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+
+	snap := g.Snapshot()
+	if len(snap.Config.Mangas) != 0 {
+		t.Fatalf("expected Snapshot to leave the legacy Mangas field empty, got %v", snap.Config.Mangas)
+	}
+	if got, want := snap.Config.StageMangas, []string{"JOJO", "ONE_PIECE"}; !equalStrings(got, want) {
+		t.Fatalf("StageMangas = %v, want %v", got, want)
+	}
+	if got, want := snap.Config.PowerMangas, []string{"JOJO"}; !equalStrings(got, want) {
+		t.Fatalf("PowerMangas = %v, want %v", got, want)
+	}
+
+	restored, err := game.Restore(snap)
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if got, want := restored.Config().StageMangas(), cfg.StageMangas(); !equalMangas(got, want) {
+		t.Fatalf("restored StageMangas = %v, want %v", got, want)
+	}
+	if got, want := restored.Config().PowerMangas(), cfg.PowerMangas(); !equalMangas(got, want) {
+		t.Fatalf("restored PowerMangas = %v, want %v", got, want)
+	}
+}
+
+// TestRestore_LegacyMangasFallback pins the compatibility path for a
+// Snapshot written before the StageMangas/PowerMangas split (e.g. a lobby
+// still live in Redis across a deploy) - both axes fall back to the
+// legacy Mangas field.
+func TestRestore_LegacyMangasFallback(t *testing.T) {
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	host := mustHumanParticipant(t, 1, 1, 10)
+	team := mustTeam(t, 10, "Squad")
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{team}, oneStage(t))
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	snap := g.Snapshot()
+	// Simulate a pre-split payload: only the legacy field is set.
+	snap.Config.StageMangas = nil
+	snap.Config.PowerMangas = nil
+	snap.Config.Mangas = []string{"ONE_PIECE"}
+
+	restored, err := game.Restore(snap)
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	want := []enums.Manga{enums.OnePiece}
+	if got := restored.Config().StageMangas(); !equalMangas(got, want) {
+		t.Fatalf("restored StageMangas = %v, want %v (legacy fallback)", got, want)
+	}
+	if got := restored.Config().PowerMangas(); !equalMangas(got, want) {
+		t.Fatalf("restored PowerMangas = %v, want %v (legacy fallback)", got, want)
+	}
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func equalMangas(a, b []enums.Manga) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
