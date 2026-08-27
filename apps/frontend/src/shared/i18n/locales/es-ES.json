@@ -433,7 +433,8 @@
       "COMMON": "Común",
       "RARE": "Rara",
       "EPIC": "Épica",
-      "LEGENDARY": "Legendaria"
+      "LEGENDARY": "Legendaria",
+      "MYTHICAL": "Mítica"
     },
     "standStat": {
       "E": "E",

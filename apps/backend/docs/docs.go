@@ -91,7 +91,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "COMMON, RARE, EPIC, LEGENDARY",
+                        "description": "COMMON, RARE, EPIC, LEGENDARY, MYTHICAL",
                         "name": "rarity",
                         "in": "query"
                     },
@@ -763,6 +763,109 @@ const docTemplate = `{
                 }
             }
         },
+        "/games/preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Roster-free summary reachable without being a participant - the code itself is the credential, so this also works for PRIVATE lobbies. Not roster/loadout-bearing, unlike GET /games/by-code/{code}.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Preview a lobby by its join code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Join code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LobbyPreviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/public": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Roster-free, join-code-free summaries of lobbies currently joinable through the public browser. Works for any authenticated caller, not just participants.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Browse public lobbies",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max results (default 20, capped at 50)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PublicLobbyListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/games/{id}": {
             "get": {
                 "security": [
@@ -814,6 +917,158 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/config": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Host-only, LOBBY-only. Replaces the whole Config, exactly like POST /games's body.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Edit a lobby's configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New configuration",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateConfigPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GameStateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/join": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Only reachable for a PUBLIC, unlocked lobby - see POST /games/join for the code-based path, which also works for PRIVATE lobbies.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Join a public lobby by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GameStateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1316,7 +1571,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "COMMON, RARE, EPIC, LEGENDARY",
+                        "description": "COMMON, RARE, EPIC, LEGENDARY, MYTHICAL",
                         "name": "rarity",
                         "in": "query"
                     },
@@ -2366,7 +2621,16 @@ const docTemplate = `{
                 "mode": {
                     "type": "string"
                 },
+                "poolFilter": {
+                    "$ref": "#/definitions/dto.PoolFilterPayload"
+                },
                 "teamSize": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "type": "string"
+                },
+                "votingWindowSeconds": {
                     "type": "integer"
                 }
             }
@@ -2458,7 +2722,16 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "poolFilter": {
+                    "$ref": "#/definitions/dto.PoolFilterResponse"
+                },
                 "teamSize": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "type": "string"
+                },
+                "votingWindowSeconds": {
                     "type": "integer"
                 }
             }
@@ -2498,6 +2771,9 @@ const docTemplate = `{
         "dto.GameParticipantResponse": {
             "type": "object",
             "properties": {
+                "avatarThumb": {
+                    "type": "string"
+                },
                 "connected": {
                     "type": "boolean"
                 },
@@ -2599,6 +2875,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "locked": {
+                    "type": "boolean"
+                },
                 "mode": {
                     "type": "string"
                 },
@@ -2610,6 +2889,10 @@ const docTemplate = `{
                 },
                 "result": {
                     "$ref": "#/definitions/dto.GameResultResponse"
+                },
+                "revealEndsAt": {
+                    "description": "RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a\npending reveal - see NewGameStateResponse's deadlines param.",
+                    "type": "string"
                 },
                 "rounds": {
                     "type": "array",
@@ -2625,6 +2908,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.GameTeamResponse"
                     }
+                },
+                "votingEndsAt": {
+                    "description": "VotingEndsAt is set (RFC3339) only while the game is VOTING/TIEBREAK\nwith a pending window - the deadline a client reconnecting mid-vote\nneeds, since the VOTING_OPENED/TIEBREAK_OPENED frames that carry\nclosesAt are one-shot and long gone by then.",
+                    "type": "string"
                 }
             }
         },
@@ -2724,6 +3011,50 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.LobbyPreviewResponse": {
+            "type": "object",
+            "properties": {
+                "abilitySource": {
+                    "type": "string"
+                },
+                "allowBots": {
+                    "type": "boolean"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "gameId": {
+                    "type": "string"
+                },
+                "hostDisplayName": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "mangas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "maxPlayers": {
+                    "type": "integer"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "playerCount": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "type": "string"
+                },
+                "votingWindowSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.LoginResponse": {
             "type": "object",
             "properties": {
@@ -2741,6 +3072,64 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PoolFilterPayload": {
+            "type": "object",
+            "properties": {
+                "banned": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "fruitRarities": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "fruitTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "standRarities": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "dto.PoolFilterResponse": {
+            "type": "object",
+            "properties": {
+                "banned": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "fruitRarities": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "fruitTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "standRarities": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "dto.PowerTranslationsResponse": {
             "type": "object",
             "properties": {
@@ -2749,6 +3138,55 @@ const docTemplate = `{
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.TranslationResponse"
                     }
+                }
+            }
+        },
+        "dto.PublicLobbyListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PublicLobbyResponse"
+                    }
+                }
+            }
+        },
+        "dto.PublicLobbyResponse": {
+            "type": "object",
+            "properties": {
+                "abilitySource": {
+                    "type": "string"
+                },
+                "allowBots": {
+                    "type": "boolean"
+                },
+                "gameId": {
+                    "type": "string"
+                },
+                "hostDisplayName": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "mangas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "maxPlayers": {
+                    "type": "integer"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "playerCount": {
+                    "type": "integer"
+                },
+                "votingWindowSeconds": {
+                    "type": "integer"
                 }
             }
         },
@@ -2964,6 +3402,38 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "dto.UpdateConfigPayload": {
+            "type": "object",
+            "properties": {
+                "abilitySource": {
+                    "type": "string"
+                },
+                "allowBots": {
+                    "type": "boolean"
+                },
+                "mangas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "poolFilter": {
+                    "$ref": "#/definitions/dto.PoolFilterPayload"
+                },
+                "teamSize": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "type": "string"
+                },
+                "votingWindowSeconds": {
+                    "type": "integer"
                 }
             }
         },

@@ -62,7 +62,9 @@ func rarityBonus(r enums.PowerRarity) int {
 	case enums.Epic:
 		return 2
 	case enums.Legendary:
-		return 3
+		return 4
+	case enums.Mythical:
+		return 8
 	default:
 		return 0
 	}
