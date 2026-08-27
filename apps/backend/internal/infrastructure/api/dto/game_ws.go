@@ -143,13 +143,32 @@ func parseRarities(raw []string, field string, errs *[]string) []enums.PowerRari
 	return out
 }
 
+// parseMangas parses raw into a []enums.Manga, collecting field errors
+// under field - shared by CreateGameRequest/UpdateConfigPayload's
+// stageMangas and powerMangas.
+func parseMangas(raw []string, field string, errs *[]string) []enums.Manga {
+	out := make([]enums.Manga, 0, len(raw))
+	for _, r := range raw {
+		m, err := enums.ParseManga(r)
+		if err != nil {
+			*errs = append(*errs, fmt.Sprintf("%s: %v", field, err))
+			continue
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
 // UpdateConfigPayload is CommandUpdateConfig's payload and the JSON body
 // accepted by the config-edit REST path - a full replacement of the
 // lobby's Config, the same shape CreateGameRequest builds a Config from
 // plus the fields the host can only set once a lobby exists.
 type UpdateConfigPayload struct {
-	Mode                string             `json:"mode"`
-	Mangas              []string           `json:"mangas"`
+	Mode string `json:"mode"`
+	// StageMangas and PowerMangas are independent - see game.Config's doc
+	// comment.
+	StageMangas         []string           `json:"stageMangas"`
+	PowerMangas         []string           `json:"powerMangas"`
 	AbilitySource       string             `json:"abilitySource"`
 	TeamSize            int                `json:"teamSize"`
 	AllowBots           bool               `json:"allowBots"`
@@ -167,15 +186,8 @@ func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
 	if err != nil {
 		errs = append(errs, fmt.Sprintf("mode: %v", err))
 	}
-	mangas := make([]enums.Manga, 0, len(p.Mangas))
-	for _, raw := range p.Mangas {
-		m, err := enums.ParseManga(raw)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("mangas: %v", err))
-			continue
-		}
-		mangas = append(mangas, m)
-	}
+	stageMangas := parseMangas(p.StageMangas, "stageMangas", &errs)
+	powerMangas := parseMangas(p.PowerMangas, "powerMangas", &errs)
 	abilitySource, err := enums.ParseAbilitySource(p.AbilitySource)
 	if err != nil {
 		errs = append(errs, fmt.Sprintf("abilitySource: %v", err))
@@ -195,7 +207,8 @@ func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
 
 	return services.ConfigUpdateInput{
 		Mode:                mode,
-		Mangas:              mangas,
+		StageMangas:         stageMangas,
+		PowerMangas:         powerMangas,
 		AbilitySource:       abilitySource,
 		TeamSize:            p.TeamSize,
 		AllowBots:           p.AllowBots,

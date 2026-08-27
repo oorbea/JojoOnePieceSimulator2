@@ -106,7 +106,7 @@ func someStages(t *testing.T) []game.Stage {
 // (players-1) additional joined human participants, all on the same team.
 func newGauntletGame(t *testing.T, stages []game.Stage, players int) (*game.Game, []*game.Participant) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -137,7 +137,7 @@ func assignAndOpenVoting(t *testing.T, g *game.Game) {
 		t.Fatalf("Start: %v", err)
 	}
 	cfg := g.Config()
-	builder := game.NewLoadoutBuilder(cfg.Mangas(), game.DefaultAssignmentWeights(), &fakeRandom{})
+	builder := game.NewLoadoutBuilder(cfg.PowerMangas(), game.DefaultAssignmentWeights(), &fakeRandom{})
 	pools := make(map[game.TeamID]*game.AvailablePowers, len(g.Teams()))
 	for _, tm := range g.Teams() {
 		pools[tm.ID()] = game.NewAvailablePowers(nil, nil)

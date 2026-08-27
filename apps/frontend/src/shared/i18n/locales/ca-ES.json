@@ -178,7 +178,8 @@
       "title": "Crea una sala",
       "modeGauntletHint": "Cooperatiu. Avança per la història fins caure o completar-la.",
       "modeVersusHint": "Competitiu. Dos equips iguals, tres rondes.",
-      "mangasLabel": "Manga",
+      "stageMangasLabel": "Escenaris",
+      "powerMangasLabel": "Poders",
       "teamSizeLabel": "Mida de l'equip",
       "teamSizeGauntletLabel": "Jugadors màxims",
       "votingSecondsLabel": "Finestra de votació (segons)",
@@ -192,7 +193,8 @@
       "help": {
         "modeGauntlet": "Cooperatiu contra la història. Tot l'esquadró guanya o cau junt.",
         "modeVersus": "Competitiu. Dos equips iguals s'enfronten en tres rondes.",
-        "mangas": "De quins universos treu aquesta sala els Stands i les Fruites del Diable.",
+        "stageMangas": "De quins universos treu aquesta sala els seus escenaris.",
+        "powerMangas": "De quins universos treu aquesta sala els Stands i les Fruites del Diable.",
         "teamSize": "Quants jugadors caben a cada equip (Versus) o a l'esquadró (Gauntlet).",
         "votingSeconds": "Quant de temps tenen els jugadors per votar a cada ronda.",
         "privacy": "Les sales públiques apareixen a Sales obertes. Les privades només s'hi entra amb codi.",
@@ -283,7 +285,8 @@
       "ready": "Llesta per començar",
       "reasonNotHost": "Només l'amfitrió pot començar la partida.",
       "reasonAlreadyStarted": "Aquesta partida ja ha començat.",
-      "reasonNoMangas": "Selecciona com a mínim un manga.",
+      "reasonNoStageMangas": "Selecciona com a mínim un manga per als escenaris.",
+      "reasonNoPowerMangas": "Selecciona com a mínim un manga per als poders.",
       "reasonNeedsTwoTeams": "Versus necessita exactament dos equips.",
       "reasonEmptyTeam": "Els dos equips necessiten com a mínim un jugador.",
       "reasonUnequalTeams": "Els dos equips necessiten el mateix nombre de jugadors ({{a}} contra {{b}}).",
@@ -310,12 +313,19 @@
         "spin": "Spin",
         "hamon": "Hamon",
         "fruitMastery": "Mestratge de fruita",
+        "hakiSet": "Haki",
         "armamentHaki": "Haki d'Armadura",
         "observationHaki": "Haki d'Observació",
         "conquerorHaki": "Haki del Rei",
         "physicalForm": "Forma física",
         "stand": "Stand",
         "devilFruit": "Fruita del Diable"
+      },
+      "hakiType": {
+        "armament": "Armadura",
+        "observation": "Observació",
+        "conqueror": "Del Rei",
+        "none": "Cap"
       },
       "reveal": {
         "title": "Sorteig de poders",
@@ -433,7 +443,8 @@
       "COMMON": "Comuna",
       "RARE": "Rara",
       "EPIC": "Èpica",
-      "LEGENDARY": "Llegendària"
+      "LEGENDARY": "Llegendària",
+      "MYTHICAL": "Mítica"
     },
     "standStat": {
       "E": "E",
@@ -476,7 +487,6 @@
     "spinLevel": {
       "NONE": "Cap",
       "BASIC": "Bàsic",
-      "ADVANCED": "Avançat",
       "GOLDEN": "Daurat",
       "INFINITE": "Infinit"
     },
@@ -493,13 +503,16 @@
       "AWAKENED": "Despertada"
     },
     "hakiLevel": {
+      "NONE": "Cap",
       "PRIVATE": "Soldat",
       "VICE_ADMIRAL": "Vicealmirall",
       "YONKO_COMMANDER": "Comandant Yonko",
       "YONKO_PLUS": "Yonko+"
     },
     "physicalForm": {
-      "PRIVATE": "Soldat",
+      "PRIVATE": "Soldat ras de la marina",
+      "STRONG_FISHMAN": "Home peix fort",
+      "MARINE_CAPTAIN": "Capità de la marina",
       "VICE_ADMIRAL": "Vicealmirall",
       "YONKO_COMMANDER": "Comandant Yonko",
       "YONKO_PLUS": "Yonko+"

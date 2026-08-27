@@ -24,9 +24,12 @@ export type PoolFilter = {
   banned: string[]
 }
 
-// Mirrors dto.GameConfigResponse.
+// Mirrors dto.GameConfigResponse. StageMangas and PowerMangas are
+// independent - which manga(s) Stages come from vs. which manga(s)
+// abilities/powers come from need not match.
 export type GameConfig = {
-  mangas: Manga[]
+  stageMangas: Manga[]
+  powerMangas: Manga[]
   abilitySource: AbilitySource
   teamSize: number
   allowBots: boolean
@@ -172,10 +175,12 @@ export type PublicLobbyList = { items: PublicLobby[] }
 // Mirrors dto.LobbyPreviewResponse.
 export type LobbyPreview = PublicLobby & { code: string; visibility: LobbyVisibility }
 
-// Mirrors services.CreateGameInput / dto.CreateGameRequest.
+// Mirrors services.CreateGameInput / dto.CreateGameRequest. StageMangas and
+// PowerMangas are independent - see GameConfig's doc comment.
 export type CreateGameInput = {
   mode: GameMode
-  mangas: Manga[]
+  stageMangas: Manga[]
+  powerMangas: Manga[]
   abilitySource: AbilitySource
   teamSize: number
   allowBots: boolean
@@ -191,7 +196,8 @@ export type CreateGameInput = {
 // backend only defaults on creation).
 export type UpdateGameConfigInput = {
   mode: GameMode
-  mangas: Manga[]
+  stageMangas: Manga[]
+  powerMangas: Manga[]
   abilitySource: AbilitySource
   teamSize: number
   allowBots: boolean

@@ -31,10 +31,11 @@ export function CreateLobbyContainer() {
   const devilFruitsQuery = useDevilFruits()
 
   const [mode, setMode] = useState<GameMode>('GAUNTLET')
-  // Both mangas on by default - a new host most likely wants the full pool,
-  // not a JoJo-only lobby by accident just because it's first in the toggle
-  // row.
-  const [mangas, setMangas] = useState<Manga[]>(['JOJO', 'ONE_PIECE'])
+  // Both mangas on by default, on both axes - a new host most likely wants
+  // the full pool, not a JoJo-only lobby by accident just because it's
+  // first in the toggle row.
+  const [stageMangas, setStageMangas] = useState<Manga[]>(['JOJO', 'ONE_PIECE'])
+  const [powerMangas, setPowerMangas] = useState<Manga[]>(['JOJO', 'ONE_PIECE'])
   const [teamSize, setTeamSize] = useState(5)
   const [allowBots, setAllowBots] = useState(false)
   const [visibility, setVisibility] = useState<LobbyVisibility>('PRIVATE')
@@ -78,8 +79,14 @@ export function CreateLobbyContainer() {
     }
   }
 
-  const handleToggleManga = (manga: Manga) => {
-    setMangas((current) =>
+  const handleToggleStageManga = (manga: Manga) => {
+    setStageMangas((current) =>
+      current.includes(manga) ? current.filter((m) => m !== manga) : [...current, manga]
+    )
+  }
+
+  const handleTogglePowerManga = (manga: Manga) => {
+    setPowerMangas((current) =>
       current.includes(manga) ? current.filter((m) => m !== manga) : [...current, manga]
     )
   }
@@ -111,7 +118,8 @@ export function CreateLobbyContainer() {
     createGame.mutate(
       {
         mode,
-        mangas,
+        stageMangas,
+        powerMangas,
         abilitySource: 'RANDOM',
         teamSize,
         allowBots,
@@ -130,8 +138,10 @@ export function CreateLobbyContainer() {
       onBack={() => router.back()}
       mode={mode}
       onChangeMode={handleChangeMode}
-      mangas={mangas}
-      onToggleManga={handleToggleManga}
+      stageMangas={stageMangas}
+      powerMangas={powerMangas}
+      onToggleStageManga={handleToggleStageManga}
+      onTogglePowerManga={handleTogglePowerManga}
       teamSize={teamSize}
       teamSizeMin={mode === 'GAUNTLET' ? GAUNTLET_MIN : VERSUS_MIN}
       teamSizeMax={mode === 'GAUNTLET' ? GAUNTLET_MAX : VERSUS_MAX}

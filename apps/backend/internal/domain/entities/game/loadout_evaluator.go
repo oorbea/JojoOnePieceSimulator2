@@ -11,6 +11,12 @@ type LoadoutEvaluator interface {
 
 // DefaultLoadoutEvaluator sums normalized ability levels plus Stand stats
 // and a rarity bonus for the Stand/DevilFruit, if any.
+//
+// TODO(owner): Score sums enums.SpinLevel/HakiLevel/PhysicalForm/etc as
+// their raw ordinal (int(l.Spin()), ...), not a hand-picked weight per
+// level. Every enum reshuffle silently rebalances this score - see
+// ObsidianVault/gameplay-domain-design.md's "Known debt" for the open
+// question (not yet discussed with the owner).
 type DefaultLoadoutEvaluator struct{}
 
 func (DefaultLoadoutEvaluator) Score(l *Loadout) int {
@@ -62,7 +68,9 @@ func rarityBonus(r enums.PowerRarity) int {
 	case enums.Epic:
 		return 2
 	case enums.Legendary:
-		return 3
+		return 4
+	case enums.Mythical:
+		return 8
 	default:
 		return 0
 	}

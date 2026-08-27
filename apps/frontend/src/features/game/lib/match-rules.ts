@@ -23,19 +23,26 @@ export function hasAllLoadouts(snapshot: GameSnapshot): boolean {
 }
 
 // LoadoutSlotKind is every distinct thing a loadout card can reveal, in the
-// exact order the owner asked for (2026-08-14): PhysicalForm -> Stand ->
-// DevilFruit -> FruitMastery -> Hamon -> ArmamentHaki -> ObservationHaki ->
-// ConquerorHaki -> Spin - the same order LoadoutBuilder.Build draws them in
-// (apps/backend/.../loadout_builder.go), so the reveal walks the draw order
-// a player actually experienced. 'stand'/'devilFruit' are the two big art
-// blocks (rendered specially by LoadoutCard); every other slot is a scalar
-// chip.
+// exact order the owner asked for (2026-08-14, haki-set slot added
+// 2026-08-27): PhysicalForm -> Stand -> DevilFruit -> FruitMastery -> Hamon
+// -> HakiSet -> ArmamentHaki -> ObservationHaki -> ConquerorHaki -> Spin -
+// the same order LoadoutBuilder.Build draws them in
+// (apps/backend/.../loadout_builder.go), plus one synthetic slot: 'hakiSet'
+// isn't a draw step at all, it's a summary of which of the three haki
+// types the loadout ends up with, revealed once before the three
+// individual level slots so the reveal tells its story in the right
+// order - "here's WHICH haki you have" before "here's HOW MUCH of each".
+// 'stand'/'devilFruit' are the two big art blocks (rendered specially by
+// LoadoutCard); every other slot is a scalar chip ('hakiSet' has no
+// i18nKey/value of its own - see RevealLane, which renders it specially,
+// same as stand/devilFruit).
 export type LoadoutSlotKind =
   | 'physicalForm'
   | 'stand'
   | 'devilFruit'
   | 'fruitMastery'
   | 'hamon'
+  | 'hakiSet'
   | 'armamentHaki'
   | 'observationHaki'
   | 'conquerorHaki'
@@ -49,6 +56,7 @@ const SLOT_ORDER: LoadoutSlotKind[] = [
   'devilFruit',
   'fruitMastery',
   'hamon',
+  'hakiSet',
   'armamentHaki',
   'observationHaki',
   'conquerorHaki',
@@ -116,6 +124,12 @@ export function loadoutSlots(loadout: GameLoadout, mangas: Manga[]): LoadoutSlot
         break
       case 'hamon':
         slots.push({ key, i18nKey: 'game.match.trait.hamon', value: loadout.hamon })
+        break
+      case 'hakiSet':
+        // No i18nKey/value - rendered specially (see RevealLane's slotFor);
+        // TraitChip renders nothing for it in the static post-match card,
+        // same treatment as 'stand'/'devilFruit'.
+        slots.push({ key })
         break
       case 'armamentHaki':
         slots.push({ key, i18nKey: 'game.match.trait.armamentHaki', value: loadout.armamentHaki })

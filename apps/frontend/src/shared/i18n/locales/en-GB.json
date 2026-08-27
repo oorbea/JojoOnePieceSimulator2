@@ -178,7 +178,8 @@
       "title": "Create Lobby",
       "modeGauntletHint": "Co-op. Play through the story until the squad falls or clears it.",
       "modeVersusHint": "Competitive. Two even teams, three rounds.",
-      "mangasLabel": "Manga",
+      "stageMangasLabel": "Stages",
+      "powerMangasLabel": "Powers",
       "teamSizeLabel": "Team size",
       "teamSizeGauntletLabel": "Max players",
       "votingSecondsLabel": "Voting window (seconds)",
@@ -192,7 +193,8 @@
       "help": {
         "modeGauntlet": "Co-op against the story. The whole squad wins or falls together.",
         "modeVersus": "Competitive. Two even teams face off over three rounds.",
-        "mangas": "Which universes this lobby draws Stands and Devil Fruits from.",
+        "stageMangas": "Which universes this lobby draws its Stages from.",
+        "powerMangas": "Which universes this lobby draws Stands and Devil Fruits from.",
         "teamSize": "How many players fit on each team (Versus) or in the squad (Gauntlet).",
         "votingSeconds": "How long players get to vote on choices during a round.",
         "privacy": "Public lobbies show up in Open Lobbies. Private lobbies are join-by-code only.",
@@ -283,7 +285,8 @@
       "ready": "Ready to start",
       "reasonNotHost": "Only the host can start the game.",
       "reasonAlreadyStarted": "This game has already started.",
-      "reasonNoMangas": "Select at least one manga.",
+      "reasonNoStageMangas": "Select at least one manga for stages.",
+      "reasonNoPowerMangas": "Select at least one manga for powers.",
       "reasonNeedsTwoTeams": "Versus needs exactly two teams.",
       "reasonEmptyTeam": "Both teams need at least one player.",
       "reasonUnequalTeams": "Both teams need the same number of players ({{a}} vs {{b}}).",
@@ -310,12 +313,19 @@
         "spin": "Spin",
         "hamon": "Hamon",
         "fruitMastery": "Fruit Mastery",
+        "hakiSet": "Haki",
         "armamentHaki": "Armament Haki",
         "observationHaki": "Observation Haki",
         "conquerorHaki": "Conqueror's Haki",
         "physicalForm": "Physical Form",
         "stand": "Stand",
         "devilFruit": "Devil Fruit"
+      },
+      "hakiType": {
+        "armament": "Armament",
+        "observation": "Observation",
+        "conqueror": "Conqueror's",
+        "none": "None"
       },
       "reveal": {
         "title": "Power draw",
@@ -433,7 +443,8 @@
       "COMMON": "Common",
       "RARE": "Rare",
       "EPIC": "Epic",
-      "LEGENDARY": "Legendary"
+      "LEGENDARY": "Legendary",
+      "MYTHICAL": "Mythical"
     },
     "standStat": {
       "E": "E",
@@ -476,7 +487,6 @@
     "spinLevel": {
       "NONE": "None",
       "BASIC": "Basic",
-      "ADVANCED": "Advanced",
       "GOLDEN": "Golden",
       "INFINITE": "Infinite"
     },
@@ -493,6 +503,7 @@
       "AWAKENED": "Awakened"
     },
     "hakiLevel": {
+      "NONE": "None",
       "PRIVATE": "Private",
       "VICE_ADMIRAL": "Vice Admiral",
       "YONKO_COMMANDER": "Yonko Commander",
@@ -500,6 +511,8 @@
     },
     "physicalForm": {
       "PRIVATE": "Private",
+      "STRONG_FISHMAN": "Strong Fishman",
+      "MARINE_CAPTAIN": "Marine Captain",
       "VICE_ADMIRAL": "Vice Admiral",
       "YONKO_COMMANDER": "Yonko Commander",
       "YONKO_PLUS": "Yonko+"

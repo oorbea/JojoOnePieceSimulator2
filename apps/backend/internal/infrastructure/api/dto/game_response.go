@@ -13,7 +13,10 @@ import (
 
 // GameConfigResponse mirrors game.Config.
 type GameConfigResponse struct {
-	Mangas              []string           `json:"mangas"`
+	// StageMangas and PowerMangas are independent - see game.Config's doc
+	// comment.
+	StageMangas         []string           `json:"stageMangas"`
+	PowerMangas         []string           `json:"powerMangas"`
 	AbilitySource       string             `json:"abilitySource"`
 	TeamSize            int                `json:"teamSize"`
 	AllowBots           bool               `json:"allowBots"`
@@ -359,7 +362,8 @@ func NewGameStateResponse(
 			HostID: g.HostID().String(),
 			Locked: g.Locked(),
 			Config: GameConfigResponse{
-				Mangas:              mangaNames(g.Config().Mangas()),
+				StageMangas:         mangaNames(g.Config().StageMangas()),
+				PowerMangas:         mangaNames(g.Config().PowerMangas()),
 				AbilitySource:       g.Config().AbilitySource().String(),
 				TeamSize:            g.Config().TeamSize(),
 				AllowBots:           g.Config().AllowBots(),

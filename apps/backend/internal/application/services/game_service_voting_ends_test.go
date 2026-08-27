@@ -28,7 +28,7 @@ func TestVotingEndsAt_TracksThenClearsOnEarlyClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -101,7 +101,7 @@ func TestVotingEndsAt_ClearedOnTimerExpiry(t *testing.T) {
 	if _, err := svc.StartGame(context.Background(), g.ID(), g.HostID()); err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	deps.tiebreak.winner = "FALL"
 
 	if _, ok := svc.VotingEndsAt(g.ID()); !ok {
@@ -143,7 +143,7 @@ func TestVotingEndsAt_RevoteReschedulesDeadline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, versusInput(1).Mangas)
+	advanceReveal(deps, versusInput(1).PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -199,7 +199,7 @@ func TestAbortGame_DuringVoting_ClearsVotingEndsAt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -242,7 +242,7 @@ func TestCastVote_PublishesHumanVoteProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)

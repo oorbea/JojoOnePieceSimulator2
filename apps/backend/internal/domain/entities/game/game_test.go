@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewGame_GauntletRequiresStages(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, enums.Random, 5, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 5, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestGame_OnlyHostCanAbort(t *testing.T) {
 }
 
 func TestGame_VersusRequiresEqualTeamsToStart(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestGame_VersusTeamEmptiedInLobbyDoesNotAbort(t *testing.T) {
 	// players can still join, or SwitchTeam can empty a team on the way
 	// to an even split) - only a mid-match empty team aborts. See
 	// TestGame_VersusAbortsWhenTeamEmptiesMidMatch below.
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestGame_VersusTeamEmptiedInLobbyDoesNotAbort(t *testing.T) {
 }
 
 func TestGame_VersusAbortsWhenTeamEmptiesMidMatch(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestGame_VersusAbortsWhenTeamEmptiesMidMatch(t *testing.T) {
 	if err := g.Start(g.HostID()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	builder := game.NewLoadoutBuilder(cfg.Mangas(), game.DefaultAssignmentWeights(), &fakeRandom{})
+	builder := game.NewLoadoutBuilder(cfg.PowerMangas(), game.DefaultAssignmentWeights(), &fakeRandom{})
 	pools := map[game.TeamID]*game.AvailablePowers{
 		teamA.ID(): game.NewAvailablePowers(nil, nil),
 		teamB.ID(): game.NewAvailablePowers(nil, nil),

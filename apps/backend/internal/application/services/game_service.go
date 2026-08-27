@@ -53,8 +53,13 @@ var (
 // so CreateGame takes one argument instead of a long positional list -
 // mirrors StandInput/DevilFruitInput.
 type CreateGameInput struct {
-	PoolFilter          game.PoolFilter
-	Mangas              []enums.Manga
+	PoolFilter game.PoolFilter
+	// StageMangas and PowerMangas are independent - which manga(s) a
+	// lobby's Stages come from vs. which manga(s) its abilities/powers come
+	// from need not match (e.g. Stages from both mangas with powers from
+	// JoJo only).
+	StageMangas         []enums.Manga
+	PowerMangas         []enums.Manga
 	TeamSize            int
 	VotingWindowSeconds int
 	Mode                enums.GameModeKind
@@ -231,7 +236,7 @@ func (s *GameService) buildConfig(input CreateGameInput) (game.Config, error) {
 		votingWindowSeconds = int(s.votingCfg.Window / time.Second)
 	}
 	return game.NewConfig(
-		input.Mode, input.Mangas, input.AbilitySource, input.TeamSize, input.AllowBots,
+		input.Mode, input.StageMangas, input.PowerMangas, input.AbilitySource, input.TeamSize, input.AllowBots,
 		visibility, votingWindowSeconds, input.PoolFilter,
 	)
 }
@@ -259,13 +264,15 @@ func (s *GameService) buildTeams(mode enums.GameModeKind) ([]*game.Team, error) 
 	}
 }
 
-// loadStages resolves cfg's selected mangas against the stage catalog.
-// Gauntlet needs the full, pre-ordered round list (Interleave); Versus just
-// needs the pool game.IGameMode.StageFor draws a random Stage from each
-// round, so every selected manga's Stages are simply concatenated.
+// loadStages resolves cfg's selected StageMangas against the stage
+// catalog. Gauntlet needs the full, pre-ordered round list (Interleave);
+// Versus just needs the pool game.IGameMode.StageFor draws a random Stage
+// from each round, so every selected manga's Stages are simply
+// concatenated.
 func (s *GameService) loadStages(ctx context.Context, cfg game.Config) ([]game.Stage, error) {
-	byManga := make(map[enums.Manga][]game.Stage, len(cfg.Mangas()))
-	for _, m := range cfg.Mangas() {
+	mangas := cfg.StageMangas()
+	byManga := make(map[enums.Manga][]game.Stage, len(mangas))
+	for _, m := range mangas {
 		stages, err := s.stages.Stages(ctx, m)
 		if err != nil {
 			return nil, err
@@ -278,7 +285,7 @@ func (s *GameService) loadStages(ctx context.Context, cfg game.Config) ([]game.S
 	}
 
 	var pool []game.Stage
-	for _, m := range cfg.Mangas() {
+	for _, m := range mangas {
 		pool = append(pool, byManga[m]...)
 	}
 	return pool, nil
@@ -439,7 +446,7 @@ func (s *GameService) EditLobbyConfig(ctx context.Context, gameID game.GameID, c
 				return err
 			}
 		}
-		if next.Mode() != g.Config().Mode() || !mangasEqual(next.Mangas(), g.Config().Mangas()) {
+		if next.Mode() != g.Config().Mode() || !mangasEqual(next.StageMangas(), g.Config().StageMangas()) {
 			stages, err = s.loadStages(ctx, next)
 			if err != nil {
 				return err
@@ -527,10 +534,10 @@ func (s *GameService) checkPoolSufficiency(ctx context.Context, g *game.Game) er
 			needed = t.Size()
 		}
 	}
-	if g.Config().HasManga(enums.Jojo) && len(stands) < needed {
+	if g.Config().HasPowerManga(enums.Jojo) && len(stands) < needed {
 		return game.ErrPoolTooSmall
 	}
-	if g.Config().HasManga(enums.OnePiece) && len(fruits) < needed {
+	if g.Config().HasPowerManga(enums.OnePiece) && len(fruits) < needed {
 		return game.ErrPoolTooSmall
 	}
 	return nil
@@ -569,7 +576,7 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 			poolByTeam[t.ID()] = game.NewAvailablePowers(stands, fruits)
 		}
 
-		builder := game.NewLoadoutBuilder(g.Config().Mangas(), weights, s.rng)
+		builder := game.NewLoadoutBuilder(g.Config().PowerMangas(), weights, s.rng)
 		if err := g.AssignLoadouts(builder, poolByTeam); err != nil {
 			return err
 		}
@@ -596,7 +603,7 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 // RevealEndsAt to serve to (re)connecting clients.
 func (s *GameService) scheduleRevealDelay(g *game.Game) {
 	id := g.ID()
-	d := game.RevealDuration(g.Config().Mangas())
+	d := game.RevealDuration(g.Config().PowerMangas())
 
 	s.timersMu.Lock()
 	s.revealEnds[id] = s.clock.Now().Add(d)
@@ -808,18 +815,41 @@ func newLobbyListing(g *game.Game) LobbyListing {
 		hostName = host.DisplayName()
 	}
 	return LobbyListing{
-		GameID:              g.ID(),
-		Mode:                cfg.Mode(),
-		HostDisplayName:     hostName,
-		PlayerCount:         len(g.Participants()),
-		MaxPlayers:          maxPlayers,
-		Mangas:              cfg.Mangas(),
+		GameID:          g.ID(),
+		Mode:            cfg.Mode(),
+		HostDisplayName: hostName,
+		PlayerCount:     len(g.Participants()),
+		MaxPlayers:      maxPlayers,
+		// Mangas is the union of StageMangas/PowerMangas - a public lobby
+		// listing only needs "which mangas does this lobby touch at all",
+		// not the split; the split itself lives in GameConfigResponse for
+		// clients that already joined.
+		Mangas:              mangaUnion(cfg.StageMangas(), cfg.PowerMangas()),
 		AbilitySource:       cfg.AbilitySource(),
 		AllowBots:           cfg.AllowBots(),
 		Visibility:          cfg.Visibility(),
 		VotingWindowSeconds: cfg.VotingWindowSeconds(),
 		Locked:              g.Locked(),
 	}
+}
+
+// mangaUnion returns every manga appearing in either a or b, deduplicated
+// and in enums.Mangas() canonical order.
+func mangaUnion(a, b []enums.Manga) []enums.Manga {
+	seen := make(map[enums.Manga]struct{}, len(a)+len(b))
+	for _, m := range a {
+		seen[m] = struct{}{}
+	}
+	for _, m := range b {
+		seen[m] = struct{}{}
+	}
+	union := make([]enums.Manga, 0, len(seen))
+	for _, m := range enums.Mangas() {
+		if _, ok := seen[m]; ok {
+			union = append(union, m)
+		}
+	}
+	return union
 }
 
 // ListPublicLobbies returns up to limit lobbies currently joinable through
@@ -905,7 +935,7 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 // and fans them out over hub.
 func (s *GameService) publish(g *game.Game) {
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
-	revealMs := game.RevealDuration(g.Config().Mangas())
+	revealMs := game.RevealDuration(g.Config().PowerMangas())
 	for _, e := range g.PullEvents() {
 		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window, RevealMs: revealMs})
 	}

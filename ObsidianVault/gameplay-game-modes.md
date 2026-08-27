@@ -135,7 +135,8 @@ Two submodes for how Versus draws abilities, selected per game:
   no persisted inventory (no schema, no unlock/gacha flow) yet — selecting this submode is rejected
   outright (`game.ErrInventoryNotSupported`) until that system exists. The domain design already
   has the seam for it (`ports.IInventory`, `enums.AbilitySource`) so building it later doesn't
-  require touching the game/round/voting logic at all.
+  require touching the game/round/voting logic at all. Full planned design (4-slot per-round
+  selection, characters, gachapon boxes, Battle IQ): [[gameplay-versus-inventory-characters]].
 
 ## Deliberately not done here
 

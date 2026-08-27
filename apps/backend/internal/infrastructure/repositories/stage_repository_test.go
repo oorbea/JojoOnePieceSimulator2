@@ -59,8 +59,10 @@ func TestStageRepository_SeedIsPresentAndOrdered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Stages(JOJO): %v", err)
 	}
-	if len(jojo) != 8 {
-		t.Fatalf("len(jojo stages) = %d, want 8", len(jojo))
+	// 9, not the original 8 - 00011_stage_updates.sql appended "The
+	// JOJOLands" at position 8.
+	if len(jojo) != 9 {
+		t.Fatalf("len(jojo stages) = %d, want 9", len(jojo))
 	}
 	for i, st := range jojo {
 		if st.Order() != i {
@@ -70,16 +72,18 @@ func TestStageRepository_SeedIsPresentAndOrdered(t *testing.T) {
 			t.Errorf("jojo[%d].Description() is empty, want the en-GB seed backfill", i)
 		}
 	}
-	if jojo[0].Name() != "Phantom Blood" || jojo[7].Name() != "JoJolion" {
-		t.Errorf("unexpected jojo seed order: first=%q last=%q", jojo[0].Name(), jojo[7].Name())
+	if jojo[0].Name() != "Phantom Blood" || jojo[8].Name() != "The JOJOLands" {
+		t.Errorf("unexpected jojo seed order: first=%q last=%q", jojo[0].Name(), jojo[8].Name())
 	}
 
 	onePiece, err := repo.Stages(ctx, enums.OnePiece)
 	if err != nil {
 		t.Fatalf("Stages(ONE_PIECE): %v", err)
 	}
-	if len(onePiece) != 11 {
-		t.Fatalf("len(one piece stages) = %d, want 11", len(onePiece))
+	// 12, not the original 11 - 00011_stage_updates.sql appended "Elbaph"
+	// at position 11.
+	if len(onePiece) != 12 {
+		t.Fatalf("len(one piece stages) = %d, want 12", len(onePiece))
 	}
 }
 

@@ -517,7 +517,8 @@ func decodeGameBody(t *testing.T, raw []byte) map[string]any {
 func gauntletCreateBody() map[string]any {
 	return map[string]any{
 		"mode":          "GAUNTLET",
-		"mangas":        []string{"JOJO"},
+		"stageMangas":   []string{"JOJO"},
+		"powerMangas":   []string{"JOJO"},
 		"abilitySource": "RANDOM",
 		"teamSize":      5,
 		"allowBots":     false,
@@ -528,7 +529,8 @@ func gauntletCreateBody() map[string]any {
 func publicVersusCreateBody(teamSize int) map[string]any {
 	return map[string]any{
 		"mode":          "VERSUS",
-		"mangas":        []string{"JOJO", "ONE_PIECE"},
+		"stageMangas":   []string{"JOJO", "ONE_PIECE"},
+		"powerMangas":   []string{"JOJO", "ONE_PIECE"},
 		"abilitySource": "RANDOM",
 		"teamSize":      teamSize,
 		"allowBots":     true,

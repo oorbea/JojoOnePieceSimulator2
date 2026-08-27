@@ -48,7 +48,7 @@ export function RevealStage({
   const standNames = (standsQuery.data ?? []).map((s) => s.name)
   const fruitNames = (devilFruitsQuery.data ?? []).map((f) => f.name)
 
-  const slotKinds = revealSlotKinds(snapshot.config.mangas)
+  const slotKinds = revealSlotKinds(snapshot.config.powerMangas)
   const currentKind = slotIndex >= 0 && slotIndex < slotKinds.length ? slotKinds[slotIndex] : null
   const spinning = phase === 'spin'
 

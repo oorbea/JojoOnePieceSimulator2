@@ -43,7 +43,7 @@ func TestGame_CastVote_EventCarriesHumanVoteProgress(t *testing.T) {
 }
 
 func TestGame_BotVoteCast_CountsHumansOnly(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, enums.Random, 3, true, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 3, true, enums.Private, 30, game.PoolFilter{})
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestGame_BotVoteCast_CountsHumansOnly(t *testing.T) {
 	if err := g.Start(g.HostID()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	builder := game.NewLoadoutBuilder(cfg.Mangas(), game.DefaultAssignmentWeights(), &fakeRandom{})
+	builder := game.NewLoadoutBuilder(cfg.PowerMangas(), game.DefaultAssignmentWeights(), &fakeRandom{})
 	pools := map[game.TeamID]*game.AvailablePowers{
 		teamA.ID(): game.NewAvailablePowers(nil, nil),
 		teamB.ID(): game.NewAvailablePowers(nil, nil),

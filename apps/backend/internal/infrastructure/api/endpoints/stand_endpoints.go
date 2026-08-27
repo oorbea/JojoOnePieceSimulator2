@@ -103,7 +103,7 @@ func (e *StandEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConfig) c
 //	@Tags			stands
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			rarity		query		string	false	"COMMON, RARE, EPIC, LEGENDARY"
+//	@Param			rarity		query		string	false	"COMMON, RARE, EPIC, LEGENDARY, MYTHICAL"
 //	@Param			attackPower	query		string	false	"E, D, C, B, A, INFINITE, NULL"
 //	@Param			speed		query		string	false	"E, D, C, B, A, INFINITE, NULL"
 //	@Param			attackRange	query		string	false	"E, D, C, B, A, INFINITE, NULL"
