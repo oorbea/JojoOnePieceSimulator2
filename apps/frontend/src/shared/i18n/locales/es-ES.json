@@ -477,7 +477,6 @@
     "spinLevel": {
       "NONE": "Ninguno",
       "BASIC": "Básico",
-      "ADVANCED": "Avanzado",
       "GOLDEN": "Dorado",
       "INFINITE": "Infinito"
     },
@@ -494,13 +493,16 @@
       "AWAKENED": "Despertada"
     },
     "hakiLevel": {
+      "NONE": "Ninguno",
       "PRIVATE": "Soldado",
       "VICE_ADMIRAL": "Vicealmirante",
       "YONKO_COMMANDER": "Comandante Yonko",
       "YONKO_PLUS": "Yonko+"
     },
     "physicalForm": {
-      "PRIVATE": "Soldado",
+      "PRIVATE": "Soldado raso de la marina",
+      "STRONG_FISHMAN": "Gyojin fuerte",
+      "MARINE_CAPTAIN": "Capitán de la marina",
       "VICE_ADMIRAL": "Vicealmirante",
       "YONKO_COMMANDER": "Comandante Yonko",
       "YONKO_PLUS": "Yonko+"

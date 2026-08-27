@@ -497,7 +497,16 @@ func restoreBallot(bs BallotSnapshot) (*Ballot, error) {
 }
 
 func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
-	spin, err := enums.ParseSpinLevel(ls.Spin)
+	// Legacy fallback: SpinLevel dropped its ADVANCED tier (see
+	// ObsidianVault/gameplay-game-modes.md's V1-probabilities port) - a
+	// snapshot written before that change can still carry the string.
+	// Degrade to SpinBasic, the closest surviving tier below it, rather
+	// than fail to restore an otherwise-valid in-flight game.
+	spinStr := ls.Spin
+	if spinStr == "ADVANCED" {
+		spinStr = "BASIC"
+	}
+	spin, err := enums.ParseSpinLevel(spinStr)
 	if err != nil {
 		return nil, err
 	}
