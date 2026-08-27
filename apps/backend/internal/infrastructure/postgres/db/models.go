@@ -277,6 +277,7 @@ const (
 	PowerRarityRARE      PowerRarity = "RARE"
 	PowerRarityEPIC      PowerRarity = "EPIC"
 	PowerRarityLEGENDARY PowerRarity = "LEGENDARY"
+	PowerRarityMYTHICAL  PowerRarity = "MYTHICAL"
 )
 
 func (e *PowerRarity) Scan(src interface{}) error {

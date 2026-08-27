@@ -9,6 +9,7 @@ const (
 	Rare
 	Epic
 	Legendary
+	Mythical
 )
 
 func (p PowerRarity) String() string {
@@ -21,6 +22,8 @@ func (p PowerRarity) String() string {
 		return "EPIC"
 	case Legendary:
 		return "LEGENDARY"
+	case Mythical:
+		return "MYTHICAL"
 	default:
 		return "UNKNOWN"
 	}
@@ -30,7 +33,7 @@ var ErrInvalidRarity = errors.New("invalid power rarity")
 
 func (p PowerRarity) IsValid() bool {
 	switch p {
-	case Common, Rare, Epic, Legendary:
+	case Common, Rare, Epic, Legendary, Mythical:
 		return true
 	default:
 		return false
@@ -47,6 +50,8 @@ func ParsePowerRarity(str string) (PowerRarity, error) {
 		return Epic, nil
 	case "LEGENDARY":
 		return Legendary, nil
+	case "MYTHICAL":
+		return Mythical, nil
 	default:
 		return Common, ErrInvalidRarity
 	}

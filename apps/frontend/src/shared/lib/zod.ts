@@ -3,7 +3,7 @@ import { z } from 'zod'
 // Backend enums (apps/backend/internal/domain/enums) mirrored here so every
 // feature validates against the same source of truth instead of redeclaring
 // string unions ad hoc.
-export const raritySchema = z.enum(['COMMON', 'RARE', 'EPIC', 'LEGENDARY'])
+export const raritySchema = z.enum(['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHICAL'])
 export const standStatSchema = z.enum(['E', 'D', 'C', 'B', 'A', 'INFINITE', 'NULL'])
 export const fruitTypeSchema = z.enum([
   'PARAMECIA',
