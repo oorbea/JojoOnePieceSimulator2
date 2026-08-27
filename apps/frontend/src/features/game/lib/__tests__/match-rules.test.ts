@@ -69,7 +69,8 @@ function snapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
     hostId: 'p1',
     locked: false,
     config: {
-      mangas: ['ONE_PIECE'],
+      stageMangas: ['ONE_PIECE'],
+      powerMangas: ['ONE_PIECE'],
       abilitySource: 'RANDOM',
       teamSize: 4,
       allowBots: false,
@@ -148,7 +149,7 @@ describe('hasAllLoadouts', () => {
 describe('loadoutSlots', () => {
   const BOTH: Manga[] = ['JOJO', 'ONE_PIECE']
 
-  it('orders slots physicalForm, stand, devilFruit, fruitMastery, hamon, armamentHaki, observationHaki, conquerorHaki, spin', () => {
+  it('orders slots physicalForm, stand, devilFruit, fruitMastery, hamon, hakiSet, armamentHaki, observationHaki, conquerorHaki, spin', () => {
     const slots = loadoutSlots(
       loadout({ spin: 'BASIC', hamon: 'BASIC', fruitMastery: 'REGULAR' }),
       BOTH
@@ -159,6 +160,7 @@ describe('loadoutSlots', () => {
       'devilFruit',
       'fruitMastery',
       'hamon',
+      'hakiSet',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',
@@ -174,6 +176,7 @@ describe('loadoutSlots', () => {
       'devilFruit',
       'fruitMastery',
       'hamon',
+      'hakiSet',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',
@@ -211,6 +214,7 @@ describe('loadoutSlots', () => {
       'physicalForm',
       'devilFruit',
       'fruitMastery',
+      'hakiSet',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',
@@ -219,13 +223,14 @@ describe('loadoutSlots', () => {
 })
 
 describe('revealSlotKinds', () => {
-  it('both mangas: all 9 slots in draw order', () => {
+  it('both mangas: all 10 slots in draw order, haki-set before the individual levels', () => {
     expect(revealSlotKinds(['JOJO', 'ONE_PIECE'])).toEqual([
       'physicalForm',
       'stand',
       'devilFruit',
       'fruitMastery',
       'hamon',
+      'hakiSet',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',
@@ -237,11 +242,12 @@ describe('revealSlotKinds', () => {
     expect(revealSlotKinds(['JOJO'])).toEqual(['stand', 'hamon', 'spin'])
   })
 
-  it('one piece only: physicalForm, devilFruit, fruitMastery, the three hakis', () => {
+  it('one piece only: physicalForm, devilFruit, fruitMastery, haki-set, the three hakis', () => {
     expect(revealSlotKinds(['ONE_PIECE'])).toEqual([
       'physicalForm',
       'devilFruit',
       'fruitMastery',
+      'hakiSet',
       'armamentHaki',
       'observationHaki',
       'conquerorHaki',

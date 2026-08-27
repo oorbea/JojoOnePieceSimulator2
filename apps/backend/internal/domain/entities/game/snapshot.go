@@ -36,9 +36,17 @@ type Snapshot struct {
 // ConfigSnapshot mirrors Config. Visibility/VotingWindowSeconds/PoolFilter
 // are additive fields on top of the original v1 shape - see wire.go's
 // snapshotVersion doc for how a legacy payload missing them decodes.
+//
+// Mangas is a legacy field, kept only so a Snapshot written before
+// StageMangas/PowerMangas split apart can still restore: snapshotConfig
+// never populates it for a fresh Snapshot, but Restore falls back to it for
+// either axis that comes back empty (see restoreConfig). A payload old
+// enough to lack all three restores nothing and errors, same as before.
 type ConfigSnapshot struct {
 	Mode                string
 	Mangas              []string
+	StageMangas         []string
+	PowerMangas         []string
 	AbilitySource       string
 	TeamSize            int
 	AllowBots           bool
@@ -144,7 +152,8 @@ func (g *Game) Snapshot() Snapshot {
 		Locked: g.locked,
 		Config: ConfigSnapshot{
 			Mode:                g.config.mode.String(),
-			Mangas:              mangaStrings(g.config.mangas),
+			StageMangas:         mangaStrings(g.config.stageMangas),
+			PowerMangas:         mangaStrings(g.config.powerMangas),
 			AbilitySource:       g.config.abilitySource.String(),
 			TeamSize:            g.config.teamSize,
 			AllowBots:           g.config.allowBots,
@@ -251,6 +260,18 @@ func mangaStrings(mangas []enums.Manga) []string {
 	return out
 }
 
+func parseMangaList(raw []string) ([]enums.Manga, error) {
+	out := make([]enums.Manga, len(raw))
+	for i, m := range raw {
+		parsed, err := enums.ParseManga(m)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = parsed
+	}
+	return out, nil
+}
+
 func rarityStrings(rarities []enums.PowerRarity) []string {
 	out := make([]string, len(rarities))
 	for i, r := range rarities {
@@ -327,13 +348,26 @@ func Restore(s Snapshot) (*Game, error) {
 	if err != nil {
 		return nil, err
 	}
-	mangas := make([]enums.Manga, len(s.Config.Mangas))
-	for i, m := range s.Config.Mangas {
-		parsed, err := enums.ParseManga(m)
-		if err != nil {
-			return nil, err
-		}
-		mangas[i] = parsed
+	// StageMangas/PowerMangas are additive fields, split apart from the
+	// original single Mangas field - a legacy Snapshot (or a fresher one
+	// that just hasn't been re-saved since the split) predating them
+	// decodes with both empty, so either axis coming back empty falls back
+	// to the legacy Mangas list. See ConfigSnapshot's doc comment.
+	stageMangaStrs := s.Config.StageMangas
+	if len(stageMangaStrs) == 0 {
+		stageMangaStrs = s.Config.Mangas
+	}
+	powerMangaStrs := s.Config.PowerMangas
+	if len(powerMangaStrs) == 0 {
+		powerMangaStrs = s.Config.Mangas
+	}
+	stageMangas, err := parseMangaList(stageMangaStrs)
+	if err != nil {
+		return nil, err
+	}
+	powerMangas, err := parseMangaList(powerMangaStrs)
+	if err != nil {
+		return nil, err
 	}
 	// Visibility/VotingWindowSeconds/PoolFilter are additive fields - a
 	// legacy Snapshot predating them decodes with an empty Visibility
@@ -358,7 +392,8 @@ func Restore(s Snapshot) (*Game, error) {
 
 	cfg := Config{
 		mode:                mode,
-		mangas:              mangas,
+		stageMangas:         stageMangas,
+		powerMangas:         powerMangas,
 		abilitySource:       abilitySource,
 		teamSize:            s.Config.TeamSize,
 		allowBots:           s.Config.AllowBots,
@@ -497,7 +532,16 @@ func restoreBallot(bs BallotSnapshot) (*Ballot, error) {
 }
 
 func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
-	spin, err := enums.ParseSpinLevel(ls.Spin)
+	// Legacy fallback: SpinLevel dropped its ADVANCED tier (see
+	// ObsidianVault/gameplay-game-modes.md's V1-probabilities port) - a
+	// snapshot written before that change can still carry the string.
+	// Degrade to SpinBasic, the closest surviving tier below it, rather
+	// than fail to restore an otherwise-valid in-flight game.
+	spinStr := ls.Spin
+	if spinStr == "ADVANCED" {
+		spinStr = "BASIC"
+	}
+	spin, err := enums.ParseSpinLevel(spinStr)
 	if err != nil {
 		return nil, err
 	}

@@ -37,7 +37,8 @@ const VERSUS_MAX = 5
 // typing/toggling doesn't fight incoming STATE frames from other clients.
 type ConfigFormState = {
   mode: GameMode
-  mangas: Manga[]
+  stageMangas: Manga[]
+  powerMangas: Manga[]
   teamSize: number
   allowBots: boolean
   visibility: LobbyVisibility
@@ -48,7 +49,8 @@ type ConfigFormState = {
 function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormState {
   return {
     mode,
-    mangas: config.mangas,
+    stageMangas: config.stageMangas,
+    powerMangas: config.powerMangas,
     teamSize: config.teamSize,
     allowBots: config.allowBots,
     visibility: config.visibility,
@@ -137,7 +139,7 @@ export function LobbyRoomContainer() {
   // Computed unconditionally (before the !snapshot early return below) since
   // hooks can't be called conditionally - mangas/active fall back to safe
   // empty/false values until snapshot actually arrives.
-  const revealMangas = snapshot?.config.mangas ?? []
+  const revealMangas = snapshot?.config.powerMangas ?? []
   const revealActive = !!snapshot && shouldReveal(socket.live, snapshot)
   const loadoutReveal = useLoadoutReveal({
     mangas: revealMangas,
@@ -292,7 +294,8 @@ export function LobbyRoomContainer() {
     setConfigSaved(false)
     commands.updateConfig({
       mode: next.mode,
-      mangas: next.mangas,
+      stageMangas: next.stageMangas,
+      powerMangas: next.powerMangas,
       abilitySource: snapshot.config.abilitySource,
       teamSize: next.teamSize,
       allowBots: next.allowBots,
@@ -306,13 +309,24 @@ export function LobbyRoomContainer() {
     }, 500)
   }
 
-  // The manga selector now lives on the main lobby screen (MangaRow), always
+  // The manga selectors now live on the main lobby screen (MangaRow), always
   // visible instead of tucked inside "Lobby settings" - so, unlike every
-  // other field in that settings panel, it has no separate "Save" step and
-  // autosaves on every toggle.
-  const handleToggleConfigManga = (manga: Manga) => {
-    const mangas = form.mangas.includes(manga) ? form.mangas.filter((m) => m !== manga) : [...form.mangas, manga]
-    const next = { ...form, mangas }
+  // other field in that settings panel, they have no separate "Save" step
+  // and autosave on every toggle. Two independent axes (stages vs. powers).
+  const handleToggleConfigStageManga = (manga: Manga) => {
+    const stageMangas = form.stageMangas.includes(manga)
+      ? form.stageMangas.filter((m) => m !== manga)
+      : [...form.stageMangas, manga]
+    const next = { ...form, stageMangas }
+    setConfigForm(next)
+    submitConfigForm(next)
+  }
+
+  const handleToggleConfigPowerManga = (manga: Manga) => {
+    const powerMangas = form.powerMangas.includes(manga)
+      ? form.powerMangas.filter((m) => m !== manga)
+      : [...form.powerMangas, manga]
+    const next = { ...form, powerMangas }
     setConfigForm(next)
     submitConfigForm(next)
   }
@@ -390,8 +404,10 @@ export function LobbyRoomContainer() {
       onCancelConfirm={() => setConfirmSheet(null)}
       configMode={form.mode}
       onChangeConfigMode={handleChangeConfigMode}
-      configMangas={form.mangas}
-      onToggleConfigManga={handleToggleConfigManga}
+      configStageMangas={form.stageMangas}
+      configPowerMangas={form.powerMangas}
+      onToggleConfigStageManga={handleToggleConfigStageManga}
+      onToggleConfigPowerManga={handleToggleConfigPowerManga}
       configTeamSize={form.teamSize}
       configTeamSizeMin={form.mode === 'GAUNTLET' ? GAUNTLET_MIN : VERSUS_MIN}
       configTeamSizeMax={form.mode === 'GAUNTLET' ? GAUNTLET_MAX : VERSUS_MAX}

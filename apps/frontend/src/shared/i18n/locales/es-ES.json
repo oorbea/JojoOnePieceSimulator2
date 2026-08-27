@@ -178,7 +178,8 @@
       "title": "Crear sala",
       "modeGauntletHint": "Cooperativo. Avanza en la historia hasta caer o completarla.",
       "modeVersusHint": "Competitivo. Dos equipos iguales, tres rondas.",
-      "mangasLabel": "Manga",
+      "stageMangasLabel": "Escenarios",
+      "powerMangasLabel": "Poderes",
       "teamSizeLabel": "Tamaño de equipo",
       "teamSizeGauntletLabel": "Jugadores máximos",
       "votingSecondsLabel": "Ventana de votación (segundos)",
@@ -192,7 +193,8 @@
       "help": {
         "modeGauntlet": "Cooperativo contra la historia. Todo el escuadrón gana o cae junto.",
         "modeVersus": "Competitivo. Dos equipos iguales se enfrentan en tres rondas.",
-        "mangas": "De qué universos saca esta sala los Stands y las Frutas del Diablo.",
+        "stageMangas": "De qué universos saca esta sala sus escenarios.",
+        "powerMangas": "De qué universos saca esta sala los Stands y las Frutas del Diablo.",
         "teamSize": "Cuántos jugadores caben en cada equipo (Versus) o en el escuadrón (Gauntlet).",
         "votingSeconds": "Cuánto tiempo tienen los jugadores para votar en cada ronda.",
         "privacy": "Las salas públicas aparecen en Salas abiertas. Las privadas solo se unen con código.",
@@ -283,7 +285,8 @@
       "ready": "Lista para empezar",
       "reasonNotHost": "Solo el anfitrión puede empezar la partida.",
       "reasonAlreadyStarted": "Esta partida ya ha empezado.",
-      "reasonNoMangas": "Selecciona al menos un manga.",
+      "reasonNoStageMangas": "Selecciona al menos un manga para los escenarios.",
+      "reasonNoPowerMangas": "Selecciona al menos un manga para los poderes.",
       "reasonNeedsTwoTeams": "Versus necesita exactamente dos equipos.",
       "reasonEmptyTeam": "Ambos equipos necesitan al menos un jugador.",
       "reasonUnequalTeams": "Ambos equipos necesitan el mismo número de jugadores ({{a}} contra {{b}}).",
@@ -310,12 +313,19 @@
         "spin": "Spin",
         "hamon": "Hamon",
         "fruitMastery": "Maestría de fruta",
+        "hakiSet": "Haki",
         "armamentHaki": "Haki de Armadura",
         "observationHaki": "Haki de Observación",
         "conquerorHaki": "Haki del Rey",
         "physicalForm": "Forma física",
         "stand": "Stand",
         "devilFruit": "Fruta del Diablo"
+      },
+      "hakiType": {
+        "armament": "Armadura",
+        "observation": "Observación",
+        "conqueror": "Del Rey",
+        "none": "Ninguno"
       },
       "reveal": {
         "title": "Sorteo de poderes",
@@ -433,7 +443,8 @@
       "COMMON": "Común",
       "RARE": "Rara",
       "EPIC": "Épica",
-      "LEGENDARY": "Legendaria"
+      "LEGENDARY": "Legendaria",
+      "MYTHICAL": "Mítica"
     },
     "standStat": {
       "E": "E",
@@ -476,7 +487,6 @@
     "spinLevel": {
       "NONE": "Ninguno",
       "BASIC": "Básico",
-      "ADVANCED": "Avanzado",
       "GOLDEN": "Dorado",
       "INFINITE": "Infinito"
     },
@@ -493,13 +503,16 @@
       "AWAKENED": "Despertada"
     },
     "hakiLevel": {
+      "NONE": "Ninguno",
       "PRIVATE": "Soldado",
       "VICE_ADMIRAL": "Vicealmirante",
       "YONKO_COMMANDER": "Comandante Yonko",
       "YONKO_PLUS": "Yonko+"
     },
     "physicalForm": {
-      "PRIVATE": "Soldado",
+      "PRIVATE": "Soldado raso de la marina",
+      "STRONG_FISHMAN": "Gyojin fuerte",
+      "MARINE_CAPTAIN": "Capitán de la marina",
       "VICE_ADMIRAL": "Vicealmirante",
       "YONKO_COMMANDER": "Comandante Yonko",
       "YONKO_PLUS": "Yonko+"

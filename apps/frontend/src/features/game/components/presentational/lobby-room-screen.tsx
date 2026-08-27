@@ -54,8 +54,10 @@ type Props = {
   onCancelConfirm: () => void
   configMode: GameMode
   onChangeConfigMode: (mode: GameMode) => void
-  configMangas: Manga[]
-  onToggleConfigManga: (manga: Manga) => void
+  configStageMangas: Manga[]
+  configPowerMangas: Manga[]
+  onToggleConfigStageManga: (manga: Manga) => void
+  onToggleConfigPowerManga: (manga: Manga) => void
   configTeamSize: number
   configTeamSizeMin: number
   configTeamSizeMax: number
@@ -109,8 +111,10 @@ export function LobbyRoomScreen({
   onCancelConfirm,
   configMode,
   onChangeConfigMode,
-  configMangas,
-  onToggleConfigManga,
+  configStageMangas,
+  configPowerMangas,
+  onToggleConfigStageManga,
+  onToggleConfigPowerManga,
   configTeamSize,
   configTeamSizeMin,
   configTeamSizeMax,
@@ -164,9 +168,11 @@ export function LobbyRoomScreen({
           />
 
           <MangaRow
-            mangas={configMangas}
+            stageMangas={configStageMangas}
+            powerMangas={configPowerMangas}
             isHost={you.isHost}
-            onToggle={onToggleConfigManga}
+            onToggleStageManga={onToggleConfigStageManga}
+            onTogglePowerManga={onToggleConfigPowerManga}
             saving={configSaving}
             saved={configSaved}
           />
@@ -213,7 +219,8 @@ export function LobbyRoomScreen({
               isHost={you.isHost}
               mode={configMode}
               onChangeMode={onChangeConfigMode}
-              mangas={configMangas}
+              stageMangas={configStageMangas}
+              powerMangas={configPowerMangas}
               teamSize={configTeamSize}
               teamSizeMin={configTeamSizeMin}
               teamSizeMax={configTeamSizeMax}

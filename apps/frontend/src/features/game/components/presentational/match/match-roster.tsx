@@ -25,7 +25,7 @@ type Props = {
 // finished, so every participant here already has their full loadout.
 export function MatchRoster({ snapshot, selfId }: Props) {
   const { t } = useTranslation()
-  const mangas = snapshot.config.mangas
+  const mangas = snapshot.config.powerMangas
   const [modalParticipant, setModalParticipant] = useState<GameParticipant | null>(null)
 
   // Render order (teams flattened in VERSUS, snapshot order in GAUNTLET) is

@@ -38,6 +38,21 @@ func TestPoolFilter_RarityAllowlist(t *testing.T) {
 	}
 }
 
+func TestPoolFilter_RarityAllowlist_IncludesMythical(t *testing.T) {
+	f, err := game.NewPoolFilter([]enums.PowerRarity{enums.Mythical}, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("NewPoolFilter: %v", err)
+	}
+	mythical := mustStand(t, 1, "The World Over Heaven", enums.Mythical)
+	legendary := mustStand(t, 2, "Star Platinum", enums.Legendary)
+	if !f.AllowsStand(mythical) {
+		t.Fatalf("expected the mythical Stand to be allowed")
+	}
+	if f.AllowsStand(legendary) {
+		t.Fatalf("expected the legendary Stand to be excluded by a mythical-only allowlist")
+	}
+}
+
 func TestPoolFilter_FruitTypeAllowlist(t *testing.T) {
 	f, err := game.NewPoolFilter(nil, nil, []enums.FruitType{enums.Logia}, nil)
 	if err != nil {
