@@ -146,6 +146,17 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
 - Bot vote heuristic (`DefaultLoadoutEvaluator`) is a first-pass linear scoring function (stand
   stats E..A→1..5, INFINITE→6, plus ability levels plus a rarity bonus) — reasonable enough to
   exercise `IGameMode`/`Game` in tests, not tuned for actual game balance.
+- **TODO, not yet discussed with the owner (2026-08-27)**: `DefaultLoadoutEvaluator.Score`
+  (`loadout_evaluator.go:20-22`) sums `enums.SpinLevel`/`HamonLevel`/`FruitMastery`/`HakiLevel`/
+  `PhysicalForm` as their **raw ordinal** (`int(l.Spin())`, etc), not a chosen weight per level.
+  That means every time one of those enums gets reshuffled or grows/shrinks, the score silently
+  rebalances as a side effect — nobody decided "Infinite spin should now be worth 3 instead of 4",
+  it just fell out of the enum's `iota` order. This already happened once, during the
+  probabilities-from-V1 port ([[gameplay-game-modes]]): spin lost a tier (max ordinal 4→3), haki
+  gained one (`HakiNone` inserted at 0, so `HakiYonkoPlus` moved 3→4), and physical form's max grew
+  3→5 (4→6 levels). Open questions for whoever revisits this: should each enum have its own
+  explicit weight table (decoupling "position in the enum" from "score contribution"), and if so
+  what should the actual weights be — this needs the owner's input, not a unilateral pick.
 
 The application layer that wires this domain up (game store, voting timer, event hub, the cheap
 adapters, and what's still stubbed) landed the same day — see [[gameplay-application-layer]].
