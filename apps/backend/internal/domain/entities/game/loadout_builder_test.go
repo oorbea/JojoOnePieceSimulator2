@@ -21,8 +21,8 @@ func TestLoadoutBuilder_JojoOnlyDrawsNoOnePieceAbilities(t *testing.T) {
 	if loadout.DevilFruit() != nil || loadout.FruitMastery() != enums.FruitMasteryNone {
 		t.Fatalf("expected no one piece abilities, got fruit=%v mastery=%v", loadout.DevilFruit(), loadout.FruitMastery())
 	}
-	if loadout.ArmamentHaki() != enums.HakiPrivate || loadout.ObservationHaki() != enums.HakiPrivate ||
-		loadout.ConquerorHaki() != enums.HakiPrivate || loadout.PhysicalForm() != enums.PhysicalFormPrivate {
+	if loadout.ArmamentHaki() != enums.HakiNone || loadout.ObservationHaki() != enums.HakiNone ||
+		loadout.ConquerorHaki() != enums.HakiNone || loadout.PhysicalForm() != enums.PhysicalFormPrivate {
 		t.Fatalf("expected zero-value one piece stats, got %+v", loadout)
 	}
 }
@@ -114,11 +114,17 @@ func (r *recordingRandom) IntN(n int) int {
 }
 
 // TestLoadoutBuilder_DrawOrder pins the owner-mandated step order: Physical
-// Form -> Stand -> Devil Fruit -> Fruit Mastery -> Hamon -> Armament Haki ->
-// Observation Haki -> Conqueror Haki -> Spin (RequiresSpin4 is a post-pass,
-// not a draw, so it never shows up here). Pool sizes (2 stands, 3 fruits)
-// are chosen so stand's IntN(3) and devilFruit's IntN(4) can't be confused
-// with each other or with the 4-level enum tables.
+// Form -> Stand -> Devil Fruit -> Fruit Mastery -> Hamon -> Haki Set ->
+// Haki Mastery (once per haki the set draw landed on) -> Spin
+// (RequiresSpin4 is a post-pass, not a draw, so it never shows up here).
+// Pool sizes (2 stands, 3 fruits) are chosen so stand's IntN and
+// devilFruit's IntN can't be confused with each other.
+//
+// n is the *total* weight weightedPick sums to for that draw, not the raw
+// option count. recordingRandom always returns n-1, i.e. the *last* bucket
+// of whatever table is being drawn from - for HakiSetWeights (weights.go)
+// the last bucket is HakiSetConqueror, so exactly one HakiMastery draw
+// follows (Armament/Observation are never drawn here), not three.
 func TestLoadoutBuilder_DrawOrder(t *testing.T) {
 	standA := mustStand(t, 1, "Star Platinum", enums.Legendary)
 	standB := mustStand(t, 2, "The World", enums.Legendary)
@@ -137,11 +143,12 @@ func TestLoadoutBuilder_DrawOrder(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
-	// n is the *total* weight weightedPick sums to for that draw, not the
-	// raw option count - ConquerorHakiWeights is deliberately skewed
-	// (weights.go), so its total (10) differs from Armament/Observation's
-	// (4) even though all three share the same 4-level table.
-	want := []int{4, 3, 4, 3, 4, 4, 4, 10, 5}
+	// PhysicalForm(6 levels, total 6) -> Stand(no-stand + 2, total 3) ->
+	// DevilFruit(no-fruit + 3, total 4) -> FruitMastery(3 levels, total 3)
+	// -> Hamon(total 25+35+35+5=100) -> HakiSet(total
+	// 4+20+20+20+15+10+10+1=100, lands on Conqueror-only) ->
+	// ConquerorMastery(4 levels, total 4) -> Spin(total 15+30+30+25=100).
+	want := []int{6, 3, 4, 3, 100, 100, 4, 100}
 	if len(rng.ns) != len(want) {
 		t.Fatalf("expected %d draws, got %d: %v", len(want), len(rng.ns), rng.ns)
 	}

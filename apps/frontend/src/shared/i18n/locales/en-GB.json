@@ -477,7 +477,6 @@
     "spinLevel": {
       "NONE": "None",
       "BASIC": "Basic",
-      "ADVANCED": "Advanced",
       "GOLDEN": "Golden",
       "INFINITE": "Infinite"
     },
@@ -494,6 +493,7 @@
       "AWAKENED": "Awakened"
     },
     "hakiLevel": {
+      "NONE": "None",
       "PRIVATE": "Private",
       "VICE_ADMIRAL": "Vice Admiral",
       "YONKO_COMMANDER": "Yonko Commander",
@@ -501,6 +501,8 @@
     },
     "physicalForm": {
       "PRIVATE": "Private",
+      "STRONG_FISHMAN": "Strong Fishman",
+      "MARINE_CAPTAIN": "Marine Captain",
       "VICE_ADMIRAL": "Vice Admiral",
       "YONKO_COMMANDER": "Yonko Commander",
       "YONKO_PLUS": "Yonko+"

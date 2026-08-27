@@ -2,14 +2,21 @@ package enums
 
 import "errors"
 
-// HakiLevel is the shared 0-3 scale used by all three haki types
-// (Armament, Observation, Conqueror). Conqueror is drawn far less often
-// than the other two - that skew lives in an IAssignmentWeights adapter,
-// not in this type.
+// HakiLevel is the shared scale used by all three haki types (Armament,
+// Observation, Conqueror). HakiNone means the player doesn't have that haki
+// at all - distinct from HakiPrivate, the weakest mastery a haki you *do*
+// have can show. This mirrors the original JoJoOnePiece_Simulator's model
+// (github.com/oorbea/JoJoOnePiece_Simulator, powers.cc's generateHaki):
+// whether a player has a given haki at all is drawn first (as a set, with
+// correlations between the three - see game.AssignmentWeights.
+// HakiSetWeights), then a mastery level is drawn independently for each
+// haki present. Conqueror is drawn far less often than the other two - that
+// skew lives in an IAssignmentWeights adapter, not in this type.
 type HakiLevel byte
 
 const (
-	HakiPrivate HakiLevel = iota
+	HakiNone HakiLevel = iota
+	HakiPrivate
 	HakiViceAdmiral
 	HakiYonkoCommander
 	HakiYonkoPlus
@@ -17,6 +24,8 @@ const (
 
 func (h HakiLevel) String() string {
 	switch h {
+	case HakiNone:
+		return "NONE"
 	case HakiPrivate:
 		return "PRIVATE"
 	case HakiViceAdmiral:
@@ -34,7 +43,7 @@ var ErrInvalidHakiLevel = errors.New("invalid haki level")
 
 func (h HakiLevel) IsValid() bool {
 	switch h {
-	case HakiPrivate, HakiViceAdmiral, HakiYonkoCommander, HakiYonkoPlus:
+	case HakiNone, HakiPrivate, HakiViceAdmiral, HakiYonkoCommander, HakiYonkoPlus:
 		return true
 	default:
 		return false
@@ -43,6 +52,8 @@ func (h HakiLevel) IsValid() bool {
 
 func ParseHakiLevel(str string) (HakiLevel, error) {
 	switch str {
+	case "NONE":
+		return HakiNone, nil
 	case "PRIVATE":
 		return HakiPrivate, nil
 	case "VICE_ADMIRAL":
@@ -52,6 +63,6 @@ func ParseHakiLevel(str string) (HakiLevel, error) {
 	case "YONKO_PLUS":
 		return HakiYonkoPlus, nil
 	default:
-		return HakiPrivate, ErrInvalidHakiLevel
+		return HakiNone, ErrInvalidHakiLevel
 	}
 }

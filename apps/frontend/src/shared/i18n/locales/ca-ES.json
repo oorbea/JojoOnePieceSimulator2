@@ -477,7 +477,6 @@
     "spinLevel": {
       "NONE": "Cap",
       "BASIC": "Bàsic",
-      "ADVANCED": "Avançat",
       "GOLDEN": "Daurat",
       "INFINITE": "Infinit"
     },
@@ -494,13 +493,16 @@
       "AWAKENED": "Despertada"
     },
     "hakiLevel": {
+      "NONE": "Cap",
       "PRIVATE": "Soldat",
       "VICE_ADMIRAL": "Vicealmirall",
       "YONKO_COMMANDER": "Comandant Yonko",
       "YONKO_PLUS": "Yonko+"
     },
     "physicalForm": {
-      "PRIVATE": "Soldat",
+      "PRIVATE": "Soldat ras de la marina",
+      "STRONG_FISHMAN": "Home peix fort",
+      "MARINE_CAPTAIN": "Capità de la marina",
       "VICE_ADMIRAL": "Vicealmirall",
       "YONKO_COMMANDER": "Comandant Yonko",
       "YONKO_PLUS": "Yonko+"

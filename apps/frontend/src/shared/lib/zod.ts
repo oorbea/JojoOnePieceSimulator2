@@ -39,17 +39,28 @@ export const gameStateSchema = z.enum([
 export const participantKindSchema = z.enum(['HUMAN', 'BOT'])
 // Mirrors the backend's enums.LobbyVisibility.
 export const lobbyVisibilitySchema = z.enum(['PUBLIC', 'PRIVATE'])
-// Mirrors the backend's enums.SpinLevel.
-export const spinLevelSchema = z.enum(['NONE', 'BASIC', 'ADVANCED', 'GOLDEN', 'INFINITE'])
+// Mirrors the backend's enums.SpinLevel. No ADVANCED tier - dropped when
+// random assignment was ported 1:1 from JoJoOnePiece_Simulator V1, which
+// only has 4 spin levels.
+export const spinLevelSchema = z.enum(['NONE', 'BASIC', 'GOLDEN', 'INFINITE'])
 // Mirrors the backend's enums.HamonLevel.
 export const hamonLevelSchema = z.enum(['NONE', 'BASIC', 'ADVANCED', 'PERFECT'])
 // Mirrors the backend's enums.FruitMastery.
 export const fruitMasterySchema = z.enum(['NONE', 'REGULAR', 'ADVANCED', 'AWAKENED'])
-// Mirrors the backend's enums.HakiLevel - shared by Armament/Observation/Conqueror.
-export const hakiLevelSchema = z.enum(['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'])
-// Mirrors the backend's enums.PhysicalForm - same members as HakiLevel, kept
-// as a distinct type since the two Go enums are conceptually separate.
-export const physicalFormSchema = z.enum(['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'])
+// Mirrors the backend's enums.HakiLevel - shared by Armament/Observation/
+// Conqueror. NONE means the player doesn't have that haki at all, distinct
+// from PRIVATE (the weakest mastery a haki you do have can show).
+export const hakiLevelSchema = z.enum(['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'])
+// Mirrors the backend's enums.PhysicalForm - 6 levels (V1's uniform_int_
+// distribution(1,6)), unlike HakiLevel's 4-level scale.
+export const physicalFormSchema = z.enum([
+  'PRIVATE',
+  'STRONG_FISHMAN',
+  'MARINE_CAPTAIN',
+  'VICE_ADMIRAL',
+  'YONKO_COMMANDER',
+  'YONKO_PLUS',
+])
 
 export const errorResponseSchema = z.object({
   error: z.string(),
