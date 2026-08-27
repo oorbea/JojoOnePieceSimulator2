@@ -23,7 +23,7 @@ func TestRevealSlots_GatedByManga(t *testing.T) {
 			mangas: []enums.Manga{enums.OnePiece},
 			want: []RevealSlot{
 				RevealPhysicalForm, RevealDevilFruit, RevealFruitMastery,
-				RevealArmamentHaki, RevealObservationHaki, RevealConquerorHaki,
+				RevealHakiSet, RevealArmamentHaki, RevealObservationHaki, RevealConquerorHaki,
 			},
 		},
 		{
@@ -31,7 +31,7 @@ func TestRevealSlots_GatedByManga(t *testing.T) {
 			mangas: []enums.Manga{enums.Jojo, enums.OnePiece},
 			want: []RevealSlot{
 				RevealPhysicalForm, RevealStand, RevealDevilFruit, RevealFruitMastery,
-				RevealHamon, RevealArmamentHaki, RevealObservationHaki, RevealConquerorHaki,
+				RevealHamon, RevealHakiSet, RevealArmamentHaki, RevealObservationHaki, RevealConquerorHaki,
 				RevealSpin,
 			},
 		},
@@ -63,9 +63,9 @@ func TestRevealDuration_PinnedTotals(t *testing.T) {
 		mangas []enums.Manga
 		wantMs int
 	}{
-		{"both mangas", []enums.Manga{enums.Jojo, enums.OnePiece}, 44750},
+		{"both mangas", []enums.Manga{enums.Jojo, enums.OnePiece}, 48900},
 		{"jojo only", []enums.Manga{enums.Jojo}, 18350},
-		{"one piece only", []enums.Manga{enums.OnePiece}, 30800},
+		{"one piece only", []enums.Manga{enums.OnePiece}, 34950},
 	}
 
 	for _, tt := range tests {

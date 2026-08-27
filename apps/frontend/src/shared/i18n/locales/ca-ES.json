@@ -313,12 +313,19 @@
         "spin": "Spin",
         "hamon": "Hamon",
         "fruitMastery": "Mestratge de fruita",
+        "hakiSet": "Haki",
         "armamentHaki": "Haki d'Armadura",
         "observationHaki": "Haki d'Observació",
         "conquerorHaki": "Haki del Rei",
         "physicalForm": "Forma física",
         "stand": "Stand",
         "devilFruit": "Fruita del Diable"
+      },
+      "hakiType": {
+        "armament": "Armadura",
+        "observation": "Observació",
+        "conqueror": "Del Rei",
+        "none": "Cap"
       },
       "reveal": {
         "title": "Sorteig de poders",

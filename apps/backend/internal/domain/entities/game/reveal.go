@@ -8,7 +8,12 @@ import (
 
 // RevealSlot names one step of the poder-a-poder reveal shown to clients
 // while a Game sits in ASSIGNING, in the exact order LoadoutBuilder.Build
-// draws them (see loadout_builder.go's doc comment - keep both in sync).
+// draws them (see loadout_builder.go's doc comment - keep both in sync),
+// with one exception: RevealHakiSet isn't a draw step at all, it's a
+// synthetic slot summarizing which of the three haki types the loadout
+// ends up with (see game.HakiSet), inserted right before the three
+// individual level slots - the reveal tells its story as "which haki you
+// have" before "how much of each", per the owner's request (2026-08-27).
 type RevealSlot byte
 
 const (
@@ -17,6 +22,7 @@ const (
 	RevealDevilFruit
 	RevealFruitMastery
 	RevealHamon
+	RevealHakiSet
 	RevealArmamentHaki
 	RevealObservationHaki
 	RevealConquerorHaki
@@ -37,6 +43,7 @@ var revealSlotOrder = []struct {
 	{RevealDevilFruit, enums.OnePiece, true},
 	{RevealFruitMastery, enums.OnePiece, false},
 	{RevealHamon, enums.Jojo, false},
+	{RevealHakiSet, enums.OnePiece, false},
 	{RevealArmamentHaki, enums.OnePiece, false},
 	{RevealObservationHaki, enums.OnePiece, false},
 	{RevealConquerorHaki, enums.OnePiece, false},

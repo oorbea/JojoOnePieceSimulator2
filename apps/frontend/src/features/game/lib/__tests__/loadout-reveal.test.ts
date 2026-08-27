@@ -126,14 +126,14 @@ describe('shouldReveal', () => {
 })
 
 describe('revealPhases', () => {
-  it('both mangas: intro, 9 slots (spin+land each), outro', () => {
+  it('both mangas: intro, 10 slots (spin+land each), outro', () => {
     const phases = revealPhases(['JOJO', 'ONE_PIECE'])
     expect(phases[0].phase).toEqual({ kind: 'intro' })
     expect(phases[0].durationMs).toBe(REVEAL_INTRO_MS)
     expect(phases[phases.length - 1].phase).toEqual({ kind: 'outro' })
     expect(phases[phases.length - 1].durationMs).toBe(REVEAL_OUTRO_MS)
-    // intro + 9 * (spin, land) + outro
-    expect(phases).toHaveLength(1 + 9 * 2 + 1)
+    // intro + 10 * (spin, land) + outro
+    expect(phases).toHaveLength(1 + 10 * 2 + 1)
   })
 
   it('stand/devilFruit slots hold longer than scalar slots (they carry art + a stat grid)', () => {
@@ -148,7 +148,7 @@ describe('revealPhases', () => {
   it('every spin phase holds REVEAL_SPIN_MS regardless of slot kind', () => {
     const phases = revealPhases(['JOJO', 'ONE_PIECE'])
     const spins = phases.filter((p) => p.phase.kind === 'spin')
-    expect(spins).toHaveLength(9)
+    expect(spins).toHaveLength(10)
     spins.forEach((s) => expect(s.durationMs).toBe(REVEAL_SPIN_MS))
   })
 })
@@ -157,15 +157,15 @@ describe('revealPhases', () => {
 // pinned by TestRevealDuration_PinnedTotals (reveal_test.go) - keep both in
 // sync if either side's constants or slot list ever change.
 describe('revealDurationMs', () => {
-  it('both mangas: 44750ms', () => {
-    expect(revealDurationMs(['JOJO', 'ONE_PIECE'])).toBe(44750)
+  it('both mangas: 48900ms', () => {
+    expect(revealDurationMs(['JOJO', 'ONE_PIECE'])).toBe(48900)
   })
 
   it('jojo only: 18350ms', () => {
     expect(revealDurationMs(['JOJO'])).toBe(18350)
   })
 
-  it('one piece only: 30800ms', () => {
-    expect(revealDurationMs(['ONE_PIECE'])).toBe(30800)
+  it('one piece only: 34950ms', () => {
+    expect(revealDurationMs(['ONE_PIECE'])).toBe(34950)
   })
 })

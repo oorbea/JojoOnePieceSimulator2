@@ -313,12 +313,19 @@
         "spin": "Spin",
         "hamon": "Hamon",
         "fruitMastery": "Fruit Mastery",
+        "hakiSet": "Haki",
         "armamentHaki": "Armament Haki",
         "observationHaki": "Observation Haki",
         "conquerorHaki": "Conqueror's Haki",
         "physicalForm": "Physical Form",
         "stand": "Stand",
         "devilFruit": "Devil Fruit"
+      },
+      "hakiType": {
+        "armament": "Armament",
+        "observation": "Observation",
+        "conqueror": "Conqueror's",
+        "none": "None"
       },
       "reveal": {
         "title": "Power draw",
