@@ -35,8 +35,13 @@ const (
 )
 
 var (
-	// ErrEmptyMangas is returned when a Config selects no manga at all.
-	ErrEmptyMangas = errors.New("at least one manga must be selected")
+	// ErrEmptyStageMangas is returned when a Config selects no manga at all
+	// for its Stage pool.
+	ErrEmptyStageMangas = errors.New("at least one manga must be selected for stages")
+
+	// ErrEmptyPowerMangas is returned when a Config selects no manga at all
+	// for its ability/power pool.
+	ErrEmptyPowerMangas = errors.New("at least one manga must be selected for powers")
 
 	// ErrInvalidTeamSize is returned when Config's team size is outside
 	// the bounds for its GameModeKind.
@@ -47,16 +52,19 @@ var (
 	ErrInvalidVotingWindow = errors.New("invalid voting window")
 )
 
-// Config is a lobby's setup: which mode, which manga(s) abilities are drawn
-// from, how abilities are sourced, how many players per team, whether bots
-// may fill empty Versus slots, how long a round's voting window lasts,
-// whether the lobby is browsable, and which Stands/DevilFruits are eligible
-// to be drawn. Config itself is still a plain immutable value object - the
-// host changes it by having Game.Reconfigure swap in a whole new Config,
-// never by mutating one in place.
+// Config is a lobby's setup: which mode, which manga(s) Stages are drawn
+// from, which manga(s) abilities/powers are drawn from (independently -
+// e.g. Stages from both mangas with powers from JoJo only is valid), how
+// abilities are sourced, how many players per team, whether bots may fill
+// empty Versus slots, how long a round's voting window lasts, whether the
+// lobby is browsable, and which Stands/DevilFruits are eligible to be
+// drawn. Config itself is still a plain immutable value object - the host
+// changes it by having Game.Reconfigure swap in a whole new Config, never
+// by mutating one in place.
 type Config struct {
 	poolFilter          PoolFilter
-	mangas              []enums.Manga
+	stageMangas         []enums.Manga
+	powerMangas         []enums.Manga
 	teamSize            int
 	votingWindowSeconds int
 	mode                enums.GameModeKind
@@ -68,7 +76,8 @@ type Config struct {
 // NewConfig validates and builds a Config.
 func NewConfig(
 	mode enums.GameModeKind,
-	mangas []enums.Manga,
+	stageMangas []enums.Manga,
+	powerMangas []enums.Manga,
 	abilitySource enums.AbilitySource,
 	teamSize int,
 	allowBots bool,
@@ -91,22 +100,20 @@ func NewConfig(
 	if votingWindowSeconds < MinVotingWindowSeconds || votingWindowSeconds > MaxVotingWindowSeconds {
 		return Config{}, ErrInvalidVotingWindow
 	}
-	if len(mangas) == 0 {
-		return Config{}, ErrEmptyMangas
-	}
 
-	seen := make(map[enums.Manga]struct{}, len(mangas))
-	for _, m := range mangas {
-		if !m.IsValid() {
-			return Config{}, enums.ErrInvalidManga
-		}
-		seen[m] = struct{}{}
+	uniqueStageMangas, err := normalizeMangas(stageMangas)
+	if err != nil {
+		return Config{}, err
 	}
-	uniqueMangas := make([]enums.Manga, 0, len(seen))
-	for _, m := range enums.Mangas() {
-		if _, ok := seen[m]; ok {
-			uniqueMangas = append(uniqueMangas, m)
-		}
+	if len(uniqueStageMangas) == 0 {
+		return Config{}, ErrEmptyStageMangas
+	}
+	uniquePowerMangas, err := normalizeMangas(powerMangas)
+	if err != nil {
+		return Config{}, err
+	}
+	if len(uniquePowerMangas) == 0 {
+		return Config{}, ErrEmptyPowerMangas
 	}
 
 	switch mode {
@@ -125,7 +132,8 @@ func NewConfig(
 
 	return Config{
 		mode:                mode,
-		mangas:              uniqueMangas,
+		stageMangas:         uniqueStageMangas,
+		powerMangas:         uniquePowerMangas,
 		abilitySource:       abilitySource,
 		teamSize:            teamSize,
 		allowBots:           allowBots,
@@ -133,6 +141,25 @@ func NewConfig(
 		votingWindowSeconds: votingWindowSeconds,
 		poolFilter:          poolFilter,
 	}, nil
+}
+
+// normalizeMangas validates every manga in mangas and returns a
+// deduplicated copy in enums.Mangas() canonical order.
+func normalizeMangas(mangas []enums.Manga) ([]enums.Manga, error) {
+	seen := make(map[enums.Manga]struct{}, len(mangas))
+	for _, m := range mangas {
+		if !m.IsValid() {
+			return nil, enums.ErrInvalidManga
+		}
+		seen[m] = struct{}{}
+	}
+	unique := make([]enums.Manga, 0, len(seen))
+	for _, m := range enums.Mangas() {
+		if _, ok := seen[m]; ok {
+			unique = append(unique, m)
+		}
+	}
+	return unique, nil
 }
 
 func (c Config) Mode() enums.GameModeKind           { return c.mode }
@@ -143,14 +170,22 @@ func (c Config) Visibility() enums.LobbyVisibility  { return c.visibility }
 func (c Config) VotingWindowSeconds() int           { return c.votingWindowSeconds }
 func (c Config) PoolFilter() PoolFilter             { return c.poolFilter }
 
-// Mangas returns a copy of the selected mangas, in enums.Mangas() order.
-func (c Config) Mangas() []enums.Manga {
-	return append([]enums.Manga(nil), c.mangas...)
+// StageMangas returns a copy of the mangas Stages are drawn from, in
+// enums.Mangas() order.
+func (c Config) StageMangas() []enums.Manga {
+	return append([]enums.Manga(nil), c.stageMangas...)
 }
 
-// HasManga reports whether m is selected for this Config.
-func (c Config) HasManga(m enums.Manga) bool {
-	for _, x := range c.mangas {
+// PowerMangas returns a copy of the mangas abilities/powers are drawn from,
+// in enums.Mangas() order.
+func (c Config) PowerMangas() []enums.Manga {
+	return append([]enums.Manga(nil), c.powerMangas...)
+}
+
+// HasPowerManga reports whether m is selected in this Config's power
+// mangas.
+func (c Config) HasPowerManga(m enums.Manga) bool {
+	for _, x := range c.powerMangas {
 		if x == m {
 			return true
 		}

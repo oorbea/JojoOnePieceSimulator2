@@ -10,7 +10,8 @@ export type Gate = { ok: boolean; reasonKey: string; params?: Record<string, num
 export function startGate(snapshot: GameSnapshot, you: GameViewer): Gate {
   if (!you.isHost) return { ok: false, reasonKey: 'game.start.reasonNotHost' }
   if (snapshot.state !== 'LOBBY') return { ok: false, reasonKey: 'game.start.reasonAlreadyStarted' }
-  if (snapshot.config.mangas.length === 0) return { ok: false, reasonKey: 'game.start.reasonNoMangas' }
+  if (snapshot.config.stageMangas.length === 0) return { ok: false, reasonKey: 'game.start.reasonNoStageMangas' }
+  if (snapshot.config.powerMangas.length === 0) return { ok: false, reasonKey: 'game.start.reasonNoPowerMangas' }
 
   if (snapshot.mode === 'VERSUS') {
     if (snapshot.teams.length !== 2) return { ok: false, reasonKey: 'game.start.reasonNeedsTwoTeams' }

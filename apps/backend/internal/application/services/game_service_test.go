@@ -449,14 +449,14 @@ func newGameServiceFromDeps(deps *gameTestDeps, history ports.IGameHistory) *ser
 
 func gauntletInput() services.CreateGameInput {
 	return services.CreateGameInput{
-		Mode: enums.Gauntlet, Mangas: []enums.Manga{enums.Jojo}, AbilitySource: enums.Random,
+		Mode: enums.Gauntlet, StageMangas: []enums.Manga{enums.Jojo}, PowerMangas: []enums.Manga{enums.Jojo}, AbilitySource: enums.Random,
 		TeamSize: 5, AllowBots: false,
 	}
 }
 
 func versusInput(teamSize int) services.CreateGameInput {
 	return services.CreateGameInput{
-		Mode: enums.Versus, Mangas: []enums.Manga{enums.Jojo, enums.OnePiece}, AbilitySource: enums.Random,
+		Mode: enums.Versus, StageMangas: []enums.Manga{enums.Jojo, enums.OnePiece}, PowerMangas: []enums.Manga{enums.Jojo, enums.OnePiece}, AbilitySource: enums.Random,
 		TeamSize: teamSize, AllowBots: true,
 	}
 }
@@ -758,7 +758,7 @@ func TestStartGame_Gauntlet_OpensFirstRoundVoting(t *testing.T) {
 		t.Fatalf("state right after StartGame = %v, want ASSIGNING (reveal in progress)", g.State())
 	}
 
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -792,7 +792,7 @@ func TestStartGame_RevealEndsAt_TracksThenClearsOnVotingOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	want := deps.clock.Now().Add(game.RevealDuration(gauntletInput().Mangas))
+	want := deps.clock.Now().Add(game.RevealDuration(gauntletInput().PowerMangas))
 	got, ok := svc.RevealEndsAt(g.ID())
 	if !ok {
 		t.Fatalf("RevealEndsAt during reveal: want ok")
@@ -801,7 +801,7 @@ func TestStartGame_RevealEndsAt_TracksThenClearsOnVotingOpen(t *testing.T) {
 		t.Fatalf("RevealEndsAt = %v, want %v", got, want)
 	}
 
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	if _, ok := svc.RevealEndsAt(g.ID()); ok {
 		t.Fatalf("RevealEndsAt after voting opens: want not-ok")
 	}
@@ -840,7 +840,7 @@ func TestAbortGame_DuringReveal_NeverOpensVoting(t *testing.T) {
 	// Advance well past the reveal duration - if the timer had survived the
 	// abort, this is where it would fire and try to reopen voting on a Game
 	// that finalizeLocked already deleted from the store.
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 
 	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
 		t.Fatalf("GetGame after abort+advance: err = %v, want ErrGameNotFound", err)
@@ -859,7 +859,7 @@ func TestGauntlet_FallMajority_FinishesAndFinalizes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -898,7 +898,7 @@ func TestGauntlet_ClearAllStages_Victory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -945,7 +945,7 @@ func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, versusInput(1).Mangas)
+	advanceReveal(deps, versusInput(1).PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -974,7 +974,7 @@ func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
 		// ReassignsEachRound), so every round but the last one just
 		// resolved schedules its own reveal delay before voting reopens.
 		if round < game.VersusRounds-1 {
-			advanceReveal(deps, versusInput(1).Mangas)
+			advanceReveal(deps, versusInput(1).PowerMangas)
 			g, err = svc.GetGame(context.Background(), g.ID())
 			if err != nil {
 				t.Fatalf("GetGame after round %d reveal: %v", round, err)
@@ -1008,7 +1008,7 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, versusInput(1).Mangas)
+	advanceReveal(deps, versusInput(1).PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -1072,7 +1072,7 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 	// The revote just resolved via the tiebreaker, moving Versus into round
 	// 2 - which reassigns Loadouts and so schedules its own reveal delay
 	// before voting reopens (see VersusMode.ReassignsEachRound).
-	advanceReveal(deps, versusInput(1).Mangas)
+	advanceReveal(deps, versusInput(1).PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after round 2 reveal: %v", err)
@@ -1119,7 +1119,7 @@ func TestCloseVotingWindow_TimerExpiry_ResolvesWithEmittedVotes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, gauntletInput().Mangas)
+	advanceReveal(deps, gauntletInput().PowerMangas)
 
 	// Host never votes - the window expiring must resolve with zero votes,
 	// which is a tie (see game.Ballot.Tally), opening a revote instead of
@@ -1225,7 +1225,7 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	advanceReveal(deps, versusInput(2).Mangas)
+	advanceReveal(deps, versusInput(2).PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -1249,7 +1249,7 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 	// A unanimous vote resolves round 1 immediately, moving Versus into
 	// round 2 - which reassigns Loadouts and so schedules its own reveal
 	// delay before voting reopens (see VersusMode.ReassignsEachRound).
-	advanceReveal(deps, versusInput(2).Mangas)
+	advanceReveal(deps, versusInput(2).PowerMangas)
 
 	final, err := svc.GetGame(context.Background(), g.ID())
 	if err != nil {

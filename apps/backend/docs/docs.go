@@ -2612,17 +2612,24 @@ const docTemplate = `{
                 "allowBots": {
                     "type": "boolean"
                 },
-                "mangas": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "mode": {
                     "type": "string"
                 },
                 "poolFilter": {
                     "$ref": "#/definitions/dto.PoolFilterPayload"
+                },
+                "powerMangas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "stageMangas": {
+                    "description": "StageMangas and PowerMangas are independent - see game.Config's doc\ncomment.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "teamSize": {
                     "type": "integer"
@@ -2716,14 +2723,21 @@ const docTemplate = `{
                 "allowBots": {
                     "type": "boolean"
                 },
-                "mangas": {
+                "poolFilter": {
+                    "$ref": "#/definitions/dto.PoolFilterResponse"
+                },
+                "powerMangas": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "poolFilter": {
-                    "$ref": "#/definitions/dto.PoolFilterResponse"
+                "stageMangas": {
+                    "description": "StageMangas and PowerMangas are independent - see game.Config's doc\ncomment.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "teamSize": {
                     "type": "integer"
@@ -3414,17 +3428,24 @@ const docTemplate = `{
                 "allowBots": {
                     "type": "boolean"
                 },
-                "mangas": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "mode": {
                     "type": "string"
                 },
                 "poolFilter": {
                     "$ref": "#/definitions/dto.PoolFilterPayload"
+                },
+                "powerMangas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "stageMangas": {
+                    "description": "StageMangas and PowerMangas are independent - see game.Config's doc\ncomment.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "teamSize": {
                     "type": "integer"

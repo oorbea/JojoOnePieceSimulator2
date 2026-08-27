@@ -243,7 +243,7 @@ func newWSLobby(t *testing.T) *wsLobby {
 	}
 
 	g, code, err := svc.CreateGame(context.Background(), hostUserID, services.CreateGameInput{
-		Mode: enums.Versus, Mangas: []enums.Manga{enums.Jojo}, AbilitySource: enums.Random,
+		Mode: enums.Versus, StageMangas: []enums.Manga{enums.Jojo}, PowerMangas: []enums.Manga{enums.Jojo}, AbilitySource: enums.Random,
 		TeamSize: 2, AllowBots: true,
 	})
 	if err != nil {
@@ -466,7 +466,7 @@ func TestDispatch_UpdateConfig(t *testing.T) {
 	lobby := newWSLobby(t)
 
 	payload := dto.UpdateConfigPayload{
-		Mode: "VERSUS", Mangas: []string{"JOJO"}, AbilitySource: "RANDOM",
+		Mode: "VERSUS", StageMangas: []string{"JOJO"}, PowerMangas: []string{"JOJO"}, AbilitySource: "RANDOM",
 		TeamSize: 3, AllowBots: true, Visibility: "PUBLIC",
 	}
 	cmd := dto.ClientCommand{Type: dto.CommandUpdateConfig, Payload: mustMarshal(t, payload)}
@@ -486,7 +486,7 @@ func TestDispatch_UpdateConfig_NotHost_Forbidden(t *testing.T) {
 	lobby := newWSLobby(t)
 
 	payload := dto.UpdateConfigPayload{
-		Mode: "VERSUS", Mangas: []string{"JOJO"}, AbilitySource: "RANDOM",
+		Mode: "VERSUS", StageMangas: []string{"JOJO"}, PowerMangas: []string{"JOJO"}, AbilitySource: "RANDOM",
 		TeamSize: 3, AllowBots: true, Visibility: "PUBLIC",
 	}
 	cmd := dto.ClientCommand{Type: dto.CommandUpdateConfig, Payload: mustMarshal(t, payload)}

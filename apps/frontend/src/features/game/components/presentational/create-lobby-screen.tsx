@@ -6,6 +6,7 @@ import { BanByFilterFields } from '@/features/game/components/presentational/fie
 import { BanlistField, type BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
 import { PowerPoolFields } from '@/features/game/components/presentational/fields/power-pool-fields'
+import { MangaRow } from '@/features/game/components/presentational/manga-row'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -22,8 +23,10 @@ type Props = {
   onBack: () => void
   mode: GameMode
   onChangeMode: (mode: GameMode) => void
-  mangas: Manga[]
-  onToggleManga: (manga: Manga) => void
+  stageMangas: Manga[]
+  powerMangas: Manga[]
+  onToggleStageManga: (manga: Manga) => void
+  onTogglePowerManga: (manga: Manga) => void
   teamSize: number
   teamSizeMin: number
   teamSizeMax: number
@@ -50,8 +53,10 @@ export function CreateLobbyScreen({
   onBack,
   mode,
   onChangeMode,
-  mangas,
-  onToggleManga,
+  stageMangas,
+  powerMangas,
+  onToggleStageManga,
+  onTogglePowerManga,
   teamSize,
   teamSizeMin,
   teamSizeMax,
@@ -141,25 +146,13 @@ export function CreateLobbyScreen({
 
       <GlassPanel glossy p="$5" gap="$4" width="100%" $md={{ flexDirection: 'row' }}>
         <YStack flexBasis={320} grow={1} gap="$4">
-          <YStack gap="$1.5">
-            <XStack items="center" gap="$1.5">
-              <GlowText level="label">{t('game.create.mangasLabel')}</GlowText>
-              <InfoHint text={t('game.create.help.mangas')} />
-            </XStack>
-            <XStack gap="$2">
-              {(['JOJO', 'ONE_PIECE'] as Manga[]).map((manga) => (
-                <GlossButton
-                  key={manga}
-                  tone={mangas.includes(manga) ? 'blue' : 'glass'}
-                  btnSize="sm"
-                  onPress={() => onToggleManga(manga)}
-                  accessibilityLabel={t(`enums.manga.${manga}`)}
-                >
-                  {t(`enums.manga.${manga}`)}
-                </GlossButton>
-              ))}
-            </XStack>
-          </YStack>
+          <MangaRow
+            stageMangas={stageMangas}
+            powerMangas={powerMangas}
+            isHost
+            onToggleStageManga={onToggleStageManga}
+            onTogglePowerManga={onTogglePowerManga}
+          />
 
           <NumberStepper
             label={mode === 'GAUNTLET' ? t('game.create.teamSizeGauntletLabel') : t('game.create.teamSizeLabel')}
@@ -242,7 +235,7 @@ export function CreateLobbyScreen({
         btnSize="lg"
         flare
         width="100%"
-        disabled={submitting || mangas.length === 0}
+        disabled={submitting || stageMangas.length === 0 || powerMangas.length === 0}
         onPress={onSubmit}
         accessibilityLabel={t('game.create.submit')}
       >

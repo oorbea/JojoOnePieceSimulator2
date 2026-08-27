@@ -23,11 +23,12 @@ type Props = {
   isHost: boolean
   mode: GameMode
   onChangeMode: (mode: GameMode) => void
-  /** Read-only here - the manga selector itself lives on the main lobby
-   * screen now (see `MangaRow`), always visible instead of tucked inside
-   * this collapsed panel. Still needed for the submit button's
-   * empty-selection guard below. */
-  mangas: Manga[]
+  /** Read-only here - the manga selectors themselves live on the main
+   * lobby screen now (see `MangaRow`), always visible instead of tucked
+   * inside this collapsed panel. Still needed for the submit button's
+   * empty-selection guard below - both axes must be non-empty. */
+  stageMangas: Manga[]
+  powerMangas: Manga[]
   teamSize: number
   teamSizeMin: number
   teamSizeMax: number
@@ -55,7 +56,8 @@ export function LobbyConfigPanel({
   isHost,
   mode,
   onChangeMode,
-  mangas,
+  stageMangas,
+  powerMangas,
   teamSize,
   teamSizeMin,
   teamSizeMax,
@@ -255,7 +257,7 @@ export function LobbyConfigPanel({
           btnSize="lg"
           flare
           width="100%"
-          disabled={saving || mangas.length === 0}
+          disabled={saving || stageMangas.length === 0 || powerMangas.length === 0}
           onPress={onSubmit}
           accessibilityLabel={t('common.save')}
         >

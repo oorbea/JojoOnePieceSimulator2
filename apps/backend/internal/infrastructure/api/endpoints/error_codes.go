@@ -105,8 +105,10 @@ func errorCode(err error) string {
 		return "NOT_A_BOT"
 	case errors.Is(err, game.ErrNoStagesAvailable):
 		return "NO_STAGES_AVAILABLE"
-	case errors.Is(err, game.ErrEmptyMangas):
-		return "EMPTY_MANGAS"
+	case errors.Is(err, game.ErrEmptyStageMangas):
+		return "EMPTY_STAGE_MANGAS"
+	case errors.Is(err, game.ErrEmptyPowerMangas):
+		return "EMPTY_POWER_MANGAS"
 	case errors.Is(err, game.ErrInvalidTeamSize):
 		return "INVALID_TEAM_SIZE"
 	case errors.Is(err, game.ErrFruitMasteryMismatch):

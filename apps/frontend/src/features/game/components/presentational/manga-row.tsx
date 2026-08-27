@@ -9,35 +9,21 @@ import type { Manga } from '@/shared/lib/zod'
 
 const MANGAS: Manga[] = ['JOJO', 'ONE_PIECE']
 
-type Props = {
+type GroupProps = {
+  labelKey: string
+  helpKey: string
   mangas: Manga[]
   isHost: boolean
   onToggle: (manga: Manga) => void
-  saving?: boolean
-  saved?: boolean
 }
 
-// Always-visible manga selector for the main lobby screen (not the
-// collapsed "Lobby settings" panel) - the owner reported that which
-// manga(s) a lobby draws powers from wasn't legible without opening
-// settings. A visible check mark on the active chip is the affordance fix
-// (color alone was the only signal before): flexWrap lets the two chips
-// wrap under the label on narrow screens instead of overflowing a
-// non-wrapping row, which is what happened to this same field inside the
-// config panel (long manga names, e.g. "JoJo's Bizarre Adventure").
-// Host-only edits autosave (see lobby-room-container.tsx's
-// handleToggleConfigManga) - there's no separate "save" step for this one
-// field, unlike the rest of "Lobby settings".
-export function MangaRow({ mangas, isHost, onToggle, saving, saved }: Props) {
+function MangaToggleGroup({ labelKey, helpKey, mangas, isHost, onToggle }: GroupProps) {
   const { t } = useTranslation()
-
   return (
     <YStack width="100%" gap="$1.5">
       <XStack items="center" gap="$1.5">
-        <GlowText level="label">{t('game.create.mangasLabel')}</GlowText>
-        <InfoHint text={t('game.create.help.mangas')} />
-        {saving ? <GlowText level="label" tone="soft">{t('game.config.saving')}</GlowText> : null}
-        {!saving && saved ? <GlowText level="label" tone="soft">{t('game.config.saved')}</GlowText> : null}
+        <GlowText level="label">{t(labelKey)}</GlowText>
+        <InfoHint text={t(helpKey)} />
       </XStack>
       <XStack flexWrap="wrap" gap="$2">
         {MANGAS.map((manga) => {
@@ -60,6 +46,65 @@ export function MangaRow({ mangas, isHost, onToggle, saving, saved }: Props) {
           )
         })}
       </XStack>
+    </YStack>
+  )
+}
+
+type Props = {
+  stageMangas: Manga[]
+  powerMangas: Manga[]
+  isHost: boolean
+  onToggleStageManga: (manga: Manga) => void
+  onTogglePowerManga: (manga: Manga) => void
+  saving?: boolean
+  saved?: boolean
+}
+
+// Always-visible manga selector for the main lobby screen (not the
+// collapsed "Lobby settings" panel) - the owner reported that which
+// manga(s) a lobby draws powers from wasn't legible without opening
+// settings. A visible check mark on the active chip is the affordance fix
+// (color alone was the only signal before): flexWrap lets the two chips
+// wrap under the label on narrow screens instead of overflowing a
+// non-wrapping row, which is what happened to this same field inside the
+// config panel (long manga names, e.g. "JoJo's Bizarre Adventure").
+//
+// Two independent toggle groups (Stages / Powers), not one - the owner
+// wants to be able to run e.g. Stages from both mangas while powers stay
+// JoJo-only. Host-only edits autosave (see lobby-room-container.tsx's
+// handleToggleConfigManga) - there's no separate "save" step for this
+// field, unlike the rest of "Lobby settings".
+export function MangaRow({
+  stageMangas,
+  powerMangas,
+  isHost,
+  onToggleStageManga,
+  onTogglePowerManga,
+  saving,
+  saved,
+}: Props) {
+  const { t } = useTranslation()
+
+  return (
+    <YStack width="100%" gap="$2.5">
+      <XStack items="center" gap="$1.5">
+        {saving ? <GlowText level="label" tone="soft">{t('game.config.saving')}</GlowText> : null}
+        {!saving && saved ? <GlowText level="label" tone="soft">{t('game.config.saved')}</GlowText> : null}
+      </XStack>
+      <MangaToggleGroup
+        labelKey="game.create.stageMangasLabel"
+        helpKey="game.create.help.stageMangas"
+        mangas={stageMangas}
+        isHost={isHost}
+        onToggle={onToggleStageManga}
+      />
+      <MangaToggleGroup
+        labelKey="game.create.powerMangasLabel"
+        helpKey="game.create.help.powerMangas"
+        mangas={powerMangas}
+        isHost={isHost}
+        onToggle={onTogglePowerManga}
+      />
     </YStack>
   )
 }

@@ -14,8 +14,11 @@ import (
 // the service's configured window, and an absent PoolFilter means "no
 // restriction" - see services.GameService.buildConfig.
 type CreateGameRequest struct {
-	Mode                string             `json:"mode"`
-	Mangas              []string           `json:"mangas"`
+	Mode string `json:"mode"`
+	// StageMangas and PowerMangas are independent - see game.Config's doc
+	// comment.
+	StageMangas         []string           `json:"stageMangas"`
+	PowerMangas         []string           `json:"powerMangas"`
 	AbilitySource       string             `json:"abilitySource"`
 	TeamSize            int                `json:"teamSize"`
 	AllowBots           bool               `json:"allowBots"`
@@ -34,15 +37,8 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 		errs = append(errs, fmt.Sprintf("mode: %v", err))
 	}
 
-	mangas := make([]enums.Manga, 0, len(r.Mangas))
-	for _, raw := range r.Mangas {
-		m, err := enums.ParseManga(raw)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("mangas: %v", err))
-			continue
-		}
-		mangas = append(mangas, m)
-	}
+	stageMangas := parseMangas(r.StageMangas, "stageMangas", &errs)
+	powerMangas := parseMangas(r.PowerMangas, "powerMangas", &errs)
 
 	abilitySource, err := enums.ParseAbilitySource(r.AbilitySource)
 	if err != nil {
@@ -68,7 +64,8 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 
 	return services.CreateGameInput{
 		Mode:                mode,
-		Mangas:              mangas,
+		StageMangas:         stageMangas,
+		PowerMangas:         powerMangas,
 		AbilitySource:       abilitySource,
 		TeamSize:            r.TeamSize,
 		AllowBots:           r.AllowBots,
