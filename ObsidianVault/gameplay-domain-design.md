@@ -139,6 +139,7 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
 - No player inventory (no schema, no unlock flow) — `ports.IInventory` is the seam;
   `enums.Inventory` as an `AbilitySource` is rejected by `game.NewConfig` until it exists. Still the
   one game-feature port with no adapter after [[game-lobby-persistence]]/[[game-realtime-transport]].
+  Full planned design once this gets built: [[gameplay-versus-inventory-characters]].
 - **Resolved 2026-08-11**: `ports.IGameHistory` now has a Postgres-backed adapter (see
   [[game-lobby-persistence]]) — finished/aborted games are recorded before being deleted from the
   (Redis or in-memory) lobby store.
