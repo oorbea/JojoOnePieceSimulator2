@@ -36,13 +36,35 @@ const SCALAR_NAMESPACE: Record<string, string> = {
 }
 
 const SCALAR_VALUES: Record<string, string[]> = {
-  spin: ['NONE', 'BASIC', 'ADVANCED', 'GOLDEN', 'INFINITE'],
+  spin: ['NONE', 'BASIC', 'GOLDEN', 'INFINITE'],
   hamon: ['NONE', 'BASIC', 'ADVANCED', 'PERFECT'],
   fruitMastery: ['NONE', 'REGULAR', 'ADVANCED', 'AWAKENED'],
-  physicalForm: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
-  armamentHaki: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
-  observationHaki: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
-  conquerorHaki: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  physicalForm: ['PRIVATE', 'STRONG_FISHMAN', 'MARINE_CAPTAIN', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  armamentHaki: ['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  observationHaki: ['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  conquerorHaki: ['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+}
+
+// HAKI_TYPES pairs each haki level field with the i18n key naming that type
+// (not its mastery level) - used only by the 'hakiSet' slot below to render
+// "which types do you have" before the individual level slots run.
+const HAKI_TYPES: { field: 'armamentHaki' | 'observationHaki' | 'conquerorHaki'; i18nKey: string }[] = [
+  { field: 'armamentHaki', i18nKey: 'game.match.hakiType.armament' },
+  { field: 'observationHaki', i18nKey: 'game.match.hakiType.observation' },
+  { field: 'conquerorHaki', i18nKey: 'game.match.hakiType.conqueror' },
+]
+
+// Every combination of the 3 haki types, as a localized joined label - the
+// roulette's decorative candidate pool for the 'hakiSet' slot. Mirrors the
+// backend's game.HakiSet (weights.go): 8 combinations including "none".
+function hakiSetCombos(t: (key: string) => string): string[] {
+  const labels = HAKI_TYPES.map((h) => t(h.i18nKey))
+  const combos: string[] = []
+  for (let mask = 0; mask < 8; mask++) {
+    const present = labels.filter((_, i) => (mask & (1 << i)) !== 0)
+    combos.push(present.length === 0 ? t('game.match.hakiType.none') : present.join(', '))
+  }
+  return combos
 }
 
 // One participant's carril: name plus a PowerRoulette for whichever slot the
@@ -115,6 +137,11 @@ function slotFor(
       candidates: fruitNames,
       finalLabel: loadout.devilFruit?.name ?? t('game.match.noFruit'),
     }
+  }
+  if (slotKind === 'hakiSet') {
+    const present = HAKI_TYPES.filter((h) => (loadout as unknown as Record<string, string>)[h.field] !== 'NONE')
+    const finalLabel = present.length === 0 ? t('game.match.hakiType.none') : present.map((h) => t(h.i18nKey)).join(', ')
+    return { candidates: hakiSetCombos(t), finalLabel }
   }
 
   const namespace = SCALAR_NAMESPACE[slotKind]
