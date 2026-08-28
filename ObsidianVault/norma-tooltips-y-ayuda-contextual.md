@@ -167,5 +167,43 @@ nodo vía un `ref` en el `YStack` y corrige antes del siguiente paint (sin parpa
 Nativo no se toca - sigue sin el `translateX(-50%)`/clamp (ancla sin corregir desde la esquina
 superior-izquierda, norma ya aceptada en el tercer pase de arriba).
 
+## Sexto pase (2026-08-28): la burbuja se quedaba flotando en pantalla tras hacer scroll
+
+El owner reportó que algunos tooltips se quedaban visibles en pantalla aunque el cursor ya no
+estuviera sobre el trigger, sobre todo al hacer scroll mientras uno estaba abierto.
+
+**Causa real**: ni `onHoverOut` (web) ni el timer de auto-ocultado (nativo) se disparan cuando el
+trigger se desplaza fuera de debajo de un puntero/dedo que no se ha movido - el scroll mueve el
+contenido, no el puntero, así que el navegador no manda `mouseleave` (scroll no genera eventos de
+ratón) y RN tampoco tiene ningún evento equivalente. Además `TooltipBubble` se posiciona con
+coordenadas de página capturadas en el momento del `show()` (`.measure()`'s `pageX`/`pageY`) que
+nunca se refrescan, así que aunque se hubiera ocultado, la burbuja habría quedado anclada a una
+posición obsoleta durante cualquier scroll.
+
+**Fix** (`useHoverTrigger` en `tooltip.tsx`): oculta la burbuja en cuanto detecta scroll mientras
+está visible.
+- Web: un listener de `scroll` en `window` con `capture: true` (el evento `scroll` no hace bubble,
+  pero un listener en fase de captura en `window` sí recibe el scroll de cualquier contenedor
+  anidado, sin tener que instrumentar cada `ScrollView`).
+- Nativo: no existe un evento de scroll global. Se creó `shared/lib/scroll-bus.ts`, un pub/sub
+  minúsculo (`subscribeScroll`/`notifyScroll`) - cada `ScrollView` real de la app
+  (`page-shell.tsx`, `glass-select.tsx`, y los tres `*-form-modal.tsx` de Stands/DevilFruits/Stages,
+  más `loadout-modal.tsx`) llama a `notifyScroll` en su prop `onScroll`
+  (`scrollEventThrottle={16}`), y `useHoverTrigger` se suscribe solo mientras `visible` es `true`.
+- Mismo `scroll-bus.ts` reaprovechado por el drop-zone registry del drag-to-move de §5
+  ([[game-lobby-todo]]) para re-medir la posición de cada `TeamColumn` cuando el scroll la mueve -
+  el mismo problema de "coordenadas de página capturadas una vez, nunca refrescadas" aplicaba ahí
+  también.
+
+Test añadido (`tooltip.test.tsx`): `notifyScroll()` tras un `longPress` debe ocultar la burbuja.
+
+**Verificado en vivo (2026-08-28, `local-up` + `claude-in-chrome`)**: en `/play/create` (pantalla con
+scroll real), hover sobre el `InfoHint` de "Escenarios" hasta que aparece la burbuja, luego scroll
+con la rueda sin mover el cursor - la burbuja vieja desaparece correctamente (antes se habría
+quedado flotando en su posición obsoleta). Nota: tras el scroll, si el cursor quedó físicamente
+sobre OTRO trigger (el contenido se movió debajo de un puntero que no se movió), ESE trigger abre
+su propia burbuja legítimamente - eso es comportamiento correcto del navegador, no el bug original
+(el bug era que la burbuja VIEJA se quedaba pegada; confirmado que ya no pasa).
+
 Related: [[a11y-web-leak]], [[frontend-responsive-frutiger-aero]], [[norma-diseno-ui-ux]],
-[[game-lobby-frontend]], [[zettelkasten-workflow]].
+[[game-lobby-frontend]], [[game-lobby-todo]], [[zettelkasten-workflow]].

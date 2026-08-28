@@ -386,6 +386,7 @@ export function LobbyRoomContainer() {
       onLeave={handleLeave}
       onAbort={handleAbort}
       onJoinTeam={(teamId) => commands.switchTeam(teamId)}
+      onMovePlayer={(participantId, teamId) => commands.movePlayer(participantId, teamId)}
       onKick={handleKick}
       onTransferHost={handleTransferHost}
       onToggleLock={() => commands.setLocked(!snapshot.locked)}

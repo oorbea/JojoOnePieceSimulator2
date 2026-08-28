@@ -13,6 +13,7 @@ import {
   type GlassSelectOption,
 } from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
+import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
@@ -97,7 +98,13 @@ export function StageFormModal({
             {mode === 'create' ? t('stages.newStage') : t('stages.editTitle')}
           </GlowText>
 
-          <ScrollView flex={1} minH={0} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            flex={1}
+            minH={0}
+            keyboardShouldPersistTaps="handled"
+            onScroll={notifyScroll}
+            scrollEventThrottle={16}
+          >
             <YStack gap="$4" pb="$2">
               <YStack items="center" gap="$2">
                 <YStack
