@@ -95,9 +95,11 @@ export type GameParticipant = {
   loadout?: GameLoadout
 }
 
-// Mirrors dto.GameRoundResponse. Not rendered by the lobby yet - carried
-// through so the socket store already has the shape ready for the
-// in-match tanda.
+// Mirrors dto.GameRoundResponse. votes/result render as the round-result
+// panel once the round resolves (see round-result-panel.tsx); tiedVotes is
+// the exception to "hidden while live" - it's revealed as soon as a tie
+// opens a revote (state TIEBREAK), so the panel can show what tied instead
+// of just a "tie - revote" label.
 export type GameRound = {
   index: number
   stage: GameStage
@@ -105,6 +107,7 @@ export type GameRound = {
   tiebreakUsed: boolean
   votedParticipantIds: string[]
   votes?: Record<string, string>
+  tiedVotes?: Record<string, string>
   result?: { winner: string; decidedByCoinFlip: boolean }
 }
 
@@ -135,8 +138,13 @@ export type GameSnapshot = {
   /** RFC3339, present only while VOTING/TIEBREAK with a pending window -
    * lets a (re)connecting client resume the vote countdown instead of
    * showing a dead bar (see dto.GameSnapshotResponse.VotingEndsAt). At most
-   * one of revealEndsAt/votingEndsAt is ever set. */
+   * one of revealEndsAt/votingEndsAt/resultEndsAt is ever set. */
   votingEndsAt?: string
+  /** RFC3339, present only while RESOLVING with a pending round-result
+   * display - lets a (re)connecting client resume that countdown instead
+   * of missing the panel entirely (see dto.GameSnapshotResponse.
+   * ResultEndsAt). */
+  resultEndsAt?: string
 }
 
 // Mirrors dto.GameViewerResponse.

@@ -28,7 +28,13 @@ endpoints, no migrations.
 - **State** — `game.Game` over `enums.GameState`
   (`LOBBY → ASSIGNING → VOTING → [TIEBREAK] → RESOLVING → ASSIGNING → ... → FINISHED`, with
   `ABORTED` reachable from anywhere). Every transition method validates the current state and
-  returns `ErrInvalidStateTransition` otherwise.
+  returns `ErrInvalidStateTransition` otherwise. **2026-08-28** (see
+  [[game-round-result-2026-08-28]]): `RESOLVING` used to be a same-call pass-through - `resolveRound`
+  set it and immediately moved on to `ASSIGNING`/`FINISHED` within the same method, so no client ever
+  actually observed it. Split into `resolveRound` (parks the Game in `RESOLVING`, `Round.Result` set)
+  + a new `(*Game) CompleteRound()` (the rest: `mode.ApplyRoundResult` → `FINISHED`/`ASSIGNING`) so
+  the application layer can hold the pause open long enough to show the round's outcome - the same
+  shape `AssignLoadouts`/`OpenVoting` already have relative to `GameService.scheduleRevealDelay`.
 - **Strategy** — `game.IGameMode`, implemented by `GauntletMode` and `VersusMode`. `Game` never
   branches on `enums.GameModeKind` itself; every mode-specific decision (ballot options, whether
   Loadouts reassign each round, which Stage backs a round, how a resolved round affects the game,
@@ -146,6 +152,9 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
 - Bot vote heuristic (`DefaultLoadoutEvaluator`) is a first-pass linear scoring function (stand
   stats E..A→1..5, INFINITE→6, plus ability levels plus a rarity bonus) — reasonable enough to
   exercise `IGameMode`/`Game` in tests, not tuned for actual game balance.
+- **Confirmed pending with the owner (2026-08-28)**: raised this exact concern with the owner, who
+  confirmed it's still open/unresolved — not dismissed, not scheduled, just genuinely pending a
+  decision on the weight tables. Re-raise it rather than assuming it got silently deprioritized.
 - **TODO, not yet discussed with the owner (2026-08-27)**: `DefaultLoadoutEvaluator.Score`
   (`loadout_evaluator.go:20-22`) sums `enums.SpinLevel`/`HamonLevel`/`FruitMastery`/`HakiLevel`/
   `PhysicalForm` as their **raw ordinal** (`int(l.Spin())`, etc), not a chosen weight per level.

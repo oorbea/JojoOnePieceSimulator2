@@ -338,6 +338,16 @@
       "loadout": {
         "viewA11y": "View {{name}}'s powers",
         "closeA11y": "Close power breakdown"
+      },
+      "result": {
+        "title": "Round {{index}} result",
+        "winner": "{{option}} wins",
+        "coinFlip": "Decided by a coin flip",
+        "tie": "Tied - revoting",
+        "votesA11y": "{{count}} vote(s) for {{option}}",
+        "skip": "Skip",
+        "skipA11y": "Skip the round result",
+        "noVotes": "Nobody voted in time"
       }
     },
     "vote": {

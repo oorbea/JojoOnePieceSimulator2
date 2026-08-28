@@ -338,6 +338,16 @@
       "loadout": {
         "viewA11y": "Veure els poders de {{name}}",
         "closeA11y": "Tancar el desglossament de poders"
+      },
+      "result": {
+        "title": "Resultat de la ronda {{index}}",
+        "winner": "Guanya {{option}}",
+        "coinFlip": "Decidit a cara o creu",
+        "tie": "Empat - revotació",
+        "votesA11y": "{{count}} vot(s) per {{option}}",
+        "skip": "Saltar",
+        "skipA11y": "Saltar el resultat de la ronda",
+        "noVotes": "Ningú ha votat a temps"
       }
     },
     "vote": {

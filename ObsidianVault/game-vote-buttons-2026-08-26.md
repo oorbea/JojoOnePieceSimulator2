@@ -117,6 +117,17 @@ load and passed clean in isolation/with `--maxWorkers=2` - see [[norma-verificac
 untouched. Both are next-session verification, not skipped by oversight - flagging explicitly per
 [[zettelkasten-workflow]].
 
+**Partially closed 2026-08-28 (`local-up` + `claude-in-chrome`, solo Gauntlet, no second account
+available)**: confirmed live, single-participant only - cast a vote on "Sobrevivimos", `0/1 han
+votado` incremented and the round resolved/advanced immediately (single connected human = 100%
+either way); the hotkey hint (`Teclas: 1-9 para votar, Esc para cerrar`) rendered; casting "Caemos"
+on a solo round correctly triggered `GAME_FINISHED` → toast "Esta partida ha terminado." → bounce to
+`/play`, matching the documented §6 gap below exactly (no result screen, just a toast). **Still not
+verified**: the actual two-browser scenario this note calls out (a second client's live vote count
+updating, a real tie forcing a revote, reconnect-mid-vote countdown resume) - no second login was
+available this session (Google OAuth only, no guest/dev-bypass auth found) - and the keyboard-only
+manual pass. Still open for a session with two real accounts.
+
 ## Deliberately still out of scope (§6, unblocked by this tanda but not built)
 
 - Round-resolved feedback (who won, was it a coin flip) - nothing renders `ROUND_RESOLVED` beyond

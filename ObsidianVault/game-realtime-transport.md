@@ -65,6 +65,12 @@ from the store, so a fresh `STATE` fetch would just race `ErrGameNotFound`.
 - In `GameStateResponse`, a round still voting exposes `votedParticipantIds` (who voted, not what)
   plus the caller's own `you.vote`; once `Result` is set the full `votes` map is revealed. Both
   derive from the new `Ballot.Votes()` getter (see [[game-lobby-persistence]]).
+- **Exception, added 2026-08-28** (see [[game-round-result-2026-08-28]]): `Round.TiedVotes` — the
+  ballot as it stood the instant a tie opened a revote, captured right before `Ballot.Reset()` wipes
+  it — is revealed via `GameRoundResponse.tiedVotes` **while the round is still live** (state
+  `TIEBREAK`, no `Result` yet). This is a deliberate owner call to show what tied before the revote
+  replaces it, not a change to the "hidden while live" rule for the *current* ballot - `VOTE_CAST`
+  itself stays exactly as anonymous as before.
 - **Loadouts stay fully public**, by contrast: in Gauntlet you're voting whether the squad survives
   a Stage, in Versus which team wins the round — judging either without seeing the powers in play
   is arbitrary, and the domain's own bot-voting (`Game.optionScores`) already assumes full

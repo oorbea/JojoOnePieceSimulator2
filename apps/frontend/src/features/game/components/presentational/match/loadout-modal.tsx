@@ -13,6 +13,7 @@ import { loadoutSlots } from '@/features/game/lib/match-rules'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
+import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import type { Manga } from '@/shared/lib/zod'
@@ -87,7 +88,7 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
             </GlossButton>
           </XStack>
 
-          <ScrollView flex={1} minH={0}>
+          <ScrollView flex={1} minH={0} onScroll={notifyScroll} scrollEventThrottle={16}>
             <YStack gap="$3" pb="$2" $md={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {hasStandSlot ? (
                 <YStack flex={1} minW={280} gap="$2">

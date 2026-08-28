@@ -7,7 +7,8 @@ import { SERVER_FRAME } from '@/features/game/types/game-ws.types'
 import type { GameResult, GameStateResponse } from '@/features/game/types/game.types'
 import { useSessionStore } from '@/shared/stores/session.store'
 
-export type SocketStatus = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'unavailable'
+export type SocketStatus =
+  'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'unavailable'
 
 export type TerminalInfo =
   | { kind: 'FINISHED'; result: GameResult }
@@ -46,6 +47,18 @@ export type LiveMatchState = {
    * fallback that covers that gap, e.g. right after a reconnect). */
   votesCast: number | null
   voters: number | null
+  /** Epoch ms deadline for the in-flight round-result display - adopted
+   * from a STATE frame's game.resultEndsAt (ROUND_RESOLVED itself carries
+   * no closesAt, so this always comes from the STATE that follows it, same
+   * as a reconnect mid-result). null once the display has ended (or hasn't
+   * started). */
+  resultEndsAt: number | null
+  /** True once the local viewer has clicked "skip" on the current round's
+   * result panel - reset on every VOTING_OPENED/TIEBREAK_OPENED/
+   * ROUND_RESOLVED so the next round's panel starts visible again. Purely
+   * a client-side convenience: the server keeps holding RESOLVING for its
+   * own full duration regardless. */
+  resultDismissed: boolean
 }
 
 const INITIAL_LIVE: LiveMatchState = {
@@ -59,6 +72,8 @@ const INITIAL_LIVE: LiveMatchState = {
   tiebreak: false,
   votesCast: null,
   voters: null,
+  resultEndsAt: null,
+  resultDismissed: false,
 }
 
 type SocketFactory = (url: string) => WebSocket
@@ -80,6 +95,7 @@ type GameSocketState = {
   retryNow: () => void
   reset: () => void
   markAssignmentRevealed: () => void
+  dismissResult: () => void
 }
 
 // Module-level (not zustand state, deliberately): a live WebSocket isn't
@@ -187,6 +203,16 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
                 live = { ...live, votingClosesAt }
               }
             }
+            // Same shape and reasoning again: ROUND_RESOLVED carries no
+            // closesAt of its own, so resultEndsAt always arrives via the
+            // STATE that follows it (or, for a reconnect mid-RESOLVING, the
+            // STATE that follows RESYNC).
+            if (live.resultEndsAt === null && payload.game.resultEndsAt) {
+              const resultEndsAt = Date.parse(payload.game.resultEndsAt) || null
+              if (resultEndsAt !== null) {
+                live = { ...live, resultEndsAt }
+              }
+            }
 
             return live === state.live ? { snapshot: payload } : { snapshot: payload, live }
           })
@@ -231,13 +257,21 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           // Ignored when it's for a round we're no longer voting on (a late
           // frame arriving after ROUND_RESOLVED already cleared
           // votingRoundIndex, or for a stale previous round).
-          const payload = frame.payload as { roundIndex?: number; votesCast?: number; voters?: number } | undefined
+          const payload = frame.payload as
+            { roundIndex?: number; votesCast?: number; voters?: number } | undefined
           set((state) => {
-            if (payload?.roundIndex === undefined || payload.roundIndex !== state.live.votingRoundIndex) {
+            if (
+              payload?.roundIndex === undefined ||
+              payload.roundIndex !== state.live.votingRoundIndex
+            ) {
               return {}
             }
             return {
-              live: { ...state.live, votesCast: payload.votesCast ?? null, voters: payload.voters ?? null },
+              live: {
+                ...state.live,
+                votesCast: payload.votesCast ?? null,
+                voters: payload.voters ?? null,
+              },
             }
           })
           break
@@ -276,6 +310,8 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               // bot's, which fires immediately) lands.
               votesCast: 0,
               voters: null,
+              resultEndsAt: null,
+              resultDismissed: false,
             },
           }))
           break
@@ -292,13 +328,26 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               revealEndsAt: null,
               votesCast: 0,
               voters: null,
+              resultEndsAt: null,
+              resultDismissed: false,
             },
           }))
           break
         }
         case SERVER_FRAME.ROUND_RESOLVED:
           set((state) => ({
-            live: { ...state.live, votingRoundIndex: null, votingClosesAt: null, votesCast: null, voters: null },
+            live: {
+              ...state.live,
+              votingRoundIndex: null,
+              votingClosesAt: null,
+              votesCast: null,
+              voters: null,
+              // resultEndsAt isn't in this payload (see LiveMatchState's
+              // doc) - reset to null so the STATE frame that follows adopts
+              // it fresh, same guard as revealEndsAt/votingClosesAt.
+              resultEndsAt: null,
+              resultDismissed: false,
+            },
           }))
           pushFeed(frame.type)
           break
@@ -321,7 +370,11 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
       }
       const attempt = get().reconnectAttempts
       const delay = reconnectDelay(attempt)
-      set({ status: 'reconnecting', reconnectAttempts: attempt + 1, nextRetryAt: Date.now() + delay })
+      set({
+        status: 'reconnecting',
+        reconnectAttempts: attempt + 1,
+        nextRetryAt: Date.now() + delay,
+      })
       reconnectTimer = setTimeout(() => {
         const id = get().gameId
         if (id) connect(id)
@@ -404,6 +457,10 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
 
     markAssignmentRevealed: () => {
       set((state) => ({ live: { ...state.live, revealedAssignmentSeq: state.live.assignmentSeq } }))
+    },
+
+    dismissResult: () => {
+      set((state) => ({ live: { ...state.live, resultDismissed: true } }))
     },
   }
 })

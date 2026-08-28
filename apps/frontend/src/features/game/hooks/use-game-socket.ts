@@ -21,6 +21,7 @@ export function useGameSocket(gameId: string | null) {
   const attach = useGameSocketStore((s) => s.attach)
   const detach = useGameSocketStore((s) => s.detach)
   const markAssignmentRevealed = useGameSocketStore((s) => s.markAssignmentRevealed)
+  const dismissResult = useGameSocketStore((s) => s.dismissResult)
 
   useEffect(() => {
     if (!gameId) return
@@ -48,5 +49,6 @@ export function useGameSocket(gameId: string | null) {
     send,
     retryNow,
     markAssignmentRevealed,
+    dismissResult,
   }
 }

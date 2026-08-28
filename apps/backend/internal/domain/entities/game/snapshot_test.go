@@ -111,6 +111,9 @@ func buildMidMatchVersusGame(t *testing.T) *game.Game {
 	if tied, err := g.CloseVoting(); err != nil || tied {
 		t.Fatalf("CloseVoting (round 0): tied=%v err=%v", tied, err)
 	}
+	if err := g.CompleteRound(); err != nil {
+		t.Fatalf("CompleteRound (round 0): %v", err)
+	}
 
 	// Round 1: assign again (Versus reassigns each round), tie the vote so
 	// TiebreakUsed flips and the round is left genuinely mid-vote.
@@ -226,6 +229,14 @@ func TestSnapshotRestoreRoundTrip(t *testing.T) {
 		for pid, opt := range wantVotes {
 			if gotVotes[pid] != opt {
 				t.Errorf("round %d vote for %s mismatch: got %s want %s", i, pid, gotVotes[pid], opt)
+			}
+		}
+		if len(wr.TiedVotes) != len(gr.TiedVotes) {
+			t.Fatalf("round %d TiedVotes count mismatch: got %d want %d", i, len(gr.TiedVotes), len(wr.TiedVotes))
+		}
+		for pid, opt := range wr.TiedVotes {
+			if gr.TiedVotes[pid] != opt {
+				t.Errorf("round %d tied vote for %s mismatch: got %s want %s", i, pid, gr.TiedVotes[pid], opt)
 			}
 		}
 	}
