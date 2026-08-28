@@ -195,10 +195,21 @@ tiles now Tab-reachable, `1`-`9`/`S` hotkeys). Verified: backend `go test` green
 `claude-in-chrome` walkthrough and a real keyboard-only manual pass, both flagged as next-session
 follow-up rather than skipped silently.
 
-**Still open, separate future tanda(s)**:
-- Round-resolved feedback (who won, was it a coin flip — nothing renders `ROUND_RESOLVED` beyond
-  clearing the countdown) and the final result screen (`GAME_FINISHED` still just toasts and bounces
-  to `/play`).
+**Round-resolved feedback (vote tally + winner) — DONE (2026-08-28)**, see
+[[game-round-result-2026-08-28]] for the full writeup: `RESOLVING` used to be a same-call pass-through
+(`resolveRound` immediately advanced to ASSIGNING/FINISHED) - split into `resolveRound` (parks the
+Game) + a new `Game.CompleteRound()`, held apart by `GameService.scheduleResultDelay`
+(`game.ResultDuration`, 6s fixed) mirroring `scheduleRevealDelay`'s pattern exactly, plus a new
+`resultEndsAt` deadline (same shape as `revealEndsAt`/`votingEndsAt`). A tie's vote breakdown, which
+used to be wiped by `Ballot.Reset()` with nothing kept, is now preserved on `Round.TiedVotes` and
+revealed in `GameRoundResponse.tiedVotes` even while the round is still live - the owner's explicit
+call, and the one deliberate exception to "votes hidden until resolved" (see
+[[game-realtime-transport]]). Frontend: `VoteBar` is replaced inline by a new `RoundResultPanel` (per-
+option bars + voter avatars, reusing `voteOptions`' label/tone mapping via a new `voteTally`) during
+`RESOLVING` and, as a second variant, above the revote's own `VoteBar` during `TIEBREAK`; a local-only
+`dismissResult()`/`resultDismissed` in the socket store drives the "skip" button - the server alone
+decides when RESOLVING actually ends, skip only hides the panel client-side. Still out of scope: the
+final result screen (`GAME_FINISHED` still just toasts and bounces to `/play`).
 - `LoadoutModal`'s open state isn't wired into the new hotkey `blocked` guard yet (lives inside
   `MatchRoster`, not the container) — small, documented gap, see [[norma-teclado.md]].
 - No automated test for `use-roving-group.ts`'s web-only keyboard branch — `hooks/__tests__` always
