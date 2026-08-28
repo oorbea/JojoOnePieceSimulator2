@@ -13,6 +13,7 @@ import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { SkillsField } from '@/shared/components/presentational/skills-field'
+import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { DEFAULT_LOCALE } from '@/shared/i18n'
@@ -112,7 +113,13 @@ export function StandFormModal({
             {mode === 'create' ? t('stands.newStand') : t('stands.editTitle')}
           </GlowText>
 
-          <ScrollView flex={1} minH={0} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            flex={1}
+            minH={0}
+            keyboardShouldPersistTaps="handled"
+            onScroll={notifyScroll}
+            scrollEventThrottle={16}
+          >
             <YStack gap="$4" pb="$2">
               <YStack items="center" gap="$2">
                 <YStack

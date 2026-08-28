@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScrollView, XStack, YStack } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
+import { notifyScroll } from '@/shared/lib/scroll-bus'
 
 import { GlassField } from './glass-field'
 import { GlowText } from './glow-text'
@@ -163,7 +164,7 @@ export function GlassSelect({
               />
             ) : null}
 
-            <ScrollView>
+            <ScrollView onScroll={notifyScroll} scrollEventThrottle={16}>
               <YStack gap="$1.5">
                 {clearable ? (
                   <YStack

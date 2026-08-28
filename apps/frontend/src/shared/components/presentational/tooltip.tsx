@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Dimensions, Modal, type LayoutChangeEvent } from 'react-native'
 import { createPortal } from 'react-dom'
 import { YStack } from 'tamagui'
 
 import { clampOverlayPosition } from '@/shared/lib/overlay-position'
+import { subscribeScroll } from '@/shared/lib/scroll-bus'
 import { isWeb } from '@/shared/lib/web-blur'
 
 import { GlassPanel } from './glass-panel'
@@ -91,6 +92,23 @@ export function useHoverTrigger(opts?: HoverTriggerOptions) {
       show()
     }
   }, [delayMs, show])
+
+  // Neither platform's hover/focus events fire when the trigger scrolls out
+  // from under a stationary pointer/finger, so without this the bubble is
+  // left stuck floating on screen, anchored to wherever the trigger used to
+  // be, until some unrelated hover/focus change happens to clear it. Web has
+  // a real global scroll signal (`capture: true` catches scrolling on any
+  // nested container, since `scroll` doesn't bubble); native scrollables
+  // have no such thing, so they opt in individually via `notifyScroll`
+  // (`scroll-bus.ts`) - this only needs to subscribe while actually visible.
+  useEffect(() => {
+    if (!visible) return
+    if (isWeb) {
+      window.addEventListener('scroll', hide, { capture: true, passive: true })
+      return () => window.removeEventListener('scroll', hide, { capture: true })
+    }
+    return subscribeScroll(hide)
+  }, [visible, hide])
 
   const triggerProps = isWeb
     ? {

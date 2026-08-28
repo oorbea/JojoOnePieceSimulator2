@@ -12,6 +12,7 @@ import { MatchScreen } from '@/features/game/components/presentational/match/mat
 import { SquadRoster } from '@/features/game/components/presentational/squad-roster'
 import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
+import { useDropZones } from '@/features/game/hooks/use-drop-zones'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
 import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
@@ -44,6 +45,10 @@ type Props = {
   onLeave: () => void
   onAbort: () => void
   onJoinTeam: (teamId: string) => void
+  /** Host-only: drag-to-move another participant onto a different team's
+   * column (see game-lobby-todo.md §5). `onJoinTeam` stays the self-move
+   * path (tap AND drag, both resolve to the same switchTeam command). */
+  onMovePlayer: (participantId: string, teamId: string) => void
   onKick: (participantId: string) => void
   onTransferHost: (participantId: string) => void
   onToggleLock: () => void
@@ -101,6 +106,7 @@ export function LobbyRoomScreen({
   onLeave,
   onAbort,
   onJoinTeam,
+  onMovePlayer,
   onKick,
   onTransferHost,
   onToggleLock,
@@ -148,6 +154,7 @@ export function LobbyRoomScreen({
   const { t } = useTranslation()
   const capacity = snapshot.config.teamSize
   const [configExpanded, setConfigExpanded] = useState(false)
+  const dropZones = useDropZones()
 
   return (
     <PageShell align="top" scroll maxWidth={1080}>
@@ -193,6 +200,14 @@ export function LobbyRoomScreen({
                   onJoin={() => onJoinTeam(team.id)}
                   onKick={onKick}
                   onTransferHost={onTransferHost}
+                  zoneRef={dropZones.registerZone(team.id)}
+                  onZoneLayout={dropZones.onZoneLayout(team.id)}
+                  onDragEndAt={(participantId, { pageX, pageY }) => {
+                    const targetTeamId = dropZones.resolveZone(pageX, pageY)
+                    if (!targetTeamId || targetTeamId === team.id) return
+                    if (participantId === you.participantId) onJoinTeam(targetTeamId)
+                    else onMovePlayer(participantId, targetTeamId)
+                  }}
                 />
               ))}
             </YStack>

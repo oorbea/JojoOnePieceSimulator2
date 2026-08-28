@@ -146,6 +146,9 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
 - Bot vote heuristic (`DefaultLoadoutEvaluator`) is a first-pass linear scoring function (stand
   stats E..A→1..5, INFINITE→6, plus ability levels plus a rarity bonus) — reasonable enough to
   exercise `IGameMode`/`Game` in tests, not tuned for actual game balance.
+- **Confirmed pending with the owner (2026-08-28)**: raised this exact concern with the owner, who
+  confirmed it's still open/unresolved — not dismissed, not scheduled, just genuinely pending a
+  decision on the weight tables. Re-raise it rather than assuming it got silently deprioritized.
 - **TODO, not yet discussed with the owner (2026-08-27)**: `DefaultLoadoutEvaluator.Score`
   (`loadout_evaluator.go:20-22`) sums `enums.SpinLevel`/`HamonLevel`/`FruitMastery`/`HakiLevel`/
   `PhysicalForm` as their **raw ordinal** (`int(l.Spin())`, etc), not a chosen weight per level.
