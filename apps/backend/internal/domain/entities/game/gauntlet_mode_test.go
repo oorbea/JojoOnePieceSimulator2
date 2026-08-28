@@ -17,6 +17,9 @@ func TestGauntletMode_FallMajorityEndsInDefeat(t *testing.T) {
 	if tied, err := g.CloseVoting(); err != nil || tied {
 		t.Fatalf("CloseVoting: tied=%v err=%v", tied, err)
 	}
+	if err := g.CompleteRound(); err != nil {
+		t.Fatalf("CompleteRound: %v", err)
+	}
 	if g.State() != enums.Finished {
 		t.Fatalf("expected FINISHED after a FALL majority, got %v", g.State())
 	}
@@ -42,6 +45,9 @@ func TestGauntletMode_SurviveMajorityAdvances(t *testing.T) {
 	if tied, err := g.CloseVoting(); err != nil || tied {
 		t.Fatalf("CloseVoting: tied=%v err=%v", tied, err)
 	}
+	if err := g.CompleteRound(); err != nil {
+		t.Fatalf("CompleteRound: %v", err)
+	}
 	if g.State() != enums.Assigning {
 		t.Fatalf("expected ASSIGNING for the next round, got %v", g.State())
 	}
@@ -59,6 +65,9 @@ func TestGauntletMode_ClearingEveryStageIsVictory(t *testing.T) {
 	}
 	if _, err := g.CloseVoting(); err != nil {
 		t.Fatalf("CloseVoting: %v", err)
+	}
+	if err := g.CompleteRound(); err != nil {
+		t.Fatalf("CompleteRound: %v", err)
 	}
 	if g.State() != enums.Finished {
 		t.Fatalf("expected FINISHED once the only stage is cleared, got %v", g.State())

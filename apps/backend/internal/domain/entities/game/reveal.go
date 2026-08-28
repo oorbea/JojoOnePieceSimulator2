@@ -118,3 +118,9 @@ func RevealDuration(mangas []enums.Manga) time.Duration {
 	}
 	return time.Duration(total) * time.Millisecond
 }
+
+// ResultDuration is how long GameService holds a Game in RESOLVING before
+// advancing it (see Game.CompleteRound) - long enough for clients to read
+// the round's outcome (winner, vote breakdown, coin flip) inline where the
+// ballot used to be. Fixed, not host-configurable, same as the reveal.
+const ResultDuration = 6 * time.Second
