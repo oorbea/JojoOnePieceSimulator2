@@ -63,6 +63,105 @@ func buildLoadoutTestGame(t *testing.T) (*game.Game, *powers.Stand) {
 	return g, stand
 }
 
+// zeroRandom is the simplest game.RandomSource: always picks index 0. Good
+// enough for OpenVoting's stage pick and LoadoutBuilder's draws in tests
+// that don't care which stage/power comes out, only that voting opens.
+type zeroRandom struct{}
+
+func (zeroRandom) IntN(int) int { return 0 }
+
+// buildTiedRoundGame builds a 2-player Gauntlet game with an open round
+// tied 1-1 (host SURVIVE, second player FALL), for
+// TestNewGameStateResponse_TiedVotes below.
+func buildTiedRoundGame(t *testing.T) (*game.Game, *game.Participant) {
+	t.Helper()
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{})
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	host, err := game.NewHumanParticipant(game.ParticipantID{1}, user.UserID{1}, "host", game.TeamID{10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant host: %v", err)
+	}
+	second, err := game.NewHumanParticipant(game.ParticipantID{2}, user.UserID{2}, "second", game.TeamID{10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant second: %v", err)
+	}
+	team, err := game.NewTeam(game.TeamID{10}, "Squad", 0)
+	if err != nil {
+		t.Fatalf("NewTeam: %v", err)
+	}
+	stage, err := game.NewStage(game.StageID{1}, enums.Jojo, 0, "Phantom Blood", "a test stage", "")
+	if err != nil {
+		t.Fatalf("NewStage: %v", err)
+	}
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{team}, []game.Stage{stage})
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	if err := g.Join(second); err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+	if err := g.Start(g.HostID()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	pools := map[game.TeamID]*game.AvailablePowers{team.ID(): game.NewAvailablePowers(nil, nil)}
+	builder := game.NewLoadoutBuilder(cfg.PowerMangas(), game.DefaultAssignmentWeights(), zeroRandom{})
+	if err := g.AssignLoadouts(builder, pools); err != nil {
+		t.Fatalf("AssignLoadouts: %v", err)
+	}
+	if err := g.OpenVoting(zeroRandom{}); err != nil {
+		t.Fatalf("OpenVoting: %v", err)
+	}
+	if err := g.CastVote(host.ID(), "SURVIVE"); err != nil {
+		t.Fatalf("CastVote host: %v", err)
+	}
+	if err := g.CastVote(second.ID(), "FALL"); err != nil {
+		t.Fatalf("CastVote second: %v", err)
+	}
+	if tied, err := g.CloseVoting(); err != nil || !tied {
+		t.Fatalf("CloseVoting: tied=%v err=%v", tied, err)
+	}
+	return g, host
+}
+
+// TestNewGameStateResponse_TiedVotes guards the owner's explicit call
+// (2026-08-28): once a tie opens a revote, the tied round's TiedVotes is
+// revealed in the response even though the round hasn't resolved (no
+// Result yet) - unlike Votes, which stays hidden until Result is set.
+func TestNewGameStateResponse_TiedVotes(t *testing.T) {
+	g, host := buildTiedRoundGame(t)
+	noFruitText := func(_ context.Context, _ powers.PowerID) (ports.PowerContent, error) {
+		return ports.PowerContent{}, nil
+	}
+
+	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
+		noPictures, noPictures, noPictures, noPictures,
+		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
+	if err != nil {
+		t.Fatalf("NewGameStateResponse: %v", err)
+	}
+
+	round := resp.Game.Rounds[len(resp.Game.Rounds)-1]
+	if round.Result != nil {
+		t.Fatalf("Result = %+v, want nil while still TIEBREAK", round.Result)
+	}
+	if len(round.TiedVotes) != 2 {
+		t.Fatalf("TiedVotes = %+v, want the 2 votes that tied", round.TiedVotes)
+	}
+	if round.TiedVotes[host.ID().String()] != "SURVIVE" {
+		t.Errorf("TiedVotes[host] = %q, want SURVIVE", round.TiedVotes[host.ID().String()])
+	}
+
+	raw, err := json.Marshal(resp.Game)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if !strings.Contains(string(raw), "tiedVotes") {
+		t.Fatalf("expected tiedVotes in the marshaled response: %s", raw)
+	}
+}
+
 func noPictures(_ context.Context, key string) (string, error) { return key, nil }
 
 func noStageText(_ context.Context, _ game.StageID) (string, error) { return "", nil }
@@ -288,5 +387,23 @@ func TestNewGameStateResponse_Deadlines(t *testing.T) {
 	}
 	if !strings.Contains(string(raw), "votingEndsAt") {
 		t.Fatalf("expected votingEndsAt in the marshaled response: %s", raw)
+	}
+
+	resultEndsAt := time.Date(2026, 1, 1, 12, 0, 6, 0, time.UTC)
+	resultResp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
+		noPictures, noPictures, noPictures, noPictures,
+		noStageText, noFruitText, noFruitText,
+		dto.GameStateDeadlines{ResultEndsAt: &resultEndsAt})
+	if err != nil {
+		t.Fatalf("NewGameStateResponse (ResultEndsAt): %v", err)
+	}
+	if resultResp.Game.RevealEndsAt != nil || resultResp.Game.VotingEndsAt != nil {
+		t.Errorf("RevealEndsAt/VotingEndsAt should stay nil when only ResultEndsAt was set")
+	}
+	if resultResp.Game.ResultEndsAt == nil || *resultResp.Game.ResultEndsAt != resultEndsAt.Format(time.RFC3339) {
+		t.Errorf("ResultEndsAt = %v, want %v", resultResp.Game.ResultEndsAt, resultEndsAt.Format(time.RFC3339))
+	}
+	if strings.Contains(string(emptyRaw), "resultEndsAt") {
+		t.Fatalf("zero-value GameStateDeadlines marshaled resultEndsAt: %s", emptyRaw)
 	}
 }

@@ -477,6 +477,17 @@ func advanceReveal(deps *gameTestDeps, mangas []enums.Manga) {
 	deps.clock.Advance(game.RevealDuration(mangas))
 }
 
+// advanceResult fires the result-display timer scheduleResultDelay starts
+// once a round resolves (a clear winner, or a tiebreak winner) - by
+// advancing deps.clock past game.ResultDuration. Until this timer fires the
+// Game sits in RESOLVING, not ASSIGNING/FINISHED/VOTING, so any test that
+// needs to observe the round's aftermath (next round opening, or the match
+// finishing) must call this (then re-fetch via GetGame, same caveat as
+// advanceReveal).
+func advanceResult(deps *gameTestDeps) {
+	deps.clock.Advance(game.ResultDuration)
+}
+
 // --- creation / membership ---
 
 func TestCreateGame_Gauntlet_Success(t *testing.T) {
@@ -869,6 +880,10 @@ func TestGauntlet_FallMajority_FinishesAndFinalizes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CastVote: %v", err)
 	}
+	// The clear FALL majority leaves the Game in RESOLVING (see
+	// GameService.scheduleResultDelay) until the result display's own
+	// timer elapses - only then does CompleteRound advance it to FINISHED.
+	advanceResult(deps)
 	if g.State() != enums.Finished {
 		t.Fatalf("state = %v, want FINISHED", g.State())
 	}
@@ -910,6 +925,10 @@ func TestGauntlet_ClearAllStages_Victory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CastVote round 1: %v", err)
 	}
+	// Gauntlet never reassigns after round 1 (ReassignsEachRound is false),
+	// so once the result display elapses, round 2's voting opens
+	// immediately - no reveal delay in between.
+	advanceResult(deps)
 	if g.State() != enums.Voting {
 		t.Fatalf("state after round 1 = %v, want VOTING", g.State())
 	}
@@ -918,6 +937,7 @@ func TestGauntlet_ClearAllStages_Victory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CastVote round 2: %v", err)
 	}
+	advanceResult(deps)
 	if g.State() != enums.Finished {
 		t.Fatalf("state after round 2 = %v, want FINISHED", g.State())
 	}
@@ -970,6 +990,9 @@ func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
 		if err != nil {
 			t.Fatalf("round %d joiner vote: %v", round, err)
 		}
+		// The unanimous vote leaves the Game in RESOLVING until the result
+		// display's own timer elapses (see scheduleResultDelay).
+		advanceResult(deps)
 		// Versus reassigns Loadouts every round (see VersusMode.
 		// ReassignsEachRound), so every round but the last one just
 		// resolved schedules its own reveal delay before voting reopens.
@@ -1069,9 +1092,12 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("joiner vote 2: %v", err)
 	}
-	// The revote just resolved via the tiebreaker, moving Versus into round
-	// 2 - which reassigns Loadouts and so schedules its own reveal delay
-	// before voting reopens (see VersusMode.ReassignsEachRound).
+	// The revote just resolved via the tiebreaker, leaving the Game in
+	// RESOLVING until the result display's own timer elapses.
+	advanceResult(deps)
+	// That advances Versus into round 2 - which reassigns Loadouts and so
+	// schedules its own reveal delay before voting reopens (see
+	// VersusMode.ReassignsEachRound).
 	advanceReveal(deps, versusInput(1).PowerMangas)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
@@ -1246,9 +1272,12 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 	}
 	wg.Wait()
 
-	// A unanimous vote resolves round 1 immediately, moving Versus into
-	// round 2 - which reassigns Loadouts and so schedules its own reveal
-	// delay before voting reopens (see VersusMode.ReassignsEachRound).
+	// A unanimous vote resolves round 1, leaving the Game in RESOLVING
+	// until the result display's own timer elapses.
+	advanceResult(deps)
+	// That moves Versus into round 2 - which reassigns Loadouts and so
+	// schedules its own reveal delay before voting reopens (see
+	// VersusMode.ReassignsEachRound).
 	advanceReveal(deps, versusInput(2).PowerMangas)
 
 	final, err := svc.GetGame(context.Background(), g.ID())

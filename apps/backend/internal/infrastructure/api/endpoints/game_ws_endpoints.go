@@ -503,6 +503,9 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 	if t, ok := e.svc.VotingEndsAt(g.ID()); ok {
 		deadlines.VotingEndsAt = &t
 	}
+	if t, ok := e.svc.ResultEndsAt(g.ID()); ok {
+		deadlines.ResultEndsAt = &t
+	}
 	resp, err := dto.NewGameStateResponse(ctx, g, code, self,
 		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
 		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), deadlines)

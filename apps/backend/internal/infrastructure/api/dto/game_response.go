@@ -143,6 +143,10 @@ type GameRoundResultResponse struct {
 // Votes is populated so a client resyncing after a round closed can still
 // render who voted for what. This matches VOTE_CAST's transport framing
 // (game_ws.go), which is anonymized the same way while a round is live.
+// TiedVotes is the exception to "hidden while live": it is populated as
+// soon as a tie opens a revote (state TIEBREAK), revealing what tied before
+// the revote replaces it - an explicit owner call (2026-08-28) to let
+// clients render the tied breakdown, not just a "tie - revote" label.
 type GameRoundResponse struct {
 	Index               int                      `json:"index"`
 	Stage               GameStageResponse        `json:"stage"`
@@ -150,6 +154,7 @@ type GameRoundResponse struct {
 	TiebreakUsed        bool                     `json:"tiebreakUsed"`
 	VotedParticipantIDs []string                 `json:"votedParticipantIds"`
 	Votes               map[string]string        `json:"votes,omitempty"`
+	TiedVotes           map[string]string        `json:"tiedVotes,omitempty"`
 	Result              *GameRoundResultResponse `json:"result,omitempty"`
 }
 
@@ -183,6 +188,9 @@ type GameSnapshotResponse struct {
 	// needs, since the VOTING_OPENED/TIEBREAK_OPENED frames that carry
 	// closesAt are one-shot and long gone by then.
 	VotingEndsAt *string `json:"votingEndsAt,omitempty"`
+	// ResultEndsAt is set (RFC3339) only while the game is RESOLVING with a
+	// pending result display - see GameService.ResultEndsAt.
+	ResultEndsAt *string `json:"resultEndsAt,omitempty"`
 }
 
 // GameViewerResponse is the cheap, per-viewer convenience block - everything
@@ -206,9 +214,9 @@ type GameStateResponse struct {
 // GameStateDeadlines carries the in-process wall-clock deadlines GameService
 // keeps for a Game, so a (re)connecting client resumes a countdown instead
 // of restarting it. Each is nil unless that phase is actually in flight,
-// and at most one is ever set (the reveal and voting timers never coexist
-// for the same GameID - see GameService's timers field doc). Grouped in a
-// struct rather than passed as two adjacent *time.Time parameters: two
+// and at most one is ever set (the reveal, voting, and result timers never
+// coexist for the same GameID - see GameService's timers field doc).
+// Grouped in a struct rather than passed as adjacent *time.Time parameters:
 // same-typed pointers in a positional call are silently swappable, and the
 // swap would still compile and still produce a plausible response.
 type GameStateDeadlines struct {
@@ -218,6 +226,9 @@ type GameStateDeadlines struct {
 	// VotingEndsAt is set only while the Game is VOTING/TIEBREAK with a
 	// pending window - see GameService.VotingEndsAt.
 	VotingEndsAt *time.Time
+	// ResultEndsAt is set only while the Game is RESOLVING with a pending
+	// result display - see GameService.ResultEndsAt.
+	ResultEndsAt *time.Time
 }
 
 // NewGameStateResponse builds a GameStateResponse for self's point of view.
@@ -305,6 +316,12 @@ func NewGameStateResponse(
 			Options:      options,
 			TiebreakUsed: r.TiebreakUsed,
 		}
+		if r.TiedVotes != nil {
+			rr.TiedVotes = make(map[string]string, len(r.TiedVotes))
+			for pid, opt := range r.TiedVotes {
+				rr.TiedVotes[pid.String()] = string(opt)
+			}
+		}
 		votes := r.Ballot.Votes()
 		if r.Result != nil {
 			// Round resolved: votes are no longer secret.
@@ -343,7 +360,7 @@ func NewGameStateResponse(
 		}
 	}
 
-	var revealEndsAtStr, votingEndsAtStr *string
+	var revealEndsAtStr, votingEndsAtStr, resultEndsAtStr *string
 	if deadlines.RevealEndsAt != nil {
 		s := deadlines.RevealEndsAt.Format(time.RFC3339)
 		revealEndsAtStr = &s
@@ -351,6 +368,10 @@ func NewGameStateResponse(
 	if deadlines.VotingEndsAt != nil {
 		s := deadlines.VotingEndsAt.Format(time.RFC3339)
 		votingEndsAtStr = &s
+	}
+	if deadlines.ResultEndsAt != nil {
+		s := deadlines.ResultEndsAt.Format(time.RFC3339)
+		resultEndsAtStr = &s
 	}
 
 	return GameStateResponse{
@@ -377,6 +398,7 @@ func NewGameStateResponse(
 			Result:       result,
 			RevealEndsAt: revealEndsAtStr,
 			VotingEndsAt: votingEndsAtStr,
+			ResultEndsAt: resultEndsAtStr,
 		},
 		You: viewer,
 	}, nil

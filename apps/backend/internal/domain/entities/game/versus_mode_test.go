@@ -57,6 +57,9 @@ func TestVersusMode_PlaysExactlyThreeRoundsAndTracksWins(t *testing.T) {
 		if tied, err := g.CloseVoting(); err != nil || tied {
 			t.Fatalf("round %d CloseVoting: tied=%v err=%v", i, tied, err)
 		}
+		if err := g.CompleteRound(); err != nil {
+			t.Fatalf("round %d CompleteRound: %v", i, err)
+		}
 	}
 
 	if g.State() != enums.Finished {
