@@ -28,7 +28,13 @@ endpoints, no migrations.
 - **State** — `game.Game` over `enums.GameState`
   (`LOBBY → ASSIGNING → VOTING → [TIEBREAK] → RESOLVING → ASSIGNING → ... → FINISHED`, with
   `ABORTED` reachable from anywhere). Every transition method validates the current state and
-  returns `ErrInvalidStateTransition` otherwise.
+  returns `ErrInvalidStateTransition` otherwise. **2026-08-28** (see
+  [[game-round-result-2026-08-28]]): `RESOLVING` used to be a same-call pass-through - `resolveRound`
+  set it and immediately moved on to `ASSIGNING`/`FINISHED` within the same method, so no client ever
+  actually observed it. Split into `resolveRound` (parks the Game in `RESOLVING`, `Round.Result` set)
+  + a new `(*Game) CompleteRound()` (the rest: `mode.ApplyRoundResult` → `FINISHED`/`ASSIGNING`) so
+  the application layer can hold the pause open long enough to show the round's outcome - the same
+  shape `AssignLoadouts`/`OpenVoting` already have relative to `GameService.scheduleRevealDelay`.
 - **Strategy** — `game.IGameMode`, implemented by `GauntletMode` and `VersusMode`. `Game` never
   branches on `enums.GameModeKind` itself; every mode-specific decision (ballot options, whether
   Loadouts reassign each round, which Stage backs a round, how a resolved round affects the game,
