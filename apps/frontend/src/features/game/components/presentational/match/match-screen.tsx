@@ -3,6 +3,7 @@ import { XStack } from 'tamagui'
 
 import { MatchRoster } from '@/features/game/components/presentational/match/match-roster'
 import { RevealStage } from '@/features/game/components/presentational/match/reveal-stage'
+import { RoundResultPanel } from '@/features/game/components/presentational/match/round-result-panel'
 import { StageBanner } from '@/features/game/components/presentational/match/stage-banner'
 import { VoteBar } from '@/features/game/components/presentational/match/vote-bar'
 import { VotingStatusBar } from '@/features/game/components/presentational/match/voting-status-bar'
@@ -31,6 +32,7 @@ type Props = {
   reducedMotion: boolean
   onAbort: () => void
   onVote: (optionId: string) => void
+  onSkipResult: () => void
 }
 
 // Renders once the lobby has moved past LOBBY. While isRevealing, the
@@ -52,6 +54,7 @@ export function MatchScreen({
   reducedMotion,
   onAbort,
   onVote,
+  onSkipResult,
 }: Props) {
   const { t } = useTranslation()
   const round = currentRound(snapshot)
@@ -59,6 +62,9 @@ export function MatchScreen({
   const now = useNow(1000, votingOpen && live.votingClosesAt !== null)
   const options = votingOpen ? voteOptions(snapshot, you) : []
   const progress = voteProgress(snapshot, live)
+  const showResolvedPanel =
+    snapshot.state === 'RESOLVING' && !!round?.result && !live.resultDismissed
+  const showTiedPanel = snapshot.state === 'TIEBREAK' && !!round?.tiedVotes && !live.resultDismissed
 
   return (
     <>
@@ -106,7 +112,25 @@ export function MatchScreen({
 
           <MatchRoster snapshot={snapshot} selfId={you.participantId} />
 
-          {votingOpen ? (
+          {showTiedPanel && round ? (
+            <RoundResultPanel
+              snapshot={snapshot}
+              you={you}
+              round={round}
+              variant="tie"
+              onSkip={onSkipResult}
+            />
+          ) : null}
+
+          {showResolvedPanel && round ? (
+            <RoundResultPanel
+              snapshot={snapshot}
+              you={you}
+              round={round}
+              variant="result"
+              onSkip={onSkipResult}
+            />
+          ) : votingOpen ? (
             <VoteBar
               options={options}
               selectedOptionId={you.vote ?? null}

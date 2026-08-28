@@ -1,5 +1,10 @@
-import { voteOptions } from '@/features/game/lib/vote-options'
-import type { GameRound, GameSnapshot, GameTeam, GameViewer } from '@/features/game/types/game.types'
+import { voteOptions, voteTally } from '@/features/game/lib/vote-options'
+import type {
+  GameRound,
+  GameSnapshot,
+  GameTeam,
+  GameViewer,
+} from '@/features/game/types/game.types'
 
 function snapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
   return {
@@ -91,6 +96,70 @@ describe('voteOptions', () => {
       rounds: [round({ options: ['team-a', 'missing-team'] })],
     })
     const options = voteOptions(snap, viewer({ teamId: 'team-a' }))
-    expect(options[1]).toEqual({ id: 'missing-team', label: 'missing-team', tone: 'glass', isOwnTeam: false })
+    expect(options[1]).toEqual({
+      id: 'missing-team',
+      label: 'missing-team',
+      tone: 'glass',
+      isOwnTeam: false,
+    })
+  })
+})
+
+describe('voteTally', () => {
+  it('Gauntlet: counts votes per option and lists their voter ids, in option order', () => {
+    const snap = snapshot({ mode: 'GAUNTLET', rounds: [round()] })
+    const { entries, maxCount } = voteTally(snap, viewer(), {
+      p1: 'SURVIVE',
+      p2: 'SURVIVE',
+      p3: 'FALL',
+    })
+    expect(entries).toEqual([
+      {
+        id: 'SURVIVE',
+        labelKey: 'game.vote.gauntlet.SURVIVE',
+        tone: 'green',
+        isOwnTeam: false,
+        count: 2,
+        voterIds: ['p1', 'p2'],
+      },
+      {
+        id: 'FALL',
+        labelKey: 'game.vote.gauntlet.FALL',
+        tone: 'red',
+        isOwnTeam: false,
+        count: 1,
+        voterIds: ['p3'],
+      },
+    ])
+    expect(maxCount).toBe(2)
+  })
+
+  it('Versus: tallies raw team-id votes the same way voteOptions maps them', () => {
+    const teamA = team({ id: 'team-a', name: 'Straw Hats' })
+    const teamB = team({ id: 'team-b', name: 'Baroque Works' })
+    const snap = snapshot({
+      mode: 'VERSUS',
+      teams: [teamA, teamB],
+      rounds: [round({ options: ['team-a', 'team-b'] })],
+    })
+    const { entries } = voteTally(snap, viewer({ teamId: 'team-a' }), { p1: 'team-b' })
+    expect(entries).toEqual([
+      { id: 'team-a', label: 'Straw Hats', tone: 'blue', isOwnTeam: true, count: 0, voterIds: [] },
+      {
+        id: 'team-b',
+        label: 'Baroque Works',
+        tone: 'red',
+        isOwnTeam: false,
+        count: 1,
+        voterIds: ['p1'],
+      },
+    ])
+  })
+
+  it('zero votes: every entry counts 0 and maxCount floors at 1 (no divide-by-zero)', () => {
+    const snap = snapshot({ mode: 'GAUNTLET', rounds: [round()] })
+    const { entries, maxCount } = voteTally(snap, viewer(), {})
+    expect(entries.every((e) => e.count === 0 && e.voterIds.length === 0)).toBe(true)
+    expect(maxCount).toBe(1)
   })
 })

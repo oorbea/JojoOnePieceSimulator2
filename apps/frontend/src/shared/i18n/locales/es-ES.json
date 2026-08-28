@@ -338,6 +338,16 @@
       "loadout": {
         "viewA11y": "Ver los poderes de {{name}}",
         "closeA11y": "Cerrar el desglose de poderes"
+      },
+      "result": {
+        "title": "Resultado de la ronda {{index}}",
+        "winner": "Gana {{option}}",
+        "coinFlip": "Decidido a cara o cruz",
+        "tie": "Empate - revotación",
+        "votesA11y": "{{count}} voto(s) para {{option}}",
+        "skip": "Saltar",
+        "skipA11y": "Saltar el resultado de la ronda",
+        "noVotes": "Nadie votó a tiempo"
       }
     },
     "vote": {
