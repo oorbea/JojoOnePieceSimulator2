@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { columnMaxWidth } from '@/shared/lib/layout'
 import { useNavInsets } from '@/shared/lib/nav-insets'
+import { notifyScroll } from '@/shared/lib/scroll-bus'
 
 import { AquaBackground } from './aqua-background'
 
@@ -72,7 +73,12 @@ export function PageShell({
     <YStack flex={1}>
       {showBackdrop ? <AquaBackground plain={plain} /> : null}
       {scroll ? (
-        <ScrollView flex={1} contentContainerStyle={{ flexGrow: 1 } as object}>
+        <ScrollView
+          flex={1}
+          contentContainerStyle={{ flexGrow: 1 } as object}
+          onScroll={notifyScroll}
+          scrollEventThrottle={16}
+        >
           {content}
         </ScrollView>
       ) : (

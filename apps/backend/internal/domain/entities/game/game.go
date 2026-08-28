@@ -765,6 +765,10 @@ func (g *Game) CloseVoting() (tied bool, err error) {
 	if !round.TiebreakUsed {
 		round.TiebreakUsed = true
 		g.state = enums.Tiebreak
+		// Capture the tied vote breakdown before wiping it - clients get
+		// to see what tied before the revote replaces it (owner's explicit
+		// call, 2026-08-28). Votes() already returns a copy.
+		round.TiedVotes = round.Ballot.Votes()
 		// The revote must start from a genuinely empty ballot - without
 		// this, every vote from the tied round would still stand, so the
 		// window would open already reporting cast==total (VotingComplete
@@ -796,20 +800,40 @@ func (g *Game) ResolveTiebreak(winner OptionID) error {
 	return nil
 }
 
+// resolveRound tallies a Round's outcome and parks the Game in RESOLVING -
+// it deliberately stops there instead of advancing to ASSIGNING/FINISHED in
+// the same call, so clients get an observable window to show the round's
+// result (winner, vote breakdown, coin flip) before the next round's
+// sorteo starts. See CompleteRound for the second half, and
+// GameService.scheduleResultDelay for what holds the Game here.
 func (g *Game) resolveRound(winner OptionID, coinFlip bool) {
 	round := g.currentRound()
 	round.Result = &RoundResult{Winner: winner, DecidedByCoinFlip: coinFlip}
 	g.state = enums.Resolving
 	g.emit(RoundResolved{RoundIndex: round.Index, Winner: winner, DecidedByCoinFlip: coinFlip})
+}
+
+// CompleteRound applies the just-resolved round's effect on the match
+// (mode.ApplyRoundResult) and advances the Game out of RESOLVING - to
+// FINISHED (emitting GameFinished) if that was the last round, or back to
+// ASSIGNING for the next one. Only valid from RESOLVING; the caller (see
+// GameService.completeRoundAfterResult) is what times this call, since the
+// domain itself knows nothing about the result-display delay.
+func (g *Game) CompleteRound() error {
+	if g.state != enums.Resolving {
+		return ErrInvalidStateTransition
+	}
+	round := g.currentRound()
 
 	finished := g.mode.ApplyRoundResult(g, *round)
 	if finished {
 		g.state = enums.Finished
 		result, _ := g.mode.Outcome(g)
 		g.emit(GameFinished{Result: result})
-		return
+		return nil
 	}
 	g.state = enums.Assigning
+	return nil
 }
 
 // Result computes the final GameResult. Only valid once the Game is

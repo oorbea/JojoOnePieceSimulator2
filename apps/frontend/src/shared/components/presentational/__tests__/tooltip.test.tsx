@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { Pressable, Text } from 'react-native'
 import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 
+import { notifyScroll } from '@/shared/lib/scroll-bus'
+
 import { TooltipBubble, useTooltipTrigger } from '../tooltip'
 
 // Exercises the hook directly against a bare RN `Pressable` rather than
@@ -41,6 +43,21 @@ describe('useTooltipTrigger / TooltipBubble', () => {
     })
 
     expect(screen.getByText('Explains the button')).toBeTruthy()
+  })
+
+  it('hides on a scroll-bus notification instead of staying stuck on screen', async () => {
+    await renderWithProviders(<TestTrigger label="Explains the button" />)
+
+    await act(async () => {
+      fireEvent(screen.getByLabelText('trigger'), 'longPress')
+    })
+    expect(screen.getByText('Explains the button')).toBeTruthy()
+
+    await act(async () => {
+      notifyScroll()
+    })
+
+    expect(screen.queryByText('Explains the button')).toBeNull()
   })
 
   it('never renders without a label', async () => {

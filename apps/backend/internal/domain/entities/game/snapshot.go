@@ -98,13 +98,16 @@ type StageSnapshot struct {
 	PictureStatus string
 }
 
-// RoundSnapshot mirrors Round.
+// RoundSnapshot mirrors Round. TiedVotes mirrors Round.TiedVotes, same
+// slice-not-map reasoning as BallotSnapshot.Votes; nil/empty until a tie
+// opens a revote for this round.
 type RoundSnapshot struct {
 	Index        int
 	Stage        StageSnapshot
 	Ballot       BallotSnapshot
 	TiebreakUsed bool
 	Result       *RoundResultSnapshot
+	TiedVotes    []VoteSnapshot
 }
 
 // BallotSnapshot mirrors Ballot. Votes is a slice, not a map: [16]byte is
@@ -210,6 +213,12 @@ func (g *Game) Snapshot() Snapshot {
 			rs.Result = &RoundResultSnapshot{
 				Winner:            r.Result.Winner,
 				DecidedByCoinFlip: r.Result.DecidedByCoinFlip,
+			}
+		}
+		if r.TiedVotes != nil {
+			rs.TiedVotes = make([]VoteSnapshot, 0, len(r.TiedVotes))
+			for pid, opt := range r.TiedVotes {
+				rs.TiedVotes = append(rs.TiedVotes, VoteSnapshot{ParticipantID: pid, Option: opt})
 			}
 		}
 		s.Rounds = append(s.Rounds, rs)
@@ -492,6 +501,12 @@ func Restore(s Snapshot) (*Game, error) {
 			r.Result = &RoundResult{
 				Winner:            rs.Result.Winner,
 				DecidedByCoinFlip: rs.Result.DecidedByCoinFlip,
+			}
+		}
+		if rs.TiedVotes != nil {
+			r.TiedVotes = make(map[ParticipantID]OptionID, len(rs.TiedVotes))
+			for _, v := range rs.TiedVotes {
+				r.TiedVotes[v.ParticipantID] = v.Option
 			}
 		}
 		g.rounds = append(g.rounds, r)

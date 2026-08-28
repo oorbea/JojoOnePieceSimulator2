@@ -142,6 +142,12 @@ type GameService struct {
 	// scheduleVotingTimer has always had. The reveal and voting deadlines
 	// never coexist for the same GameID (see the timers field doc).
 	votingEnds map[game.GameID]time.Time
+	// resultEnds holds the wall-clock deadline of the in-flight
+	// round-result display for each Game currently in RESOLVING with a
+	// pending result timer, keyed by GameID - read by ResultEndsAt so a
+	// client joining/reconnecting mid-result gets the real remaining time.
+	// Same process-memory-only caveat as revealEnds/votingEnds.
+	resultEnds map[game.GameID]time.Time
 }
 
 // NewGameService builds a GameService. history may be nil until an
@@ -171,6 +177,7 @@ func NewGameService(
 		timers:     make(map[game.GameID]Timer),
 		revealEnds: make(map[game.GameID]time.Time),
 		votingEnds: make(map[game.GameID]time.Time),
+		resultEnds: make(map[game.GameID]time.Time),
 	}
 }
 
@@ -667,6 +674,69 @@ func (s *GameService) VotingEndsAt(id game.GameID) (time.Time, bool) {
 	return t, ok
 }
 
+// ResultEndsAt reports id's in-flight round-result display deadline, if
+// any - the same role RevealEndsAt/VotingEndsAt play for their own phases:
+// a client joining or reconnecting mid-RESOLVING resumes the real
+// countdown instead of missing the window entirely. The bool is false once
+// the result display has ended (or never started).
+func (s *GameService) ResultEndsAt(id game.GameID) (time.Time, bool) {
+	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	t, ok := s.resultEnds[id]
+	return t, ok
+}
+
+// scheduleResultDelay holds g in RESOLVING for game.ResultDuration so
+// clients have time to render the round's outcome (winner, vote
+// breakdown, coin flip) before the next round's sorteo starts - the exact
+// same pattern scheduleRevealDelay uses for the ASSIGNING pause. Once the
+// delay elapses, completeRoundAfterResult does what closeVoting used to do
+// immediately: Game.CompleteRound + beginRound (if there's a next round).
+func (s *GameService) scheduleResultDelay(g *game.Game) {
+	id := g.ID()
+	d := game.ResultDuration
+
+	s.timersMu.Lock()
+	s.resultEnds[id] = s.clock.Now().Add(d)
+	s.timersMu.Unlock()
+
+	timer := s.clock.AfterFunc(d, func() {
+		s.completeRoundAfterResult(context.Background(), id)
+	})
+	s.timersMu.Lock()
+	s.timers[id] = timer
+	s.timersMu.Unlock()
+}
+
+// completeRoundAfterResult is scheduleResultDelay's callback: it
+// re-acquires g's lock via withGame and only then advances the Game past
+// RESOLVING, so it never races a concurrent AbortGame/CastVote against the
+// same Game.
+func (s *GameService) completeRoundAfterResult(ctx context.Context, id game.GameID) {
+	s.timersMu.Lock()
+	delete(s.resultEnds, id)
+	s.timersMu.Unlock()
+
+	_, err := s.withGame(ctx, id, func(g *game.Game) error {
+		if err := g.CompleteRound(); err != nil {
+			return err
+		}
+		if g.State() == enums.Assigning {
+			return s.beginRound(ctx, g)
+		}
+		return nil
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, ports.ErrGameNotFound), errors.Is(err, game.ErrInvalidStateTransition):
+			// Benign: the Game was aborted/removed, or someone else already
+			// moved it out of RESOLVING, before this timer fired.
+		default:
+			log.Printf("completing round for game %s: %v", id, err)
+		}
+	}
+}
+
 // --- Voting ---
 
 // CastVote records participantID's vote and force-closes the window early
@@ -731,8 +801,11 @@ func (s *GameService) closeVoting(ctx context.Context, g *game.Game) error {
 		}
 	}
 
-	if g.State() == enums.Assigning {
-		return s.beginRound(ctx, g)
+	// A clear winner (or a resolved tiebreak) leaves g in RESOLVING - hold
+	// it there so clients can see the round's outcome before the next
+	// round's sorteo starts (see scheduleResultDelay/CompleteRound).
+	if g.State() == enums.Resolving {
+		s.scheduleResultDelay(g)
 	}
 	return nil
 }
@@ -976,6 +1049,7 @@ func (s *GameService) cancelTimer(id game.GameID) {
 	defer s.timersMu.Unlock()
 	delete(s.revealEnds, id)
 	delete(s.votingEnds, id)
+	delete(s.resultEnds, id)
 	if t, ok := s.timers[id]; ok {
 		t.Stop()
 		delete(s.timers, id)

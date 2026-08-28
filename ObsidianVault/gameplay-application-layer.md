@@ -70,8 +70,8 @@ One mutex per `GameID`, not a global lock, so unrelated lobbies never contend.
 - `CloseVotingWindow` — what the timer calls on expiry; also directly invocable. Shared private
   helper `closeVoting` (assumes the lock is already held) implements the full tally/tie/tiebreak
   contract:
-  - clear winner → the round is already resolved by `Game.CloseVoting` itself; if the mode isn't
-    finished, `beginRound` runs again for the next round.
+  - clear winner → the round is already resolved by `Game.CloseVoting` itself, leaving state
+    `RESOLVING`; the mode's outcome is **not** applied yet (see below).
   - **first** tie → `Game.CloseVoting` already flips state to `TIEBREAK` — `closeVoting` just
     starts a fresh window for the revote and returns.
   - **second** tie (the revote also tied, including zero votes) → `closeVoting` distinguishes this
@@ -79,7 +79,18 @@ One mutex per `GameID`, not a global lock, so unrelated lobbies never contend.
     `Game.CloseVoting` (both ties otherwise look identical: `tied=true`, state stays `TIEBREAK`).
     Only then does it call `ports.ITiebreaker.Break(ctx, []string)`, converting `game.OptionID` to
     `string` and back exactly as the port's doc comment prescribes, then
-    `Game.ResolveTiebreak(winner)`.
+    `Game.ResolveTiebreak(winner)` — which also leaves state `RESOLVING`, same as the clear-winner
+    path.
+  - **2026-08-28** (see [[game-round-result-2026-08-28]]): whenever `closeVoting` ends up with state
+    `RESOLVING`, it no longer calls `beginRound` in the same breath. Instead it calls
+    `scheduleResultDelay` — the exact structural twin of `scheduleRevealDelay`: holds the Game in
+    `RESOLVING` for `game.ResultDuration` (6s, fixed), records the deadline in a new `s.resultEnds`
+    map (`ResultEndsAt(id)` accessor, mirroring `RevealEndsAt`/`VotingEndsAt`), and the timer's
+    callback `completeRoundAfterResult` re-acquires the lock, calls the new `Game.CompleteRound()`
+    (applies `mode.ApplyRoundResult`, moves to `FINISHED`/`ASSIGNING`), and only then runs
+    `beginRound` if there's a next round. This is what finally gives clients an observable window to
+    render the round's outcome — before this, `resolveRound` advanced clear past `RESOLVING` in the
+    same call and no client ever saw it.
 - `Disconnect` / `Reconnect` — presence is explicit API, no heartbeats in this tanda. A disconnect
   that leaves `VotingComplete()` true triggers the same early-close path as a vote would (a
   disconnected participant counts as a null vote, per [[gameplay-game-modes]]).

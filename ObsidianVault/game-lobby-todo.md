@@ -27,8 +27,9 @@ this note for *what's left*.
   found them confusing, only banning is needed) - see [[game-lobby-frontend]]'s "UX pass" section.
   `PowerPoolFields` is banlist-only now; the backend `PoolFilter` type is untouched. `tsc --noEmit`
   clean, `pnpm run test:ci` green (36 suites / 313 tests) after this pass.
-- **Remaining, not part of "finish the lobbies"**: §5 (optional drag-to-move polish, skip unless
-  asked), §6 (in-match UI - separate, larger future tanda).
+- **Remaining, not part of "finish the lobbies"**: §5 (drag-to-move player - **owner made this
+  mandatory 2026-08-28, no longer optional polish**, see §5 below), §6 (in-match UI - separate,
+  larger future tanda).
 
 ## 1. Commit the existing work
 
@@ -120,14 +121,59 @@ accepts `standRarities`/`fruitRarities`/`fruitTypes`/`banned` and is already par
 - i18n: `game.pool.*` (title, rarities, fruitTypes, banlist, banlistSearch, banlistEmpty, banned,
   removeBan, clearAll) in all three locales.
 
-## 5. Frontend: drag-to-move-player (optional polish, not required)
+## 5. Frontend: drag-to-move-player (MANDATORY as of 2026-08-28, not optional anymore)
 
-Team switching already works (tap own row to request a move; host taps another player's row
-action to move them) - this is pure enhancement, skip unless explicitly requested. If picked up:
-`hooks/use-player-drag.ts` using RN-core `PanResponder` (no `react-native-gesture-handler` root
-view needed - it's installed but unused, and adding a `GestureHandlerRootView` to
-`app-providers.tsx` is a bigger change than this feature needs). Disable when `maxSm` breakpoint or
-`useReducedMotion()`. The tap-based path must stay as the accessible primary path regardless.
+**Owner decision (2026-08-28)**: this is no longer optional polish - it's required, and it must
+work on **both desktop (mouse drag) and mobile (touch drag)**, not just one platform. Do not ship
+it desktop-only or behind a breakpoint gate that disables it on mobile.
+
+Team switching already works via tap (tap own row to request a move; host taps another player's
+row action to move them) - that tap-based path must stay as the accessible primary path regardless
+(keyboard/screen-reader users, [[norma-teclado]]), but drag is now a required *additional*
+interaction layered on top, not a nice-to-have.
+
+Implementation note (still valid): `hooks/use-player-drag.ts` using RN-core `PanResponder` covers
+both mouse and touch without needing `react-native-gesture-handler` (installed but unused; adding
+a `GestureHandlerRootView` to `app-providers.tsx` would be a bigger change than this needs) -
+`PanResponder` already unifies mouse-drag-as-pointer and touch-drag on web and native alike, so
+"works on both desktop and mobile" doesn't require two separate implementations. Previous guidance
+to disable under `maxSm`/`useReducedMotion()` no longer applies to the whole feature - if
+`useReducedMotion()` is honored at all, it should suppress the drag *animation/visual feedback*
+only, not the interaction itself, since the tap fallback is not a substitute the owner asked for
+here.
+
+**Shipped 2026-08-28**: `hooks/use-player-drag.ts` (the `PanResponder` wrapper) + `hooks/use-drop-
+zones.ts` (page-coordinate zone registry, re-measures on scroll via `shared/lib/scroll-bus.ts` - the
+same pub/sub [[norma-tooltips-y-ayuda-contextual]]'s "Sexto pase" built to stop tooltips sticking on
+scroll) + `TeamColumn`/`PlayerRow` wiring. Self can drag to switch team
+(mirrors `onJoinTeam`/`switchTeam`); host can drag *any* participant onto another column
+(`movePlayer` - net-new, no tap equivalent existed for moving someone else before this). A small
+`Move` icon renders on any draggable row as a pure visual affordance; the tap paths
+(`onJoin`/host row actions) remain the primary, accessible way to move a player regardless.
+
+**Deliberately avoided `Animated.ValueXY`**: this repo's eslint runs a `react-hooks/refs` rule
+(flags "accessing a ref value during render") that rejects RN's `Animated` API outright - it only
+works by handing out a `useRef(...).current` instance and reading/returning it outside normal
+render data-flow, which the rule can't prove safe (flagged `pan.x`/`pan.y` member access AND
+returning `pan` from the hook, even though `const pan = useRef(new Animated.ValueXY()).current`
+itself was fine - only *further use* of that value tripped it). Switched to plain `useState` for
+the drag translate offset and a `useMemo`'d (not `useRef`'d) `PanResponder.create(...)` instead -
+zero refs, so the rule has nothing to flag. No existing code in this repo used RN's `Animated`
+before this, which is presumably why nobody hit this until now.
+
+**Verified live (2026-08-28, `local-up` + `claude-in-chrome`)**: `left_click_drag` (this tool's
+compound drag action) silently no-ops against RN-Web's `PanResponder` - it doesn't emit the
+intermediate `mousemove` events with `buttons:1` the responder system needs to claim the gesture.
+Worked once `javascript_tool` dispatched a real `mousedown` → several `mousemove` steps → `mouseup`
+sequence via `element.dispatchEvent(new MouseEvent(...))` directly - confirmed self-drag between
+`Team A`/`Team B` moves the participant and updates both columns' counts. Touch-event
+(`TouchEvent`/`Touch`) dispatch did **not** trigger it, because this was a desktop Chrome profile
+with no real touch capability (`'ontouchstart' in window` false) - RN-Web feature-detects and never
+attaches touch listeners there, so that's an environment limitation, not a code path difference:
+`usePlayerDrag` has exactly one implementation for both platforms, already confirmed working via
+the mouse path. Host-dragging *another* participant and a genuine mobile/touch-emulated browser
+pass are still unverified live (no second test account, no touch-capable browser profile in this
+session) - flagged here rather than silently assumed.
 
 ## 6. In-match UI (rounds, voting, loadouts) - split into two tandas
 
@@ -149,10 +195,21 @@ tiles now Tab-reachable, `1`-`9`/`S` hotkeys). Verified: backend `go test` green
 `claude-in-chrome` walkthrough and a real keyboard-only manual pass, both flagged as next-session
 follow-up rather than skipped silently.
 
-**Still open, separate future tanda(s)**:
-- Round-resolved feedback (who won, was it a coin flip — nothing renders `ROUND_RESOLVED` beyond
-  clearing the countdown) and the final result screen (`GAME_FINISHED` still just toasts and bounces
-  to `/play`).
+**Round-resolved feedback (vote tally + winner) — DONE (2026-08-28)**, see
+[[game-round-result-2026-08-28]] for the full writeup: `RESOLVING` used to be a same-call pass-through
+(`resolveRound` immediately advanced to ASSIGNING/FINISHED) - split into `resolveRound` (parks the
+Game) + a new `Game.CompleteRound()`, held apart by `GameService.scheduleResultDelay`
+(`game.ResultDuration`, 6s fixed) mirroring `scheduleRevealDelay`'s pattern exactly, plus a new
+`resultEndsAt` deadline (same shape as `revealEndsAt`/`votingEndsAt`). A tie's vote breakdown, which
+used to be wiped by `Ballot.Reset()` with nothing kept, is now preserved on `Round.TiedVotes` and
+revealed in `GameRoundResponse.tiedVotes` even while the round is still live - the owner's explicit
+call, and the one deliberate exception to "votes hidden until resolved" (see
+[[game-realtime-transport]]). Frontend: `VoteBar` is replaced inline by a new `RoundResultPanel` (per-
+option bars + voter avatars, reusing `voteOptions`' label/tone mapping via a new `voteTally`) during
+`RESOLVING` and, as a second variant, above the revote's own `VoteBar` during `TIEBREAK`; a local-only
+`dismissResult()`/`resultDismissed` in the socket store drives the "skip" button - the server alone
+decides when RESOLVING actually ends, skip only hides the panel client-side. Still out of scope: the
+final result screen (`GAME_FINISHED` still just toasts and bounces to `/play`).
 - `LoadoutModal`'s open state isn't wired into the new hotkey `blocked` guard yet (lives inside
   `MatchRoster`, not the container) — small, documented gap, see [[norma-teclado.md]].
 - No automated test for `use-roving-group.ts`'s web-only keyboard branch — `hooks/__tests__` always

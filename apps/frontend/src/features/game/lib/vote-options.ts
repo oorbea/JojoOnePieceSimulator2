@@ -3,6 +3,11 @@ import { currentRound } from '@/features/game/lib/match-rules'
 import type { GameSnapshot, GameViewer } from '@/features/game/types/game.types'
 import type { GlossButtonTone } from '@/shared/components/presentational/gloss-button'
 
+export type VoteTallyEntry = VoteOption & {
+  count: number
+  voterIds: string[]
+}
+
 export type VoteOption = {
   id: string
   /** Gauntlet: an i18n key (`game.vote.gauntlet.SURVIVE`/`FALL`) - the copy
@@ -63,4 +68,32 @@ export function voteOptions(snapshot: GameSnapshot, you: GameViewer): VoteOption
       isOwnTeam: id === you.teamId,
     }
   })
+}
+
+// voteTally turns a round's raw votes map (participant -> option, either
+// GameRound.votes once resolved, or GameRound.tiedVotes for the tied
+// breakdown shown before a revote) into per-option counts + voter ids, in
+// the same fixed option order voteOptions renders - reused here rather than
+// duplicated so the result panel's labels/tones/isOwnTeam always match the
+// vote bar's exactly. maxCount is at least 1 so a zero-vote round (nobody
+// connected, or everyone disconnected before voting) still normalizes
+// MeterBar's value without dividing by zero.
+export function voteTally(
+  snapshot: GameSnapshot,
+  you: GameViewer,
+  votes: Record<string, string>
+): { entries: VoteTallyEntry[]; maxCount: number } {
+  const voterIdsByOption = new Map<string, string[]>()
+  for (const [participantId, optionId] of Object.entries(votes)) {
+    const ids = voterIdsByOption.get(optionId) ?? []
+    ids.push(participantId)
+    voterIdsByOption.set(optionId, ids)
+  }
+
+  const entries = voteOptions(snapshot, you).map((option) => {
+    const voterIds = voterIdsByOption.get(option.id) ?? []
+    return { ...option, count: voterIds.length, voterIds }
+  })
+  const maxCount = Math.max(1, ...entries.map((e) => e.count))
+  return { entries, maxCount }
 }
