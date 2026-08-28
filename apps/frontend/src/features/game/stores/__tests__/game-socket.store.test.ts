@@ -1,12 +1,16 @@
 // EXPO_PUBLIC_SOCKET_URL is blank in the real .env (native realtime isn't
 // deployed yet) - stub it here so buildGameSocketUrl doesn't short-circuit
 // to null and skip opening a socket at all.
-jest.mock('@/shared/config/env', () => ({
-  env: { EXPO_PUBLIC_API_URL: 'http://localhost/api/v1', EXPO_PUBLIC_SOCKET_URL: 'ws://localhost/api/v1', EXPO_PUBLIC_BUILD_ID: 'test' },
-}))
-
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import { useSessionStore } from '@/shared/stores/session.store'
+
+jest.mock('@/shared/config/env', () => ({
+  env: {
+    EXPO_PUBLIC_API_URL: 'http://localhost/api/v1',
+    EXPO_PUBLIC_SOCKET_URL: 'ws://localhost/api/v1',
+    EXPO_PUBLIC_BUILD_ID: 'test',
+  },
+}))
 
 // Minimal fake WebSocket: captures the last instance so the test can drive
 // onopen/onmessage/onclose directly, mirroring the real socket's lifecycle
@@ -124,7 +128,10 @@ describe('useGameSocketStore', () => {
     ws.open()
 
     ws.receive({ type: 'GAME_ABORTED', payload: { reason: 'host cancelled' } })
-    expect(useGameSocketStore.getState().terminal).toEqual({ kind: 'ABORTED', reason: 'host cancelled' })
+    expect(useGameSocketStore.getState().terminal).toEqual({
+      kind: 'ABORTED',
+      reason: 'host cancelled',
+    })
 
     ws.close()
     expect(useGameSocketStore.getState().status).toBe('closed')
@@ -210,7 +217,10 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: { game: { id: 'g1', revealEndsAt: '2100-01-01T00:00:20.000Z' }, you: { participantId: 'p1' } },
+      payload: {
+        game: { id: 'g1', revealEndsAt: '2100-01-01T00:00:20.000Z' },
+        you: { participantId: 'p1' },
+      },
     })
 
     const live = useGameSocketStore.getState().live
@@ -227,7 +237,10 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: { game: { id: 'g1', revealEndsAt: '2100-01-01T00:00:20.000Z' }, you: { participantId: 'p1' } },
+      payload: {
+        game: { id: 'g1', revealEndsAt: '2100-01-01T00:00:20.000Z' },
+        you: { participantId: 'p1' },
+      },
     })
 
     expect(useGameSocketStore.getState().live.revealEndsAt).toBe(revealEndsAtBefore)
@@ -251,7 +264,10 @@ describe('useGameSocketStore', () => {
     ws.open()
     ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
 
-    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
 
     const live = useGameSocketStore.getState().live
     expect(live.votingRoundIndex).toBe(0)
@@ -266,7 +282,10 @@ describe('useGameSocketStore', () => {
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
-    ws.receive({ type: 'TIEBREAK_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'TIEBREAK_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
 
     const live = useGameSocketStore.getState().live
     expect(live.votingRoundIndex).toBe(0)
@@ -278,9 +297,15 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
 
-    ws.receive({ type: 'ROUND_RESOLVED', payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false } })
+    ws.receive({
+      type: 'ROUND_RESOLVED',
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
+    })
 
     const live = useGameSocketStore.getState().live
     expect(live.votingRoundIndex).toBeNull()
@@ -322,6 +347,8 @@ describe('useGameSocketStore', () => {
       tiebreak: false,
       votesCast: null,
       voters: null,
+      resultEndsAt: null,
+      resultDismissed: false,
     })
   })
 
@@ -358,7 +385,10 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
 
     ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1, voters: 3 } })
     expect(useGameSocketStore.getState().live.votesCast).toBe(1)
@@ -374,7 +404,10 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 1, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 1, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
 
     ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1, voters: 3 } })
 
@@ -385,10 +418,16 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
     ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 2, voters: 3 } })
 
-    ws.receive({ type: 'TIEBREAK_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'TIEBREAK_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
 
     const live = useGameSocketStore.getState().live
     expect(live.votesCast).toBe(0)
@@ -399,10 +438,16 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
     ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1, voters: 2 } })
 
-    ws.receive({ type: 'ROUND_RESOLVED', payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false } })
+    ws.receive({
+      type: 'ROUND_RESOLVED',
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
+    })
 
     const live = useGameSocketStore.getState().live
     expect(live.votesCast).toBeNull()
@@ -416,24 +461,110 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: { game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:10.000Z' }, you: { participantId: 'p1' } },
+      payload: {
+        game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:10.000Z' },
+        you: { participantId: 'p1' },
+      },
     })
 
-    expect(useGameSocketStore.getState().live.votingClosesAt).toBe(Date.parse('2100-01-01T00:00:10.000Z'))
+    expect(useGameSocketStore.getState().live.votingClosesAt).toBe(
+      Date.parse('2100-01-01T00:00:10.000Z')
+    )
   })
 
   it('STATE does not override an already-tracked voting deadline from VOTING_OPENED', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'VOTING_OPENED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' } })
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
     const votingClosesAtBefore = useGameSocketStore.getState().live.votingClosesAt
 
     ws.receive({
       type: 'STATE',
-      payload: { game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:20.000Z' }, you: { participantId: 'p1' } },
+      payload: {
+        game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:20.000Z' },
+        you: { participantId: 'p1' },
+      },
     })
 
     expect(useGameSocketStore.getState().live.votingClosesAt).toBe(votingClosesAtBefore)
+  })
+
+  it('STATE adopts game.resultEndsAt when no result display is already tracked', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({
+      type: 'ROUND_RESOLVED',
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
+    })
+
+    ws.receive({
+      type: 'STATE',
+      payload: {
+        game: { id: 'g1', resultEndsAt: '2100-01-01T00:00:06.000Z' },
+        you: { participantId: 'p1' },
+      },
+    })
+
+    expect(useGameSocketStore.getState().live.resultEndsAt).toBe(
+      Date.parse('2100-01-01T00:00:06.000Z')
+    )
+  })
+
+  it('ROUND_RESOLVED resets resultEndsAt/resultDismissed so the next STATE adopts fresh', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
+    useGameSocketStore.getState().dismissResult()
+    expect(useGameSocketStore.getState().live.resultDismissed).toBe(true)
+
+    ws.receive({
+      type: 'ROUND_RESOLVED',
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
+    })
+
+    const live = useGameSocketStore.getState().live
+    expect(live.resultEndsAt).toBeNull()
+    expect(live.resultDismissed).toBe(false)
+  })
+
+  it('VOTING_OPENED/TIEBREAK_OPENED reset resultEndsAt/resultDismissed too', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({
+      type: 'STATE',
+      payload: {
+        game: { id: 'g1', resultEndsAt: '2100-01-01T00:00:06.000Z' },
+        you: { participantId: 'p1' },
+      },
+    })
+    useGameSocketStore.getState().dismissResult()
+
+    ws.receive({
+      type: 'VOTING_OPENED',
+      payload: { roundIndex: 1, closesAt: '2100-01-01T00:00:10.000Z' },
+    })
+
+    const live = useGameSocketStore.getState().live
+    expect(live.resultEndsAt).toBeNull()
+    expect(live.resultDismissed).toBe(false)
+  })
+
+  it('dismissResult sets resultDismissed', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    expect(useGameSocketStore.getState().live.resultDismissed).toBe(false)
+
+    useGameSocketStore.getState().dismissResult()
+
+    expect(useGameSocketStore.getState().live.resultDismissed).toBe(true)
   })
 })

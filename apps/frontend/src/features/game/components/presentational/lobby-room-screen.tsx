@@ -92,6 +92,7 @@ type Props = {
   onSkipReveal: () => void
   reducedMotion: boolean
   onVote: (optionId: string) => void
+  onSkipResult: () => void
 }
 
 export function LobbyRoomScreen({
@@ -150,6 +151,7 @@ export function LobbyRoomScreen({
   onSkipReveal,
   reducedMotion,
   onVote,
+  onSkipResult,
 }: Props) {
   const { t } = useTranslation()
   const capacity = snapshot.config.teamSize
@@ -160,7 +162,11 @@ export function LobbyRoomScreen({
     <PageShell align="top" scroll maxWidth={1080}>
       {snapshot.state === 'LOBBY' ? (
         <>
-          <ConnectionBanner status={socketStatus} nextRetryAt={nextRetryAt} onRetryNow={onRetryNow} />
+          <ConnectionBanner
+            status={socketStatus}
+            nextRetryAt={nextRetryAt}
+            onRetryNow={onRetryNow}
+          />
 
           <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$2">
             <GlowText level="title">{t(`enums.gameMode.${snapshot.mode}`)}</GlowText>
@@ -260,7 +266,14 @@ export function LobbyRoomScreen({
             />
           </FilterDisclosure>
 
-          <StartBar isHost={you.isHost} gate={gate} starting={starting} onStart={onStart} onLeave={onLeave} onAbort={onAbort} />
+          <StartBar
+            isHost={you.isHost}
+            gate={gate}
+            starting={starting}
+            onStart={onStart}
+            onLeave={onLeave}
+            onAbort={onAbort}
+          />
         </>
       ) : (
         <MatchScreen
@@ -278,6 +291,7 @@ export function LobbyRoomScreen({
           reducedMotion={reducedMotion}
           onAbort={onAbort}
           onVote={onVote}
+          onSkipResult={onSkipResult}
         />
       )}
 

@@ -26,6 +26,8 @@ const INITIAL_LIVE: LiveMatchState = {
   tiebreak: false,
   votesCast: null,
   voters: null,
+  resultEndsAt: null,
+  resultDismissed: false,
 }
 
 function round(overrides: Partial<GameRound> = {}): GameRound {

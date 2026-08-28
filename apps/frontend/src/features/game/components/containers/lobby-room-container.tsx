@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 
 import type { BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
-import { LobbyRoomScreen, type ConfirmSheetState } from '@/features/game/components/presentational/lobby-room-screen'
+import {
+  LobbyRoomScreen,
+  type ConfirmSheetState,
+} from '@/features/game/components/presentational/lobby-room-screen'
 import { gameKeys } from '@/features/game/api/game.keys'
 import { useGameCommands } from '@/features/game/hooks/use-game-commands'
 import { useGameDetail } from '@/features/game/hooks/use-game-detail'
@@ -123,7 +126,11 @@ export function LobbyRoomContainer() {
     if (you.vote === optionId) return
     const options = voteOptions(snapshot, you)
     const chosen = options.find((o) => o.id === optionId)
-    const label = chosen ? (chosen.labelKey ? t(chosen.labelKey) : (chosen.label ?? optionId)) : optionId
+    const label = chosen
+      ? chosen.labelKey
+        ? t(chosen.labelKey)
+        : (chosen.label ?? optionId)
+      : optionId
     setConfirmSheet({
       title: t('game.vote.changeTitle'),
       message: t('game.vote.changeMessage', { option: label }),
@@ -202,7 +209,6 @@ export function LobbyRoomContainer() {
   useEffect(() => {
     if (!socket.lastError) return
     showErrorToast(new AppError(socket.lastError.message, { code: socket.lastError.code }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per new error
   }, [socket.lastError])
 
   if (!snapshot || !you) {
@@ -335,7 +341,10 @@ export function LobbyRoomContainer() {
     setConfigForm((current) => {
       const base = current ?? form
       if (base.poolFilter.banned.includes(powerId)) return base
-      return { ...base, poolFilter: { ...base.poolFilter, banned: [...base.poolFilter.banned, powerId] } }
+      return {
+        ...base,
+        poolFilter: { ...base.poolFilter, banned: [...base.poolFilter.banned, powerId] },
+      }
     })
   }
 
@@ -344,7 +353,10 @@ export function LobbyRoomContainer() {
       const base = current ?? form
       return {
         ...base,
-        poolFilter: { ...base.poolFilter, banned: base.poolFilter.banned.filter((b) => b !== powerId) },
+        poolFilter: {
+          ...base.poolFilter,
+          banned: base.poolFilter.banned.filter((b) => b !== powerId),
+        },
       }
     })
   }
@@ -352,7 +364,10 @@ export function LobbyRoomContainer() {
   const handleBanMatchingConfig = (powerIds: string[]) => {
     setConfigForm((current) => {
       const base = current ?? form
-      const banned = [...base.poolFilter.banned, ...powerIds.filter((id) => !base.poolFilter.banned.includes(id))]
+      const banned = [
+        ...base.poolFilter.banned,
+        ...powerIds.filter((id) => !base.poolFilter.banned.includes(id)),
+      ]
       return { ...base, poolFilter: { ...base.poolFilter, banned } }
     })
   }
@@ -360,7 +375,10 @@ export function LobbyRoomContainer() {
   const handleClearConfigPoolFilter = () => {
     setConfigForm((current) => {
       const base = current ?? form
-      return { ...base, poolFilter: { standRarities: [], fruitRarities: [], fruitTypes: [], banned: [] } }
+      return {
+        ...base,
+        poolFilter: { standRarities: [], fruitRarities: [], fruitTypes: [], banned: [] },
+      }
     })
   }
 
@@ -420,7 +438,9 @@ export function LobbyRoomContainer() {
         setConfigForm({ ...form, visibility: form.visibility === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC' })
       }
       configVotingWindowSeconds={form.votingWindowSeconds}
-      onChangeConfigVotingWindow={(votingWindowSeconds) => setConfigForm({ ...form, votingWindowSeconds })}
+      onChangeConfigVotingWindow={(votingWindowSeconds) =>
+        setConfigForm({ ...form, votingWindowSeconds })
+      }
       configPoolFilter={form.poolFilter}
       configPoolActiveCount={configPoolActiveCount}
       configBanlistItems={banlistItems}
@@ -439,6 +459,7 @@ export function LobbyRoomContainer() {
       onSkipReveal={loadoutReveal.skip}
       reducedMotion={reducedMotion}
       onVote={handleVote}
+      onSkipResult={socket.dismissResult}
     />
   )
 }
