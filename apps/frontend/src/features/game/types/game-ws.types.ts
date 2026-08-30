@@ -17,6 +17,9 @@ export const CLIENT_COMMAND = {
   TRANSFER_HOST: 'TRANSFER_HOST',
   SET_LOCK: 'SET_LOCK',
   UPDATE_CONFIG: 'UPDATE_CONFIG',
+  // REVEAL_READY is the sorteo's own skip vote (owner decision,
+  // 2026-08-30) - no payload, always applies to the caller.
+  REVEAL_READY: 'REVEAL_READY',
 } as const
 
 export type ClientCommandType = (typeof CLIENT_COMMAND)[keyof typeof CLIENT_COMMAND]
@@ -48,6 +51,7 @@ export const SERVER_FRAME = {
   PLAYER_KICKED: 'PLAYER_KICKED',
   LOBBY_LOCK_CHANGED: 'LOBBY_LOCK_CHANGED',
   CONFIG_UPDATED: 'CONFIG_UPDATED',
+  REVEAL_READY_CHANGED: 'REVEAL_READY_CHANGED',
 } as const
 
 export type ServerFrameType = (typeof SERVER_FRAME)[keyof typeof SERVER_FRAME]

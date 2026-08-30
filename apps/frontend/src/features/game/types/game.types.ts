@@ -10,6 +10,7 @@ import type {
   ParticipantKind,
   PhysicalForm,
   PictureStatus,
+  RevealSpeed,
   SpinLevel,
 } from '@/shared/lib/zod'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
@@ -36,6 +37,7 @@ export type GameConfig = {
   visibility: LobbyVisibility
   votingWindowSeconds: number
   poolFilter: PoolFilter
+  revealSpeed: RevealSpeed
 }
 
 // Mirrors dto.GameTeamResponse.
@@ -195,6 +197,7 @@ export type CreateGameInput = {
   visibility?: LobbyVisibility
   votingWindowSeconds?: number
   poolFilter?: PoolFilter
+  revealSpeed?: RevealSpeed
 }
 
 // Mirrors services.ConfigUpdateInput / dto.UpdateConfigPayload - the
@@ -212,4 +215,5 @@ export type UpdateGameConfigInput = {
   visibility: LobbyVisibility
   votingWindowSeconds: number
   poolFilter?: PoolFilter
+  revealSpeed: RevealSpeed
 }

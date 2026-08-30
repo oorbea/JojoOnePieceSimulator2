@@ -37,6 +37,13 @@ export type LiveMatchState = {
    * frame's game.revealEndsAt for a client that missed that frame (a
    * reconnect mid-reveal). null once voting has actually opened. */
   revealEndsAt: number | null
+  /** Absolute values off the latest REVEAL_READY_CHANGED - how many of how
+   * many connected humans have marked the current sorteo ready to skip
+   * (see game.RevealReadyProgress). null until the first frame for this
+   * ASSIGNING window arrives; reset to null every time a fresh assignment
+   * starts (see the LOADOUTS_ASSIGNED case below). */
+  revealReadyCount: number | null
+  revealReadyTotal: number | null
   votingRoundIndex: number | null
   votingClosesAt: number | null
   tiebreak: boolean
@@ -67,6 +74,8 @@ const INITIAL_LIVE: LiveMatchState = {
   assignedRoundIndex: null,
   revealMs: null,
   revealEndsAt: null,
+  revealReadyCount: null,
+  revealReadyTotal: null,
   votingRoundIndex: null,
   votingClosesAt: null,
   tiebreak: false,
@@ -276,6 +285,18 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           })
           break
         }
+        case SERVER_FRAME.REVEAL_READY_CHANGED: {
+          // Absolute values, never an increment - same shape as VOTE_CAST.
+          const payload = frame.payload as { ready?: number; total?: number } | undefined
+          set((state) => ({
+            live: {
+              ...state.live,
+              revealReadyCount: payload?.ready ?? null,
+              revealReadyTotal: payload?.total ?? null,
+            },
+          }))
+          break
+        }
         case SERVER_FRAME.LOADOUTS_ASSIGNED: {
           // Sent BEFORE its own pushCurrentState, so `snapshot` here may
           // still be pre-assignment - never touch snapshot/feed from this
@@ -290,6 +311,10 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               assignedRoundIndex: payload?.roundIndex ?? null,
               revealMs,
               revealEndsAt: revealMs !== null ? Date.now() + revealMs : null,
+              // Fresh ASSIGNING window, fresh ready set - mirrors
+              // Game.AssignLoadouts resetting revealReady server-side.
+              revealReadyCount: null,
+              revealReadyTotal: null,
             },
           }))
           break
@@ -304,6 +329,8 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               tiebreak: false,
               revealMs: null,
               revealEndsAt: null,
+              revealReadyCount: null,
+              revealReadyTotal: null,
               // Reset, not cleared to null: the fresh window has cast=0 of
               // an as-yet-unknown total, covered by voteProgress's
               // snapshot-derived fallback until the first VOTE_CAST (or a

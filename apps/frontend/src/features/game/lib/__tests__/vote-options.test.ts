@@ -22,6 +22,7 @@ function snapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
       allowBots: false,
       visibility: 'PRIVATE',
       votingWindowSeconds: 30,
+      revealSpeed: 'NORMAL',
       poolFilter: { standRarities: [], fruitRarities: [], fruitTypes: [], banned: [] },
     },
     teams: [],

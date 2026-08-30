@@ -39,6 +39,10 @@ export const gameStateSchema = z.enum([
 export const participantKindSchema = z.enum(['HUMAN', 'BOT'])
 // Mirrors the backend's enums.LobbyVisibility.
 export const lobbyVisibilitySchema = z.enum(['PUBLIC', 'PRIVATE'])
+// Mirrors the backend's enums.RevealSpeed - the sorteo's own tempo preset
+// (owner request, 2026-08-30). NORMAL is the zero value on both sides, so
+// an omitted field defaults to it without extra fallback logic.
+export const revealSpeedSchema = z.enum(['NORMAL', 'RELAXED', 'SWIFT'])
 // Mirrors the backend's enums.SpinLevel. No ADVANCED tier - dropped when
 // random assignment was ported 1:1 from JoJoOnePiece_Simulator V1, which
 // only has 4 spin levels.
@@ -80,6 +84,7 @@ export type AbilitySource = z.infer<typeof abilitySourceSchema>
 export type GameState = z.infer<typeof gameStateSchema>
 export type ParticipantKind = z.infer<typeof participantKindSchema>
 export type LobbyVisibility = z.infer<typeof lobbyVisibilitySchema>
+export type RevealSpeed = z.infer<typeof revealSpeedSchema>
 export type SpinLevel = z.infer<typeof spinLevelSchema>
 export type HamonLevel = z.infer<typeof hamonLevelSchema>
 export type FruitMastery = z.infer<typeof fruitMasterySchema>
