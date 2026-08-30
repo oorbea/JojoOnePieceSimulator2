@@ -7,12 +7,15 @@ import { PowerRoulette } from '@/features/game/components/presentational/match/p
 import { RevealNarrator } from '@/features/game/components/presentational/match/reveal-narrator'
 import { useRevealSpinSound } from '@/features/game/hooks/use-reveal-spin-sound'
 import {
+  playerSlots,
+  REVEAL_SLOT_ORDINAL,
   REVEAL_SPEED_MULTIPLIER,
   REVEAL_SPIN_BASE_MS,
   revealSpinCycles,
   type RevealPhaseKind,
+  type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
-import { revealSlotKinds, type LoadoutSlotKind } from '@/features/game/lib/match-rules'
+import type { LoadoutSlotKind } from '@/features/game/lib/match-rules'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
@@ -53,9 +56,12 @@ const SCALAR_VALUES: Record<string, string[]> = {
   hamon: ['NONE', 'BASIC', 'ADVANCED', 'PERFECT'],
   fruitMastery: ['NONE', 'REGULAR', 'ADVANCED', 'AWAKENED'],
   physicalForm: ['PRIVATE', 'STRONG_FISHMAN', 'MARINE_CAPTAIN', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
-  armamentHaki: ['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
-  observationHaki: ['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
-  conquerorHaki: ['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  // No 'NONE' here - a haki level slot only ever appears (see playerSlots)
+  // for a type the participant actually has, so it can never land on NONE
+  // and the roulette shouldn't tease it as a possible outcome either.
+  armamentHaki: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  observationHaki: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  conquerorHaki: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
 }
 
 const HAKI_TYPES: { field: 'armamentHaki' | 'observationHaki' | 'conquerorHaki'; i18nKey: string }[] = [
@@ -102,21 +108,32 @@ export function RevealStage({
   const fruitNames = (devilFruitsQuery.data ?? []).map((f) => f.name)
 
   const participants = snapshot.participants
-  const slotKinds = revealSlotKinds(snapshot.config.powerMangas)
   const currentParticipant = participantIndex >= 0 ? participants[participantIndex] : null
+  const loadout = currentParticipant?.loadout
+  // playerSlots(mangas, thisPlayer) - not the lobby-wide revealSlotKinds -
+  // since which haki-level slots exist varies per participant (owner
+  // request, 2026-08-30: only the haki types they actually have get a
+  // roulette at all). slotIndex indexes into THIS list.
+  const currentPlayer: RevealPlayer = {
+    hasStand: !!loadout?.stand,
+    hasDevilFruit: !!loadout?.devilFruit,
+    hasArmamentHaki: loadout?.armamentHaki !== undefined && loadout.armamentHaki !== 'NONE',
+    hasObservationHaki: loadout?.observationHaki !== undefined && loadout.observationHaki !== 'NONE',
+    hasConquerorHaki: loadout?.conquerorHaki !== undefined && loadout.conquerorHaki !== 'NONE',
+  }
+  const slotKinds = currentParticipant ? playerSlots(snapshot.config.powerMangas, currentPlayer) : []
   const currentSlot: LoadoutSlotKind | null =
     slotIndex >= 0 && slotIndex < slotKinds.length ? slotKinds[slotIndex] : null
   const spinning = phase === 'spin'
   const landed = phase === 'land'
 
-  const loadout = currentParticipant?.loadout
   const { candidates, finalLabel } = slotFor(t, loadout, currentSlot, standNames, fruitNames)
 
   const speed = snapshot.config.revealSpeed
   const speedMultiplier = REVEAL_SPEED_MULTIPLIER[speed] ?? REVEAL_SPEED_MULTIPLIER.NORMAL
   const cycles =
     currentParticipant && currentSlot
-      ? revealSpinCycles(snapshot.id, snapshot.rounds.length, participantIndex, slotIndex)
+      ? revealSpinCycles(snapshot.id, snapshot.rounds.length, participantIndex, REVEAL_SLOT_ORDINAL[currentSlot])
       : 1
   const spinMs = REVEAL_SPIN_BASE_MS * cycles * speedMultiplier
 
@@ -226,7 +243,7 @@ function narratorLineFor(
   if (phase === 'playerIntro') return t('game.match.reveal.narrator.playerTurn', { name })
   if (!slot) return ''
   if (phase === 'narrator' || phase === 'spin') {
-    return t(`game.match.reveal.narrator.${narratorKey(slot)}.before`)
+    return t(`game.match.reveal.narrator.${narratorKey(slot)}.before`, { type: hakiTypeLabel(t, slot) })
   }
   if (phase === 'land') {
     if (slot === 'devilFruit') {
@@ -256,7 +273,11 @@ function narratorLineFor(
         ? t('game.match.reveal.narrator.haki.after', { list: finalLabel })
         : t('game.match.reveal.narrator.haki.none', { name })
     }
-    return t(`game.match.reveal.narrator.${narratorKey(slot)}.after`, { name, value: finalLabel })
+    return t(`game.match.reveal.narrator.${narratorKey(slot)}.after`, {
+      name,
+      value: finalLabel,
+      type: hakiTypeLabel(t, slot),
+    })
   }
   return ''
 }
@@ -275,6 +296,21 @@ function narratorKey(slot: LoadoutSlotKind): string {
       return 'hakiMastery'
     default:
       return slot
+  }
+}
+
+// hakiTypeLabel names WHICH haki type a hakiMastery beat is about (owner
+// request, 2026-08-30: each individual haki-level slot must say clearly
+// which type it is, not just "your mastery is X") - unused (empty string)
+// for every other slot, where the narrator text names nothing haki-related.
+function hakiTypeLabel(t: (key: string) => string, slot: LoadoutSlotKind): string {
+  switch (slot) {
+    case 'armamentHaki':
+    case 'observationHaki':
+    case 'conquerorHaki':
+      return t(`game.match.trait.${slot}`)
+    default:
+      return ''
   }
 }
 

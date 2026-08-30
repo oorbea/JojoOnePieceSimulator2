@@ -101,14 +101,14 @@ describe('useLoadoutReveal', () => {
     expect(readState()).toMatchObject({ phase: 'narrator', participantIndex: 0, slotIndex: 0 })
 
     // Past the whole timeline: reveal finishes.
-    await advance(revealDurationMs('g1', 0, mangas, [{ hasStand: false, hasDevilFruit: false }], 'SWIFT'))
+    await advance(revealDurationMs('g1', 0, mangas, [{ hasStand: false, hasDevilFruit: false, hasArmamentHaki: false, hasObservationHaki: false, hasConquerorHaki: false }], 'SWIFT'))
     expect(readState().isRevealing).toBe(false)
   })
 
   it('scales every phase by serverRevealMs/localTotal - a constants drift degrades pacing, not sync with the server-authoritative duration', async () => {
     const mangas: Manga[] = ['JOJO']
     const participants = [participant('p1')]
-    const localTotal = revealDurationMs('g1', 0, mangas, [{ hasStand: false, hasDevilFruit: false }], 'SWIFT')
+    const localTotal = revealDurationMs('g1', 0, mangas, [{ hasStand: false, hasDevilFruit: false, hasArmamentHaki: false, hasObservationHaki: false, hasConquerorHaki: false }], 'SWIFT')
     const serverRevealMs = localTotal * 2 // server thinks the reveal takes twice as long
 
     await render(
@@ -178,8 +178,8 @@ describe('useLoadoutReveal', () => {
     await render(<Harness mangas={mangas} participants={participants} serverRevealMs={null} />)
 
     const total = revealDurationMs('g1', 0, mangas, [
-      { hasStand: false, hasDevilFruit: false },
-      { hasStand: false, hasDevilFruit: false },
+      { hasStand: false, hasDevilFruit: false, hasArmamentHaki: false, hasObservationHaki: false, hasConquerorHaki: false },
+      { hasStand: false, hasDevilFruit: false, hasArmamentHaki: false, hasObservationHaki: false, hasConquerorHaki: false },
     ], 'SWIFT')
 
     // Somewhere in the middle of the timeline, exactly one participant's

@@ -5,7 +5,6 @@ import {
   type RevealPhaseKind,
   type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
-import { revealSlotKinds } from '@/features/game/lib/match-rules'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import type { Manga, RevealSpeed } from '@/shared/lib/zod'
 
@@ -39,7 +38,9 @@ type Result = {
    * during the lobby-wide 'intro'/'outro'. */
   participantIndex: number
   /** The slot currently spinning/holding for the current participant's
-   * turn, index into revealSlotKinds(mangas) - -1 outside a slot phase. */
+   * turn, index into playerSlots(mangas, that participant) - -1 outside a
+   * slot phase. Varies per participant (see playerSlots' doc), so
+   * `totalSlots` below is carried per-phase, not a single lobby constant. */
   slotIndex: number
   totalSlots: number
   /** Marks this client's own human ready to skip ahead - sends
@@ -83,10 +84,18 @@ export function useLoadoutReveal({
   const players: RevealPlayer[] = participants.map((p) => ({
     hasStand: !!p.loadout?.stand,
     hasDevilFruit: !!p.loadout?.devilFruit,
+    hasArmamentHaki: p.loadout?.armamentHaki !== undefined && p.loadout.armamentHaki !== 'NONE',
+    hasObservationHaki: p.loadout?.observationHaki !== undefined && p.loadout.observationHaki !== 'NONE',
+    hasConquerorHaki: p.loadout?.conquerorHaki !== undefined && p.loadout.conquerorHaki !== 'NONE',
   }))
-  const playersKey = players.map((p) => `${p.hasStand ? 1 : 0}${p.hasDevilFruit ? 1 : 0}`).join('')
+  const playersKey = players
+    .map((p) =>
+      [p.hasStand, p.hasDevilFruit, p.hasArmamentHaki, p.hasObservationHaki, p.hasConquerorHaki]
+        .map((b) => (b ? 1 : 0))
+        .join('')
+    )
+    .join(':')
   const phases = revealTimeline(gameId, roundIndex, mangas, players, speed)
-  const totalSlots = revealSlotKinds(mangas).length
   const localTotalMs = phases.reduce((sum, p) => sum + p.durationMs, 0)
   const scale = serverRevealMs && localTotalMs > 0 ? serverRevealMs / localTotalMs : 1
   const runKey = `${gameId}:${roundIndex}:${mangasKey}:${playersKey}:${speed}:${serverRevealMs ?? 'local'}`
@@ -155,8 +164,8 @@ export function useLoadoutReveal({
       isRevealing: false,
       phase: 'outro',
       participantIndex: -1,
-      slotIndex: totalSlots - 1,
-      totalSlots,
+      slotIndex: -1,
+      totalSlots: 0,
       skip: () => {},
     }
   }
@@ -164,5 +173,6 @@ export function useLoadoutReveal({
   const current = phases[Math.min(phaseIndex, phases.length - 1)]
   const participantIndex = current.phase.participant ?? -1
   const slotIndex = current.phase.slot ?? -1
+  const totalSlots = current.phase.totalSlots ?? 0
   return { isRevealing: true, phase: current.phase.kind, participantIndex, slotIndex, totalSlots, skip }
 }

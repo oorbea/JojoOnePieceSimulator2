@@ -1,4 +1,5 @@
 import {
+  playerSlots,
   REVEAL_HOLD_EMPTY_MS,
   REVEAL_HOLD_FRUIT_MS,
   REVEAL_HOLD_SCALAR_MS,
@@ -149,12 +150,47 @@ describe('revealSpinCycles', () => {
   })
 })
 
-const NO_POWERS: RevealPlayer = { hasStand: false, hasDevilFruit: false }
-const BOTH_POWERS: RevealPlayer = { hasStand: true, hasDevilFruit: true }
+const NO_POWERS: RevealPlayer = {
+  hasStand: false,
+  hasDevilFruit: false,
+  hasArmamentHaki: false,
+  hasObservationHaki: false,
+  hasConquerorHaki: false,
+}
+const BOTH_POWERS: RevealPlayer = {
+  ...NO_POWERS,
+  hasStand: true,
+  hasDevilFruit: true,
+}
+const ALL_HAKI: RevealPlayer = {
+  ...NO_POWERS,
+  hasArmamentHaki: true,
+  hasObservationHaki: true,
+  hasConquerorHaki: true,
+}
+
+describe('playerSlots', () => {
+  it('excludes a haki-level slot for a type the player does not have', () => {
+    const onlyObservation: RevealPlayer = { ...NO_POWERS, hasObservationHaki: true }
+    const slots = playerSlots(['ONE_PIECE'], onlyObservation)
+    expect(slots).toContain('observationHaki')
+    expect(slots).not.toContain('armamentHaki')
+    expect(slots).not.toContain('conquerorHaki')
+    // The synthetic "which types" summary is unaffected.
+    expect(slots).toContain('hakiSet')
+  })
+
+  it('includes every haki-level slot when the player has all three types', () => {
+    const slots = playerSlots(['ONE_PIECE'], ALL_HAKI)
+    expect(slots).toEqual(
+      expect.arrayContaining(['armamentHaki', 'observationHaki', 'conquerorHaki'])
+    )
+  })
+})
 
 describe('revealTimeline', () => {
-  it('one player, both mangas: intro, playerIntro, 10x(narrator+spin+land), playerOutro, outro', () => {
-    const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [NO_POWERS], 'SWIFT')
+  it('one player with every power/haki type, both mangas: intro, playerIntro, 10x(narrator+spin+land), playerOutro, outro', () => {
+    const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [{ ...ALL_HAKI, hasStand: true, hasDevilFruit: true }], 'SWIFT')
     expect(timeline[0].phase).toEqual({ kind: 'intro' })
     expect(timeline[0].durationMs).toBe(REVEAL_INTRO_MS)
     expect(timeline[1].phase).toEqual({ kind: 'playerIntro', participant: 0 })
@@ -164,6 +200,12 @@ describe('revealTimeline', () => {
     expect(last.durationMs).toBe(REVEAL_OUTRO_MS)
     // intro + playerIntro + 10 * (narrator, spin, land) + playerOutro + outro
     expect(timeline).toHaveLength(1 + 1 + 10 * 3 + 1 + 1)
+  })
+
+  it('a player with no haki at all skips all three haki-level slots (7, not 10, for both mangas)', () => {
+    const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [NO_POWERS], 'SWIFT')
+    // intro + playerIntro + 7 * (narrator, spin, land) + playerOutro + outro
+    expect(timeline).toHaveLength(1 + 1 + 7 * 3 + 1 + 1)
   })
 
   it('stand/devilFruit hold longer when they actually land a power than when they land NONE', () => {

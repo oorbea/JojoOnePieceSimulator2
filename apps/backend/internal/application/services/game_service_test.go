@@ -494,7 +494,10 @@ func advanceReveal(deps *gameTestDeps, mangas []enums.Manga) {
 func maxRevealDuration(mangas []enums.Manga) time.Duration {
 	players := make([]game.RevealPlayer, game.MaxGauntletPlayers)
 	for i := range players {
-		players[i] = game.RevealPlayer{HasStand: true, HasDevilFruit: true}
+		players[i] = game.RevealPlayer{
+			HasStand: true, HasDevilFruit: true,
+			HasArmamentHaki: true, HasObservationHaki: true, HasConquerorHaki: true,
+		}
 	}
 	return 2 * game.RevealDuration(game.GameID{}, 0, mangas, players, enums.Relaxed)
 }
@@ -509,8 +512,11 @@ func revealDurationOf(g *game.Game) time.Duration {
 	for _, p := range g.Participants() {
 		loadout := p.Loadout()
 		players = append(players, game.RevealPlayer{
-			HasStand:      loadout != nil && loadout.Stand() != nil,
-			HasDevilFruit: loadout != nil && loadout.DevilFruit() != nil,
+			HasStand:           loadout != nil && loadout.Stand() != nil,
+			HasDevilFruit:      loadout != nil && loadout.DevilFruit() != nil,
+			HasArmamentHaki:    loadout != nil && loadout.ArmamentHaki() != enums.HakiNone,
+			HasObservationHaki: loadout != nil && loadout.ObservationHaki() != enums.HakiNone,
+			HasConquerorHaki:   loadout != nil && loadout.ConquerorHaki() != enums.HakiNone,
 		})
 	}
 	return game.RevealDuration(g.ID(), len(g.Rounds()), g.Config().PowerMangas(), players, g.Config().RevealSpeed())
