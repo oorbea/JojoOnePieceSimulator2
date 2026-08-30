@@ -20,6 +20,10 @@ export const CLIENT_COMMAND = {
   // REVEAL_READY is the sorteo's own skip vote (owner decision,
   // 2026-08-30) - no payload, always applies to the caller.
   REVEAL_READY: 'REVEAL_READY',
+  // SUMMARY_READY is the loadout-summary screen's own skip vote (owner
+  // decision, 2026-08-30), mirroring REVEAL_READY exactly - no payload,
+  // always applies to the caller.
+  SUMMARY_READY: 'SUMMARY_READY',
 } as const
 
 export type ClientCommandType = (typeof CLIENT_COMMAND)[keyof typeof CLIENT_COMMAND]
@@ -52,6 +56,8 @@ export const SERVER_FRAME = {
   LOBBY_LOCK_CHANGED: 'LOBBY_LOCK_CHANGED',
   CONFIG_UPDATED: 'CONFIG_UPDATED',
   REVEAL_READY_CHANGED: 'REVEAL_READY_CHANGED',
+  SUMMARY_OPENED: 'SUMMARY_OPENED',
+  SUMMARY_READY_CHANGED: 'SUMMARY_READY_CHANGED',
 } as const
 
 export type ServerFrameType = (typeof SERVER_FRAME)[keyof typeof SERVER_FRAME]

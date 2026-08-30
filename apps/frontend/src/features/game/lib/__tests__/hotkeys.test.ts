@@ -8,6 +8,7 @@ function input(overrides: Partial<ResolveHotkeyInput> = {}): ResolveHotkeyInput 
     votingOpen: true,
     optionCount: 2,
     revealing: false,
+    summaryOpen: false,
     ...overrides,
   }
 }
@@ -26,6 +27,11 @@ describe('resolveHotkey', () => {
     expect(resolveHotkey(input({ key: 's', revealing: true, votingOpen: false }))).toEqual({ kind: 'skip' })
     expect(resolveHotkey(input({ key: 'S', revealing: true, votingOpen: false }))).toEqual({ kind: 'skip' })
     expect(resolveHotkey(input({ key: 's', revealing: false }))).toBeNull()
+  })
+
+  it('s also skips the loadout-summary screen while it is open', () => {
+    expect(resolveHotkey(input({ key: 's', summaryOpen: true, votingOpen: false }))).toEqual({ kind: 'skip' })
+    expect(resolveHotkey(input({ key: 's', summaryOpen: false, revealing: false }))).toBeNull()
   })
 
   it('a digit does nothing while voting is not open', () => {

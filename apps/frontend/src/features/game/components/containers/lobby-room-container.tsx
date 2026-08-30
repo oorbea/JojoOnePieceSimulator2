@@ -46,6 +46,7 @@ type ConfigFormState = {
   allowBots: boolean
   visibility: LobbyVisibility
   votingWindowSeconds: number
+  summaryDurationSeconds: number
   revealSpeed: RevealSpeed
   poolFilter: PoolFilter
 }
@@ -64,6 +65,7 @@ function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormS
     allowBots: config.allowBots,
     visibility: config.visibility,
     votingWindowSeconds: config.votingWindowSeconds,
+    summaryDurationSeconds: config.summaryDurationSeconds,
     revealSpeed: config.revealSpeed,
     poolFilter: config.poolFilter,
   }
@@ -175,6 +177,7 @@ export function LobbyRoomContainer() {
     votingOpen,
     optionCount: hotkeyOptions.length,
     revealing: loadoutReveal.isRevealing,
+    summaryOpen: snapshot?.state === 'SUMMARY',
     // ConfirmSheet is the one overlay this container itself owns and can
     // check synchronously. LoadoutModal's open/closed state lives inside
     // MatchRoster (deliberately - it's the component that already has
@@ -186,6 +189,7 @@ export function LobbyRoomContainer() {
       if (option) handleVote(option.id)
     },
     onSkipReveal: loadoutReveal.skip,
+    onSkipSummary: commands.summaryReady,
   })
 
   // Reseed the edit form whenever a fresh CONFIG_UPDATED/STATE snapshot
@@ -319,6 +323,7 @@ export function LobbyRoomContainer() {
       allowBots: next.allowBots,
       visibility: next.visibility,
       votingWindowSeconds: next.votingWindowSeconds,
+      summaryDurationSeconds: next.summaryDurationSeconds,
       revealSpeed: next.revealSpeed,
       poolFilter: next.poolFilter,
     })
@@ -454,6 +459,10 @@ export function LobbyRoomContainer() {
       onChangeConfigVotingWindow={(votingWindowSeconds) =>
         setConfigForm({ ...form, votingWindowSeconds })
       }
+      configSummaryDurationSeconds={form.summaryDurationSeconds}
+      onChangeConfigSummaryDuration={(summaryDurationSeconds) =>
+        setConfigForm({ ...form, summaryDurationSeconds })
+      }
       configRevealSpeed={form.revealSpeed}
       onCycleConfigRevealSpeed={() => {
         const i = REVEAL_SPEED_CYCLE.indexOf(form.revealSpeed)
@@ -477,6 +486,7 @@ export function LobbyRoomContainer() {
       revealTotalSlots={loadoutReveal.totalSlots}
       isRevealing={loadoutReveal.isRevealing}
       onSkipReveal={loadoutReveal.skip}
+      onSummaryReady={commands.summaryReady}
       reducedMotion={reducedMotion}
       onVote={handleVote}
       onSkipResult={socket.dismissResult}

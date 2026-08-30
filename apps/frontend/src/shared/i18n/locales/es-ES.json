@@ -183,6 +183,7 @@
       "teamSizeLabel": "Tamaño de equipo",
       "teamSizeGauntletLabel": "Jugadores máximos",
       "votingSecondsLabel": "Ventana de votación (segundos)",
+      "summarySecondsLabel": "Resumen de poderes (segundos)",
       "revealSpeedLabel": "Velocidad del sorteo",
       "revealSpeedHint": "Con qué ritmo se desarrolla el sorteo de poderes",
       "privacyLabel": "Privacidad",
@@ -311,6 +312,13 @@
       "closesIn": "Cierra en {{seconds}}s",
       "noStand": "Sin Stand",
       "noFruit": "Sin Fruta del Diablo",
+      "summary": {
+        "title": "Resumen de poderes",
+        "votingIn": "La votación empieza en {{seconds}}s",
+        "skip": "Saltar",
+        "skipA11y": "Saltar el resumen de poderes",
+        "readyCount": "{{ready}}/{{total}} listos"
+      },
       "trait": {
         "spin": "Spin",
         "hamon": "Hamon",
