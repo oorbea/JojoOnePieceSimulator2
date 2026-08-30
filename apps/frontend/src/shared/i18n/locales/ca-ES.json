@@ -541,6 +541,7 @@
     "gameState": {
       "LOBBY": "Sala",
       "ASSIGNING": "Repartint poders",
+      "SUMMARY": "Resum de poders",
       "VOTING": "Votació",
       "TIEBREAK": "Vot de desempat",
       "RESOLVING": "Resolent la ronda",

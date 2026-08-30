@@ -541,6 +541,7 @@
     "gameState": {
       "LOBBY": "Sala",
       "ASSIGNING": "Repartiendo poderes",
+      "SUMMARY": "Resumen de poderes",
       "VOTING": "Votación",
       "TIEBREAK": "Voto de desempate",
       "RESOLVING": "Resolviendo ronda",

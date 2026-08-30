@@ -541,6 +541,7 @@
     "gameState": {
       "LOBBY": "Lobby",
       "ASSIGNING": "Assigning powers",
+      "SUMMARY": "Loadout summary",
       "VOTING": "Voting",
       "TIEBREAK": "Tiebreak vote",
       "RESOLVING": "Resolving round",
