@@ -32,6 +32,11 @@ const (
 	// legacy (pre-per-game-window) Snapshot, and by the application layer
 	// when a CreateGame request doesn't specify one.
 	DefaultVotingWindowSeconds = 30
+
+	// DefaultRevealSpeed is the fallback used by Restore for a legacy
+	// (pre-reveal-speed) Snapshot, and by the application layer when a
+	// CreateGame/ConfigUpdate request doesn't specify one.
+	DefaultRevealSpeed = enums.Normal
 )
 
 var (
@@ -50,6 +55,10 @@ var (
 	// ErrInvalidVotingWindow is returned when Config's voting window falls
 	// outside [MinVotingWindowSeconds, MaxVotingWindowSeconds].
 	ErrInvalidVotingWindow = errors.New("invalid voting window")
+
+	// ErrInvalidRevealSpeed is returned when Config's reveal speed is not
+	// one of enums.RevealSpeed's valid values.
+	ErrInvalidRevealSpeed = errors.New("invalid reveal speed")
 )
 
 // Config is a lobby's setup: which mode, which manga(s) Stages are drawn
@@ -71,6 +80,7 @@ type Config struct {
 	abilitySource       enums.AbilitySource
 	allowBots           bool
 	visibility          enums.LobbyVisibility
+	revealSpeed         enums.RevealSpeed
 }
 
 // NewConfig validates and builds a Config.
@@ -84,6 +94,7 @@ func NewConfig(
 	visibility enums.LobbyVisibility,
 	votingWindowSeconds int,
 	poolFilter PoolFilter,
+	revealSpeed enums.RevealSpeed,
 ) (Config, error) {
 	if !mode.IsValid() {
 		return Config{}, enums.ErrInvalidGameModeKind
@@ -99,6 +110,9 @@ func NewConfig(
 	}
 	if votingWindowSeconds < MinVotingWindowSeconds || votingWindowSeconds > MaxVotingWindowSeconds {
 		return Config{}, ErrInvalidVotingWindow
+	}
+	if !revealSpeed.IsValid() {
+		return Config{}, ErrInvalidRevealSpeed
 	}
 
 	uniqueStageMangas, err := normalizeMangas(stageMangas)
@@ -140,6 +154,7 @@ func NewConfig(
 		visibility:          visibility,
 		votingWindowSeconds: votingWindowSeconds,
 		poolFilter:          poolFilter,
+		revealSpeed:         revealSpeed,
 	}, nil
 }
 
@@ -168,6 +183,7 @@ func (c Config) TeamSize() int                      { return c.teamSize }
 func (c Config) AllowBots() bool                    { return c.allowBots }
 func (c Config) Visibility() enums.LobbyVisibility  { return c.visibility }
 func (c Config) VotingWindowSeconds() int           { return c.votingWindowSeconds }
+func (c Config) RevealSpeed() enums.RevealSpeed     { return c.revealSpeed }
 func (c Config) PoolFilter() PoolFilter             { return c.poolFilter }
 
 // StageMangas returns a copy of the mangas Stages are drawn from, in

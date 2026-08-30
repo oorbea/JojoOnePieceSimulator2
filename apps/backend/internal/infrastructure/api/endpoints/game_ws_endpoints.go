@@ -302,6 +302,8 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 		return e.svc.CastVote(ctx, gameID, self, game.OptionID(p.Option))
 	case dto.CommandResync:
 		return e.svc.GetGame(ctx, gameID)
+	case dto.CommandRevealReady:
+		return e.svc.MarkRevealReady(ctx, gameID, self)
 	case dto.CommandSwitchTeam:
 		var p dto.SwitchTeamPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
@@ -448,6 +450,10 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 	case game.VoteCast:
 		return dto.FrameVoteCast, dto.VoteCastPayload{
 			RoundIndex: e.RoundIndex, VotesCast: e.HumanVotesCast, Voters: e.HumanVoters,
+		}, false
+	case game.RevealReadyChanged:
+		return dto.FrameRevealReadyChanged, dto.RevealReadyChangedPayload{
+			Ready: e.ReadyCount, Total: e.TotalHumans,
 		}, false
 	case game.TiebreakOpened:
 		return dto.FrameTiebreakOpened, dto.TiebreakOpenedPayload{

@@ -215,6 +215,14 @@ final result screen (`GAME_FINISHED` still just toasts and bounces to `/play`).
 - No automated test for `use-roving-group.ts`'s web-only keyboard branch — `hooks/__tests__` always
   runs under jest's native project per the current `jest.config.js` split, where the web branch
   never engages. Needs either a new jsdom hooks lane or relocating this one test.
+
+**Sorteo redesign to V1's jugador-por-jugador pacing — DONE (2026-08-30, owner request)**, see
+[[game-match-assignment-frontend]]'s dated section for the full writeup: the reveal replays
+`JoJoOnePiece_Simulator`'s own tempo and before/after copy one participant at a time, with a
+full-screen `PowerRevealCard` for a landed Stand/Devil Fruit and a synchronized skip
+(`MarkRevealReady`/`REVEAL_READY`) any connected human can trigger. Per-power special visual
+effects (Gomu Gomu no Mi bounce, The World's time-stop, etc.) were explicitly asked for as a
+**documented plan only, not built** — see [[gameplay-power-fx]].
 - `VOTING_OPENED`/`TIEBREAK_OPENED`'s `closesAt` is still transport-synthesized separately from the
   new authoritative `votingEndsAt` (can drift by hub-delivery latency) — clean follow-up, not folded
   in this tanda.

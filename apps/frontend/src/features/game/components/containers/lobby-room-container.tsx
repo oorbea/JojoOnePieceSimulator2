@@ -23,7 +23,7 @@ import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga, RevealSpeed } from '@/shared/lib/zod'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
 import { useDevilFruits } from '@/features/devil-fruits'
@@ -46,8 +46,14 @@ type ConfigFormState = {
   allowBots: boolean
   visibility: LobbyVisibility
   votingWindowSeconds: number
+  revealSpeed: RevealSpeed
   poolFilter: PoolFilter
 }
+
+// REVEAL_SPEED_CYCLE fixes the order onCycleRevealSpeed steps through -
+// slowest to fastest, so repeated presses read as "speeding the sorteo up"
+// rather than a confusing wraparound.
+const REVEAL_SPEED_CYCLE: RevealSpeed[] = ['RELAXED', 'NORMAL', 'SWIFT']
 
 function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormState {
   return {
@@ -58,6 +64,7 @@ function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormS
     allowBots: config.allowBots,
     visibility: config.visibility,
     votingWindowSeconds: config.votingWindowSeconds,
+    revealSpeed: config.revealSpeed,
     poolFilter: config.poolFilter,
   }
 }
@@ -149,9 +156,14 @@ export function LobbyRoomContainer() {
   const revealMangas = snapshot?.config.powerMangas ?? []
   const revealActive = !!snapshot && shouldReveal(socket.live, snapshot)
   const loadoutReveal = useLoadoutReveal({
+    gameId: snapshot?.id ?? '',
+    roundIndex: snapshot?.rounds.length ?? 0,
     mangas: revealMangas,
+    participants: snapshot?.participants ?? [],
+    speed: snapshot?.config.revealSpeed ?? 'NORMAL',
     active: revealActive,
     markRevealed: socket.markAssignmentRevealed,
+    sendRevealReady: commands.revealReady,
     serverRevealMs: socket.live.revealMs,
   })
 
@@ -307,6 +319,7 @@ export function LobbyRoomContainer() {
       allowBots: next.allowBots,
       visibility: next.visibility,
       votingWindowSeconds: next.votingWindowSeconds,
+      revealSpeed: next.revealSpeed,
       poolFilter: next.poolFilter,
     })
     setTimeout(() => {
@@ -441,6 +454,12 @@ export function LobbyRoomContainer() {
       onChangeConfigVotingWindow={(votingWindowSeconds) =>
         setConfigForm({ ...form, votingWindowSeconds })
       }
+      configRevealSpeed={form.revealSpeed}
+      onCycleConfigRevealSpeed={() => {
+        const i = REVEAL_SPEED_CYCLE.indexOf(form.revealSpeed)
+        const revealSpeed = REVEAL_SPEED_CYCLE[(i + 1) % REVEAL_SPEED_CYCLE.length]
+        setConfigForm({ ...form, revealSpeed })
+      }}
       configPoolFilter={form.poolFilter}
       configPoolActiveCount={configPoolActiveCount}
       configBanlistItems={banlistItems}
@@ -453,6 +472,7 @@ export function LobbyRoomContainer() {
       onSubmitConfig={handleSubmitConfig}
       live={socket.live}
       revealPhase={loadoutReveal.phase}
+      revealParticipantIndex={loadoutReveal.participantIndex}
       revealSlotIndex={loadoutReveal.slotIndex}
       revealTotalSlots={loadoutReveal.totalSlots}
       isRevealing={loadoutReveal.isRevealing}

@@ -310,5 +310,62 @@ All four verified live via `local-up` + `claude-in-chrome` after a docker rebuil
 reload) - recorded GIFs of a landing on a scalar slot and confirmed the hover card clamping to the
 top edge instead of running off past it near the bottom of the roster.
 
+**Superseded 2026-08-30 (owner request) - see [[gameplay-power-fx]] and the dated section below.**
+Everything above this note is still true of the code as it stood through 2026-08-28, but the
+reveal's own *structure* changed: it is no longer poder-a-poder for the whole lobby at once - it is
+now jugador-por-jugador, V1-style. Kept for history (the reel geometry, the bug post-mortems, the
+polish pass are all still exactly how the reel itself works); the "one global timeline, every
+lane spins the same slot simultaneously" framing is what changed.
+
+## 2026-08-30: jugador-por-jugador rewrite, V1 tempo, big power cards (owner request)
+
+Owner asked for the sorteo to look and feel like the original terminal-based
+`JoJoOnePiece_Simulator` (github.com/oorbea/JoJoOnePiece_Simulator) - one participant's full turn
+at a time, V1's own tempo (`loadingScreen`/`delay` in `main.cc`/`loadingScreen.cc`), V1's own
+before/after copy translated into the three locales, and a full-screen big reveal for a landed
+Stand/Devil Fruit so the art/description/skills actually get read (see this note's own
+"locale-gap" comment above, from the 2026-08-14 pass, about the pre-existing UI never rendering a
+power's description - that gap is now closed).
+
+- **Backend**: `game.RevealDuration` (`reveal.go`) is deliberately no longer a pure function of
+  `mangas` alone - see its own doc comment for why that stopped being the point. It now walks
+  every participant's turn, every slot, mirroring V1's constants (`RevealPlayerIntroMs`,
+  `RevealNarratorMs`, `RevealSpinBaseMs`, `RevealHoldScalarMs`, `RevealHoldFruitMs` = V1's
+  `delay(5)`, `RevealHoldStandMs` = V1's `delay(10)`, `RevealHoldEmptyMs`), scaled by a new
+  per-lobby `enums.RevealSpeed` (`Relaxed`/`Normal`/`Swift` - `Normal` is the zero value, ×1.3;
+  `Swift` = ×1.0 reproduces V1 exactly). `game.RevealSpinCycles` reproduces V1's
+  `generateRandomNumber(1, 2)` deterministically (FNV-1a 32 over `gameID` + round/participant/slot
+  bytes) so both ends of the wire agree on how many "loadingScreen" cycles a spin plays without
+  exchanging anything extra. `GameService.MarkRevealReady` is the sorteo's own skip vote (owner
+  decision: "todos pueden saltar", not host-only) - mirrors `humanVoteProgress`/`VotingComplete`
+  exactly, cutting the pending reveal timer short the instant every connected human is ready.
+- **Frontend timeline**: `lib/loadout-reveal.ts`'s `revealPhases`/`REVEAL_SPIN_MS` are gone,
+  replaced by `revealTimeline(gameId, roundIndex, mangas, players, speed)` - a flat sequence of
+  `intro -> [playerIntro -> (narrator -> spin -> land) per slot -> playerOutro] per participant ->
+  outro`. `revealSpinCycles` mirrors the backend's hash bit-for-bit (keep both in sync per the
+  in-code comment). `use-loadout-reveal.ts` keeps its two documented traps intact (the
+  cleanup-not-tied-to-`active` fix; the `shouldReveal` gate on `state === 'ASSIGNING'`) and now
+  also sends `REVEAL_READY` from `skip()`.
+- **`RevealStage`** no longer renders one `PowerRoulette` per participant simultaneously - it
+  renders exactly one, for whoever's turn it is, plus a `RevealNarrator` band reproducing V1's
+  before/after lines and an avatar strip (done/current/pending) for the rest of the lobby. Landing
+  on `stand`/`devilFruit` opens `PowerRevealCard`, a full-screen timed overlay built on `PowerBlock`
+  - extracted out of `loadout-modal.tsx` (was a private, unexported component there) so the sorteo
+  and the post-match breakdown share the exact same big-card layout instead of duplicating it.
+  `reveal-lane.tsx` (the old per-lane component) was deleted - nothing else referenced it once
+  `RevealStage` stopped rendering a lane per participant.
+- **Config**: a new `RevealSpeed` setting lives in `LobbyConfigPanel`/`lobby-room-container.tsx`
+  next to the voting-window stepper - a `GlossButton` that cycles Relaxed → Normal → Swift, full
+  UPDATE_CONFIG replacement like every other config field. No create-time selector was added
+  (scope trimmed deliberately) - a lobby always starts at `Normal` and the host adjusts it after
+  creation, same as it would any other config field, from the lobby screen.
+- **i18n**: new `game.match.reveal.narrator.*` block in all three locales, es-ES copy is V1's own
+  Spanish verbatim, en-GB/ca-ES translated keeping the same slightly cheeky tone. New
+  `game.create.revealSpeedLabel`/`revealSpeedHint` and `enums.revealSpeed.*`.
+- **Deliberately not done, documented instead**: per-power special visual effects (Gomu Gomu no Mi
+  bounce, Holy's Stand greyscale+brambles, The World's time-stop, etc.) - see [[gameplay-power-fx]],
+  a planned-only note the owner explicitly asked to have written up rather than built yet.
+
 Related: [[game-lobby-todo]], [[game-lobby-frontend]], [[gameplay-application-layer]],
-[[game-realtime-transport]], [[docker-setup]], [[frontend-stack]], [[i18n-multi-language]].
+[[game-realtime-transport]], [[docker-setup]], [[frontend-stack]], [[i18n-multi-language]],
+[[gameplay-power-fx]].

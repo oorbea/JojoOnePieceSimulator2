@@ -342,6 +342,8 @@ describe('useGameSocketStore', () => {
       assignedRoundIndex: null,
       revealMs: null,
       revealEndsAt: null,
+      revealReadyCount: null,
+      revealReadyTotal: null,
       votingRoundIndex: null,
       votingClosesAt: null,
       tiebreak: false,

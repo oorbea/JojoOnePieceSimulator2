@@ -8,7 +8,7 @@ import (
 )
 
 func TestVersusMode_PlaysExactlyThreeRoundsAndTracksWins(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestVersusMode_ReassignsLoadoutsEachRound(t *testing.T) {
 }
 
 func TestVersusMode_StageIsRandomPerRound(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

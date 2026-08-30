@@ -75,6 +75,11 @@ type wireConfig struct {
 	Visibility          string         `json:"visibility,omitempty"`
 	VotingWindowSeconds int            `json:"votingWindowSeconds,omitempty"`
 	PoolFilter          wirePoolFilter `json:"poolFilter,omitempty"`
+	// RevealSpeed is additive/omitempty like Visibility/VotingWindowSeconds
+	// above - an absent value (a lobby saved before this field existed)
+	// decodes as "", which game.Restore already defaults to
+	// DefaultRevealSpeed, same reasoning as this file's snapshotVersion doc.
+	RevealSpeed string `json:"revealSpeed,omitempty"`
 }
 
 type wirePoolFilter struct {
@@ -170,6 +175,7 @@ func toWire(s game.Snapshot) wireGame {
 			Visibility:          s.Config.Visibility,
 			VotingWindowSeconds: s.Config.VotingWindowSeconds,
 			PoolFilter:          toWirePoolFilter(s.Config.PoolFilter),
+			RevealSpeed:         s.Config.RevealSpeed,
 		},
 		Participants: make([]wireParticipant, 0, len(s.Participants)),
 		Teams:        make([]wireTeam, 0, len(s.Teams)),
@@ -311,6 +317,7 @@ func fromWire(w wireGame) game.Snapshot {
 			Visibility:          w.Config.Visibility,
 			VotingWindowSeconds: w.Config.VotingWindowSeconds,
 			PoolFilter:          fromWirePoolFilter(w.Config.PoolFilter),
+			RevealSpeed:         w.Config.RevealSpeed,
 		},
 		Participants: make([]game.ParticipantSnapshot, 0, len(w.Participants)),
 		Teams:        make([]game.TeamSnapshot, 0, len(w.Teams)),

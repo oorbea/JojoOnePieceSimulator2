@@ -183,6 +183,8 @@
       "teamSizeLabel": "Mida de l'equip",
       "teamSizeGauntletLabel": "Jugadors màxims",
       "votingSecondsLabel": "Finestra de votació (segons)",
+      "revealSpeedLabel": "Velocitat del sorteig",
+      "revealSpeedHint": "A quin ritme es desenvolupa el sorteig de poders",
       "privacyLabel": "Privadesa",
       "allowBotsLabel": "Permet bots",
       "allowBotsOn": "Amb bots",
@@ -333,11 +335,54 @@
         "progress": "{{current}}/{{total}}",
         "skip": "Salta",
         "skipA11y": "Salta l'animació del sorteig de poders",
-        "votingIn": "La votació comença en {{seconds}}s"
+        "votingIn": "La votació comença en {{seconds}}s",
+        "readyCount": "{{ready}}/{{total}} llestos",
+        "outro": "Aquestes són les vostres estadístiques finals",
+        "narrator": {
+          "playerTurn": "Li toca a {{name}}",
+          "physicalForm": {
+            "before": "Primer vegem el teu físic base",
+            "after": "{{name}}, ets tan fort com un {{value}}"
+          },
+          "spin": {
+            "before": "Ara vegem si saps utilitzar l'spin",
+            "after": "{{name}}, el teu nivell d'spin és {{value}}",
+            "none": "{{name}}, ho sento, però malauradament no has après a utilitzar l'spin"
+          },
+          "hamon": {
+            "before": "A veure quin nivell tens d'hamon",
+            "after": "{{name}}, el teu nivell d'hamon és {{value}}",
+            "none": "{{name}}, ho sento, però malauradament no has après a utilitzar l'hamon"
+          },
+          "devilFruit": {
+            "before": "Va, a veure quina fruita del diable tens",
+            "after": "{{name}}, la teva fruita és la {{name2}}, que és de tipus {{type}}",
+            "none": "{{name}}, ho sento, però malauradament no tens fruita del diable."
+          },
+          "fruitMastery": {
+            "before": "I la teva mestria amb ella és…",
+            "after": "Mestria amb la teva fruita: {{value}}"
+          },
+          "stand": {
+            "before": "Alguna cosa t'està passant! Crec que estàs a punt d'obtenir un stand!",
+            "after": "{{name}}, el teu stand és {{name2}}",
+            "none": "{{name}}, ho sento, però malauradament no ets usuari d'stand."
+          },
+          "haki": {
+            "before": "A veure quin resultat ha donat el teu entrenament. Quin haki tindràs?",
+            "after": "Resulta que tens aquests tipus d'haki: {{list}}",
+            "none": "{{name}}, ho sento, però malauradament no has après a utilitzar haki"
+          },
+          "hakiMastery": {
+            "before": "I la teva mestria de {{type}} és:",
+            "after": "{{name}}, la teva mestria de {{type}} és {{value}}"
+          }
+        }
       },
       "loadout": {
         "viewA11y": "Veure els poders de {{name}}",
-        "closeA11y": "Tancar el desglossament de poders"
+        "closeA11y": "Tancar el desglossament de poders",
+        "viewImageA11y": "Veure la imatge de {{name}} en gran"
       },
       "result": {
         "title": "Resultat de la ronda {{index}}",
@@ -497,7 +542,7 @@
     "spinLevel": {
       "NONE": "Cap",
       "BASIC": "Bàsic",
-      "GOLDEN": "Daurat",
+      "GOLDEN": "Auri",
       "INFINITE": "Infinit"
     },
     "hamonLevel": {
@@ -514,9 +559,9 @@
     },
     "hakiLevel": {
       "NONE": "Cap",
-      "PRIVATE": "Soldat",
-      "VICE_ADMIRAL": "Vicealmirall",
-      "YONKO_COMMANDER": "Comandant Yonko",
+      "PRIVATE": "Bàsica",
+      "VICE_ADMIRAL": "Avançada",
+      "YONKO_COMMANDER": "Gairebé yonko",
       "YONKO_PLUS": "Yonko+"
     },
     "physicalForm": {
@@ -538,6 +583,11 @@
     "lobbyVisibility": {
       "PUBLIC": "Pública",
       "PRIVATE": "Privada"
+    },
+    "revealSpeed": {
+      "NORMAL": "Normal",
+      "RELAXED": "Relaxat",
+      "SWIFT": "Ràpid"
     }
   },
   "errors": {
