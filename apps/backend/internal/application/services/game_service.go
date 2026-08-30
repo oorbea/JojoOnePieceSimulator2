@@ -70,6 +70,9 @@ type CreateGameInput struct {
 	// defaults to VotingPolicy.Window, and a zero PoolFilter means "no
 	// restriction".
 	Visibility enums.LobbyVisibility
+	// RevealSpeed is optional - its zero value is enums.Normal (see that
+	// enum's doc), so an omitted field needs no extra fallback here.
+	RevealSpeed enums.RevealSpeed
 }
 
 // ConfigUpdateInput is EditLobbyConfig's whole-replacement input - the same
@@ -244,7 +247,7 @@ func (s *GameService) buildConfig(input CreateGameInput) (game.Config, error) {
 	}
 	return game.NewConfig(
 		input.Mode, input.StageMangas, input.PowerMangas, input.AbilitySource, input.TeamSize, input.AllowBots,
-		visibility, votingWindowSeconds, input.PoolFilter,
+		visibility, votingWindowSeconds, input.PoolFilter, input.RevealSpeed,
 	)
 }
 
@@ -600,17 +603,19 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 	return nil
 }
 
-// scheduleRevealDelay holds g in ASSIGNING for game.RevealDuration(mangas) -
-// every client computes that same duration locally (loadout-reveal.ts) to
-// pace its reveal overlay, so this is what keeps "voting opens" from ever
-// racing ahead of "everyone has seen their loadout". Once the delay elapses,
+// scheduleRevealDelay holds g in ASSIGNING for game.RevealDuration(...) -
+// every client computes that same duration locally (loadout-reveal.ts),
+// from the same mangas/participants'-loadouts/revealSpeed it already has in
+// its own snapshot, to pace its reveal overlay - so this is what keeps
+// "voting opens" from ever racing ahead of "everyone has seen their
+// loadout". Once the delay elapses,
 // openVotingAfterReveal does what beginRound used to do immediately:
 // OpenVoting + scheduleVotingTimer. Uses the same s.timers map as the voting
 // timer (see its field doc) and records the deadline in s.revealEnds for
 // RevealEndsAt to serve to (re)connecting clients.
 func (s *GameService) scheduleRevealDelay(g *game.Game) {
 	id := g.ID()
-	d := game.RevealDuration(g.Config().PowerMangas())
+	d := revealDurationFor(g)
 
 	s.timersMu.Lock()
 	s.revealEnds[id] = s.clock.Now().Add(d)
@@ -741,6 +746,29 @@ func (s *GameService) completeRoundAfterResult(ctx context.Context, id game.Game
 
 // CastVote records participantID's vote and force-closes the window early
 // once every connected human has voted (see game.Game.VotingComplete).
+// MarkRevealReady records that participantID (a connected human) is done
+// watching its own sorteo reveal - the server-side half of the "todos
+// pueden saltar" skip (owner decision, 2026-08-30). Once every connected
+// human has called this during the lobby's current ASSIGNING window, the
+// pending reveal timer is cancelled and voting opens immediately, exactly
+// like CastVote short-circuiting the voting-window timer once
+// VotingComplete goes true.
+func (s *GameService) MarkRevealReady(ctx context.Context, gameID game.GameID, participantID game.ParticipantID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		if err := g.MarkRevealReady(participantID); err != nil {
+			return err
+		}
+		if g.RevealReadyComplete() {
+			s.cancelTimer(g.ID())
+			if err := g.OpenVoting(s.rng); err != nil {
+				return err
+			}
+			s.scheduleVotingTimer(g)
+		}
+		return nil
+	})
+}
+
 func (s *GameService) CastVote(ctx context.Context, gameID game.GameID, participantID game.ParticipantID, option game.OptionID) (*game.Game, error) {
 	return s.withGame(ctx, gameID, func(g *game.Game) error {
 		if err := g.CastVote(participantID, option); err != nil {
@@ -1008,10 +1036,31 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 // and fans them out over hub.
 func (s *GameService) publish(g *game.Game) {
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
-	revealMs := game.RevealDuration(g.Config().PowerMangas())
+	revealMs := revealDurationFor(g)
 	for _, e := range g.PullEvents() {
 		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window, RevealMs: revealMs})
 	}
+}
+
+// revealDurationFor computes game.RevealDuration for g as it stands right
+// now: its own mangas/RevealSpeed, its current round index (len(g.Rounds())
+// - the reveal always runs before that round's Round is created, see
+// scheduleRevealDelay's doc), and each participant's own already-assigned
+// Loadout (nil before AssignLoadouts has run, treated as "landed nothing").
+// Shared by scheduleRevealDelay (to size the actual timer) and publish (to
+// stamp every GameEvent's RevealMs, most importantly LOADOUTS_ASSIGNED's)
+// so the two never compute a different number for the same reveal.
+func revealDurationFor(g *game.Game) time.Duration {
+	players := make([]game.RevealPlayer, 0, len(g.Participants()))
+	for _, p := range g.Participants() {
+		loadout := p.Loadout()
+		players = append(players, game.RevealPlayer{
+			HasStand:      loadout != nil && loadout.Stand() != nil,
+			HasDevilFruit: loadout != nil && loadout.DevilFruit() != nil,
+		})
+	}
+	roundIndex := len(g.Rounds())
+	return game.RevealDuration(g.ID(), roundIndex, g.Config().PowerMangas(), players, g.Config().RevealSpeed())
 }
 
 // scheduleVotingTimer starts g's voting-window timer using its own

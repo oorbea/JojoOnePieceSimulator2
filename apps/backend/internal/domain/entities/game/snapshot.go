@@ -53,6 +53,7 @@ type ConfigSnapshot struct {
 	Visibility          string
 	VotingWindowSeconds int
 	PoolFilter          PoolFilterSnapshot
+	RevealSpeed         string
 }
 
 // PoolFilterSnapshot mirrors PoolFilter. Empty slices mean "no
@@ -163,6 +164,7 @@ func (g *Game) Snapshot() Snapshot {
 			Visibility:          g.config.visibility.String(),
 			VotingWindowSeconds: g.config.votingWindowSeconds,
 			PoolFilter:          snapshotPoolFilter(g.config.poolFilter),
+			RevealSpeed:         g.config.revealSpeed.String(),
 		},
 		Participants: make([]ParticipantSnapshot, 0, len(g.order)),
 		Teams:        make([]TeamSnapshot, 0, len(g.teams)),
@@ -398,6 +400,16 @@ func Restore(s Snapshot) (*Game, error) {
 	if err != nil {
 		return nil, err
 	}
+	// RevealSpeed is likewise an additive field - a legacy Snapshot
+	// predating it decodes with an empty string, which falls back to
+	// DefaultRevealSpeed rather than failing to parse.
+	revealSpeed := DefaultRevealSpeed
+	if s.Config.RevealSpeed != "" {
+		revealSpeed, err = enums.ParseRevealSpeed(s.Config.RevealSpeed)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	cfg := Config{
 		mode:                mode,
@@ -409,6 +421,7 @@ func Restore(s Snapshot) (*Game, error) {
 		visibility:          visibility,
 		votingWindowSeconds: votingWindowSeconds,
 		poolFilter:          poolFilter,
+		revealSpeed:         revealSpeed,
 	}
 
 	state, err := enums.ParseGameState(s.State)

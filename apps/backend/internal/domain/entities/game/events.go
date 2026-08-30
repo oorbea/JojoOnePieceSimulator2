@@ -33,6 +33,18 @@ type VotingOpened struct{ RoundIndex int }
 
 func (VotingOpened) Name() string { return "VOTING_OPENED" }
 
+// RevealReadyChanged is emitted by MarkRevealReady - the sorteo's own skip
+// vote, mirroring VoteCast's ready/total shape but scoped to the ASSIGNING
+// window rather than a round's Ballot. ReadyCount/TotalHumans are
+// Game.RevealReadyProgress() at emit time: connected humans only, exactly
+// the population RevealReadyComplete waits on.
+type RevealReadyChanged struct {
+	ReadyCount  int
+	TotalHumans int
+}
+
+func (RevealReadyChanged) Name() string { return "REVEAL_READY_CHANGED" }
+
 // VoteCast is emitted once per recorded ballot - by CastVote for a human,
 // and by castBotVotes for each bot the instant a window (or revote window)
 // opens. HumanVotesCast/HumanVoters are the round's human-vote progress at
