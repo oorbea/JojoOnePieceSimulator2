@@ -158,5 +158,10 @@ anyone has seen their loadout. Rounds that don't reassign (Gauntlet after round 
 immediately, since there's nothing new to reveal. See [[gameplay-application-layer]] for the
 mechanism and [[game-match-assignment-frontend]] for the frontend half.
 
+**2026-08-30 (owner request)**: `Config` gained a `RevealSpeed` (`Relaxed`/`Normal`/`Swift`,
+`Normal` the zero value) - a per-lobby knob for how fast the sorteo plays out, host-editable via
+`UPDATE_CONFIG` like every other config field. See [[game-match-assignment-frontend]]'s dated
+section for the full jugador-por-jugador rewrite this belongs to.
+
 Related: [[gameplay-domain-design]] (technical design, patterns, file map), [[backend-contract]],
 [[gameplay-application-layer]], [[game-match-assignment-frontend]], [[ADR]]
