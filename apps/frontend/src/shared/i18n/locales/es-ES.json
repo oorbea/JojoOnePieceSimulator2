@@ -558,9 +558,9 @@
     },
     "hakiLevel": {
       "NONE": "Ninguno",
-      "PRIVATE": "Soldado",
-      "VICE_ADMIRAL": "Vicealmirante",
-      "YONKO_COMMANDER": "Comandante Yonko",
+      "PRIVATE": "Básica",
+      "VICE_ADMIRAL": "Avanzada",
+      "YONKO_COMMANDER": "Casi yonko",
       "YONKO_PLUS": "Yonko+"
     },
     "physicalForm": {
