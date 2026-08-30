@@ -1,11 +1,14 @@
 import { Sparkles } from '@tamagui/lucide-icons-2'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image } from 'react-native'
+import { Image, Pressable } from 'react-native'
 import { XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
+import { a11yProps } from '@/shared/lib/a11y'
 
 export type PowerBlockProps = {
   picture?: string
@@ -26,7 +29,8 @@ export type PowerBlockProps = {
 // (e.g. NoStandWeight won the roll) rather than an empty block. Extracted
 // out of loadout-modal.tsx (2026-08-30) so the sorteo's own big power-reveal
 // card (power-reveal-card.tsx) can reuse the exact same layout instead of
-// duplicating it.
+// duplicating it. Tapping the art opens ImageLightbox full-screen, same
+// recipe as the admin Stand/DevilFruit cards (owner request, 2026-08-30).
 export function PowerBlock({
   picture,
   name,
@@ -38,33 +42,41 @@ export function PowerBlock({
   children,
 }: PowerBlockProps) {
   const { t } = useTranslation()
+  const [previewOpen, setPreviewOpen] = useState(false)
   return (
     <GlassPanel tone="plastic" p="$3" gap="$2" rounded="$panel">
-      <YStack
-        width="100%"
-        height={artHeight}
-        rounded="$card"
-        overflow="hidden"
-        position="relative"
-        bg="$plasticEdge"
+      <Pressable
+        onPress={() => setPreviewOpen(true)}
+        disabled={!picture}
+        {...a11yProps(name ? t('game.match.loadout.viewImageA11y', { name }) : fallbackLabel, 'imagebutton')}
       >
-        <InsetRing rounded="$card" />
-        {name ? (
-          picture ? (
-            <Image source={{ uri: picture }} style={{ width: '100%', height: '100%' }} />
+        <YStack
+          width="100%"
+          height={artHeight}
+          rounded="$card"
+          overflow="hidden"
+          position="relative"
+          bg="$plasticEdge"
+        >
+          <InsetRing rounded="$card" />
+          {name ? (
+            picture ? (
+              <Image source={{ uri: picture }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <YStack flex={1} items="center" justify="center">
+                <Sparkles size={36} color="$standPurple" />
+              </YStack>
+            )
           ) : (
             <YStack flex={1} items="center" justify="center">
-              <Sparkles size={36} color="$standPurple" />
+              <GlowText level="label" tone="soft">
+                {fallbackLabel}
+              </GlowText>
             </YStack>
-          )
-        ) : (
-          <YStack flex={1} items="center" justify="center">
-            <GlowText level="label" tone="soft">
-              {fallbackLabel}
-            </GlowText>
-          </YStack>
-        )}
-      </YStack>
+          )}
+        </YStack>
+      </Pressable>
+      <ImageLightbox visible={previewOpen} uri={picture ?? null} onClose={() => setPreviewOpen(false)} />
 
       {name ? (
         <>

@@ -374,14 +374,15 @@
             "none": "{{name}}, sorry, but unfortunately you haven't learned to use haki"
           },
           "hakiMastery": {
-            "before": "And your mastery with each of them is:",
-            "after": "{{name}}, your mastery is {{value}}"
+            "before": "And your mastery of {{type}} is:",
+            "after": "{{name}}, your mastery of {{type}} is {{value}}"
           }
         }
       },
       "loadout": {
         "viewA11y": "View {{name}}'s powers",
-        "closeA11y": "Close power breakdown"
+        "closeA11y": "Close power breakdown",
+        "viewImageA11y": "View {{name}}'s image full-size"
       },
       "result": {
         "title": "Round {{index}} result",
