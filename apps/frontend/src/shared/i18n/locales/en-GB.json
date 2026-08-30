@@ -183,6 +183,8 @@
       "teamSizeLabel": "Team size",
       "teamSizeGauntletLabel": "Max players",
       "votingSecondsLabel": "Voting window (seconds)",
+      "revealSpeedLabel": "Sorteo speed",
+      "revealSpeedHint": "How fast the power draw plays out",
       "privacyLabel": "Privacy",
       "allowBotsLabel": "Allow bots",
       "allowBotsOn": "Bots on",
@@ -333,7 +335,49 @@
         "progress": "{{current}}/{{total}}",
         "skip": "Skip",
         "skipA11y": "Skip the power draw animation",
-        "votingIn": "Voting opens in {{seconds}}s"
+        "votingIn": "Voting opens in {{seconds}}s",
+        "readyCount": "{{ready}}/{{total}} ready",
+        "outro": "Here are your final stats",
+        "narrator": {
+          "playerTurn": "It's {{name}}'s turn",
+          "physicalForm": {
+            "before": "First, let's see your base physique",
+            "after": "{{name}}, you're as strong as a {{value}}"
+          },
+          "spin": {
+            "before": "Now let's see if you know how to use spin",
+            "after": "{{name}}, your spin level is {{value}}",
+            "none": "{{name}}, sorry, but unfortunately you haven't learned to use spin"
+          },
+          "hamon": {
+            "before": "Let's see how your hamon training paid off",
+            "after": "{{name}}, your hamon level is {{value}}",
+            "none": "{{name}}, sorry, but unfortunately you haven't learned to use hamon"
+          },
+          "devilFruit": {
+            "before": "Come on, let's see about your devil fruit",
+            "after": "{{name}}, your fruit is the {{name2}}, which is a {{type}} type",
+            "none": "{{name}}, sorry, but unfortunately you don't have a devil fruit."
+          },
+          "fruitMastery": {
+            "before": "And your mastery with it is…",
+            "after": "Mastery with your fruit: {{value}}"
+          },
+          "stand": {
+            "before": "Something's happening to you! I think you're about to get a stand!",
+            "after": "{{name}}, your stand is {{name2}}",
+            "none": "{{name}}, sorry, but unfortunately you're not a stand user."
+          },
+          "haki": {
+            "before": "Let's see how your training paid off. What haki will you have?",
+            "after": "Turns out you have these types of haki: {{list}}",
+            "none": "{{name}}, sorry, but unfortunately you haven't learned to use haki"
+          },
+          "hakiMastery": {
+            "before": "And your mastery with each of them is:",
+            "after": "{{name}}, your mastery is {{value}}"
+          }
+        }
       },
       "loadout": {
         "viewA11y": "View {{name}}'s powers",
@@ -538,6 +582,11 @@
     "lobbyVisibility": {
       "PUBLIC": "Public",
       "PRIVATE": "Private"
+    },
+    "revealSpeed": {
+      "NORMAL": "Normal",
+      "RELAXED": "Relaxed",
+      "SWIFT": "Swift"
     }
   },
   "errors": {

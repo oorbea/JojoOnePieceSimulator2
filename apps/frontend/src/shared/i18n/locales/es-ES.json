@@ -183,6 +183,8 @@
       "teamSizeLabel": "Tamaño de equipo",
       "teamSizeGauntletLabel": "Jugadores máximos",
       "votingSecondsLabel": "Ventana de votación (segundos)",
+      "revealSpeedLabel": "Velocidad del sorteo",
+      "revealSpeedHint": "Con qué ritmo se desarrolla el sorteo de poderes",
       "privacyLabel": "Privacidad",
       "allowBotsLabel": "Permitir bots",
       "allowBotsOn": "Con bots",
@@ -333,7 +335,49 @@
         "progress": "{{current}}/{{total}}",
         "skip": "Saltar",
         "skipA11y": "Saltar la animación del sorteo de poderes",
-        "votingIn": "La votación empieza en {{seconds}}s"
+        "votingIn": "La votación empieza en {{seconds}}s",
+        "readyCount": "{{ready}}/{{total}} listos",
+        "outro": "Vuestras estadísticas finales son las siguientes",
+        "narrator": {
+          "playerTurn": "Le toca a {{name}}",
+          "physicalForm": {
+            "before": "Primero veamos tu físico base",
+            "after": "{{name}}, eres tan fuerte como un {{value}}"
+          },
+          "spin": {
+            "before": "Ahora veamos si sabes usar el spin",
+            "after": "{{name}}, tu nivel de spin es {{value}}",
+            "none": "{{name}}, lo siento, pero desafortunadamente no has aprendido a usar el spin"
+          },
+          "hamon": {
+            "before": "A ver qué tal se te da el hamon",
+            "after": "{{name}}, tu nivel de hamon es {{value}}",
+            "none": "{{name}}, lo siento, pero desafortunadamente no has aprendido a usar hamon"
+          },
+          "devilFruit": {
+            "before": "Vamos, a ver qué tal tu fruta del diablo",
+            "after": "{{name}}, tu fruta es la {{name2}}, que es de tipo {{type}}",
+            "none": "{{name}}, lo siento, pero desafortunadamente no tienes fruta del diablo."
+          },
+          "fruitMastery": {
+            "before": "Y tu maestría con ella es…",
+            "after": "Maestría con tu fruta: {{value}}"
+          },
+          "stand": {
+            "before": "¡Algo te está pasando! ¡Creo que vas a obtener un stand!",
+            "after": "{{name}}, tu stand es {{name2}}",
+            "none": "{{name}}, lo siento, pero desafortunadamente no eres usuario de stand."
+          },
+          "haki": {
+            "before": "A ver qué tal los resultados de tu entrenamiento. ¿Qué haki tendrás?",
+            "after": "Pues resulta que tienes estos tipos de haki: {{list}}",
+            "none": "{{name}}, lo siento, pero desafortunadamente no has aprendido a usar haki"
+          },
+          "hakiMastery": {
+            "before": "Y tu maestría con cada uno de ellos es:",
+            "after": "{{name}}, tu maestría es {{value}}"
+          }
+        }
       },
       "loadout": {
         "viewA11y": "Ver los poderes de {{name}}",
@@ -538,6 +582,11 @@
     "lobbyVisibility": {
       "PUBLIC": "Pública",
       "PRIVATE": "Privada"
+    },
+    "revealSpeed": {
+      "NORMAL": "Normal",
+      "RELAXED": "Relajado",
+      "SWIFT": "Rápido"
     }
   },
   "errors": {
