@@ -15,6 +15,7 @@ export function useGameCommands() {
     abort: () => send(CLIENT_COMMAND.ABORT),
     vote: (option: string) => send(CLIENT_COMMAND.VOTE, { option }),
     revealReady: () => send(CLIENT_COMMAND.REVEAL_READY),
+    summaryReady: () => send(CLIENT_COMMAND.SUMMARY_READY),
     resync: () => send(CLIENT_COMMAND.RESYNC),
     switchTeam: (teamId: string) => send(CLIENT_COMMAND.SWITCH_TEAM, { teamId }),
     movePlayer: (participantId: string, teamId: string) =>

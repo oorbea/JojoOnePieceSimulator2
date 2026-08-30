@@ -183,6 +183,7 @@
       "teamSizeLabel": "Mida de l'equip",
       "teamSizeGauntletLabel": "Jugadors màxims",
       "votingSecondsLabel": "Finestra de votació (segons)",
+      "summarySecondsLabel": "Resum de poders (segons)",
       "revealSpeedLabel": "Velocitat del sorteig",
       "revealSpeedHint": "A quin ritme es desenvolupa el sorteig de poders",
       "privacyLabel": "Privadesa",
@@ -311,6 +312,13 @@
       "closesIn": "Tanca en {{seconds}}s",
       "noStand": "Sense Stand",
       "noFruit": "Sense Fruita del Diable",
+      "summary": {
+        "title": "Resum de poders",
+        "votingIn": "La votació comença en {{seconds}}s",
+        "skip": "Saltar",
+        "skipA11y": "Saltar el resum de poders",
+        "readyCount": "{{ready}}/{{total}} llestos"
+      },
       "trait": {
         "spin": "Spin",
         "hamon": "Hamon",

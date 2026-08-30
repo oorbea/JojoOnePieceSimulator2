@@ -29,6 +29,7 @@ export const abilitySourceSchema = z.enum(['RANDOM', 'INVENTORY'])
 export const gameStateSchema = z.enum([
   'LOBBY',
   'ASSIGNING',
+  'SUMMARY',
   'VOTING',
   'TIEBREAK',
   'RESOLVING',

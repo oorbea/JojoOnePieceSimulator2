@@ -73,6 +73,8 @@ type Props = {
   onToggleConfigVisibility: () => void
   configVotingWindowSeconds: number
   onChangeConfigVotingWindow: (seconds: number) => void
+  configSummaryDurationSeconds: number
+  onChangeConfigSummaryDuration: (seconds: number) => void
   configRevealSpeed: RevealSpeed
   onCycleConfigRevealSpeed: () => void
   configPoolFilter: PoolFilter
@@ -93,6 +95,7 @@ type Props = {
   revealTotalSlots: number
   isRevealing: boolean
   onSkipReveal: () => void
+  onSummaryReady: () => void
   reducedMotion: boolean
   onVote: (optionId: string) => void
   onSkipResult: () => void
@@ -135,6 +138,8 @@ export function LobbyRoomScreen({
   onToggleConfigVisibility,
   configVotingWindowSeconds,
   onChangeConfigVotingWindow,
+  configSummaryDurationSeconds,
+  onChangeConfigSummaryDuration,
   configRevealSpeed,
   onCycleConfigRevealSpeed,
   configPoolFilter,
@@ -155,6 +160,7 @@ export function LobbyRoomScreen({
   revealTotalSlots,
   isRevealing,
   onSkipReveal,
+  onSummaryReady,
   reducedMotion,
   onVote,
   onSkipResult,
@@ -258,6 +264,8 @@ export function LobbyRoomScreen({
               onToggleVisibility={onToggleConfigVisibility}
               votingWindowSeconds={configVotingWindowSeconds}
               onChangeVotingWindow={onChangeConfigVotingWindow}
+              summaryDurationSeconds={configSummaryDurationSeconds}
+              onChangeSummaryDuration={onChangeConfigSummaryDuration}
               revealSpeed={configRevealSpeed}
               onCycleRevealSpeed={onCycleConfigRevealSpeed}
               poolFilter={configPoolFilter}
@@ -297,6 +305,7 @@ export function LobbyRoomScreen({
           revealTotalSlots={revealTotalSlots}
           isRevealing={isRevealing}
           onSkipReveal={onSkipReveal}
+          onSummaryReady={onSummaryReady}
           reducedMotion={reducedMotion}
           onAbort={onAbort}
           onVote={onVote}

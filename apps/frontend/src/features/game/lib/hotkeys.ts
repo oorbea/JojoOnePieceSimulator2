@@ -22,6 +22,10 @@ export type ResolveHotkeyInput = {
    * anything during the reveal, there's nothing to skip once voting has
    * opened. */
   revealing: boolean
+  /** True while the loadout-summary screen (2026-08-30) is showing - 's'
+   * also skips that, same key as the sorteo's own skip since the two never
+   * overlap. */
+  summaryOpen: boolean
 }
 
 // resolveHotkey is the single source of truth for every match-screen single-
@@ -33,7 +37,7 @@ export function resolveHotkey(input: ResolveHotkeyInput): HotkeyAction | null {
 
   const key = input.key.toLowerCase()
 
-  if (key === 's') return input.revealing ? { kind: 'skip' } : null
+  if (key === 's') return input.revealing || input.summaryOpen ? { kind: 'skip' } : null
 
   if (!input.votingOpen) return null
   if (!/^[1-9]$/.test(key)) return null

@@ -7,11 +7,14 @@ type UseMatchHotkeysInput = {
   votingOpen: boolean
   optionCount: number
   revealing: boolean
+  /** True while the loadout-summary screen (2026-08-30) is showing. */
+  summaryOpen: boolean
   /** True while any overlay that should own all keyboard input is showing
    * (ConfirmSheet, LoadoutModal) - hotkeys stay fully suppressed. */
   blocked: boolean
   onVote: (index: number) => void
   onSkipReveal: () => void
+  onSkipSummary: () => void
 }
 
 const TEXT_INPUT_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
@@ -34,9 +37,11 @@ export function useMatchHotkeys({
   votingOpen,
   optionCount,
   revealing,
+  summaryOpen,
   blocked,
   onVote,
   onSkipReveal,
+  onSkipSummary,
 }: UseMatchHotkeysInput) {
   useEffect(() => {
     if (!isWeb || typeof window === 'undefined') return
@@ -50,14 +55,16 @@ export function useMatchHotkeys({
         votingOpen,
         optionCount,
         revealing,
+        summaryOpen,
       })
       if (!action) return
       e.preventDefault()
       if (action.kind === 'vote') onVote(action.index)
-      else onSkipReveal()
+      else if (revealing) onSkipReveal()
+      else onSkipSummary()
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [votingOpen, optionCount, revealing, blocked, onVote, onSkipReveal])
+  }, [votingOpen, optionCount, revealing, summaryOpen, blocked, onVote, onSkipReveal, onSkipSummary])
 }
