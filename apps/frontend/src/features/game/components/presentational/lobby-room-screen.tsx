@@ -16,7 +16,7 @@ import { useDropZones } from '@/features/game/hooks/use-drop-zones'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
 import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga, RevealSpeed } from '@/shared/lib/zod'
 import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
@@ -73,6 +73,8 @@ type Props = {
   onToggleConfigVisibility: () => void
   configVotingWindowSeconds: number
   onChangeConfigVotingWindow: (seconds: number) => void
+  configRevealSpeed: RevealSpeed
+  onCycleConfigRevealSpeed: () => void
   configPoolFilter: PoolFilter
   configPoolActiveCount: number
   configBanlistItems: BannableItem[]
@@ -86,6 +88,7 @@ type Props = {
   onSubmitConfig: () => void
   live: LiveMatchState
   revealPhase: RevealPhaseKind
+  revealParticipantIndex: number
   revealSlotIndex: number
   revealTotalSlots: number
   isRevealing: boolean
@@ -132,6 +135,8 @@ export function LobbyRoomScreen({
   onToggleConfigVisibility,
   configVotingWindowSeconds,
   onChangeConfigVotingWindow,
+  configRevealSpeed,
+  onCycleConfigRevealSpeed,
   configPoolFilter,
   configPoolActiveCount,
   configBanlistItems,
@@ -145,6 +150,7 @@ export function LobbyRoomScreen({
   onSubmitConfig,
   live,
   revealPhase,
+  revealParticipantIndex,
   revealSlotIndex,
   revealTotalSlots,
   isRevealing,
@@ -252,6 +258,8 @@ export function LobbyRoomScreen({
               onToggleVisibility={onToggleConfigVisibility}
               votingWindowSeconds={configVotingWindowSeconds}
               onChangeVotingWindow={onChangeConfigVotingWindow}
+              revealSpeed={configRevealSpeed}
+              onCycleRevealSpeed={onCycleConfigRevealSpeed}
               poolFilter={configPoolFilter}
               poolActiveCount={configPoolActiveCount}
               banlistItems={configBanlistItems}
@@ -284,6 +292,7 @@ export function LobbyRoomScreen({
           onRetryNow={onRetryNow}
           live={live}
           revealPhase={revealPhase}
+          revealParticipantIndex={revealParticipantIndex}
           revealSlotIndex={revealSlotIndex}
           revealTotalSlots={revealTotalSlots}
           isRevealing={isRevealing}
