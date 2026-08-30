@@ -22,7 +22,7 @@ import (
 // deterministic instead of RNG-dependent.
 func buildLoadoutTestGame(t *testing.T) (*game.Game, *powers.Stand) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -75,7 +75,7 @@ func (zeroRandom) IntN(int) int { return 0 }
 // TestNewGameStateResponse_TiedVotes below.
 func buildTiedRoundGame(t *testing.T) (*game.Game, *game.Participant) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -174,7 +174,7 @@ func TestNewGameStateResponse_TiedVotes(t *testing.T) {
 // round's own sorteo tried to read the first round's now-null field via
 // currentRound(snapshot).votedParticipantIds.filter(...).
 func TestNewGameStateResponse_ResolvedRound_VotedParticipantIDsNeverNull(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -347,7 +347,7 @@ func TestNewGameStateResponse_ParticipantAvatar(t *testing.T) {
 	// Versus + AllowBots: bots are Versus-only (see Game.AddBot), so a bot
 	// fixture needs that combination even though the interesting assertions
 	// here have nothing to do with team play.
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, true, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, true, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

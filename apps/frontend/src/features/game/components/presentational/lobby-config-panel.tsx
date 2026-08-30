@@ -39,6 +39,8 @@ type Props = {
   onToggleVisibility: () => void
   votingWindowSeconds: number
   onChangeVotingWindow: (seconds: number) => void
+  summaryDurationSeconds: number
+  onChangeSummaryDuration: (seconds: number) => void
   revealSpeed: RevealSpeed
   onCycleRevealSpeed: () => void
   poolFilter: PoolFilter
@@ -70,6 +72,8 @@ export function LobbyConfigPanel({
   onToggleVisibility,
   votingWindowSeconds,
   onChangeVotingWindow,
+  summaryDurationSeconds,
+  onChangeSummaryDuration,
   revealSpeed,
   onCycleRevealSpeed,
   poolFilter,
@@ -182,6 +186,21 @@ export function LobbyConfigPanel({
             <YStack gap="$1.5">
               <GlowText level="label">{t('game.create.votingSecondsLabel')}</GlowText>
               <GlowText level="heading">{votingWindowSeconds}</GlowText>
+            </YStack>
+          )}
+
+          {isHost ? (
+            <NumberStepper
+              label={t('game.create.summarySecondsLabel')}
+              value={summaryDurationSeconds}
+              min={10}
+              max={300}
+              onChange={onChangeSummaryDuration}
+            />
+          ) : (
+            <YStack gap="$1.5">
+              <GlowText level="label">{t('game.create.summarySecondsLabel')}</GlowText>
+              <GlowText level="heading">{summaryDurationSeconds}</GlowText>
             </YStack>
           )}
 

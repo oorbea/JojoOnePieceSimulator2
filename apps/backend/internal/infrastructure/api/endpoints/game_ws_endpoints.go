@@ -304,6 +304,8 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 		return e.svc.GetGame(ctx, gameID)
 	case dto.CommandRevealReady:
 		return e.svc.MarkRevealReady(ctx, gameID, self)
+	case dto.CommandSummaryReady:
+		return e.svc.MarkSummaryReady(ctx, gameID, self)
 	case dto.CommandSwitchTeam:
 		var p dto.SwitchTeamPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
@@ -395,7 +397,7 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 			if votingWindow == 0 {
 				votingWindow = e.cfg.VotingWindow
 			}
-			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealMs)
+			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealMs, evt.SummaryWindow)
 			if frameType == "" {
 				continue
 			}
@@ -429,7 +431,7 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 // from the store, so a fresh STATE fetch would race ErrGameNotFound: the
 // event itself already carries everything a client needs to render the
 // terminal screen.
-func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs time.Duration) (frameType string, payload any, resendState bool) {
+func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs time.Duration, summaryWindow time.Duration) (frameType string, payload any, resendState bool) {
 	switch e := evt.(type) {
 	case game.PlayerJoined:
 		return dto.FramePlayerJoined, dto.PlayerJoinedPayload{ParticipantID: e.ParticipantID.String()}, true
@@ -453,6 +455,14 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, false
 	case game.RevealReadyChanged:
 		return dto.FrameRevealReadyChanged, dto.RevealReadyChangedPayload{
+			Ready: e.ReadyCount, Total: e.TotalHumans,
+		}, false
+	case game.SummaryOpened:
+		return dto.FrameSummaryOpened, dto.SummaryOpenedPayload{
+			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(summaryWindow).Format(time.RFC3339),
+		}, true
+	case game.SummaryReadyChanged:
+		return dto.FrameSummaryReadyChanged, dto.SummaryReadyChangedPayload{
 			Ready: e.ReadyCount, Total: e.TotalHumans,
 		}, false
 	case game.TiebreakOpened:
@@ -511,6 +521,9 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 	}
 	if t, ok := e.svc.ResultEndsAt(g.ID()); ok {
 		deadlines.ResultEndsAt = &t
+	}
+	if t, ok := e.svc.SummaryEndsAt(g.ID()); ok {
+		deadlines.SummaryEndsAt = &t
 	}
 	resp, err := dto.NewGameStateResponse(ctx, g, code, self,
 		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,

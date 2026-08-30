@@ -47,7 +47,7 @@ func TestGame_VotingComplete_TrueWhenLastHoldoutDisconnects(t *testing.T) {
 }
 
 func TestGame_VotingComplete_NotBlockedByBots(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, true, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, true, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

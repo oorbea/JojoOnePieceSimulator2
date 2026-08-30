@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { XStack } from 'tamagui'
 
+import { LoadoutSummaryStage } from '@/features/game/components/presentational/match/loadout-summary-stage'
 import { MatchRoster } from '@/features/game/components/presentational/match/match-roster'
 import { RevealStage } from '@/features/game/components/presentational/match/reveal-stage'
 import { RoundResultPanel } from '@/features/game/components/presentational/match/round-result-panel'
@@ -30,6 +31,7 @@ type Props = {
   revealTotalSlots: number
   isRevealing: boolean
   onSkipReveal: () => void
+  onSummaryReady: () => void
   reducedMotion: boolean
   onAbort: () => void
   onVote: (optionId: string) => void
@@ -53,6 +55,7 @@ export function MatchScreen({
   revealTotalSlots,
   isRevealing,
   onSkipReveal,
+  onSummaryReady,
   reducedMotion,
   onAbort,
   onVote,
@@ -101,6 +104,15 @@ export function MatchScreen({
           readyTotal={live.revealReadyTotal}
           onSkip={onSkipReveal}
           reducedMotion={reducedMotion}
+        />
+      ) : snapshot.state === 'SUMMARY' ? (
+        <LoadoutSummaryStage
+          snapshot={snapshot}
+          selfId={you.participantId}
+          summaryEndsAt={live.summaryEndsAt}
+          readyCount={live.summaryReadyCount}
+          readyTotal={live.summaryReadyTotal}
+          onSkip={onSummaryReady}
         />
       ) : (
         <>

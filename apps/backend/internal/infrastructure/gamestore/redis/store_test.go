@@ -52,7 +52,7 @@ func rawClient(t *testing.T) *goredis.Client {
 // and a random-ish join code, so concurrent test runs never collide.
 func newFreshGame(t *testing.T, seed byte) (*game.Game, string) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestStore_Get_CorruptPayload_ErrorsAndKeySurvives(t *testing.T) {
 // jojo:game:public index.
 func newFreshPublicGame(t *testing.T, seed byte) (*game.Game, string) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Public, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Public, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

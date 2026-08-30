@@ -37,6 +37,11 @@ type Game struct {
 	// both methods). Mirrors the shape of a Ballot's votes but for the
 	// sorteo skip vote rather than the round's own vote.
 	revealReady map[ParticipantID]struct{}
+	// summaryReady mirrors revealReady exactly but for the SUMMARY window's
+	// own skip vote (MarkSummaryReady) - reset by OpenSummary (and, for
+	// symmetry with revealReady, by AssignLoadouts/CompleteRound too, though
+	// it only matters once the Game actually enters Summary).
+	summaryReady map[ParticipantID]struct{}
 }
 
 // NewGame builds a Game in the LOBBY state with host already seated. teams
@@ -603,6 +608,7 @@ func (g *Game) AssignLoadouts(builder *LoadoutBuilder, poolByTeam map[TeamID]*Av
 		p.AssignLoadout(loadout)
 	}
 	g.revealReady = make(map[ParticipantID]struct{})
+	g.summaryReady = make(map[ParticipantID]struct{})
 	g.emit(LoadoutsAssigned{RoundIndex: len(g.rounds)})
 	return nil
 }
@@ -666,11 +672,77 @@ func (g *Game) RevealReadyComplete() bool {
 	return total > 0 && ready >= total
 }
 
+// OpenSummary moves the Game from ASSIGNING to SUMMARY once a reassigning
+// round's sorteo finishes (or is skipped via RevealReadyComplete) - owner
+// decision 2026-08-30: before voting opens, every participant's freshly
+// assigned loadout gets its own summary screen with a synchronized skip,
+// mirroring the sorteo's own skip vote. Resets summaryReady for the fresh
+// window.
+func (g *Game) OpenSummary() error {
+	if g.state != enums.Assigning {
+		return ErrInvalidStateTransition
+	}
+	g.summaryReady = make(map[ParticipantID]struct{})
+	g.state = enums.Summary
+	g.emit(SummaryOpened{RoundIndex: len(g.rounds)})
+	return nil
+}
+
+// MarkSummaryReady mirrors MarkRevealReady exactly, scoped to the SUMMARY
+// window instead of ASSIGNING.
+func (g *Game) MarkSummaryReady(id ParticipantID) error {
+	if g.state != enums.Summary {
+		return ErrInvalidStateTransition
+	}
+	p, ok := g.participants[id]
+	if !ok {
+		return ErrParticipantNotFound
+	}
+	if p.Kind() != enums.Human {
+		return ErrParticipantNotFound
+	}
+	if g.summaryReady == nil {
+		g.summaryReady = make(map[ParticipantID]struct{})
+	}
+	g.summaryReady[id] = struct{}{}
+	ready, total := g.SummaryReadyProgress()
+	g.emit(SummaryReadyChanged{ReadyCount: ready, TotalHumans: total})
+	return nil
+}
+
+// SummaryReadyProgress mirrors RevealReadyProgress exactly, scoped to the
+// SUMMARY window instead of ASSIGNING.
+func (g *Game) SummaryReadyProgress() (ready, total int) {
+	for _, pid := range g.order {
+		p := g.participants[pid]
+		if p == nil || p.Kind() != enums.Human || !p.Connected() {
+			continue
+		}
+		total++
+		if _, ok := g.summaryReady[pid]; ok {
+			ready++
+		}
+	}
+	return ready, total
+}
+
+// SummaryReadyComplete mirrors RevealReadyComplete exactly, scoped to the
+// SUMMARY window instead of ASSIGNING.
+func (g *Game) SummaryReadyComplete() bool {
+	if g.state != enums.Summary {
+		return false
+	}
+	ready, total := g.SummaryReadyProgress()
+	return total > 0 && ready >= total
+}
+
 // OpenVoting picks the round's Stage, opens a fresh Ballot, and casts every
 // connected bot's vote immediately (so VotingComplete never blocks on a
-// bot). Moves the Game from ASSIGNING to VOTING.
+// bot). Moves the Game to VOTING from either ASSIGNING (a round that never
+// reassigned, so it skips SUMMARY entirely) or SUMMARY (a round that did
+// reassign and just finished/skipped its summary screen).
 func (g *Game) OpenVoting(rng RandomSource) error {
-	if g.state != enums.Assigning {
+	if g.state != enums.Assigning && g.state != enums.Summary {
 		return ErrInvalidStateTransition
 	}
 	roundIndex := len(g.rounds)
@@ -905,6 +977,7 @@ func (g *Game) CompleteRound() error {
 	// earlier round would otherwise linger into a window MarkRevealReady
 	// could still (briefly) be called against.
 	g.revealReady = make(map[ParticipantID]struct{})
+	g.summaryReady = make(map[ParticipantID]struct{})
 	return nil
 }
 

@@ -183,6 +183,7 @@
       "teamSizeLabel": "Tamaño de equipo",
       "teamSizeGauntletLabel": "Jugadores máximos",
       "votingSecondsLabel": "Ventana de votación (segundos)",
+      "summarySecondsLabel": "Resumen de poderes (segundos)",
       "revealSpeedLabel": "Velocidad del sorteo",
       "revealSpeedHint": "Con qué ritmo se desarrolla el sorteo de poderes",
       "privacyLabel": "Privacidad",
@@ -199,6 +200,7 @@
         "powerMangas": "De qué universos saca esta sala los Stands y las Frutas del Diablo.",
         "teamSize": "Cuántos jugadores caben en cada equipo (Versus) o en el escuadrón (Gauntlet).",
         "votingSeconds": "Cuánto tiempo tienen los jugadores para votar en cada ronda.",
+        "summarySeconds": "Cuánto tiempo se muestra el resumen de poderes de todos antes de que empiece la votación.",
         "privacy": "Las salas públicas aparecen en Salas abiertas. Las privadas solo se unen con código.",
         "allowBots": "Rellena los huecos vacíos con bots. No disponible en Gauntlet.",
         "pool": "Bloquea Stands o Frutas del Diablo concretas para que nunca salgan en esta sala."
@@ -311,6 +313,13 @@
       "closesIn": "Cierra en {{seconds}}s",
       "noStand": "Sin Stand",
       "noFruit": "Sin Fruta del Diablo",
+      "summary": {
+        "title": "Resumen de poderes",
+        "votingIn": "La votación empieza en {{seconds}}s",
+        "skip": "Saltar",
+        "skipA11y": "Saltar el resumen de poderes",
+        "readyCount": "{{ready}}/{{total}} listos"
+      },
       "trait": {
         "spin": "Spin",
         "hamon": "Hamon",
@@ -533,6 +542,7 @@
     "gameState": {
       "LOBBY": "Sala",
       "ASSIGNING": "Repartiendo poderes",
+      "SUMMARY": "Resumen de poderes",
       "VOTING": "Votación",
       "TIEBREAK": "Voto de desempate",
       "RESOLVING": "Resolviendo ronda",

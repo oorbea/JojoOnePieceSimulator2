@@ -15,15 +15,16 @@ import (
 type GameConfigResponse struct {
 	// StageMangas and PowerMangas are independent - see game.Config's doc
 	// comment.
-	StageMangas         []string           `json:"stageMangas"`
-	PowerMangas         []string           `json:"powerMangas"`
-	AbilitySource       string             `json:"abilitySource"`
-	TeamSize            int                `json:"teamSize"`
-	AllowBots           bool               `json:"allowBots"`
-	Visibility          string             `json:"visibility"`
-	VotingWindowSeconds int                `json:"votingWindowSeconds"`
-	PoolFilter          PoolFilterResponse `json:"poolFilter"`
-	RevealSpeed         string             `json:"revealSpeed"`
+	StageMangas            []string           `json:"stageMangas"`
+	PowerMangas            []string           `json:"powerMangas"`
+	AbilitySource          string             `json:"abilitySource"`
+	TeamSize               int                `json:"teamSize"`
+	AllowBots              bool               `json:"allowBots"`
+	Visibility             string             `json:"visibility"`
+	VotingWindowSeconds    int                `json:"votingWindowSeconds"`
+	PoolFilter             PoolFilterResponse `json:"poolFilter"`
+	RevealSpeed            string             `json:"revealSpeed"`
+	SummaryDurationSeconds int                `json:"summaryDurationSeconds"`
 }
 
 // PoolFilterResponse mirrors game.PoolFilter. Empty arrays mean "no
@@ -192,6 +193,9 @@ type GameSnapshotResponse struct {
 	// ResultEndsAt is set (RFC3339) only while the game is RESOLVING with a
 	// pending result display - see GameService.ResultEndsAt.
 	ResultEndsAt *string `json:"resultEndsAt,omitempty"`
+	// SummaryEndsAt is set (RFC3339) only while the game is SUMMARY with a
+	// pending loadout-summary display - see GameService.SummaryEndsAt.
+	SummaryEndsAt *string `json:"summaryEndsAt,omitempty"`
 }
 
 // GameViewerResponse is the cheap, per-viewer convenience block - everything
@@ -230,6 +234,9 @@ type GameStateDeadlines struct {
 	// ResultEndsAt is set only while the Game is RESOLVING with a pending
 	// result display - see GameService.ResultEndsAt.
 	ResultEndsAt *time.Time
+	// SummaryEndsAt is set only while the Game is SUMMARY with a pending
+	// loadout-summary display - see GameService.SummaryEndsAt.
+	SummaryEndsAt *time.Time
 }
 
 // NewGameStateResponse builds a GameStateResponse for self's point of view.
@@ -371,7 +378,7 @@ func NewGameStateResponse(
 		}
 	}
 
-	var revealEndsAtStr, votingEndsAtStr, resultEndsAtStr *string
+	var revealEndsAtStr, votingEndsAtStr, resultEndsAtStr, summaryEndsAtStr *string
 	if deadlines.RevealEndsAt != nil {
 		s := deadlines.RevealEndsAt.Format(time.RFC3339)
 		revealEndsAtStr = &s
@@ -384,6 +391,10 @@ func NewGameStateResponse(
 		s := deadlines.ResultEndsAt.Format(time.RFC3339)
 		resultEndsAtStr = &s
 	}
+	if deadlines.SummaryEndsAt != nil {
+		s := deadlines.SummaryEndsAt.Format(time.RFC3339)
+		summaryEndsAtStr = &s
+	}
 
 	return GameStateResponse{
 		Game: GameSnapshotResponse{
@@ -394,23 +405,25 @@ func NewGameStateResponse(
 			HostID: g.HostID().String(),
 			Locked: g.Locked(),
 			Config: GameConfigResponse{
-				StageMangas:         mangaNames(g.Config().StageMangas()),
-				PowerMangas:         mangaNames(g.Config().PowerMangas()),
-				AbilitySource:       g.Config().AbilitySource().String(),
-				TeamSize:            g.Config().TeamSize(),
-				AllowBots:           g.Config().AllowBots(),
-				Visibility:          g.Config().Visibility().String(),
-				VotingWindowSeconds: g.Config().VotingWindowSeconds(),
-				PoolFilter:          newPoolFilterResponse(g.Config().PoolFilter()),
-				RevealSpeed:         g.Config().RevealSpeed().String(),
+				StageMangas:            mangaNames(g.Config().StageMangas()),
+				PowerMangas:            mangaNames(g.Config().PowerMangas()),
+				AbilitySource:          g.Config().AbilitySource().String(),
+				TeamSize:               g.Config().TeamSize(),
+				AllowBots:              g.Config().AllowBots(),
+				Visibility:             g.Config().Visibility().String(),
+				VotingWindowSeconds:    g.Config().VotingWindowSeconds(),
+				PoolFilter:             newPoolFilterResponse(g.Config().PoolFilter()),
+				RevealSpeed:            g.Config().RevealSpeed().String(),
+				SummaryDurationSeconds: g.Config().SummaryDurationSeconds(),
 			},
-			Teams:        teams,
-			Participants: participants,
-			Rounds:       rounds,
-			Result:       result,
-			RevealEndsAt: revealEndsAtStr,
-			VotingEndsAt: votingEndsAtStr,
-			ResultEndsAt: resultEndsAtStr,
+			Teams:         teams,
+			Participants:  participants,
+			Rounds:        rounds,
+			Result:        result,
+			RevealEndsAt:  revealEndsAtStr,
+			VotingEndsAt:  votingEndsAtStr,
+			ResultEndsAt:  resultEndsAtStr,
+			SummaryEndsAt: summaryEndsAtStr,
 		},
 		You: viewer,
 	}, nil

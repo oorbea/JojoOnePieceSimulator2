@@ -38,6 +38,7 @@ export type GameConfig = {
   votingWindowSeconds: number
   poolFilter: PoolFilter
   revealSpeed: RevealSpeed
+  summaryDurationSeconds: number
 }
 
 // Mirrors dto.GameTeamResponse.
@@ -147,6 +148,12 @@ export type GameSnapshot = {
    * of missing the panel entirely (see dto.GameSnapshotResponse.
    * ResultEndsAt). */
   resultEndsAt?: string
+  /** RFC3339, present only while SUMMARY with a pending loadout-summary
+   * display - lets a (re)connecting client resume that countdown instead
+   * of missing the screen entirely (see dto.GameSnapshotResponse.
+   * SummaryEndsAt). At most one of revealEndsAt/votingEndsAt/resultEndsAt/
+   * summaryEndsAt is ever set. */
+  summaryEndsAt?: string
 }
 
 // Mirrors dto.GameViewerResponse.
@@ -198,6 +205,7 @@ export type CreateGameInput = {
   votingWindowSeconds?: number
   poolFilter?: PoolFilter
   revealSpeed?: RevealSpeed
+  summaryDurationSeconds?: number
 }
 
 // Mirrors services.ConfigUpdateInput / dto.UpdateConfigPayload - the
@@ -216,4 +224,5 @@ export type UpdateGameConfigInput = {
   votingWindowSeconds: number
   poolFilter?: PoolFilter
   revealSpeed: RevealSpeed
+  summaryDurationSeconds: number
 }
