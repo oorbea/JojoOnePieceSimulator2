@@ -25,6 +25,7 @@ type CreateGameRequest struct {
 	Visibility          string             `json:"visibility,omitempty"`
 	VotingWindowSeconds int                `json:"votingWindowSeconds,omitempty"`
 	PoolFilter          *PoolFilterPayload `json:"poolFilter,omitempty"`
+	RevealSpeed         string             `json:"revealSpeed,omitempty"`
 }
 
 // Validate converts the request into a services.CreateGameInput, collecting
@@ -58,6 +59,14 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 	}
 	poolFilter := r.PoolFilter.ToPoolFilter(&errs)
 
+	var revealSpeed enums.RevealSpeed
+	if r.RevealSpeed != "" {
+		revealSpeed, err = enums.ParseRevealSpeed(r.RevealSpeed)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("revealSpeed: %v", err))
+		}
+	}
+
 	if len(errs) > 0 {
 		return services.CreateGameInput{}, &ValidationError{Errors: errs}
 	}
@@ -72,6 +81,7 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 		Visibility:          visibility,
 		VotingWindowSeconds: r.VotingWindowSeconds,
 		PoolFilter:          poolFilter,
+		RevealSpeed:         revealSpeed,
 	}, nil
 }
 

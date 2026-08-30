@@ -23,6 +23,7 @@ type GameConfigResponse struct {
 	Visibility          string             `json:"visibility"`
 	VotingWindowSeconds int                `json:"votingWindowSeconds"`
 	PoolFilter          PoolFilterResponse `json:"poolFilter"`
+	RevealSpeed         string             `json:"revealSpeed"`
 }
 
 // PoolFilterResponse mirrors game.PoolFilter. Empty arrays mean "no
@@ -391,6 +392,7 @@ func NewGameStateResponse(
 				Visibility:          g.Config().Visibility().String(),
 				VotingWindowSeconds: g.Config().VotingWindowSeconds(),
 				PoolFilter:          newPoolFilterResponse(g.Config().PoolFilter()),
+				RevealSpeed:         g.Config().RevealSpeed().String(),
 			},
 			Teams:        teams,
 			Participants: participants,

@@ -31,6 +31,12 @@ type Game struct {
 	evaluator    LoadoutEvaluator
 	events       []DomainEvent
 	locked       bool // host-toggled: blocks new Join while true (AddBot is unaffected)
+	// revealReady tracks which connected humans have called MarkRevealReady
+	// during the current ASSIGNING window - reset every time AssignLoadouts
+	// runs and cleared once OpenVoting moves the Game out of ASSIGNING (see
+	// both methods). Mirrors the shape of a Ballot's votes but for the
+	// sorteo skip vote rather than the round's own vote.
+	revealReady map[ParticipantID]struct{}
 }
 
 // NewGame builds a Game in the LOBBY state with host already seated. teams
@@ -596,8 +602,68 @@ func (g *Game) AssignLoadouts(builder *LoadoutBuilder, poolByTeam map[TeamID]*Av
 		}
 		p.AssignLoadout(loadout)
 	}
+	g.revealReady = make(map[ParticipantID]struct{})
 	g.emit(LoadoutsAssigned{RoundIndex: len(g.rounds)})
 	return nil
+}
+
+// MarkRevealReady records that the connected human id is done watching its
+// own sorteo reveal and wants to skip ahead - the server-side half of the
+// "todos pueden saltar" skip (owner decision, 2026-08-30): once every
+// connected human has called this during the current ASSIGNING window,
+// RevealReadyComplete goes true and GameService cuts the reveal timer short
+// instead of waiting out the full game.RevealDuration. A vote is
+// idempotent (calling it again is a no-op) and never rescinded - unlike a
+// Ballot vote, there is nothing to change your mind about here.
+func (g *Game) MarkRevealReady(id ParticipantID) error {
+	if g.state != enums.Assigning {
+		return ErrInvalidStateTransition
+	}
+	p, ok := g.participants[id]
+	if !ok {
+		return ErrParticipantNotFound
+	}
+	if p.Kind() != enums.Human {
+		return ErrParticipantNotFound
+	}
+	if g.revealReady == nil {
+		g.revealReady = make(map[ParticipantID]struct{})
+	}
+	g.revealReady[id] = struct{}{}
+	ready, total := g.RevealReadyProgress()
+	g.emit(RevealReadyChanged{ReadyCount: ready, TotalHumans: total})
+	return nil
+}
+
+// RevealReadyProgress reports how many connected humans have called
+// MarkRevealReady during the current ASSIGNING window (ready) out of how
+// many are eligible to (total) - the same "connected humans only" scope as
+// humanVoteProgress, and the single definition RevealReadyComplete and
+// every REVEAL_READY_CHANGED frame both read from.
+func (g *Game) RevealReadyProgress() (ready, total int) {
+	for _, pid := range g.order {
+		p := g.participants[pid]
+		if p == nil || p.Kind() != enums.Human || !p.Connected() {
+			continue
+		}
+		total++
+		if _, ok := g.revealReady[pid]; ok {
+			ready++
+		}
+	}
+	return ready, total
+}
+
+// RevealReadyComplete reports whether every connected human has marked the
+// current sorteo ready to skip. False outside ASSIGNING, and false when
+// there are no connected humans at all (an all-bots Gauntlet still plays
+// out its full reveal - nobody is there to skip it).
+func (g *Game) RevealReadyComplete() bool {
+	if g.state != enums.Assigning {
+		return false
+	}
+	ready, total := g.RevealReadyProgress()
+	return total > 0 && ready >= total
 }
 
 // OpenVoting picks the round's Stage, opens a fresh Ballot, and casts every
@@ -833,6 +899,12 @@ func (g *Game) CompleteRound() error {
 		return nil
 	}
 	g.state = enums.Assigning
+	// Reset here too, not just in AssignLoadouts: a Gauntlet round after
+	// the first never calls AssignLoadouts again (see
+	// GameService.beginRound), so without this a stale ready set from an
+	// earlier round would otherwise linger into a window MarkRevealReady
+	// could still (briefly) be called against.
+	g.revealReady = make(map[ParticipantID]struct{})
 	return nil
 }
 

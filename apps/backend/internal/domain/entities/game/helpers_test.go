@@ -106,7 +106,7 @@ func someStages(t *testing.T) []game.Stage {
 // (players-1) additional joined human participants, all on the same team.
 func newGauntletGame(t *testing.T, stages []game.Stage, players int) (*game.Game, []*game.Participant) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -133,6 +133,18 @@ func newGauntletGame(t *testing.T, stages []game.Stage, players int) (*game.Game
 // drawn).
 func assignAndOpenVoting(t *testing.T, g *game.Game) {
 	t.Helper()
+	assignOnly(t, g)
+	if err := g.OpenVoting(&fakeRandom{}); err != nil {
+		t.Fatalf("OpenVoting: %v", err)
+	}
+}
+
+// assignOnly drives a Gauntlet Game from LOBBY (Start must not have been
+// called yet) through Start+AssignLoadouts, leaving it parked in ASSIGNING
+// - the window the sorteo's MarkRevealReady/RevealReadyComplete operate in,
+// before OpenVoting would move it on.
+func assignOnly(t *testing.T, g *game.Game) {
+	t.Helper()
 	if err := g.Start(g.HostID()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -144,8 +156,5 @@ func assignAndOpenVoting(t *testing.T, g *game.Game) {
 	}
 	if err := g.AssignLoadouts(builder, pools); err != nil {
 		t.Fatalf("AssignLoadouts: %v", err)
-	}
-	if err := g.OpenVoting(&fakeRandom{}); err != nil {
-		t.Fatalf("OpenVoting: %v", err)
 	}
 }
