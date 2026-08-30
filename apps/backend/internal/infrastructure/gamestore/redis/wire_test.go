@@ -16,7 +16,12 @@ import (
 // exercises the recursive embedding path.
 func buildTestGame(t *testing.T) *game.Game {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{})
+	// enums.Swift (not enums.Normal, the zero value / restore fallback) so
+	// the round trip actually exercises RevealSpeed surviving - a dropped
+	// field would silently decode back to Normal and this test would never
+	// notice (see wire.go's wireConfig.RevealSpeed doc for the bug this
+	// guards against: toWire/fromWire once omitted it entirely).
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Swift)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -106,6 +111,9 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 	}
 	if host.GooglePicture() != "https://accounts.google.com/host.jpg" {
 		t.Errorf("google picture lost across decode: got %q", host.GooglePicture())
+	}
+	if restored.Config().RevealSpeed() != enums.Swift {
+		t.Errorf("revealSpeed lost across decode: got %v, want %v", restored.Config().RevealSpeed(), enums.Swift)
 	}
 }
 

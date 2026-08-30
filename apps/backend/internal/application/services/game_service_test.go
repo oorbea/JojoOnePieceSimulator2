@@ -468,13 +468,58 @@ func hostOf(t *testing.T, g *game.Game) game.ParticipantID {
 
 // advanceReveal fires the reveal-delay timer scheduleRevealDelay starts
 // whenever a round (re)assigns Loadouts - StartGame, and every Versus round
-// after it - by advancing deps.clock past game.RevealDuration(mangas). Until
-// this timer fires the Game sits in ASSIGNING, not VOTING, so any test that
-// needs to actually cast a vote must call this (then re-fetch via GetGame,
-// since the timer's own openVotingAfterReveal runs asynchronously against
-// the fake clock, not inline with the call that scheduled it).
+// after it - by advancing deps.clock past the longest possible
+// game.RevealDuration for mangas (see maxRevealDuration: since 2026-08-30
+// the real duration also depends on which participants actually landed a
+// Stand/Devil Fruit and on RevealSpeed, neither of which every caller here
+// has in hand, and fakeClock.Advance fires any timer that is due by the new
+// "now" regardless of overshoot). Until this timer fires the Game sits in
+// ASSIGNING, not VOTING, so any test that needs to actually cast a vote
+// must call this (then re-fetch via GetGame, since the timer's own
+// openVotingAfterReveal runs asynchronously against the fake clock, not
+// inline with the call that scheduled it).
 func advanceReveal(deps *gameTestDeps, mangas []enums.Manga) {
-	deps.clock.Advance(game.RevealDuration(mangas))
+	deps.clock.Advance(maxRevealDuration(mangas))
+}
+
+// maxRevealDuration upper-bounds game.RevealDuration for mangas across any
+// number of players (up to game.MaxGauntletPlayers, the largest a lobby
+// this test suite builds ever seats), any draw outcome, and the slowest
+// RevealSpeed - enough headroom for advanceReveal to always fire the timer
+// it targets. Doubled on top of that because game.RevealSpinCycles picks 1
+// or 2 spin cycles deterministically from (gameID, roundIndex, participant,
+// slot) - inputs this helper can't reproduce exactly for an arbitrary real
+// game, so it pads for the worst case where every slot happens to land 2
+// cycles instead of whatever mix the real gameID's hash actually produced.
+func maxRevealDuration(mangas []enums.Manga) time.Duration {
+	players := make([]game.RevealPlayer, game.MaxGauntletPlayers)
+	for i := range players {
+		players[i] = game.RevealPlayer{
+			HasStand: true, HasDevilFruit: true,
+			HasArmamentHaki: true, HasObservationHaki: true, HasConquerorHaki: true,
+		}
+	}
+	return 2 * game.RevealDuration(game.GameID{}, 0, mangas, players, enums.Relaxed)
+}
+
+// revealDurationOf mirrors GameService's own (unexported) revealDurationFor
+// using only exported *game.Game API, so a test can assert the exact
+// deadline the service computed without duplicating its internals: g's own
+// mangas/RevealSpeed, current round index, and each participant's own
+// already-assigned Loadout.
+func revealDurationOf(g *game.Game) time.Duration {
+	players := make([]game.RevealPlayer, 0, len(g.Participants()))
+	for _, p := range g.Participants() {
+		loadout := p.Loadout()
+		players = append(players, game.RevealPlayer{
+			HasStand:           loadout != nil && loadout.Stand() != nil,
+			HasDevilFruit:      loadout != nil && loadout.DevilFruit() != nil,
+			HasArmamentHaki:    loadout != nil && loadout.ArmamentHaki() != enums.HakiNone,
+			HasObservationHaki: loadout != nil && loadout.ObservationHaki() != enums.HakiNone,
+			HasConquerorHaki:   loadout != nil && loadout.ConquerorHaki() != enums.HakiNone,
+		})
+	}
+	return game.RevealDuration(g.ID(), len(g.Rounds()), g.Config().PowerMangas(), players, g.Config().RevealSpeed())
 }
 
 // advanceResult fires the result-display timer scheduleResultDelay starts
@@ -803,7 +848,7 @@ func TestStartGame_RevealEndsAt_TracksThenClearsOnVotingOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
-	want := deps.clock.Now().Add(game.RevealDuration(gauntletInput().PowerMangas))
+	want := deps.clock.Now().Add(revealDurationOf(g))
 	got, ok := svc.RevealEndsAt(g.ID())
 	if !ok {
 		t.Fatalf("RevealEndsAt during reveal: want ok")

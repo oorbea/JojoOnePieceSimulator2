@@ -43,7 +43,7 @@ func TestGame_CastVote_EventCarriesHumanVoteProgress(t *testing.T) {
 }
 
 func TestGame_BotVoteCast_CountsHumansOnly(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 3, true, enums.Private, 30, game.PoolFilter{})
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 3, true, enums.Private, 30, game.PoolFilter{}, enums.Normal)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

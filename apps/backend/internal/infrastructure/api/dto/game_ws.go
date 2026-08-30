@@ -40,6 +40,10 @@ const (
 	CommandTransferHost = "TRANSFER_HOST"
 	CommandSetLock      = "SET_LOCK"
 	CommandUpdateConfig = "UPDATE_CONFIG"
+	// CommandRevealReady is the sorteo's own skip vote (owner decision,
+	// 2026-08-30) - takes no payload, since it always applies to "the
+	// caller, right now". See services.GameService.MarkRevealReady.
+	CommandRevealReady = "REVEAL_READY"
 )
 
 // AddBotPayload is CommandAddBot's payload.
@@ -175,6 +179,7 @@ type UpdateConfigPayload struct {
 	Visibility          string             `json:"visibility"`
 	VotingWindowSeconds int                `json:"votingWindowSeconds"`
 	PoolFilter          *PoolFilterPayload `json:"poolFilter,omitempty"`
+	RevealSpeed         string             `json:"revealSpeed,omitempty"`
 }
 
 // Validate converts the payload into a services.ConfigUpdateInput,
@@ -201,6 +206,14 @@ func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
 	}
 	poolFilter := p.PoolFilter.ToPoolFilter(&errs)
 
+	var revealSpeed enums.RevealSpeed
+	if p.RevealSpeed != "" {
+		revealSpeed, err = enums.ParseRevealSpeed(p.RevealSpeed)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("revealSpeed: %v", err))
+		}
+	}
+
 	if len(errs) > 0 {
 		return services.ConfigUpdateInput{}, &ValidationError{Errors: errs}
 	}
@@ -215,6 +228,7 @@ func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
 		Visibility:          visibility,
 		VotingWindowSeconds: p.VotingWindowSeconds,
 		PoolFilter:          poolFilter,
+		RevealSpeed:         revealSpeed,
 	}, nil
 }
 
@@ -230,24 +244,25 @@ type ServerFrame struct {
 // from entities/game/events.go's DomainEvent.Name() - the transport never
 // invents its own vocabulary for them.
 const (
-	FrameState            = "STATE"
-	FramePlayerJoined     = "PLAYER_JOINED"
-	FramePlayerLeft       = "PLAYER_LEFT"
-	FrameHostReassigned   = "HOST_REASSIGNED"
-	FrameGameStarted      = "GAME_STARTED"
-	FrameLoadoutsAssigned = "LOADOUTS_ASSIGNED"
-	FrameVotingOpened     = "VOTING_OPENED"
-	FrameVoteCast         = "VOTE_CAST"
-	FrameTiebreakOpened   = "TIEBREAK_OPENED"
-	FrameRoundResolved    = "ROUND_RESOLVED"
-	FrameGameFinished     = "GAME_FINISHED"
-	FrameGameAborted      = "GAME_ABORTED"
-	FrameError            = "ERROR"
-	FrameResyncRequired   = "RESYNC_REQUIRED"
-	FrameTeamChanged      = "TEAM_CHANGED"
-	FramePlayerKicked     = "PLAYER_KICKED"
-	FrameLobbyLockChanged = "LOBBY_LOCK_CHANGED"
-	FrameConfigUpdated    = "CONFIG_UPDATED"
+	FrameState              = "STATE"
+	FramePlayerJoined       = "PLAYER_JOINED"
+	FramePlayerLeft         = "PLAYER_LEFT"
+	FrameHostReassigned     = "HOST_REASSIGNED"
+	FrameGameStarted        = "GAME_STARTED"
+	FrameLoadoutsAssigned   = "LOADOUTS_ASSIGNED"
+	FrameVotingOpened       = "VOTING_OPENED"
+	FrameVoteCast           = "VOTE_CAST"
+	FrameTiebreakOpened     = "TIEBREAK_OPENED"
+	FrameRoundResolved      = "ROUND_RESOLVED"
+	FrameGameFinished       = "GAME_FINISHED"
+	FrameGameAborted        = "GAME_ABORTED"
+	FrameError              = "ERROR"
+	FrameResyncRequired     = "RESYNC_REQUIRED"
+	FrameTeamChanged        = "TEAM_CHANGED"
+	FramePlayerKicked       = "PLAYER_KICKED"
+	FrameLobbyLockChanged   = "LOBBY_LOCK_CHANGED"
+	FrameConfigUpdated      = "CONFIG_UPDATED"
+	FrameRevealReadyChanged = "REVEAL_READY_CHANGED"
 )
 
 // VotingOpenedPayload/TiebreakOpenedPayload carry a transport-computed
@@ -278,6 +293,15 @@ type VoteCastPayload struct {
 	RoundIndex int `json:"roundIndex"`
 	VotesCast  int `json:"votesCast"`
 	Voters     int `json:"voters"`
+}
+
+// RevealReadyChangedPayload mirrors VoteCastPayload's aggregate-only shape,
+// scoped to the sorteo's own skip vote instead of a round's Ballot: no
+// participant identity, just how many of how many connected humans are
+// ready to skip ahead.
+type RevealReadyChangedPayload struct {
+	Ready int `json:"ready"`
+	Total int `json:"total"`
 }
 
 type PlayerJoinedPayload struct {

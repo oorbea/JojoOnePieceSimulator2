@@ -1,4 +1,4 @@
-import { Bot, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
+import { Bot, Clock, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
@@ -14,7 +14,7 @@ import { SettingRow } from '@/shared/components/presentational/setting-row'
 import { TooltipBubble, useTooltipTrigger } from '@/shared/components/presentational/tooltip'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga, RevealSpeed } from '@/shared/lib/zod'
 
 // Fields mirror create-lobby-screen.tsx's exactly (mode, mangas, team size,
 // voting window, privacy, allow bots, pool filter) since UPDATE_CONFIG is a
@@ -39,6 +39,8 @@ type Props = {
   onToggleVisibility: () => void
   votingWindowSeconds: number
   onChangeVotingWindow: (seconds: number) => void
+  revealSpeed: RevealSpeed
+  onCycleRevealSpeed: () => void
   poolFilter: PoolFilter
   poolActiveCount: number
   banlistItems: BannableItem[]
@@ -68,6 +70,8 @@ export function LobbyConfigPanel({
   onToggleVisibility,
   votingWindowSeconds,
   onChangeVotingWindow,
+  revealSpeed,
+  onCycleRevealSpeed,
   poolFilter,
   poolActiveCount,
   banlistItems,
@@ -180,6 +184,28 @@ export function LobbyConfigPanel({
               <GlowText level="heading">{votingWindowSeconds}</GlowText>
             </YStack>
           )}
+
+          <SettingRow label={t('game.create.revealSpeedLabel')}>
+            {isHost ? (
+              <GlossButton
+                tone="glass"
+                btnSize="sm"
+                onPress={onCycleRevealSpeed}
+                accessibilityLabel={t(`enums.revealSpeed.${revealSpeed}`)}
+                tooltip={t('game.create.revealSpeedHint')}
+              >
+                <XStack items="center" gap="$2">
+                  <Clock size={14} color="$panelText" />
+                  {t(`enums.revealSpeed.${revealSpeed}`)}
+                </XStack>
+              </GlossButton>
+            ) : (
+              <XStack items="center" gap="$2">
+                <Clock size={14} color="$panelText" />
+                <GlowText level="heading">{t(`enums.revealSpeed.${revealSpeed}`)}</GlowText>
+              </XStack>
+            )}
+          </SettingRow>
 
           <SettingRow label={t('game.create.privacyLabel')}>
             {isHost ? (

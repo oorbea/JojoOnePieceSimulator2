@@ -164,8 +164,14 @@ export function loadoutSlots(loadout: GameLoadout, mangas: Manga[]): LoadoutSlot
 // guards it anyway in case a bot's id ever appeared there).
 export function voteProgress(snapshot: GameSnapshot, live: LiveMatchState): { cast: number; total: number } {
   const round = currentRound(snapshot)
+  // snapshot.participants defends against null here specifically because
+  // this runs on every MatchScreen render, including the brief window
+  // between a GAME_FINISHED frame (which never resends STATE - see
+  // buildEventFrame's doc) and the container's own cleanup effect
+  // replacing the route - a stale/partial cached snapshot in that gap
+  // must degrade to "nobody's voted" rather than crash the whole screen.
   const connectedHumanIds = new Set(
-    snapshot.participants.filter((p) => p.kind !== 'BOT' && p.connected !== false).map((p) => p.id)
+    (snapshot.participants ?? []).filter((p) => p.kind !== 'BOT' && p.connected !== false).map((p) => p.id)
   )
   const frameIsForCurrentRound = round !== null && live.votingRoundIndex === round.index
 
@@ -174,7 +180,7 @@ export function voteProgress(snapshot: GameSnapshot, live: LiveMatchState): { ca
   if (frameIsForCurrentRound && live.votesCast !== null) {
     return { cast: live.votesCast, total }
   }
-  const cast = round ? round.votedParticipantIds.filter((id) => connectedHumanIds.has(id)).length : 0
+  const cast = round ? (round.votedParticipantIds ?? []).filter((id) => connectedHumanIds.has(id)).length : 0
   return { cast, total }
 }
 

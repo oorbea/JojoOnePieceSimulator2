@@ -25,6 +25,7 @@ type Props = {
   onRetryNow: () => void
   live: LiveMatchState
   revealPhase: RevealPhaseKind
+  revealParticipantIndex: number
   revealSlotIndex: number
   revealTotalSlots: number
   isRevealing: boolean
@@ -47,6 +48,7 @@ export function MatchScreen({
   onRetryNow,
   live,
   revealPhase,
+  revealParticipantIndex,
   revealSlotIndex,
   revealTotalSlots,
   isRevealing,
@@ -92,8 +94,11 @@ export function MatchScreen({
           snapshot={snapshot}
           selfId={you.participantId}
           phase={revealPhase}
+          participantIndex={revealParticipantIndex}
           slotIndex={revealSlotIndex}
           totalSlots={revealTotalSlots}
+          readyCount={live.revealReadyCount}
+          readyTotal={live.revealReadyTotal}
           onSkip={onSkipReveal}
           reducedMotion={reducedMotion}
         />

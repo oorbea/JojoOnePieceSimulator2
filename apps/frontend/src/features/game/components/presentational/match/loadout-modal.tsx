@@ -1,6 +1,6 @@
-import { Sparkles, X } from '@tamagui/lucide-icons-2'
+import { X } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
-import { Image, Modal } from 'react-native'
+import { Modal } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ScrollView, XStack, YStack } from 'tamagui'
 
@@ -9,13 +9,13 @@ import {
   STAND_STAT_KEYS,
   STAND_STAT_LABELS,
 } from '@/features/game/components/presentational/match/loadout-card'
+import { PowerBlock } from '@/features/game/components/presentational/match/power-block'
 import { loadoutSlots } from '@/features/game/lib/match-rules'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { InsetRing } from '@/shared/components/presentational/wii-card'
 import type { Manga } from '@/shared/lib/zod'
 
 type Props = {
@@ -184,97 +184,3 @@ function enumNamespace(key: string): string {
   }
 }
 
-type PowerBlockProps = {
-  picture?: string
-  name?: string
-  rarityLabel?: string
-  description?: string
-  skills?: string[]
-  fallbackLabel: string
-  children?: React.ReactNode
-}
-
-// One power's full breakdown: large art, name + rarity/type pill,
-// description, skills - and, for a Stand, the caller's own stat grid slotted
-// in as `children`. Shows `fallbackLabel` when the loadout didn't draw one
-// (e.g. NoStandWeight won the roll) rather than an empty block.
-function PowerBlock({
-  picture,
-  name,
-  rarityLabel,
-  description,
-  skills,
-  fallbackLabel,
-  children,
-}: PowerBlockProps) {
-  const { t } = useTranslation()
-  return (
-    <GlassPanel tone="plastic" p="$3" gap="$2" rounded="$panel">
-      <YStack
-        width="100%"
-        height={160}
-        rounded="$card"
-        overflow="hidden"
-        position="relative"
-        bg="$plasticEdge"
-      >
-        <InsetRing rounded="$card" />
-        {name ? (
-          picture ? (
-            <Image source={{ uri: picture }} style={{ width: '100%', height: '100%' }} />
-          ) : (
-            <YStack flex={1} items="center" justify="center">
-              <Sparkles size={36} color="$standPurple" />
-            </YStack>
-          )
-        ) : (
-          <YStack flex={1} items="center" justify="center">
-            <GlowText level="label" tone="soft">
-              {fallbackLabel}
-            </GlowText>
-          </YStack>
-        )}
-      </YStack>
-
-      {name ? (
-        <>
-          <XStack items="center" justify="space-between" gap="$2">
-            <GlowText level="heading" numberOfLines={1} flex={1}>
-              {name}
-            </GlowText>
-            {rarityLabel ? (
-              <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-                <GlowText level="label">{rarityLabel}</GlowText>
-              </GlassPanel>
-            ) : null}
-          </XStack>
-          {description ? <GlowText level="label">{description}</GlowText> : null}
-          {skills && skills.length > 0 ? (
-            <YStack gap="$1">
-              <GlowText level="label" tone="soft" fontSize="$1">
-                {t('stands.skills')}
-              </GlowText>
-              <XStack flexWrap="wrap" gap="$1.5">
-                {skills.map((skill) => (
-                  <GlassPanel
-                    key={skill}
-                    tone="plastic"
-                    px="$2"
-                    py="$0.5"
-                    rounded="$pill"
-                    elevate={0}
-                  >
-                    <GlowText level="label" fontSize="$1">
-                      {skill}
-                    </GlowText>
-                  </GlassPanel>
-                ))}
-              </XStack>
-            </YStack>
-          ) : null}
-          {children}
-        </>
-      ) : null}
-    </GlassPanel>
-  )
-}

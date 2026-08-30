@@ -1,12 +1,17 @@
 import {
-  REVEAL_HOLD_BLOCK_MS,
+  playerSlots,
+  REVEAL_HOLD_EMPTY_MS,
+  REVEAL_HOLD_FRUIT_MS,
   REVEAL_HOLD_SCALAR_MS,
+  REVEAL_HOLD_STAND_MS,
   REVEAL_INTRO_MS,
   REVEAL_OUTRO_MS,
-  REVEAL_SPIN_MS,
+  REVEAL_PLAYER_INTRO_MS,
   revealDurationMs,
-  revealPhases,
+  revealSpinCycles,
+  revealTimeline,
   shouldReveal,
+  type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameLoadout, GameParticipant, GameSnapshot } from '@/features/game/types/game.types'
@@ -39,6 +44,7 @@ function snapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
       allowBots: false,
       visibility: 'PRIVATE',
       votingWindowSeconds: 30,
+      revealSpeed: 'NORMAL',
       poolFilter: { standRarities: [], fruitRarities: [], fruitTypes: [], banned: [] },
     },
     teams: [],
@@ -68,6 +74,8 @@ function live(overrides: Partial<LiveMatchState> = {}): LiveMatchState {
     assignedRoundIndex: null,
     revealMs: null,
     revealEndsAt: null,
+    revealReadyCount: null,
+    revealReadyTotal: null,
     votingRoundIndex: null,
     votingClosesAt: null,
     tiebreak: false,
@@ -127,47 +135,130 @@ describe('shouldReveal', () => {
   })
 })
 
-describe('revealPhases', () => {
-  it('both mangas: intro, 10 slots (spin+land each), outro', () => {
-    const phases = revealPhases(['JOJO', 'ONE_PIECE'])
-    expect(phases[0].phase).toEqual({ kind: 'intro' })
-    expect(phases[0].durationMs).toBe(REVEAL_INTRO_MS)
-    expect(phases[phases.length - 1].phase).toEqual({ kind: 'outro' })
-    expect(phases[phases.length - 1].durationMs).toBe(REVEAL_OUTRO_MS)
-    // intro + 10 * (spin, land) + outro
-    expect(phases).toHaveLength(1 + 10 * 2 + 1)
+describe('revealSpinCycles', () => {
+  it('always returns 1 or 2 (mirrors V1s generateRandomNumber(1, 2))', () => {
+    for (let slot = 0; slot < 10; slot++) {
+      for (let pi = 0; pi < 5; pi++) {
+        const cycles = revealSpinCycles('game-1', 0, pi, slot)
+        expect([1, 2]).toContain(cycles)
+      }
+    }
   })
 
-  it('stand/devilFruit slots hold longer than scalar slots (they carry art + a stat grid)', () => {
-    const phases = revealPhases(['JOJO', 'ONE_PIECE'])
-    const standSlotIndex = 1 // physicalForm(0), stand(1)
-    const standLand = phases.find((p) => p.phase.kind === 'land' && p.phase.slot === standSlotIndex)
-    expect(standLand?.durationMs).toBe(REVEAL_HOLD_BLOCK_MS)
-    const physicalFormLand = phases.find((p) => p.phase.kind === 'land' && p.phase.slot === 0)
-    expect(physicalFormLand?.durationMs).toBe(REVEAL_HOLD_SCALAR_MS)
-  })
-
-  it('every spin phase holds REVEAL_SPIN_MS regardless of slot kind', () => {
-    const phases = revealPhases(['JOJO', 'ONE_PIECE'])
-    const spins = phases.filter((p) => p.phase.kind === 'spin')
-    expect(spins).toHaveLength(10)
-    spins.forEach((s) => expect(s.durationMs).toBe(REVEAL_SPIN_MS))
+  it('is deterministic - same inputs always produce the same result', () => {
+    expect(revealSpinCycles('game-1', 2, 3, 4)).toBe(revealSpinCycles('game-1', 2, 3, 4))
   })
 })
 
-// revealDurationMs is the frontend half of the backend/frontend agreement
-// pinned by TestRevealDuration_PinnedTotals (reveal_test.go) - keep both in
-// sync if either side's constants or slot list ever change.
+const NO_POWERS: RevealPlayer = {
+  hasStand: false,
+  hasDevilFruit: false,
+  hasArmamentHaki: false,
+  hasObservationHaki: false,
+  hasConquerorHaki: false,
+}
+const BOTH_POWERS: RevealPlayer = {
+  ...NO_POWERS,
+  hasStand: true,
+  hasDevilFruit: true,
+}
+const ALL_HAKI: RevealPlayer = {
+  ...NO_POWERS,
+  hasArmamentHaki: true,
+  hasObservationHaki: true,
+  hasConquerorHaki: true,
+}
+
+describe('playerSlots', () => {
+  it('excludes a haki-level slot for a type the player does not have', () => {
+    const onlyObservation: RevealPlayer = { ...NO_POWERS, hasObservationHaki: true }
+    const slots = playerSlots(['ONE_PIECE'], onlyObservation)
+    expect(slots).toContain('observationHaki')
+    expect(slots).not.toContain('armamentHaki')
+    expect(slots).not.toContain('conquerorHaki')
+    // The synthetic "which types" summary is unaffected.
+    expect(slots).toContain('hakiSet')
+  })
+
+  it('includes every haki-level slot when the player has all three types', () => {
+    const slots = playerSlots(['ONE_PIECE'], ALL_HAKI)
+    expect(slots).toEqual(
+      expect.arrayContaining(['armamentHaki', 'observationHaki', 'conquerorHaki'])
+    )
+  })
+})
+
+describe('revealTimeline', () => {
+  it('one player with every power/haki type, both mangas: intro, playerIntro, 10x(narrator+spin+land), playerOutro, outro', () => {
+    const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [{ ...ALL_HAKI, hasStand: true, hasDevilFruit: true }], 'SWIFT')
+    expect(timeline[0].phase).toEqual({ kind: 'intro' })
+    expect(timeline[0].durationMs).toBe(REVEAL_INTRO_MS)
+    expect(timeline[1].phase).toEqual({ kind: 'playerIntro', participant: 0 })
+    expect(timeline[1].durationMs).toBe(REVEAL_PLAYER_INTRO_MS)
+    const last = timeline[timeline.length - 1]
+    expect(last.phase).toEqual({ kind: 'outro' })
+    expect(last.durationMs).toBe(REVEAL_OUTRO_MS)
+    // intro + playerIntro + 10 * (narrator, spin, land) + playerOutro + outro
+    expect(timeline).toHaveLength(1 + 1 + 10 * 3 + 1 + 1)
+  })
+
+  it('a player with no haki at all skips all three haki-level slots (7, not 10, for both mangas)', () => {
+    const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [NO_POWERS], 'SWIFT')
+    // intro + playerIntro + 7 * (narrator, spin, land) + playerOutro + outro
+    expect(timeline).toHaveLength(1 + 1 + 7 * 3 + 1 + 1)
+  })
+
+  it('stand/devilFruit hold longer when they actually land a power than when they land NONE', () => {
+    const withPowers = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [BOTH_POWERS], 'SWIFT')
+    const withoutPowers = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [NO_POWERS], 'SWIFT')
+
+    const standLandWith = withPowers.find((p) => p.phase.kind === 'land' && p.phase.slot === 1)
+    const standLandWithout = withoutPowers.find((p) => p.phase.kind === 'land' && p.phase.slot === 1)
+    expect(standLandWith?.durationMs).toBe(REVEAL_HOLD_STAND_MS)
+    expect(standLandWithout?.durationMs).toBe(REVEAL_HOLD_EMPTY_MS)
+
+    const fruitLandWith = withPowers.find((p) => p.phase.kind === 'land' && p.phase.slot === 2)
+    expect(fruitLandWith?.durationMs).toBe(REVEAL_HOLD_FRUIT_MS)
+
+    const physicalFormLand = withPowers.find((p) => p.phase.kind === 'land' && p.phase.slot === 0)
+    expect(physicalFormLand?.durationMs).toBe(REVEAL_HOLD_SCALAR_MS)
+  })
+
+  it('two players each play a full turn - never in parallel', () => {
+    const timeline = revealTimeline('g1', 0, ['JOJO'], [NO_POWERS, NO_POWERS], 'SWIFT')
+    const playerIntros = timeline.filter((p) => p.phase.kind === 'playerIntro')
+    expect(playerIntros.map((p) => p.phase.participant)).toEqual([0, 1])
+    const playerOutros = timeline.filter((p) => p.phase.kind === 'playerOutro')
+    expect(playerOutros).toHaveLength(2)
+  })
+
+  it('scales every duration by the speed multiplier', () => {
+    const swift = revealTimeline('g1', 0, ['JOJO'], [NO_POWERS], 'SWIFT')
+    const relaxed = revealTimeline('g1', 0, ['JOJO'], [NO_POWERS], 'RELAXED')
+    expect(relaxed[0].durationMs).toBeGreaterThan(swift[0].durationMs)
+  })
+})
+
 describe('revealDurationMs', () => {
-  it('both mangas: 48900ms', () => {
-    expect(revealDurationMs(['JOJO', 'ONE_PIECE'])).toBe(48900)
+  it('is longer with more players', () => {
+    const one = revealDurationMs('g1', 0, ['JOJO'], [NO_POWERS], 'SWIFT')
+    const two = revealDurationMs('g1', 0, ['JOJO'], [NO_POWERS, NO_POWERS], 'SWIFT')
+    expect(two).toBeGreaterThan(one)
   })
 
-  it('jojo only: 18350ms', () => {
-    expect(revealDurationMs(['JOJO'])).toBe(18350)
+  it('agrees exactly with the sum of revealTimeline durations', () => {
+    const timeline = revealTimeline('g1', 3, ['JOJO', 'ONE_PIECE'], [BOTH_POWERS, NO_POWERS], 'NORMAL')
+    const total = timeline.reduce((sum, p) => sum + p.durationMs, 0)
+    expect(revealDurationMs('g1', 3, ['JOJO', 'ONE_PIECE'], [BOTH_POWERS, NO_POWERS], 'NORMAL')).toBe(total)
   })
 
-  it('one piece only: 34950ms', () => {
-    expect(revealDurationMs(['ONE_PIECE'])).toBe(34950)
+  it('scales with speed: RELAXED > NORMAL > SWIFT', () => {
+    const players = [BOTH_POWERS]
+    const mangas = ['JOJO', 'ONE_PIECE'] as const
+    const swift = revealDurationMs('g1', 0, [...mangas], players, 'SWIFT')
+    const normal = revealDurationMs('g1', 0, [...mangas], players, 'NORMAL')
+    const relaxed = revealDurationMs('g1', 0, [...mangas], players, 'RELAXED')
+    expect(swift).toBeLessThan(normal)
+    expect(normal).toBeLessThan(relaxed)
   })
 })

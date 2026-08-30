@@ -23,6 +23,7 @@ type GameConfigResponse struct {
 	Visibility          string             `json:"visibility"`
 	VotingWindowSeconds int                `json:"votingWindowSeconds"`
 	PoolFilter          PoolFilterResponse `json:"poolFilter"`
+	RevealSpeed         string             `json:"revealSpeed"`
 }
 
 // PoolFilterResponse mirrors game.PoolFilter. Empty arrays mean "no
@@ -315,6 +316,16 @@ func NewGameStateResponse(
 			Stage:        stageResp,
 			Options:      options,
 			TiebreakUsed: r.TiebreakUsed,
+			// VotedParticipantIDs has no `omitempty` (the frontend's
+			// GameRound.votedParticipantIds is a required string[], never
+			// optional) - always initialized to an empty, never nil, slice
+			// so a resolved round (which never repopulates it below) still
+			// marshals to `[]`, not `null`. A resolved round from an
+			// earlier one stays in g.Rounds() for the rest of the match, so
+			// every STATE sent afterwards carries this - a bug found
+			// 2026-08-30 crashing the whole match screen the moment a
+			// second round's own sorteo/vote tried to read it.
+			VotedParticipantIDs: make([]string, 0),
 		}
 		if r.TiedVotes != nil {
 			rr.TiedVotes = make(map[string]string, len(r.TiedVotes))
@@ -391,6 +402,7 @@ func NewGameStateResponse(
 				Visibility:          g.Config().Visibility().String(),
 				VotingWindowSeconds: g.Config().VotingWindowSeconds(),
 				PoolFilter:          newPoolFilterResponse(g.Config().PoolFilter()),
+				RevealSpeed:         g.Config().RevealSpeed().String(),
 			},
 			Teams:        teams,
 			Participants: participants,
