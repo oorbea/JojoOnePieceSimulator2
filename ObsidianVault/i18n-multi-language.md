@@ -171,4 +171,13 @@ serialization time (`standTextResolver`/`devilFruitTextResolver`), the same patt
 `StageTextResolver` already used for a Round's Stage. See [[game-match-assignment-frontend]] for
 the full writeup (also covers the same pass's haki wording fix in es-ES/ca-ES).
 
+## Follow-up: sorteo narrator copy, ported from V1 (2026-08-30)
+
+New `game.match.reveal.narrator.*` block (all three locales, identical key set): the
+jugador-por-jugador reveal's before/after lines. es-ES is V1's own printed Spanish
+(`JoJoOnePiece_Simulator`'s `main.cc`) verbatim; en-GB/ca-ES translated to match its tone rather
+than word-for-word. Also `game.create.revealSpeedLabel`/`revealSpeedHint` and
+`enums.revealSpeed.{NORMAL,RELAXED,SWIFT}`. See [[game-match-assignment-frontend]]'s 2026-08-30
+section for the full rewrite this belongs to.
+
 Related: [[ADR]], [[frontend-stack]], [[backend-contract]], [[game-match-assignment-frontend]]

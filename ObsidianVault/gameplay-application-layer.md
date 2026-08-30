@@ -46,15 +46,21 @@ One mutex per `GameID`, not a global lock, so unrelated lobbies never contend.
   `Game.AssignLoadouts`, then... **changed 2026-08-14** (see [[game-match-assignment-frontend]]'s
   sorteo redesign): only when loadouts were actually (re)assigned this call, `beginRound` now defers
   `Game.OpenVoting` behind `scheduleRevealDelay` instead of calling it inline. That method computes
-  `game.RevealDuration(g.Config().Mangas())` — a pure function of the lobby's mangas, independent of
-  the actual random draws, so every client can compute the identical number without the server
-  sharing anything beyond `mangas` — records the deadline in `s.revealEnds[gameID]` (read by the new
-  `RevealEndsAt` accessor, served to a (re)connecting client as `GameStateResponse.RevealEndsAt` so
-  it can resume the countdown instead of restarting from zero), and schedules a `Clock.AfterFunc`
-  timer that, on firing, calls `openVotingAfterReveal` — which re-acquires the lock via `withGame`
-  and *only then* does what `beginRound` used to do inline: `Game.OpenVoting` +
-  `scheduleVotingTimer`. Rounds that don't reassign (Gauntlet after round 1) skip the delay entirely
-  and call `OpenVoting` immediately, same as before — there's nothing new to reveal.
+  `revealDurationFor(g)` (`GameService`'s own helper, wrapping `game.RevealDuration`) — records the
+  deadline in `s.revealEnds[gameID]` (read by the new `RevealEndsAt` accessor, served to a
+  (re)connecting client as `GameStateResponse.RevealEndsAt` so it can resume the countdown instead
+  of restarting from zero), and schedules a `Clock.AfterFunc` timer that, on firing, calls
+  `openVotingAfterReveal` — which re-acquires the lock via `withGame` and *only then* does what
+  `beginRound` used to do inline: `Game.OpenVoting` + `scheduleVotingTimer`. Rounds that don't
+  reassign (Gauntlet after round 1) skip the delay entirely and call `OpenVoting` immediately, same
+  as before — there's nothing new to reveal. **Amended 2026-08-30 (owner request, see
+  [[game-match-assignment-frontend]]'s dated section)**: `game.RevealDuration` stopped being a pure
+  function of `mangas` alone — it now also takes each participant's own landed
+  Stand/DevilFruit and the lobby's `RevealSpeed`, reproducing V1's own per-participant tempo
+  instead of one flat per-slot hold for everyone. Both server and client still arrive at the
+  identical number without exchanging anything beyond what each already has (the snapshot's own
+  `mangas`/`participants[*].loadout`/`config.revealSpeed`) — the "no shared code, same number"
+  property survives, only the inputs it's a function of grew.
   **Consequence worth knowing**: the Game now sits in `ASSIGNING` with **zero `Rounds()`** for the
   whole reveal delay, since a `Round` is only created inside `OpenVoting` itself. Any code that
   assumed "loadouts assigned ⇒ a Round already exists" (the frontend's old `shouldReveal` did) breaks
