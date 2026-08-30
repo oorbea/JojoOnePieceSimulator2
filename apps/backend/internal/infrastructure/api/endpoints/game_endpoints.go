@@ -204,6 +204,9 @@ func (e *GameEndpoints) respondState(w http.ResponseWriter, r *http.Request, g *
 	if t, ok := e.svc.ResultEndsAt(g.ID()); ok {
 		deadlines.ResultEndsAt = &t
 	}
+	if t, ok := e.svc.SummaryEndsAt(g.ID()); ok {
+		deadlines.SummaryEndsAt = &t
+	}
 	resp, err := dto.NewGameStateResponse(r.Context(), g, code, self,
 		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
 		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), deadlines)

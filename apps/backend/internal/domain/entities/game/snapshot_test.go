@@ -31,7 +31,7 @@ func mustEvolvedStand(t *testing.T, id byte, name string, rarity enums.PowerRari
 func buildMidMatchVersusGame(t *testing.T) *game.Game {
 	t.Helper()
 
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo, enums.OnePiece}, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.Random, 2, true, enums.Public, 45, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo, enums.OnePiece}, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.Random, 2, true, enums.Public, 45, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestSnapshotDoesNotDrainEvents(t *testing.T) {
 // round-trip independently through Snapshot/Restore - a Snapshot never
 // populates the legacy Mangas field, only the split ones.
 func TestSnapshotRoundTrip_SplitMangaAxes(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo, enums.OnePiece}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo, enums.OnePiece}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -372,7 +372,7 @@ func TestSnapshotRoundTrip_SplitMangaAxes(t *testing.T) {
 // still live in Redis across a deploy) - both axes fall back to the
 // legacy Mangas field.
 func TestRestore_LegacyMangasFallback(t *testing.T) {
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

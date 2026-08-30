@@ -80,6 +80,10 @@ type wireConfig struct {
 	// decodes as "", which game.Restore already defaults to
 	// DefaultRevealSpeed, same reasoning as this file's snapshotVersion doc.
 	RevealSpeed string `json:"revealSpeed,omitempty"`
+	// SummaryDurationSeconds is additive/omitempty like RevealSpeed above -
+	// an absent value decodes as 0, which game.Restore already defaults to
+	// DefaultSummaryDurationSeconds.
+	SummaryDurationSeconds int `json:"summaryDurationSeconds,omitempty"`
 }
 
 type wirePoolFilter struct {
@@ -166,16 +170,17 @@ func toWire(s game.Snapshot) wireGame {
 		HostID: s.HostID,
 		Locked: s.Locked,
 		Config: wireConfig{
-			Mode:                s.Config.Mode,
-			StageMangas:         append([]string(nil), s.Config.StageMangas...),
-			PowerMangas:         append([]string(nil), s.Config.PowerMangas...),
-			AbilitySource:       s.Config.AbilitySource,
-			TeamSize:            s.Config.TeamSize,
-			AllowBots:           s.Config.AllowBots,
-			Visibility:          s.Config.Visibility,
-			VotingWindowSeconds: s.Config.VotingWindowSeconds,
-			PoolFilter:          toWirePoolFilter(s.Config.PoolFilter),
-			RevealSpeed:         s.Config.RevealSpeed,
+			Mode:                   s.Config.Mode,
+			StageMangas:            append([]string(nil), s.Config.StageMangas...),
+			PowerMangas:            append([]string(nil), s.Config.PowerMangas...),
+			AbilitySource:          s.Config.AbilitySource,
+			TeamSize:               s.Config.TeamSize,
+			AllowBots:              s.Config.AllowBots,
+			Visibility:             s.Config.Visibility,
+			VotingWindowSeconds:    s.Config.VotingWindowSeconds,
+			PoolFilter:             toWirePoolFilter(s.Config.PoolFilter),
+			RevealSpeed:            s.Config.RevealSpeed,
+			SummaryDurationSeconds: s.Config.SummaryDurationSeconds,
 		},
 		Participants: make([]wireParticipant, 0, len(s.Participants)),
 		Teams:        make([]wireTeam, 0, len(s.Teams)),
@@ -307,17 +312,18 @@ func fromWire(w wireGame) game.Snapshot {
 		HostID: w.HostID,
 		Locked: w.Locked,
 		Config: game.ConfigSnapshot{
-			Mode:                w.Config.Mode,
-			Mangas:              append([]string(nil), w.Config.Mangas...),
-			StageMangas:         append([]string(nil), w.Config.StageMangas...),
-			PowerMangas:         append([]string(nil), w.Config.PowerMangas...),
-			AbilitySource:       w.Config.AbilitySource,
-			TeamSize:            w.Config.TeamSize,
-			AllowBots:           w.Config.AllowBots,
-			Visibility:          w.Config.Visibility,
-			VotingWindowSeconds: w.Config.VotingWindowSeconds,
-			PoolFilter:          fromWirePoolFilter(w.Config.PoolFilter),
-			RevealSpeed:         w.Config.RevealSpeed,
+			Mode:                   w.Config.Mode,
+			Mangas:                 append([]string(nil), w.Config.Mangas...),
+			StageMangas:            append([]string(nil), w.Config.StageMangas...),
+			PowerMangas:            append([]string(nil), w.Config.PowerMangas...),
+			AbilitySource:          w.Config.AbilitySource,
+			TeamSize:               w.Config.TeamSize,
+			AllowBots:              w.Config.AllowBots,
+			Visibility:             w.Config.Visibility,
+			VotingWindowSeconds:    w.Config.VotingWindowSeconds,
+			PoolFilter:             fromWirePoolFilter(w.Config.PoolFilter),
+			RevealSpeed:            w.Config.RevealSpeed,
+			SummaryDurationSeconds: w.Config.SummaryDurationSeconds,
 		},
 		Participants: make([]game.ParticipantSnapshot, 0, len(w.Participants)),
 		Teams:        make([]game.TeamSnapshot, 0, len(w.Teams)),

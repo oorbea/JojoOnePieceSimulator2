@@ -17,15 +17,16 @@ type CreateGameRequest struct {
 	Mode string `json:"mode"`
 	// StageMangas and PowerMangas are independent - see game.Config's doc
 	// comment.
-	StageMangas         []string           `json:"stageMangas"`
-	PowerMangas         []string           `json:"powerMangas"`
-	AbilitySource       string             `json:"abilitySource"`
-	TeamSize            int                `json:"teamSize"`
-	AllowBots           bool               `json:"allowBots"`
-	Visibility          string             `json:"visibility,omitempty"`
-	VotingWindowSeconds int                `json:"votingWindowSeconds,omitempty"`
-	PoolFilter          *PoolFilterPayload `json:"poolFilter,omitempty"`
-	RevealSpeed         string             `json:"revealSpeed,omitempty"`
+	StageMangas            []string           `json:"stageMangas"`
+	PowerMangas            []string           `json:"powerMangas"`
+	AbilitySource          string             `json:"abilitySource"`
+	TeamSize               int                `json:"teamSize"`
+	AllowBots              bool               `json:"allowBots"`
+	Visibility             string             `json:"visibility,omitempty"`
+	VotingWindowSeconds    int                `json:"votingWindowSeconds,omitempty"`
+	PoolFilter             *PoolFilterPayload `json:"poolFilter,omitempty"`
+	RevealSpeed            string             `json:"revealSpeed,omitempty"`
+	SummaryDurationSeconds int                `json:"summaryDurationSeconds,omitempty"`
 }
 
 // Validate converts the request into a services.CreateGameInput, collecting
@@ -72,16 +73,17 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 	}
 
 	return services.CreateGameInput{
-		Mode:                mode,
-		StageMangas:         stageMangas,
-		PowerMangas:         powerMangas,
-		AbilitySource:       abilitySource,
-		TeamSize:            r.TeamSize,
-		AllowBots:           r.AllowBots,
-		Visibility:          visibility,
-		VotingWindowSeconds: r.VotingWindowSeconds,
-		PoolFilter:          poolFilter,
-		RevealSpeed:         revealSpeed,
+		Mode:                   mode,
+		StageMangas:            stageMangas,
+		PowerMangas:            powerMangas,
+		AbilitySource:          abilitySource,
+		TeamSize:               r.TeamSize,
+		AllowBots:              r.AllowBots,
+		Visibility:             visibility,
+		VotingWindowSeconds:    r.VotingWindowSeconds,
+		PoolFilter:             poolFilter,
+		RevealSpeed:            revealSpeed,
+		SummaryDurationSeconds: r.SummaryDurationSeconds,
 	}, nil
 }
 

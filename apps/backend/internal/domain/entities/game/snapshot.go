@@ -43,17 +43,18 @@ type Snapshot struct {
 // either axis that comes back empty (see restoreConfig). A payload old
 // enough to lack all three restores nothing and errors, same as before.
 type ConfigSnapshot struct {
-	Mode                string
-	Mangas              []string
-	StageMangas         []string
-	PowerMangas         []string
-	AbilitySource       string
-	TeamSize            int
-	AllowBots           bool
-	Visibility          string
-	VotingWindowSeconds int
-	PoolFilter          PoolFilterSnapshot
-	RevealSpeed         string
+	Mode                   string
+	Mangas                 []string
+	StageMangas            []string
+	PowerMangas            []string
+	AbilitySource          string
+	TeamSize               int
+	AllowBots              bool
+	Visibility             string
+	VotingWindowSeconds    int
+	PoolFilter             PoolFilterSnapshot
+	RevealSpeed            string
+	SummaryDurationSeconds int
 }
 
 // PoolFilterSnapshot mirrors PoolFilter. Empty slices mean "no
@@ -155,16 +156,17 @@ func (g *Game) Snapshot() Snapshot {
 		HostID: g.hostID,
 		Locked: g.locked,
 		Config: ConfigSnapshot{
-			Mode:                g.config.mode.String(),
-			StageMangas:         mangaStrings(g.config.stageMangas),
-			PowerMangas:         mangaStrings(g.config.powerMangas),
-			AbilitySource:       g.config.abilitySource.String(),
-			TeamSize:            g.config.teamSize,
-			AllowBots:           g.config.allowBots,
-			Visibility:          g.config.visibility.String(),
-			VotingWindowSeconds: g.config.votingWindowSeconds,
-			PoolFilter:          snapshotPoolFilter(g.config.poolFilter),
-			RevealSpeed:         g.config.revealSpeed.String(),
+			Mode:                   g.config.mode.String(),
+			StageMangas:            mangaStrings(g.config.stageMangas),
+			PowerMangas:            mangaStrings(g.config.powerMangas),
+			AbilitySource:          g.config.abilitySource.String(),
+			TeamSize:               g.config.teamSize,
+			AllowBots:              g.config.allowBots,
+			Visibility:             g.config.visibility.String(),
+			VotingWindowSeconds:    g.config.votingWindowSeconds,
+			PoolFilter:             snapshotPoolFilter(g.config.poolFilter),
+			RevealSpeed:            g.config.revealSpeed.String(),
+			SummaryDurationSeconds: g.config.summaryDurationSeconds,
 		},
 		Participants: make([]ParticipantSnapshot, 0, len(g.order)),
 		Teams:        make([]TeamSnapshot, 0, len(g.teams)),
@@ -410,18 +412,26 @@ func Restore(s Snapshot) (*Game, error) {
 			return nil, err
 		}
 	}
+	// SummaryDurationSeconds is likewise an additive field - a legacy
+	// Snapshot predating it decodes with a zero value, which falls back to
+	// DefaultSummaryDurationSeconds rather than failing validation.
+	summaryDurationSeconds := s.Config.SummaryDurationSeconds
+	if summaryDurationSeconds == 0 {
+		summaryDurationSeconds = DefaultSummaryDurationSeconds
+	}
 
 	cfg := Config{
-		mode:                mode,
-		stageMangas:         stageMangas,
-		powerMangas:         powerMangas,
-		abilitySource:       abilitySource,
-		teamSize:            s.Config.TeamSize,
-		allowBots:           s.Config.AllowBots,
-		visibility:          visibility,
-		votingWindowSeconds: votingWindowSeconds,
-		poolFilter:          poolFilter,
-		revealSpeed:         revealSpeed,
+		mode:                   mode,
+		stageMangas:            stageMangas,
+		powerMangas:            powerMangas,
+		abilitySource:          abilitySource,
+		teamSize:               s.Config.TeamSize,
+		allowBots:              s.Config.AllowBots,
+		visibility:             visibility,
+		votingWindowSeconds:    votingWindowSeconds,
+		poolFilter:             poolFilter,
+		revealSpeed:            revealSpeed,
+		summaryDurationSeconds: summaryDurationSeconds,
 	}
 
 	state, err := enums.ParseGameState(s.State)

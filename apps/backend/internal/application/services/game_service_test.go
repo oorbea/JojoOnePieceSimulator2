@@ -482,6 +482,18 @@ func advanceReveal(deps *gameTestDeps, mangas []enums.Manga) {
 	deps.clock.Advance(maxRevealDuration(mangas))
 }
 
+// advanceSummary fires the summary-delay timer scheduleSummaryDelay starts
+// once the reveal finishes (2026-08-30's loadout-summary screen, between
+// ASSIGNING and VOTING) - by advancing deps.clock past the lobby's
+// configured SummaryDurationSeconds (game.DefaultSummaryDurationSeconds for
+// every test lobby here, since none of them set it explicitly). Until this
+// timer fires the Game sits in SUMMARY, not VOTING, so any test that needs
+// to actually cast a vote must call this after advanceReveal (then re-fetch
+// via GetGame, same async-timer caveat as advanceReveal/advanceResult).
+func advanceSummary(deps *gameTestDeps) {
+	deps.clock.Advance(time.Duration(game.DefaultSummaryDurationSeconds) * time.Second)
+}
+
 // maxRevealDuration upper-bounds game.RevealDuration for mangas across any
 // number of players (up to game.MaxGauntletPlayers, the largest a lobby
 // this test suite builds ever seats), any draw outcome, and the slowest
@@ -815,6 +827,7 @@ func TestStartGame_Gauntlet_OpensFirstRoundVoting(t *testing.T) {
 	}
 
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -858,6 +871,7 @@ func TestStartGame_RevealEndsAt_TracksThenClearsOnVotingOpen(t *testing.T) {
 	}
 
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 	if _, ok := svc.RevealEndsAt(g.ID()); ok {
 		t.Fatalf("RevealEndsAt after voting opens: want not-ok")
 	}
@@ -897,6 +911,7 @@ func TestAbortGame_DuringReveal_NeverOpensVoting(t *testing.T) {
 	// abort, this is where it would fire and try to reopen voting on a Game
 	// that finalizeLocked already deleted from the store.
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 
 	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
 		t.Fatalf("GetGame after abort+advance: err = %v, want ErrGameNotFound", err)
@@ -916,6 +931,7 @@ func TestGauntlet_FallMajority_FinishesAndFinalizes(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -959,6 +975,7 @@ func TestGauntlet_ClearAllStages_Victory(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -1011,6 +1028,7 @@ func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, versusInput(1).PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -1043,6 +1061,7 @@ func TestVersus_ThreeRounds_TeamAWins(t *testing.T) {
 		// resolved schedules its own reveal delay before voting reopens.
 		if round < game.VersusRounds-1 {
 			advanceReveal(deps, versusInput(1).PowerMangas)
+			advanceSummary(deps)
 			g, err = svc.GetGame(context.Background(), g.ID())
 			if err != nil {
 				t.Fatalf("GetGame after round %d reveal: %v", round, err)
@@ -1077,6 +1096,7 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, versusInput(1).PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -1144,6 +1164,7 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 	// schedules its own reveal delay before voting reopens (see
 	// VersusMode.ReassignsEachRound).
 	advanceReveal(deps, versusInput(1).PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after round 2 reveal: %v", err)
@@ -1191,6 +1212,7 @@ func TestCloseVotingWindow_TimerExpiry_ResolvesWithEmittedVotes(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 
 	// Host never votes - the window expiring must resolve with zero votes,
 	// which is a tie (see game.Ballot.Tally), opening a revote instead of
@@ -1297,6 +1319,7 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, versusInput(2).PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -1324,6 +1347,7 @@ func TestCastVote_Concurrent_NoRace(t *testing.T) {
 	// schedules its own reveal delay before voting reopens (see
 	// VersusMode.ReassignsEachRound).
 	advanceReveal(deps, versusInput(2).PowerMangas)
+	advanceSummary(deps)
 
 	final, err := svc.GetGame(context.Background(), g.ID())
 	if err != nil {

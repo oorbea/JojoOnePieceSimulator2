@@ -37,6 +37,16 @@ const (
 	// (pre-reveal-speed) Snapshot, and by the application layer when a
 	// CreateGame/ConfigUpdate request doesn't specify one.
 	DefaultRevealSpeed = enums.Normal
+
+	// MinSummaryDurationSeconds and MaxSummaryDurationSeconds bound a
+	// lobby's configurable loadout-summary-screen duration.
+	MinSummaryDurationSeconds = 10
+	MaxSummaryDurationSeconds = 300
+
+	// DefaultSummaryDurationSeconds is the fallback used by Restore for a
+	// legacy (pre-summary-screen) Snapshot, and by the application layer
+	// when a CreateGame request doesn't specify one.
+	DefaultSummaryDurationSeconds = 60
 )
 
 var (
@@ -59,6 +69,10 @@ var (
 	// ErrInvalidRevealSpeed is returned when Config's reveal speed is not
 	// one of enums.RevealSpeed's valid values.
 	ErrInvalidRevealSpeed = errors.New("invalid reveal speed")
+
+	// ErrInvalidSummaryDuration is returned when Config's summary duration
+	// falls outside [MinSummaryDurationSeconds, MaxSummaryDurationSeconds].
+	ErrInvalidSummaryDuration = errors.New("invalid summary duration")
 )
 
 // Config is a lobby's setup: which mode, which manga(s) Stages are drawn
@@ -71,16 +85,17 @@ var (
 // changes it by having Game.Reconfigure swap in a whole new Config, never
 // by mutating one in place.
 type Config struct {
-	poolFilter          PoolFilter
-	stageMangas         []enums.Manga
-	powerMangas         []enums.Manga
-	teamSize            int
-	votingWindowSeconds int
-	mode                enums.GameModeKind
-	abilitySource       enums.AbilitySource
-	allowBots           bool
-	visibility          enums.LobbyVisibility
-	revealSpeed         enums.RevealSpeed
+	poolFilter             PoolFilter
+	stageMangas            []enums.Manga
+	powerMangas            []enums.Manga
+	teamSize               int
+	votingWindowSeconds    int
+	mode                   enums.GameModeKind
+	abilitySource          enums.AbilitySource
+	allowBots              bool
+	visibility             enums.LobbyVisibility
+	revealSpeed            enums.RevealSpeed
+	summaryDurationSeconds int
 }
 
 // NewConfig validates and builds a Config.
@@ -95,6 +110,7 @@ func NewConfig(
 	votingWindowSeconds int,
 	poolFilter PoolFilter,
 	revealSpeed enums.RevealSpeed,
+	summaryDurationSeconds int,
 ) (Config, error) {
 	if !mode.IsValid() {
 		return Config{}, enums.ErrInvalidGameModeKind
@@ -113,6 +129,9 @@ func NewConfig(
 	}
 	if !revealSpeed.IsValid() {
 		return Config{}, ErrInvalidRevealSpeed
+	}
+	if summaryDurationSeconds < MinSummaryDurationSeconds || summaryDurationSeconds > MaxSummaryDurationSeconds {
+		return Config{}, ErrInvalidSummaryDuration
 	}
 
 	uniqueStageMangas, err := normalizeMangas(stageMangas)
@@ -145,16 +164,17 @@ func NewConfig(
 	}
 
 	return Config{
-		mode:                mode,
-		stageMangas:         uniqueStageMangas,
-		powerMangas:         uniquePowerMangas,
-		abilitySource:       abilitySource,
-		teamSize:            teamSize,
-		allowBots:           allowBots,
-		visibility:          visibility,
-		votingWindowSeconds: votingWindowSeconds,
-		poolFilter:          poolFilter,
-		revealSpeed:         revealSpeed,
+		mode:                   mode,
+		stageMangas:            uniqueStageMangas,
+		powerMangas:            uniquePowerMangas,
+		abilitySource:          abilitySource,
+		teamSize:               teamSize,
+		allowBots:              allowBots,
+		visibility:             visibility,
+		votingWindowSeconds:    votingWindowSeconds,
+		poolFilter:             poolFilter,
+		revealSpeed:            revealSpeed,
+		summaryDurationSeconds: summaryDurationSeconds,
 	}, nil
 }
 
@@ -185,6 +205,7 @@ func (c Config) Visibility() enums.LobbyVisibility  { return c.visibility }
 func (c Config) VotingWindowSeconds() int           { return c.votingWindowSeconds }
 func (c Config) RevealSpeed() enums.RevealSpeed     { return c.revealSpeed }
 func (c Config) PoolFilter() PoolFilter             { return c.poolFilter }
+func (c Config) SummaryDurationSeconds() int        { return c.summaryDurationSeconds }
 
 // StageMangas returns a copy of the mangas Stages are drawn from, in
 // enums.Mangas() order.

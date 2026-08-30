@@ -20,8 +20,12 @@ func buildTestGame(t *testing.T) *game.Game {
 	// the round trip actually exercises RevealSpeed surviving - a dropped
 	// field would silently decode back to Normal and this test would never
 	// notice (see wire.go's wireConfig.RevealSpeed doc for the bug this
-	// guards against: toWire/fromWire once omitted it entirely).
-	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Swift)
+	// guards against: toWire/fromWire once omitted it entirely). Same
+	// reasoning for SummaryDurationSeconds: 90, not
+	// game.DefaultSummaryDurationSeconds (60, also the restore fallback for
+	// a zero value) - a dropped field would silently decode back to the
+	// default and this test would never notice.
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Swift, 90)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -114,6 +118,9 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 	}
 	if restored.Config().RevealSpeed() != enums.Swift {
 		t.Errorf("revealSpeed lost across decode: got %v, want %v", restored.Config().RevealSpeed(), enums.Swift)
+	}
+	if restored.Config().SummaryDurationSeconds() != 90 {
+		t.Errorf("summaryDurationSeconds lost across decode: got %v, want 90", restored.Config().SummaryDurationSeconds())
 	}
 }
 
