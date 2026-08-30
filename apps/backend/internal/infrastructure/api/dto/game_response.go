@@ -316,6 +316,16 @@ func NewGameStateResponse(
 			Stage:        stageResp,
 			Options:      options,
 			TiebreakUsed: r.TiebreakUsed,
+			// VotedParticipantIDs has no `omitempty` (the frontend's
+			// GameRound.votedParticipantIds is a required string[], never
+			// optional) - always initialized to an empty, never nil, slice
+			// so a resolved round (which never repopulates it below) still
+			// marshals to `[]`, not `null`. A resolved round from an
+			// earlier one stays in g.Rounds() for the rest of the match, so
+			// every STATE sent afterwards carries this - a bug found
+			// 2026-08-30 crashing the whole match screen the moment a
+			// second round's own sorteo/vote tried to read it.
+			VotedParticipantIDs: make([]string, 0),
 		}
 		if r.TiedVotes != nil {
 			rr.TiedVotes = make(map[string]string, len(r.TiedVotes))

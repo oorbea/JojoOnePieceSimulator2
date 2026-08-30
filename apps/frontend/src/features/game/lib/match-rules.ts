@@ -180,7 +180,7 @@ export function voteProgress(snapshot: GameSnapshot, live: LiveMatchState): { ca
   if (frameIsForCurrentRound && live.votesCast !== null) {
     return { cast: live.votesCast, total }
   }
-  const cast = round ? round.votedParticipantIds.filter((id) => connectedHumanIds.has(id)).length : 0
+  const cast = round ? (round.votedParticipantIds ?? []).filter((id) => connectedHumanIds.has(id)).length : 0
   return { cast, total }
 }
 
