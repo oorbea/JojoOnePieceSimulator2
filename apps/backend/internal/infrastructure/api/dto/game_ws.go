@@ -44,6 +44,10 @@ const (
 	// 2026-08-30) - takes no payload, since it always applies to "the
 	// caller, right now". See services.GameService.MarkRevealReady.
 	CommandRevealReady = "REVEAL_READY"
+	// CommandSummaryReady is the loadout-summary screen's own skip vote
+	// (owner decision, 2026-08-30), mirroring CommandRevealReady exactly.
+	// See services.GameService.MarkSummaryReady.
+	CommandSummaryReady = "SUMMARY_READY"
 )
 
 // AddBotPayload is CommandAddBot's payload.
@@ -171,15 +175,16 @@ type UpdateConfigPayload struct {
 	Mode string `json:"mode"`
 	// StageMangas and PowerMangas are independent - see game.Config's doc
 	// comment.
-	StageMangas         []string           `json:"stageMangas"`
-	PowerMangas         []string           `json:"powerMangas"`
-	AbilitySource       string             `json:"abilitySource"`
-	TeamSize            int                `json:"teamSize"`
-	AllowBots           bool               `json:"allowBots"`
-	Visibility          string             `json:"visibility"`
-	VotingWindowSeconds int                `json:"votingWindowSeconds"`
-	PoolFilter          *PoolFilterPayload `json:"poolFilter,omitempty"`
-	RevealSpeed         string             `json:"revealSpeed,omitempty"`
+	StageMangas            []string           `json:"stageMangas"`
+	PowerMangas            []string           `json:"powerMangas"`
+	AbilitySource          string             `json:"abilitySource"`
+	TeamSize               int                `json:"teamSize"`
+	AllowBots              bool               `json:"allowBots"`
+	Visibility             string             `json:"visibility"`
+	VotingWindowSeconds    int                `json:"votingWindowSeconds"`
+	PoolFilter             *PoolFilterPayload `json:"poolFilter,omitempty"`
+	RevealSpeed            string             `json:"revealSpeed,omitempty"`
+	SummaryDurationSeconds int                `json:"summaryDurationSeconds,omitempty"`
 }
 
 // Validate converts the payload into a services.ConfigUpdateInput,
@@ -219,16 +224,17 @@ func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
 	}
 
 	return services.ConfigUpdateInput{
-		Mode:                mode,
-		StageMangas:         stageMangas,
-		PowerMangas:         powerMangas,
-		AbilitySource:       abilitySource,
-		TeamSize:            p.TeamSize,
-		AllowBots:           p.AllowBots,
-		Visibility:          visibility,
-		VotingWindowSeconds: p.VotingWindowSeconds,
-		PoolFilter:          poolFilter,
-		RevealSpeed:         revealSpeed,
+		Mode:                   mode,
+		StageMangas:            stageMangas,
+		PowerMangas:            powerMangas,
+		AbilitySource:          abilitySource,
+		TeamSize:               p.TeamSize,
+		AllowBots:              p.AllowBots,
+		Visibility:             visibility,
+		VotingWindowSeconds:    p.VotingWindowSeconds,
+		PoolFilter:             poolFilter,
+		RevealSpeed:            revealSpeed,
+		SummaryDurationSeconds: p.SummaryDurationSeconds,
 	}, nil
 }
 
@@ -244,25 +250,27 @@ type ServerFrame struct {
 // from entities/game/events.go's DomainEvent.Name() - the transport never
 // invents its own vocabulary for them.
 const (
-	FrameState              = "STATE"
-	FramePlayerJoined       = "PLAYER_JOINED"
-	FramePlayerLeft         = "PLAYER_LEFT"
-	FrameHostReassigned     = "HOST_REASSIGNED"
-	FrameGameStarted        = "GAME_STARTED"
-	FrameLoadoutsAssigned   = "LOADOUTS_ASSIGNED"
-	FrameVotingOpened       = "VOTING_OPENED"
-	FrameVoteCast           = "VOTE_CAST"
-	FrameTiebreakOpened     = "TIEBREAK_OPENED"
-	FrameRoundResolved      = "ROUND_RESOLVED"
-	FrameGameFinished       = "GAME_FINISHED"
-	FrameGameAborted        = "GAME_ABORTED"
-	FrameError              = "ERROR"
-	FrameResyncRequired     = "RESYNC_REQUIRED"
-	FrameTeamChanged        = "TEAM_CHANGED"
-	FramePlayerKicked       = "PLAYER_KICKED"
-	FrameLobbyLockChanged   = "LOBBY_LOCK_CHANGED"
-	FrameConfigUpdated      = "CONFIG_UPDATED"
-	FrameRevealReadyChanged = "REVEAL_READY_CHANGED"
+	FrameState               = "STATE"
+	FramePlayerJoined        = "PLAYER_JOINED"
+	FramePlayerLeft          = "PLAYER_LEFT"
+	FrameHostReassigned      = "HOST_REASSIGNED"
+	FrameGameStarted         = "GAME_STARTED"
+	FrameLoadoutsAssigned    = "LOADOUTS_ASSIGNED"
+	FrameVotingOpened        = "VOTING_OPENED"
+	FrameVoteCast            = "VOTE_CAST"
+	FrameTiebreakOpened      = "TIEBREAK_OPENED"
+	FrameRoundResolved       = "ROUND_RESOLVED"
+	FrameGameFinished        = "GAME_FINISHED"
+	FrameGameAborted         = "GAME_ABORTED"
+	FrameError               = "ERROR"
+	FrameResyncRequired      = "RESYNC_REQUIRED"
+	FrameTeamChanged         = "TEAM_CHANGED"
+	FramePlayerKicked        = "PLAYER_KICKED"
+	FrameLobbyLockChanged    = "LOBBY_LOCK_CHANGED"
+	FrameConfigUpdated       = "CONFIG_UPDATED"
+	FrameRevealReadyChanged  = "REVEAL_READY_CHANGED"
+	FrameSummaryOpened       = "SUMMARY_OPENED"
+	FrameSummaryReadyChanged = "SUMMARY_READY_CHANGED"
 )
 
 // VotingOpenedPayload/TiebreakOpenedPayload carry a transport-computed
@@ -300,6 +308,20 @@ type VoteCastPayload struct {
 // participant identity, just how many of how many connected humans are
 // ready to skip ahead.
 type RevealReadyChangedPayload struct {
+	Ready int `json:"ready"`
+	Total int `json:"total"`
+}
+
+// SummaryOpenedPayload mirrors VotingOpenedPayload exactly, scoped to the
+// SUMMARY window instead of VOTING.
+type SummaryOpenedPayload struct {
+	RoundIndex int    `json:"roundIndex"`
+	ClosesAt   string `json:"closesAt"`
+}
+
+// SummaryReadyChangedPayload mirrors RevealReadyChangedPayload exactly,
+// scoped to the summary screen's own skip vote.
+type SummaryReadyChangedPayload struct {
 	Ready int `json:"ready"`
 	Total int `json:"total"`
 }

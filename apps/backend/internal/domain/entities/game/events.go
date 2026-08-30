@@ -33,6 +33,23 @@ type VotingOpened struct{ RoundIndex int }
 
 func (VotingOpened) Name() string { return "VOTING_OPENED" }
 
+// SummaryOpened is emitted by OpenSummary once a reassigning round's sorteo
+// finishes (or is skipped) - RoundIndex is len(g.rounds) at emit time, same
+// value LoadoutsAssigned carries, since the Round itself isn't created until
+// OpenVoting runs afterward.
+type SummaryOpened struct{ RoundIndex int }
+
+func (SummaryOpened) Name() string { return "SUMMARY_OPENED" }
+
+// SummaryReadyChanged mirrors RevealReadyChanged exactly, scoped to the
+// SUMMARY window instead of ASSIGNING.
+type SummaryReadyChanged struct {
+	ReadyCount  int
+	TotalHumans int
+}
+
+func (SummaryReadyChanged) Name() string { return "SUMMARY_READY_CHANGED" }
+
 // RevealReadyChanged is emitted by MarkRevealReady - the sorteo's own skip
 // vote, mirroring VoteCast's ready/total shape but scoped to the ASSIGNING
 // window rather than a round's Ballot. ReadyCount/TotalHumans are

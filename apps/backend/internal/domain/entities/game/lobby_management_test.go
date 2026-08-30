@@ -12,7 +12,7 @@ import (
 // team B - one per team, so it's valid for any teamSize >= 1.
 func newVersusLobby(t *testing.T, teamSize int) (*game.Game, *game.Participant, *game.Participant, *game.Team, *game.Team) {
 	t.Helper()
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, teamSize, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, teamSize, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestTransferHost_HostOnly(t *testing.T) {
 func TestTransferHost_RejectsBot(t *testing.T) {
 	// A Config with AllowBots so the bot actually seats, isolating this
 	// test to TransferHost's own kind check rather than AddBot's.
-	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, true, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, true, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestSetLocked_HostOnlyAndBlocksJoin(t *testing.T) {
 
 func TestReconfigure_HostOnlyAndLobbyOnly(t *testing.T) {
 	g, host, other, teamA, teamB := newVersusLobby(t, 2)
-	next, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Public, 45, game.PoolFilter{}, enums.Normal)
+	next, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Public, 45, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestReconfigure_HostOnlyAndLobbyOnly(t *testing.T) {
 
 func TestReconfigure_GauntletToVersusSplitsPlayers(t *testing.T) {
 	g, players := newGauntletGame(t, oneStage(t), 4)
-	next, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	next, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -213,7 +213,7 @@ func TestReconfigure_GauntletToVersusSplitsPlayers(t *testing.T) {
 
 func TestReconfigure_VersusToGauntletMergesPlayers(t *testing.T) {
 	g, host, other, _, _ := newVersusLobby(t, 2)
-	next, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 10, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	next, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 10, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestReconfigure_ShrinkingBelowSeatedHumansIsRejected(t *testing.T) {
 	}
 	// Team A now has 2 players (host + third). Shrinking teamSize to 1
 	// would evict a seated human and must be rejected.
-	shrunk, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	shrunk, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
 	if err != nil {
 		t.Fatalf("NewConfig: %v", err)
 	}

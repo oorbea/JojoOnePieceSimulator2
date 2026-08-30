@@ -568,7 +568,7 @@ func TestBuildEventFrame_VoteCast_CarriesHumanVoteProgress(t *testing.T) {
 		RoundIndex: 2, ParticipantID: pid, Option: "SURVIVE",
 		HumanVotesCast: 1, HumanVoters: 3,
 	}
-	frameType, payload, resendState := buildEventFrame(evt, 30*time.Second, 0)
+	frameType, payload, resendState := buildEventFrame(evt, 30*time.Second, 0, 0)
 
 	if frameType != dto.FrameVoteCast {
 		t.Fatalf("frameType = %q, want %q", frameType, dto.FrameVoteCast)
@@ -596,7 +596,7 @@ func TestBuildEventFrame_VoteCast_StaysAnonymous(t *testing.T) {
 		RoundIndex: 0, ParticipantID: pid, Option: "FALL",
 		HumanVotesCast: 1, HumanVoters: 1,
 	}
-	_, payload, _ := buildEventFrame(evt, 30*time.Second, 0)
+	_, payload, _ := buildEventFrame(evt, 30*time.Second, 0, 0)
 
 	raw, err := json.Marshal(payload)
 	if err != nil {
