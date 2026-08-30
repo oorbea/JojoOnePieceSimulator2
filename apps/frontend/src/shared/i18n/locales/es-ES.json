@@ -374,14 +374,15 @@
             "none": "{{name}}, lo siento, pero desafortunadamente no has aprendido a usar haki"
           },
           "hakiMastery": {
-            "before": "Y tu maestría con cada uno de ellos es:",
-            "after": "{{name}}, tu maestría es {{value}}"
+            "before": "Y tu maestría de {{type}} es:",
+            "after": "{{name}}, tu maestría de {{type}} es {{value}}"
           }
         }
       },
       "loadout": {
         "viewA11y": "Ver los poderes de {{name}}",
-        "closeA11y": "Cerrar el desglose de poderes"
+        "closeA11y": "Cerrar el desglose de poderes",
+        "viewImageA11y": "Ver la imagen de {{name}} en grande"
       },
       "result": {
         "title": "Resultado de la ronda {{index}}",

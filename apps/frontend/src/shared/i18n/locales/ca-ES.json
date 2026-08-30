@@ -374,14 +374,15 @@
             "none": "{{name}}, ho sento, però malauradament no has après a utilitzar haki"
           },
           "hakiMastery": {
-            "before": "I la teva mestria amb cadascun és:",
-            "after": "{{name}}, la teva mestria és {{value}}"
+            "before": "I la teva mestria de {{type}} és:",
+            "after": "{{name}}, la teva mestria de {{type}} és {{value}}"
           }
         }
       },
       "loadout": {
         "viewA11y": "Veure els poders de {{name}}",
-        "closeA11y": "Tancar el desglossament de poders"
+        "closeA11y": "Tancar el desglossament de poders",
+        "viewImageA11y": "Veure la imatge de {{name}} en gran"
       },
       "result": {
         "title": "Resultat de la ronda {{index}}",
