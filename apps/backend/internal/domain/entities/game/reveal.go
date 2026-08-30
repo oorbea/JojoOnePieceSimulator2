@@ -125,11 +125,53 @@ const (
 // RevealPlayer is the minimal per-participant shape RevealDuration needs:
 // whether their Loadout actually landed a Stand and/or a Devil Fruit, since
 // those two slots hold for a different (longer) duration than a NONE/empty
-// result. Order matters - RevealDuration walks players in the same order
-// the reveal plays them in (join order, i.e. Game.Participants()).
+// result, plus which of the three haki types they actually have - a
+// participant with only Observation Haki must never get a roulette for
+// Armament/Conqueror Haki at all (owner request, 2026-08-30: those slots
+// don't exist for them, not "exist and land on NONE"). Order matters -
+// RevealDuration walks players in the same order the reveal plays them in
+// (join order, i.e. Game.Participants()).
 type RevealPlayer struct {
-	HasStand      bool
-	HasDevilFruit bool
+	HasStand           bool
+	HasDevilFruit      bool
+	HasArmamentHaki    bool
+	HasObservationHaki bool
+	HasConquerorHaki   bool
+}
+
+// PlayerSlots is RevealSlots(mangas) further filtered down to the slots
+// player actually gets: the three individual haki-level slots only appear
+// for a haki type this player's Loadout actually has (see RevealPlayer's
+// doc) - every other slot (including the synthetic RevealHakiSet summary)
+// is unaffected, since PhysicalForm/Stand/DevilFruit/etc. always have a
+// value to show (even a floor/NONE one) once their manga is selected.
+// RevealDuration and the frontend's mirrored playerSlots both call this
+// per participant, never the shared RevealSlots list, once a player has
+// been assigned - so a lobby-wide "10 slots" only ever described a
+// same-mangas lobby before this, and now varies per participant exactly
+// like V1's own haki reveal (which never printed a type the roll didn't
+// grant).
+func PlayerSlots(mangas []enums.Manga, player RevealPlayer) []RevealSlot {
+	all := RevealSlots(mangas)
+	slots := make([]RevealSlot, 0, len(all))
+	for _, s := range all {
+		switch s {
+		case RevealArmamentHaki:
+			if !player.HasArmamentHaki {
+				continue
+			}
+		case RevealObservationHaki:
+			if !player.HasObservationHaki {
+				continue
+			}
+		case RevealConquerorHaki:
+			if !player.HasConquerorHaki {
+				continue
+			}
+		}
+		slots = append(slots, s)
+	}
+	return slots
 }
 
 // RevealSpinCycles picks how many loadingScreen-style spin cycles a given
@@ -184,11 +226,10 @@ func slotHoldMs(slot RevealSlot, player RevealPlayer) int {
 // own (already-assigned) Loadout, and the configured RevealSpeed - see
 // GameConfigResponse.RevealSpeed and GameParticipantResponse.Loadout.
 func RevealDuration(gameID GameID, roundIndex int, mangas []enums.Manga, players []RevealPlayer, speed enums.RevealSpeed) time.Duration {
-	slots := RevealSlots(mangas)
 	total := RevealIntroMs + RevealOutroMs
 	for pi, p := range players {
 		total += RevealPlayerIntroMs + RevealPlayerOutroMs
-		for _, slot := range slots {
+		for _, slot := range PlayerSlots(mangas, p) {
 			spinMs := RevealSpinBaseMs * RevealSpinCycles(gameID, roundIndex, pi, slot)
 			total += RevealNarratorMs + spinMs + slotHoldMs(slot, p)
 		}

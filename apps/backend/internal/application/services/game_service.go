@@ -1055,8 +1055,11 @@ func revealDurationFor(g *game.Game) time.Duration {
 	for _, p := range g.Participants() {
 		loadout := p.Loadout()
 		players = append(players, game.RevealPlayer{
-			HasStand:      loadout != nil && loadout.Stand() != nil,
-			HasDevilFruit: loadout != nil && loadout.DevilFruit() != nil,
+			HasStand:           loadout != nil && loadout.Stand() != nil,
+			HasDevilFruit:      loadout != nil && loadout.DevilFruit() != nil,
+			HasArmamentHaki:    loadout != nil && loadout.ArmamentHaki() != enums.HakiNone,
+			HasObservationHaki: loadout != nil && loadout.ObservationHaki() != enums.HakiNone,
+			HasConquerorHaki:   loadout != nil && loadout.ConquerorHaki() != enums.HakiNone,
 		})
 	}
 	roundIndex := len(g.Rounds())
