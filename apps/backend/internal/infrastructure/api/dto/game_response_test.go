@@ -162,6 +162,83 @@ func TestNewGameStateResponse_TiedVotes(t *testing.T) {
 	}
 }
 
+// TestNewGameStateResponse_ResolvedRound_VotedParticipantIDsNeverNull guards
+// a bug found 2026-08-30 during manual local-up testing: once a round
+// resolves, newGameStateResponse's own builder only populates
+// VotedParticipantIDs in the "round still live" branch, leaving it at Go's
+// nil-slice zero value for a resolved round - which marshals to JSON
+// `null`, not `[]`, even though GameRound.votedParticipantIds is a
+// required (non-optional) string[] on the frontend. A resolved round stays
+// in g.Rounds() for the rest of the match, so every STATE sent afterwards
+// carried this - crashing the whole match screen the moment a second
+// round's own sorteo tried to read the first round's now-null field via
+// currentRound(snapshot).votedParticipantIds.filter(...).
+func TestNewGameStateResponse_ResolvedRound_VotedParticipantIDsNeverNull(t *testing.T) {
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal)
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	host, err := game.NewHumanParticipant(game.ParticipantID{1}, user.UserID{1}, "host", game.TeamID{10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant: %v", err)
+	}
+	team, err := game.NewTeam(game.TeamID{10}, "Squad", 0)
+	if err != nil {
+		t.Fatalf("NewTeam: %v", err)
+	}
+	stage, err := game.NewStage(game.StageID{1}, enums.Jojo, 0, "Phantom Blood", "a test stage", "")
+	if err != nil {
+		t.Fatalf("NewStage: %v", err)
+	}
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{team}, []game.Stage{stage})
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	if err := g.Start(g.HostID()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	pools := map[game.TeamID]*game.AvailablePowers{team.ID(): game.NewAvailablePowers(nil, nil)}
+	builder := game.NewLoadoutBuilder(cfg.PowerMangas(), game.DefaultAssignmentWeights(), zeroRandom{})
+	if err := g.AssignLoadouts(builder, pools); err != nil {
+		t.Fatalf("AssignLoadouts: %v", err)
+	}
+	if err := g.OpenVoting(zeroRandom{}); err != nil {
+		t.Fatalf("OpenVoting: %v", err)
+	}
+	if err := g.CastVote(host.ID(), "SURVIVE"); err != nil {
+		t.Fatalf("CastVote: %v", err)
+	}
+	if tied, err := g.CloseVoting(); err != nil || tied {
+		t.Fatalf("CloseVoting: tied=%v err=%v", tied, err)
+	}
+
+	noFruitText := func(_ context.Context, _ powers.PowerID) (ports.PowerContent, error) {
+		return ports.PowerContent{}, nil
+	}
+	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
+		noPictures, noPictures, noPictures, noPictures,
+		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
+	if err != nil {
+		t.Fatalf("NewGameStateResponse: %v", err)
+	}
+
+	round := resp.Game.Rounds[len(resp.Game.Rounds)-1]
+	if round.Result == nil {
+		t.Fatalf("Result = nil, want the round to have resolved")
+	}
+	if round.VotedParticipantIDs == nil {
+		t.Fatalf("VotedParticipantIDs = nil, want a non-nil (possibly empty) slice")
+	}
+
+	raw, err := json.Marshal(resp.Game)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if strings.Contains(string(raw), `"votedParticipantIds":null`) {
+		t.Fatalf("votedParticipantIds serialized as null: %s", raw)
+	}
+}
+
 func noPictures(_ context.Context, key string) (string, error) { return key, nil }
 
 func noStageText(_ context.Context, _ game.StageID) (string, error) { return "", nil }
