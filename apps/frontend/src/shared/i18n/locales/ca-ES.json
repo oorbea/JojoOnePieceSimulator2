@@ -200,6 +200,7 @@
         "powerMangas": "De quins universos treu aquesta sala els Stands i les Fruites del Diable.",
         "teamSize": "Quants jugadors caben a cada equip (Versus) o a l'esquadró (Gauntlet).",
         "votingSeconds": "Quant de temps tenen els jugadors per votar a cada ronda.",
+        "summarySeconds": "Quant de temps es mostra el resum de poders de tothom abans que comenci la votació.",
         "privacy": "Les sales públiques apareixen a Sales obertes. Les privades només s'hi entra amb codi.",
         "allowBots": "Omple els llocs buits amb bots. No disponible a Gauntlet.",
         "pool": "Bloca Stands o Fruites del Diable concrets perquè mai surtin en aquesta sala."
