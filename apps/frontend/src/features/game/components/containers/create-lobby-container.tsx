@@ -40,6 +40,7 @@ export function CreateLobbyContainer() {
   const [allowBots, setAllowBots] = useState(false)
   const [visibility, setVisibility] = useState<LobbyVisibility>('PRIVATE')
   const [votingWindowSeconds, setVotingWindowSeconds] = useState(30)
+  const [summaryDurationSeconds, setSummaryDurationSeconds] = useState(60)
   const [poolFilter, setPoolFilter] = useState<PoolFilter>(EMPTY_POOL_FILTER)
 
   const banlistItems: BannableItem[] = useMemo(
@@ -125,6 +126,7 @@ export function CreateLobbyContainer() {
         allowBots,
         visibility,
         votingWindowSeconds,
+        summaryDurationSeconds,
         poolFilter,
       },
       {
@@ -152,6 +154,8 @@ export function CreateLobbyContainer() {
       onToggleVisibility={() => setVisibility((v) => (v === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC'))}
       votingWindowSeconds={votingWindowSeconds}
       onChangeVotingWindow={setVotingWindowSeconds}
+      summaryDurationSeconds={summaryDurationSeconds}
+      onChangeSummaryDuration={setSummaryDurationSeconds}
       poolFilter={poolFilter}
       poolActiveCount={poolActiveCount}
       banlistItems={banlistItems}

@@ -200,6 +200,7 @@
         "powerMangas": "De qué universos saca esta sala los Stands y las Frutas del Diablo.",
         "teamSize": "Cuántos jugadores caben en cada equipo (Versus) o en el escuadrón (Gauntlet).",
         "votingSeconds": "Cuánto tiempo tienen los jugadores para votar en cada ronda.",
+        "summarySeconds": "Cuánto tiempo se muestra el resumen de poderes de todos antes de que empiece la votación.",
         "privacy": "Las salas públicas aparecen en Salas abiertas. Las privadas solo se unen con código.",
         "allowBots": "Rellena los huecos vacíos con bots. No disponible en Gauntlet.",
         "pool": "Bloquea Stands o Frutas del Diablo concretas para que nunca salgan en esta sala."

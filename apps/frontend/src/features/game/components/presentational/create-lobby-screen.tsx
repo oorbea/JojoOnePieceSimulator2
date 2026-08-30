@@ -37,6 +37,8 @@ type Props = {
   onToggleVisibility: () => void
   votingWindowSeconds: number
   onChangeVotingWindow: (seconds: number) => void
+  summaryDurationSeconds: number
+  onChangeSummaryDuration: (seconds: number) => void
   poolFilter: PoolFilter
   poolActiveCount: number
   banlistItems: BannableItem[]
@@ -67,6 +69,8 @@ export function CreateLobbyScreen({
   onToggleVisibility,
   votingWindowSeconds,
   onChangeVotingWindow,
+  summaryDurationSeconds,
+  onChangeSummaryDuration,
   poolFilter,
   poolActiveCount,
   banlistItems,
@@ -172,6 +176,15 @@ export function CreateLobbyScreen({
             min={5}
             max={180}
             onChange={onChangeVotingWindow}
+          />
+
+          <NumberStepper
+            label={t('game.create.summarySecondsLabel')}
+            help={<InfoHint text={t('game.create.help.summarySeconds')} />}
+            value={summaryDurationSeconds}
+            min={10}
+            max={300}
+            onChange={onChangeSummaryDuration}
           />
 
           <SettingRow label={t('game.create.privacyLabel')} help={<InfoHint text={t('game.create.help.privacy')} />}>
