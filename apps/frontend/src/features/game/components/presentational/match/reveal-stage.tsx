@@ -206,6 +206,7 @@ export function RevealStage({
           stand={loadout?.stand}
           devilFruit={loadout?.devilFruit}
           participantName={currentParticipant.displayName}
+          onSkip={onSkip}
         />
       ) : null}
     </GlassPanel>

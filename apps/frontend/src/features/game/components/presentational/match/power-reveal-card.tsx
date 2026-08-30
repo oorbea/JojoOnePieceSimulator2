@@ -11,6 +11,7 @@ import { PowerBlock } from '@/features/game/components/presentational/match/powe
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 import type { StandResponse } from '@/features/stands/types/stands.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
+import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 
 type Props = {
@@ -19,6 +20,7 @@ type Props = {
   stand?: StandResponse
   devilFruit?: DevilFruitResponse
   participantName: string
+  onSkip: () => void
 }
 
 // The sorteo's own big power reveal (owner request, 2026-08-30): when a
@@ -29,9 +31,11 @@ type Props = {
 // gap the pre-2026-08-30 reveal never closed (see reveal.go's superseded
 // "this UI never renders a power's description" note). Reuses PowerBlock,
 // the same big-card layout LoadoutModal already shows after the match, so
-// the two never drift. Purely a timed overlay - has no skip button of its
-// own, the sorteo's own skip (RevealStage) still applies underneath.
-export function PowerRevealCard({ visible, kind, stand, devilFruit, participantName }: Props) {
+// the two never drift. Carries its own Skip button (bug found 2026-08-30
+// manual testing: RevealStage's own Skip sits underneath this Modal, but a
+// Modal captures every touch on both native and web - the button was
+// visually present but completely unreachable while this card was up).
+export function PowerRevealCard({ visible, kind, stand, devilFruit, participantName, onSkip }: Props) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
 
@@ -87,6 +91,17 @@ export function PowerRevealCard({ visible, kind, stand, devilFruit, participantN
               </XStack>
             ) : null}
           </PowerBlock>
+          <XStack justify="center">
+            <GlossButton
+              tone="glass"
+              btnSize="sm"
+              onPress={onSkip}
+              accessibilityLabel={t('game.match.reveal.skipA11y')}
+              tooltip={t('game.match.reveal.skipA11y')}
+            >
+              {t('game.match.reveal.skip')}
+            </GlossButton>
+          </XStack>
         </GlassPanel>
       </YStack>
     </Modal>
