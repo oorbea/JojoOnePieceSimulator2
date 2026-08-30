@@ -73,6 +73,10 @@ type CreateGameInput struct {
 	// RevealSpeed is optional - its zero value is enums.Normal (see that
 	// enum's doc), so an omitted field needs no extra fallback here.
 	RevealSpeed enums.RevealSpeed
+	// SummaryDurationSeconds is optional: a zero value defaults to
+	// game.DefaultSummaryDurationSeconds, same pattern as
+	// VotingWindowSeconds.
+	SummaryDurationSeconds int
 }
 
 // ConfigUpdateInput is EditLobbyConfig's whole-replacement input - the same
@@ -151,6 +155,12 @@ type GameService struct {
 	// client joining/reconnecting mid-result gets the real remaining time.
 	// Same process-memory-only caveat as revealEnds/votingEnds.
 	resultEnds map[game.GameID]time.Time
+	// summaryEnds holds the wall-clock deadline of the in-flight
+	// loadout-summary screen for each Game currently in SUMMARY with a
+	// pending summary timer, keyed by GameID - read by SummaryEndsAt so a
+	// client joining/reconnecting mid-summary gets the real remaining time.
+	// Same process-memory-only caveat as revealEnds/votingEnds/resultEnds.
+	summaryEnds map[game.GameID]time.Time
 }
 
 // NewGameService builds a GameService. history may be nil until an
@@ -175,12 +185,13 @@ func NewGameService(
 		store: store, gameIDs: gameIDs, partIDs: partIDs, teamIDs: teamIDs,
 		users: users, stages: stages, powers: powerPool, weights: weights,
 		tiebreak: tiebreak, history: history, rng: rng, hub: hub, clock: clock,
-		votingCfg:  votingCfg,
-		locks:      newGameLocks(),
-		timers:     make(map[game.GameID]Timer),
-		revealEnds: make(map[game.GameID]time.Time),
-		votingEnds: make(map[game.GameID]time.Time),
-		resultEnds: make(map[game.GameID]time.Time),
+		votingCfg:   votingCfg,
+		locks:       newGameLocks(),
+		timers:      make(map[game.GameID]Timer),
+		revealEnds:  make(map[game.GameID]time.Time),
+		votingEnds:  make(map[game.GameID]time.Time),
+		resultEnds:  make(map[game.GameID]time.Time),
+		summaryEnds: make(map[game.GameID]time.Time),
 	}
 }
 
@@ -245,9 +256,13 @@ func (s *GameService) buildConfig(input CreateGameInput) (game.Config, error) {
 	if votingWindowSeconds == 0 {
 		votingWindowSeconds = int(s.votingCfg.Window / time.Second)
 	}
+	summaryDurationSeconds := input.SummaryDurationSeconds
+	if summaryDurationSeconds == 0 {
+		summaryDurationSeconds = game.DefaultSummaryDurationSeconds
+	}
 	return game.NewConfig(
 		input.Mode, input.StageMangas, input.PowerMangas, input.AbilitySource, input.TeamSize, input.AllowBots,
-		visibility, votingWindowSeconds, input.PoolFilter, input.RevealSpeed,
+		visibility, votingWindowSeconds, input.PoolFilter, input.RevealSpeed, summaryDurationSeconds,
 	)
 }
 
@@ -609,8 +624,9 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 // its own snapshot, to pace its reveal overlay - so this is what keeps
 // "voting opens" from ever racing ahead of "everyone has seen their
 // loadout". Once the delay elapses,
-// openVotingAfterReveal does what beginRound used to do immediately:
-// OpenVoting + scheduleVotingTimer. Uses the same s.timers map as the voting
+// openSummaryAfterReveal moves the Game on to SUMMARY (see that method) -
+// the loadout-summary screen the owner added 2026-08-30 between the sorteo
+// and the actual vote. Uses the same s.timers map as the voting/summary
 // timer (see its field doc) and records the deadline in s.revealEnds for
 // RevealEndsAt to serve to (re)connecting clients.
 func (s *GameService) scheduleRevealDelay(g *game.Game) {
@@ -622,19 +638,64 @@ func (s *GameService) scheduleRevealDelay(g *game.Game) {
 	s.timersMu.Unlock()
 
 	timer := s.clock.AfterFunc(d, func() {
-		s.openVotingAfterReveal(context.Background(), id)
+		s.openSummaryAfterReveal(context.Background(), id)
 	})
 	s.timersMu.Lock()
 	s.timers[id] = timer
 	s.timersMu.Unlock()
 }
 
-// openVotingAfterReveal is scheduleRevealDelay's callback: it re-acquires
-// g's lock via withGame and only then opens voting, so it never races a
-// concurrent AbortGame/CastVote against the same Game.
-func (s *GameService) openVotingAfterReveal(ctx context.Context, id game.GameID) {
+// openSummaryAfterReveal is scheduleRevealDelay's callback: it re-acquires
+// g's lock via withGame and only then opens the summary screen, so it never
+// races a concurrent AbortGame/CastVote against the same Game.
+func (s *GameService) openSummaryAfterReveal(ctx context.Context, id game.GameID) {
 	s.timersMu.Lock()
 	delete(s.revealEnds, id)
+	s.timersMu.Unlock()
+
+	_, err := s.withGame(ctx, id, func(g *game.Game) error {
+		if err := g.OpenSummary(); err != nil {
+			return err
+		}
+		s.scheduleSummaryDelay(g)
+		return nil
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, ports.ErrGameNotFound), errors.Is(err, game.ErrInvalidStateTransition):
+			// Benign: the Game was aborted/removed, or someone else already
+			// moved it out of ASSIGNING, before this timer fired.
+		default:
+			log.Printf("opening summary after reveal for game %s: %v", id, err)
+		}
+	}
+}
+
+// scheduleSummaryDelay holds g in SUMMARY for the lobby's configured
+// SummaryDurationSeconds, mirroring scheduleRevealDelay exactly. Once the
+// delay elapses, openVotingAfterSummary opens the actual vote.
+func (s *GameService) scheduleSummaryDelay(g *game.Game) {
+	id := g.ID()
+	d := time.Duration(g.Config().SummaryDurationSeconds()) * time.Second
+
+	s.timersMu.Lock()
+	s.summaryEnds[id] = s.clock.Now().Add(d)
+	s.timersMu.Unlock()
+
+	timer := s.clock.AfterFunc(d, func() {
+		s.openVotingAfterSummary(context.Background(), id)
+	})
+	s.timersMu.Lock()
+	s.timers[id] = timer
+	s.timersMu.Unlock()
+}
+
+// openVotingAfterSummary is scheduleSummaryDelay's callback: it re-acquires
+// g's lock via withGame and only then opens voting, so it never races a
+// concurrent AbortGame/CastVote against the same Game.
+func (s *GameService) openVotingAfterSummary(ctx context.Context, id game.GameID) {
+	s.timersMu.Lock()
+	delete(s.summaryEnds, id)
 	s.timersMu.Unlock()
 
 	_, err := s.withGame(ctx, id, func(g *game.Game) error {
@@ -648,9 +709,9 @@ func (s *GameService) openVotingAfterReveal(ctx context.Context, id game.GameID)
 		switch {
 		case errors.Is(err, ports.ErrGameNotFound), errors.Is(err, game.ErrInvalidStateTransition):
 			// Benign: the Game was aborted/removed, or someone else already
-			// moved it out of ASSIGNING, before this timer fired.
+			// moved it out of SUMMARY, before this timer fired.
 		default:
-			log.Printf("opening voting after reveal for game %s: %v", id, err)
+			log.Printf("opening voting after summary for game %s: %v", id, err)
 		}
 	}
 }
@@ -688,6 +749,18 @@ func (s *GameService) ResultEndsAt(id game.GameID) (time.Time, bool) {
 	s.timersMu.Lock()
 	defer s.timersMu.Unlock()
 	t, ok := s.resultEnds[id]
+	return t, ok
+}
+
+// SummaryEndsAt reports id's in-flight loadout-summary deadline, if any -
+// the same role RevealEndsAt/VotingEndsAt/ResultEndsAt play for their own
+// phases: a client joining or reconnecting mid-SUMMARY resumes the real
+// countdown instead of restarting it. The bool is false once the summary
+// has ended (or never started).
+func (s *GameService) SummaryEndsAt(id game.GameID) (time.Time, bool) {
+	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	t, ok := s.summaryEnds[id]
 	return t, ok
 }
 
@@ -750,15 +823,38 @@ func (s *GameService) completeRoundAfterResult(ctx context.Context, id game.Game
 // watching its own sorteo reveal - the server-side half of the "todos
 // pueden saltar" skip (owner decision, 2026-08-30). Once every connected
 // human has called this during the lobby's current ASSIGNING window, the
-// pending reveal timer is cancelled and voting opens immediately, exactly
-// like CastVote short-circuiting the voting-window timer once
-// VotingComplete goes true.
+// pending reveal timer is cancelled and the loadout-summary screen opens
+// immediately (see OpenSummary) - skipping the sorteo animation lands on
+// the summary, not straight into voting, same as letting it play out fully
+// would.
 func (s *GameService) MarkRevealReady(ctx context.Context, gameID game.GameID, participantID game.ParticipantID) (*game.Game, error) {
 	return s.withGame(ctx, gameID, func(g *game.Game) error {
 		if err := g.MarkRevealReady(participantID); err != nil {
 			return err
 		}
 		if g.RevealReadyComplete() {
+			s.cancelTimer(g.ID())
+			if err := g.OpenSummary(); err != nil {
+				return err
+			}
+			s.scheduleSummaryDelay(g)
+		}
+		return nil
+	})
+}
+
+// MarkSummaryReady records that participantID (a connected human) is done
+// looking at the loadout-summary screen and wants to skip ahead - the
+// server-side half of the summary screen's own "todos pueden saltar" skip,
+// mirroring MarkRevealReady exactly but for the SUMMARY window. Once every
+// connected human has called this, the pending summary timer is cancelled
+// and voting opens immediately.
+func (s *GameService) MarkSummaryReady(ctx context.Context, gameID game.GameID, participantID game.ParticipantID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		if err := g.MarkSummaryReady(participantID); err != nil {
+			return err
+		}
+		if g.SummaryReadyComplete() {
 			s.cancelTimer(g.ID())
 			if err := g.OpenVoting(s.rng); err != nil {
 				return err
@@ -1037,8 +1133,9 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 func (s *GameService) publish(g *game.Game) {
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
 	revealMs := revealDurationFor(g)
+	summaryWindow := time.Duration(g.Config().SummaryDurationSeconds()) * time.Second
 	for _, e := range g.PullEvents() {
-		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window, RevealMs: revealMs})
+		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window, RevealMs: revealMs, SummaryWindow: summaryWindow})
 	}
 }
 
@@ -1102,6 +1199,7 @@ func (s *GameService) cancelTimer(id game.GameID) {
 	delete(s.revealEnds, id)
 	delete(s.votingEnds, id)
 	delete(s.resultEnds, id)
+	delete(s.summaryEnds, id)
 	if t, ok := s.timers[id]; ok {
 		t.Stop()
 		delete(s.timers, id)

@@ -9,6 +9,7 @@ type GameState byte
 const (
 	Lobby GameState = iota
 	Assigning
+	Summary
 	Voting
 	Tiebreak
 	Resolving
@@ -22,6 +23,8 @@ func (s GameState) String() string {
 		return "LOBBY"
 	case Assigning:
 		return "ASSIGNING"
+	case Summary:
+		return "SUMMARY"
 	case Voting:
 		return "VOTING"
 	case Tiebreak:
@@ -41,7 +44,7 @@ var ErrInvalidGameState = errors.New("invalid game state")
 
 func (s GameState) IsValid() bool {
 	switch s {
-	case Lobby, Assigning, Voting, Tiebreak, Resolving, Finished, Aborted:
+	case Lobby, Assigning, Summary, Voting, Tiebreak, Resolving, Finished, Aborted:
 		return true
 	default:
 		return false
@@ -54,6 +57,8 @@ func ParseGameState(str string) (GameState, error) {
 		return Lobby, nil
 	case "ASSIGNING":
 		return Assigning, nil
+	case "SUMMARY":
+		return Summary, nil
 	case "VOTING":
 		return Voting, nil
 	case "TIEBREAK":

@@ -28,6 +28,11 @@ type GameEvent struct {
 	// scheduleRevealDelay). Same "compute once here, transport just reads
 	// it" pattern as VotingWindow.
 	RevealMs time.Duration
+	// SummaryWindow is the lobby's own configured summary-screen duration
+	// (Config.SummaryDurationSeconds) at the moment this event was
+	// published - the transport uses it to compute SUMMARY_OPENED's
+	// closesAt, same pattern as VotingWindow.
+	SummaryWindow time.Duration
 }
 
 // GameEventHub is an in-process, single-instance pub/sub for GameEvents,

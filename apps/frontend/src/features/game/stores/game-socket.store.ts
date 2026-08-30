@@ -44,6 +44,18 @@ export type LiveMatchState = {
    * starts (see the LOADOUTS_ASSIGNED case below). */
   revealReadyCount: number | null
   revealReadyTotal: number | null
+  /** Epoch ms deadline for the in-flight loadout-summary screen (2026-08-30,
+   * between the sorteo and the actual vote) - derived locally
+   * (Date.now() + closesAt-implied ms) on SUMMARY_OPENED, or adopted from a
+   * STATE frame's game.summaryEndsAt for a reconnect mid-summary. null once
+   * voting has actually opened (or the round never reassigned and skipped
+   * SUMMARY entirely). */
+  summaryEndsAt: number | null
+  /** Absolute values off the latest SUMMARY_READY_CHANGED, mirroring
+   * revealReadyCount/revealReadyTotal exactly but for the summary screen's
+   * own skip vote. */
+  summaryReadyCount: number | null
+  summaryReadyTotal: number | null
   votingRoundIndex: number | null
   votingClosesAt: number | null
   tiebreak: boolean
@@ -76,6 +88,9 @@ const INITIAL_LIVE: LiveMatchState = {
   revealEndsAt: null,
   revealReadyCount: null,
   revealReadyTotal: null,
+  summaryEndsAt: null,
+  summaryReadyCount: null,
+  summaryReadyTotal: null,
   votingRoundIndex: null,
   votingClosesAt: null,
   tiebreak: false,
@@ -222,6 +237,15 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
                 live = { ...live, resultEndsAt }
               }
             }
+            // Same shape and reasoning again: a reconnect mid-SUMMARY
+            // adopts the deadline from this STATE frame, same as
+            // revealEndsAt/votingClosesAt/resultEndsAt above.
+            if (live.summaryEndsAt === null && payload.game.summaryEndsAt) {
+              const summaryEndsAt = Date.parse(payload.game.summaryEndsAt) || null
+              if (summaryEndsAt !== null) {
+                live = { ...live, summaryEndsAt }
+              }
+            }
 
             return live === state.live ? { snapshot: payload } : { snapshot: payload, live }
           })
@@ -297,6 +321,33 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           }))
           break
         }
+        case SERVER_FRAME.SUMMARY_OPENED: {
+          const payload = frame.payload as { roundIndex?: number; closesAt?: string } | undefined
+          set((state) => ({
+            live: {
+              ...state.live,
+              summaryEndsAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
+              // Fresh SUMMARY window, fresh ready set - mirrors
+              // Game.OpenSummary resetting summaryReady server-side.
+              summaryReadyCount: null,
+              summaryReadyTotal: null,
+            },
+          }))
+          break
+        }
+        case SERVER_FRAME.SUMMARY_READY_CHANGED: {
+          // Absolute values, never an increment - same shape as VOTE_CAST/
+          // REVEAL_READY_CHANGED.
+          const payload = frame.payload as { ready?: number; total?: number } | undefined
+          set((state) => ({
+            live: {
+              ...state.live,
+              summaryReadyCount: payload?.ready ?? null,
+              summaryReadyTotal: payload?.total ?? null,
+            },
+          }))
+          break
+        }
         case SERVER_FRAME.LOADOUTS_ASSIGNED: {
           // Sent BEFORE its own pushCurrentState, so `snapshot` here may
           // still be pre-assignment - never touch snapshot/feed from this
@@ -331,6 +382,9 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               revealEndsAt: null,
               revealReadyCount: null,
               revealReadyTotal: null,
+              summaryEndsAt: null,
+              summaryReadyCount: null,
+              summaryReadyTotal: null,
               // Reset, not cleared to null: the fresh window has cast=0 of
               // an as-yet-unknown total, covered by voteProgress's
               // snapshot-derived fallback until the first VOTE_CAST (or a
@@ -353,6 +407,9 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               tiebreak: true,
               revealMs: null,
               revealEndsAt: null,
+              summaryEndsAt: null,
+              summaryReadyCount: null,
+              summaryReadyTotal: null,
               votesCast: 0,
               voters: null,
               resultEndsAt: null,

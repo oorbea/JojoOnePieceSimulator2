@@ -28,6 +28,7 @@ func TestCastVote_ResultEndsAt_TracksThenClearsOnCompleteRound(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)
@@ -82,6 +83,7 @@ func TestAbortGame_DuringResolving_ClearsResultEndsAt(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
 	g, err = svc.GetGame(context.Background(), g.ID())
 	if err != nil {
 		t.Fatalf("GetGame after reveal: %v", err)

@@ -183,6 +183,7 @@
       "teamSizeLabel": "Team size",
       "teamSizeGauntletLabel": "Max players",
       "votingSecondsLabel": "Voting window (seconds)",
+      "summarySecondsLabel": "Loadout summary (seconds)",
       "revealSpeedLabel": "Sorteo speed",
       "revealSpeedHint": "How fast the power draw plays out",
       "privacyLabel": "Privacy",
@@ -199,6 +200,7 @@
         "powerMangas": "Which universes this lobby draws Stands and Devil Fruits from.",
         "teamSize": "How many players fit on each team (Versus) or in the squad (Gauntlet).",
         "votingSeconds": "How long players get to vote on choices during a round.",
+        "summarySeconds": "How long the loadout summary screen shows everyone's powers before voting opens.",
         "privacy": "Public lobbies show up in Open Lobbies. Private lobbies are join-by-code only.",
         "allowBots": "Fill empty player slots with bots. Not available in Gauntlet.",
         "pool": "Ban specific Stands or Devil Fruits so they never get drawn in this lobby."
@@ -311,6 +313,13 @@
       "closesIn": "Closes in {{seconds}}s",
       "noStand": "No Stand",
       "noFruit": "No Devil Fruit",
+      "summary": {
+        "title": "Loadout summary",
+        "votingIn": "Voting opens in {{seconds}}s",
+        "skip": "Skip",
+        "skipA11y": "Skip the loadout summary",
+        "readyCount": "{{ready}}/{{total}} ready"
+      },
       "trait": {
         "spin": "Spin",
         "hamon": "Hamon",
@@ -533,6 +542,7 @@
     "gameState": {
       "LOBBY": "Lobby",
       "ASSIGNING": "Assigning powers",
+      "SUMMARY": "Loadout summary",
       "VOTING": "Voting",
       "TIEBREAK": "Tiebreak vote",
       "RESOLVING": "Resolving round",

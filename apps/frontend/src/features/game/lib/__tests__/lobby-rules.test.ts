@@ -12,6 +12,7 @@ function baseConfig(): GameConfig {
     visibility: 'PRIVATE',
     votingWindowSeconds: 30,
     revealSpeed: 'NORMAL',
+    summaryDurationSeconds: 60,
     poolFilter: { standRarities: [], fruitRarities: [], fruitTypes: [], banned: [] },
   }
 }
