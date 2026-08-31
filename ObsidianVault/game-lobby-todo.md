@@ -23,6 +23,11 @@ this note for *what's left*.
   `game_endpoints_test.go`/`game_ws_endpoints_test.go` (§2).
 - Frontend: `tsc --noEmit` clean, `pnpm run test:ci` green (34 suites / 305 tests), including
   the config-edit panel (§3) and power-pool restriction UI (§4).
+  **2026-08-31 correction**: the config-edit panel (§3) had no component tests at all until this
+  date - `features/game/components/**/__tests__/` did not exist (unlike `stands`/`stages`/
+  `devil-fruits`, which all had presentational component tests from the start). This line was
+  false when written. See §3's own "2026-08-31 audit-and-close pass" for what was added; real
+  count as of that pass is 46 suites / 482 tests.
 - **2026-08-13 UX pass**: §4's rarity/fruit-type whitelist chips were removed from the UI (owner
   found them confusing, only banning is needed) - see [[game-lobby-frontend]]'s "UX pass" section.
   `PowerPoolFields` is banlist-only now; the backend `PoolFilter` type is untouched. `tsc --noEmit`
@@ -56,37 +61,67 @@ already lists as merged. Both files exist and cover everything originally asked 
 
 No further action needed here.
 
-## 3. Frontend: config-edit UI (host edits an existing lobby's settings)
+## 3. Frontend: config-edit UI - DONE (was already shipped, this section was stale)
 
-**Backend is ready**: `PATCH /games/{id}/config` (REST) and `UPDATE_CONFIG` (WS command) both
-exist and are tested (see `apps/backend/internal/application/services/game_service.go`'s
-`EditLobbyConfig`, `apps/backend/internal/infrastructure/api/dto/game_ws.go`'s
-`UpdateConfigPayload`). **Nothing on the frontend calls either yet.**
+**2026-08-31 correction**: this section was still written as if nothing existed ("Nothing on the
+frontend calls either yet"), but the panel, the `UPDATE_CONFIG` WS command, and the wiring were
+all real and shipped before this pass - the same kind of staleness bug already caught and fixed in
+§2. What actually exists, all in `apps/frontend/src/features/game/`:
+- `hooks/use-game-commands.ts` sends `CLIENT_COMMAND` type `UPDATE_CONFIG`, matching
+  `UpdateConfigPayload` in `apps/backend/internal/infrastructure/api/dto/game_ws.go`.
+- `components/presentational/lobby-config-panel.tsx` reuses the same field controls as
+  `create-lobby-screen.tsx`. Host-only fields are editable, non-host renders the same layout
+  read-only via plain `GlowText`.
+- `lobby-room-container.tsx` seeds local form state from `snapshot.config` and submits a full
+  replacement payload (mirrors `CreateGameRequest`, never a partial patch).
+- `NumberStepper` was promoted to its own file, `components/presentational/fields/number-stepper.tsx`,
+  and both `create-lobby-screen.tsx` and the config panel import it - per the original plan.
 
-**What to do**, all in `apps/frontend/src/features/game/`:
-- Add `updateConfig` to `hooks/use-game-commands.ts` sending `CLIENT_COMMAND` type
-  `UPDATE_CONFIG` is missing from `types/game-ws.types.ts`'s `CLIENT_COMMAND` object - add it
-  there first (mirror the others), then add the sender in `use-game-commands.ts`.
-- Build a `lobby-config-panel.tsx` presentational component reusing the exact same field controls
-  already built for `create-lobby-screen.tsx` (mode picker, manga toggles, the `Stepper` helper
-  currently private to that file - promote it to its own file, e.g.
-  `components/presentational/fields/number-stepper.tsx`, and import it from both screens instead of
-  duplicating).
-- Host-only: editable. Non-host: same layout, read-only (render the values as plain `GlowText`,
-  no interactive controls) - `lobby-room-screen.tsx` already receives `you.isHost`, thread it
-  through.
-- Wire into `lobby-room-container.tsx`: local form state seeded from `snapshot.config`, submit
-  calls `commands.updateConfig(...)`. Since `UPDATE_CONFIG`'s payload is a **full replacement**
-  (mirrors `CreateGameRequest`), build the whole payload from current + edited fields, don't try to
-  send a partial patch.
-- Add it to `lobby-room-screen.tsx` between the roster and the `StartBar`, collapsed by default via
-  the existing `FilterDisclosure` primitive (`shared/components/presentational/filter-disclosure.tsx`)
-  so it doesn't dominate the screen on mobile.
-- i18n: reuse the existing `game.create.*` keys where the label is identical (mangas, teamSize,
-  votingSeconds, privacy, allowBots) - add a small `game.config.*` set only for what's config-panel
-  specific (`title`, `readOnly`, `hostOnly`, `saving`, `saved`) in all three locale files, same
-  pattern as every other `game.*` addition (identical keys across `en-GB`/`es-ES`/`ca-ES`, no
-  em/en dashes - `copy.test.ts` will catch a violation immediately, it already did once this tanda).
+**Deviations from the original plan text above** (kept as historical record of what was asked,
+not what shipped):
+- `MangaRow` was later moved *out* of this panel entirely, to its own always-visible component on
+  the main lobby screen - see [[game-lobby-frontend]]'s "Manga selector moved out..." section, not
+  re-derived here.
+- The panel also carries `revealSpeed` and `summaryDurationSeconds` fields, which weren't in the
+  original plan text at all.
+- Ban-by-filter (`fields/ban-by-filter-fields.tsx`) exists alongside the plain banlist search - see
+  §4 and [[game-lobby-frontend]]'s "Segundo UX pass" section.
+- i18n reused `game.create.*` keys as planned; the `game.config.*` additions match the original
+  list (`title`, `readOnly`, `hostOnly`, `saving`, `saved`).
+
+**2026-08-31 audit-and-close pass**: closed three real gaps found while auditing this section
+against the actual code.
+- **New file** `lib/config-form.ts` - extracted `ConfigFormState`, `TEAM_SIZE_LIMITS` (GAUNTLET
+  1-10, VERSUS 1-5, previously duplicated between `lobby-room-container.tsx` and
+  `create-lobby-container.tsx`), `clampTeamSize`, `configFormFromSnapshot`, `applyModeChange`,
+  `buildUpdateConfigPayload` - now the single source of truth for team-size limits, see
+  [[game-lobby-frontend]]'s "Config-edit panel hardened" section for the rationale.
+- **Fixed a real bug**: `configSaving`/`configSaved` used to resolve via a fake `setTimeout(500)`
+  regardless of whether the server actually accepted the `UPDATE_CONFIG`, so the panel could say
+  "Saved" on a rejected edit. Now the in-flight command's `requestId` (already returned by
+  `useGameSocketStore`'s `send()`) is correlated against `socket.lastError.requestId` to attribute
+  a WS error specifically to that submit - see [[game-realtime-transport]]'s protocol section and
+  [[game-lobby-frontend]] for the pattern. The panel's previously-dead `configError` prop is now
+  wired for real; the pre-existing toast-on-any-WS-error behavior is kept unconditionally in
+  addition to the inline panel error. The Save button also now disables while the socket isn't
+  `open`.
+- **Added contextual help parity**: `create-lobby-screen.tsx` already had `InfoHint` icons on every
+  field; `lobby-config-panel.tsx` had none. Added the same icons reusing the existing
+  `game.create.help.*` i18n keys - zero new keys needed.
+- **Found and fixed a real crash bug while writing tests**: three host-only field values in
+  `lobby-config-panel.tsx` (reveal speed, privacy, allow-bots button labels) were raw template
+  strings inside an `XStack` instead of wrapped in `GlowText`, unlike their non-host sibling
+  branches right next to them - an actual React Native `Invariant Violation` crash on native/Expo,
+  not a lint nit. Fixed by wrapping each in `<GlowText level="heading">`.
+- **Closed the test gap**: `features/game/components/**/__tests__/` didn't exist at all before
+  this pass (unlike `stands`/`stages`/`devil-fruits`). Added
+  `lib/__tests__/config-form.test.ts` and
+  `components/presentational/__tests__/lobby-config-panel.test.tsx` (host vs non-host rendering,
+  Save button disabled/text guards, error display).
+
+Verified: `tsc --noEmit` clean, full frontend suite green - 46 suites / 482 tests (up from 44/457
+before this pass, exactly the two new test files, nothing broken). Committed as `1d93c68`,
+`ef0e8e9`, `721d76b` on `develop`.
 
 ## 4. Frontend: power-pool restriction UI (rarity/fruit-type/banlist)
 
