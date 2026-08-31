@@ -35,6 +35,13 @@ tanda migrates the client onto this protocol (`EXPO_PUBLIC_SOCKET_URL` should th
 Envelopes: `ClientCommand{type, requestId?, payload?}` / `ServerFrame{type, requestId?, payload?}`.
 `requestId` is opaque, only used to correlate an `ERROR` frame back to the command that caused it.
 
+**Confirmed reusable on the frontend (2026-08-31)**: `useGameSocketStore`'s `send()` returns the
+`requestId` it stamps on the outgoing command, and `lastError.requestId` on the store surfaces it
+back. `LobbyRoomContainer`'s config-edit save is the first caller to actually correlate the two
+(attributing an `ERROR` frame to its own in-flight `UPDATE_CONFIG` rather than showing a generic
+toast) - see [[game-lobby-frontend]]'s "Config-edit panel hardened" section. Worth reusing for any
+future command with its own submit-state UI rather than re-deriving the pattern.
+
 **Commands** (each maps to exactly one `GameService` method): `LEAVE`, `ADD_BOT`, `REMOVE_BOT`,
 `START`, `ABORT`, `VOTE`, `RESYNC`. Deliberately **not** commands: `CreateGame`/`JoinByCode`/
 `GetGame*` (plain HTTP — you can't join a game over a socket you can only open by already being a

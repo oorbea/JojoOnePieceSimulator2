@@ -5,16 +5,12 @@ import { useTranslation } from 'react-i18next'
 import type { BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { CreateLobbyScreen } from '@/features/game/components/presentational/create-lobby-screen'
 import { useCreateGame } from '@/features/game/hooks/use-create-game'
+import { TEAM_SIZE_LIMITS, clampTeamSize } from '@/features/game/lib/config-form'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { toAppError } from '@/shared/api/errors'
 import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
-
-const GAUNTLET_MIN = 1
-const GAUNTLET_MAX = 10
-const VERSUS_MIN = 1
-const VERSUS_MAX = 5
 
 const EMPTY_POOL_FILTER: PoolFilter = {
   standRarities: [],
@@ -72,12 +68,8 @@ export function CreateLobbyContainer() {
 
   const handleChangeMode = (next: GameMode) => {
     setMode(next)
-    if (next === 'GAUNTLET') {
-      setAllowBots(false)
-      setTeamSize((size) => Math.min(Math.max(size, GAUNTLET_MIN), GAUNTLET_MAX))
-    } else {
-      setTeamSize((size) => Math.min(Math.max(size, VERSUS_MIN), VERSUS_MAX))
-    }
+    if (next === 'GAUNTLET') setAllowBots(false)
+    setTeamSize((size) => clampTeamSize(next, size))
   }
 
   const handleToggleStageManga = (manga: Manga) => {
@@ -145,8 +137,8 @@ export function CreateLobbyContainer() {
       onToggleStageManga={handleToggleStageManga}
       onTogglePowerManga={handleTogglePowerManga}
       teamSize={teamSize}
-      teamSizeMin={mode === 'GAUNTLET' ? GAUNTLET_MIN : VERSUS_MIN}
-      teamSizeMax={mode === 'GAUNTLET' ? GAUNTLET_MAX : VERSUS_MAX}
+      teamSizeMin={TEAM_SIZE_LIMITS[mode].min}
+      teamSizeMax={TEAM_SIZE_LIMITS[mode].max}
       onChangeTeamSize={setTeamSize}
       allowBots={allowBots}
       onToggleAllowBots={() => setAllowBots((v) => !v)}
