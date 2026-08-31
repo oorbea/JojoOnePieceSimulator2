@@ -165,6 +165,50 @@ the mouse path. Host-dragging *another* participant and a genuine mobile/touch-e
 pass are still unverified live (no second test account, no touch-capable browser profile in this
 session) - flagged here rather than silently assumed.
 
+**Both remaining gaps closed live (2026-08-31, `local-up` + `claude-in-chrome`)** - host-dragging
+another participant, and real touch-event dispatch. No second human account was created (owner
+approved skipping that): a temporary keydown debug shim (`document.addEventListener('keydown', ...)`
+calling `commands.addBot`, in `lobby-room-container.tsx`, never committed) added a bot to Team A,
+giving the host a genuinely *other* participant to drag - `movePlayer` fired and both columns'
+counts updated correctly (Team A 2/5 → 1/5, Team B 0/5 → 1/5).
+
+**Correction to the 2026-08-28 note above**: touch events are NOT gated behind
+`'ontouchstart' in window` - react-native-web's `ResponderSystem.attachListeners()`
+(`useResponderEvents/ResponderSystem.js`) unconditionally attaches
+`touchstart`/`touchmove`/`touchend`/`touchcancel` document listeners regardless of touch capability.
+The previous session's `TouchEvent` dispatch attempt failed for an unrelated reason (see below, not
+re-diagnosed this session) - a real `new TouchEvent(...)` built with real `new Touch(...)` objects
+(not a plain object literal) and dispatched directly on the row's DOM node **did** trigger
+`onMoveShouldSetPanResponder`/`onPanResponderMove`/`onPanResponderRelease` and completed a genuine
+`switchTeam` (self, trollotron, Team A → Team B) on a plain desktop Chrome profile with no device
+emulation needed. Confirms `usePlayerDrag`'s single implementation truly does cover touch, not just
+mouse.
+
+**Bug found and fixed while setting up the host-drag-another-participant test**:
+`TeamColumn`'s outer `View` (`team-column.tsx`) had a hardcoded `style={{ width: '100%' }}`. This
+is correct when the two columns stack vertically (mobile/narrow, `flexDirection: 'column'`, RN's
+default `alignItems: 'stretch'` already fills the width) but broke once the parent switches to
+`flexDirection: 'row'` at the `$md` breakpoint (`lobby-room-screen.tsx`, `minWidth: 900` per
+`tamagui.config.ts`): each column still claimed 100% of the row's width, so Team B was pushed
+completely outside `PageShell`'s 1080px cap with no way to reach it (join/kick/drag all broken) on
+**any desktop-width browser** - not a narrow-viewport-only issue. Root cause was two-fold: the fixed
+width, and flexbox's default `min-width: auto` refusing to shrink a flex item below its content's
+natural width even once `flex: 1` is set. Fixed by changing the style to
+`{ flex: 1, minWidth: 0 }` - fills full width when stacked (RN's stretch default), shares the row
+equally when side-by-side. This is very likely why a two-browser Versus lobby test was never
+actually exercised end-to-end before now at normal desktop window widths; worth a quick manual
+sanity check next time this screen is touched. Committed separately from this note.
+
+**Debugging note for next time synthetic drag events don't register**: dispatching
+`mousedown`/`mousemove`/`mouseup` (or `touchstart`/`touchmove`/`touchend`) via
+`element.dispatchEvent(new MouseEvent(...))` only reaches RN-Web's `PanResponder` if the
+coordinates are real CSS pixels (`getBoundingClientRect()`/`elementFromPoint`), not screenshot
+pixels - this environment's screenshot tool and `window.innerWidth`/`devicePixelRatio` did not
+agree 1:1, so coordinates eyeballed from a screenshot landed on the wrong element and silently
+no-opped (no error, no responder claimed, nothing moved). Always re-derive the target element and
+click point from live `getBoundingClientRect()`/`elementFromPoint()` calls in the same page, not
+from screenshot pixel-picking.
+
 ## 6. In-match UI (rounds, voting, loadouts) - split into two tandas
 
 **Start + assignment + reveal - DONE (2026-08-14)**, see [[game-match-assignment-frontend]] for the
