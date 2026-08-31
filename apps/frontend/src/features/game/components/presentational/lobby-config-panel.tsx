@@ -10,6 +10,7 @@ import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { InfoHint } from '@/shared/components/presentational/info-hint'
 import { SettingRow } from '@/shared/components/presentational/setting-row'
 import { TooltipBubble, useTooltipTrigger } from '@/shared/components/presentational/tooltip'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
@@ -158,6 +159,7 @@ export function LobbyConfigPanel({
           {isHost ? (
             <NumberStepper
               label={mode === 'GAUNTLET' ? t('game.create.teamSizeGauntletLabel') : t('game.create.teamSizeLabel')}
+              help={<InfoHint text={t('game.create.help.teamSize')} />}
               value={teamSize}
               min={teamSizeMin}
               max={teamSizeMax}
@@ -177,6 +179,7 @@ export function LobbyConfigPanel({
           {isHost ? (
             <NumberStepper
               label={t('game.create.votingSecondsLabel')}
+              help={<InfoHint text={t('game.create.help.votingSeconds')} />}
               value={votingWindowSeconds}
               min={5}
               max={180}
@@ -192,6 +195,7 @@ export function LobbyConfigPanel({
           {isHost ? (
             <NumberStepper
               label={t('game.create.summarySecondsLabel')}
+              help={<InfoHint text={t('game.create.help.summarySeconds')} />}
               value={summaryDurationSeconds}
               min={10}
               max={300}
@@ -215,7 +219,7 @@ export function LobbyConfigPanel({
               >
                 <XStack items="center" gap="$2">
                   <Clock size={14} color="$panelText" />
-                  {t(`enums.revealSpeed.${revealSpeed}`)}
+                  <GlowText level="heading">{t(`enums.revealSpeed.${revealSpeed}`)}</GlowText>
                 </XStack>
               </GlossButton>
             ) : (
@@ -226,7 +230,10 @@ export function LobbyConfigPanel({
             )}
           </SettingRow>
 
-          <SettingRow label={t('game.create.privacyLabel')}>
+          <SettingRow
+            label={t('game.create.privacyLabel')}
+            help={isHost ? <InfoHint text={t('game.create.help.privacy')} /> : undefined}
+          >
             {isHost ? (
               <GlossButton
                 tone="glass"
@@ -240,7 +247,7 @@ export function LobbyConfigPanel({
                   ) : (
                     <Lock size={14} color="$panelText" />
                   )}
-                  {t(`enums.lobbyVisibility.${visibility}`)}
+                  <GlowText level="heading">{t(`enums.lobbyVisibility.${visibility}`)}</GlowText>
                 </XStack>
               </GlossButton>
             ) : (
@@ -256,7 +263,10 @@ export function LobbyConfigPanel({
           </SettingRow>
 
           <YStack gap="$1.5">
-            <SettingRow label={t('game.create.allowBotsLabel')}>
+            <SettingRow
+              label={t('game.create.allowBotsLabel')}
+              help={isHost ? <InfoHint text={t('game.create.help.allowBots')} /> : undefined}
+            >
               {isHost ? (
                 <GlossButton
                   tone={allowBots ? 'blue' : 'glass'}
@@ -267,7 +277,9 @@ export function LobbyConfigPanel({
                 >
                   <XStack items="center" gap="$2">
                     <Bot size={14} color="$panelText" />
-                    {allowBots ? t('game.create.allowBotsOn') : t('game.create.allowBotsOff')}
+                    <GlowText level="heading">
+                      {allowBots ? t('game.create.allowBotsOn') : t('game.create.allowBotsOff')}
+                    </GlowText>
                   </XStack>
                 </GlossButton>
               ) : (
