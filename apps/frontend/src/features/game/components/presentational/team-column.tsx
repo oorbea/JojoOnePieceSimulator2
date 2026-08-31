@@ -54,7 +54,23 @@ export function TeamColumn({
   const full = participants.length >= capacity
 
   return (
-    <View ref={zoneRef} collapsable={false} onLayout={onZoneLayout} style={{ width: '100%' }}>
+    <View
+      ref={zoneRef}
+      collapsable={false}
+      onLayout={onZoneLayout}
+      // `flex: 1` (not a fixed `width: '100%'`) so this column shares the
+      // row equally with its sibling once the parent switches to
+      // `flexDirection: 'row'` at $md+ (lobby-room-screen.tsx) - a fixed
+      // 100% width here made each column claim the *entire* row width,
+      // overflowing the page's 1080px cap and pushing Team B off-screen
+      // with no way to reach it (join/kick/drag all became unusable on any
+      // desktop-width viewport). `minWidth: 0` overrides flexbox's default
+      // content-based minimum, which otherwise refuses to shrink a column
+      // below its content's natural width and reproduces the same overflow.
+      // Still fills the full width when stacked (single column,
+      // flexDirection: 'column') via RN's default `alignItems: 'stretch'`.
+      style={{ flex: 1, minWidth: 0 }}
+    >
       <GlassPanel tone="strong" width="100%" p="$4" gap="$3" borderColor={teamToneColor(tone) as never}>
         <GlowText level="heading" color={teamToneColor(tone) as never}>
           {team.name} · {participants.length}/{capacity}

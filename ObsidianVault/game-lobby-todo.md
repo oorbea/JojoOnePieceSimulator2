@@ -37,34 +37,24 @@ Nothing has been committed. Before adding anything new, stage and commit what's 
 verified (backend lobby-management commit, frontend lobby-UI commit - or one combined commit, ask
 the owner which they prefer if unclear). Do not let new work pile up uncommitted on top of this.
 
-## 2. Backend: HTTP/WS endpoint tests (gap, not forgotten)
+## 2. Backend: HTTP/WS endpoint tests - DONE (was already shipped, this section was stale)
 
-**Why it's missing**: `game_endpoints_test.go` and `game_ws_endpoints_test.go` don't exist **at
-all**, not even for routes that predate this tanda. Building one needs a local fake set
-(`IUserRepository`, `IStageRepository`, `IGamePowerPool`, `IAssignmentWeights`, `ITiebreaker`)
-mirroring what `apps/backend/internal/application/services/game_service_test.go` already has in
-the `services_test` package - nothing reusable exists in the `endpoints_test` package today.
+**2026-08-31 correction**: this section still described a gap that had already been closed by
+commit `1ddead1` ("Add HTTP/WS endpoint test coverage for game lobbies"), the same commit §0 above
+already lists as merged. Both files exist and cover everything originally asked for:
+- `apps/backend/internal/infrastructure/api/endpoints/game_endpoints_test.go` - real
+  `idgen.UUIDGenerator[T]{}` + `gamestore.NewMemoryGameStore()`, local fakes for
+  `IUserRepository`/`IStageRepository`/`IStandRepository`/`IDevilFruitRepository`/`IGamePowerPool`/
+  `IAssignmentWeights`/`ITiebreaker` mirroring `game_service_test.go`, reuses
+  `stand_endpoints_test.go`'s `fakeTokenIssuer`/`doRequest`. Covers `GET /games/public` (200, no
+  `code`/`participants` leak, auth-required), `GET /games/preview` (non-participant 200, unknown
+  code 404, works for PRIVATE), `POST /games/{id}/join` (403 `LOBBY_PRIVATE`, 409 `LOBBY_LOCKED`),
+  `PATCH /games/{id}/config` (host 200, non-host 403 `NOT_HOST`, non-participant 403).
+- `apps/backend/internal/infrastructure/api/endpoints/game_ws_endpoints_test.go` - table tests for
+  `dispatch`'s `SWITCH_TEAM`/`MOVE_PLAYER`/`KICK`/`TRANSFER_HOST`/`SET_LOCK`/`UPDATE_CONFIG`
+  (success + not-host-forbidden), plus `TestForwardEvents_KickedParticipant_ClosesOwnSocket`.
 
-**What to do**: create `apps/backend/internal/infrastructure/api/endpoints/game_endpoints_test.go`.
-- Reuse `idgen.UUIDGenerator[T]{}` (real, `apps/backend/internal/infrastructure/idgen`) for id
-  generation instead of a fake - it's already dependency-free and used exactly this way elsewhere.
-- Reuse `gamestore.NewMemoryGameStore()` (real, not a fake) as the `ports.IGameStore` - no need to
-  fake this either.
-- You DO need to write local fakes for `ports.IUserRepository`, `ports.IStageRepository`/
-  `ports.IStageCatalog`, `ports.IGamePowerPool`, `ports.IAssignmentWeights`, `ports.ITiebreaker` -
-  copy the shape from `game_service_test.go`'s `fakeStageCatalog`/`fakeGamePowerPool`/
-  `fakeAssignmentWeights`/`fakeTiebreaker` (same file, `internal/application/services/`), just
-  re-declared in the `endpoints_test` package since Go doesn't let you import test-only types
-  across packages.
-- Follow `stand_endpoints_test.go`'s `fakeTokenIssuer` (already exists in the `endpoints_test`
-  package, reusable as-is) and its `doRequest`/`httptest.NewRecorder` pattern.
-- Priority coverage (the genuinely new surface from this tanda): `GET /games/public` (200, no
-  `code`/`participants` in body), `GET /games/preview?code=` (200 for non-participant, 404 unknown
-  code, works for a PRIVATE lobby), `POST /games/{id}/join` (403 `LOBBY_PRIVATE` on a private
-  lobby, 409 `LOBBY_LOCKED` on a locked one), `PATCH /games/{id}/config` (host-only, 403 otherwise).
-- `game_ws_endpoints_test.go`: at minimum, table-test `dispatch`'s new cases
-  (`SWITCH_TEAM`/`MOVE_PLAYER`/`KICK`/`TRANSFER_HOST`/`SET_LOCK`/`UPDATE_CONFIG`) and the
-  kicked-participant-closes-own-socket behavior in `forwardEvents`.
+No further action needed here.
 
 ## 3. Frontend: config-edit UI (host edits an existing lobby's settings)
 
@@ -174,6 +164,50 @@ attaches touch listeners there, so that's an environment limitation, not a code 
 the mouse path. Host-dragging *another* participant and a genuine mobile/touch-emulated browser
 pass are still unverified live (no second test account, no touch-capable browser profile in this
 session) - flagged here rather than silently assumed.
+
+**Both remaining gaps closed live (2026-08-31, `local-up` + `claude-in-chrome`)** - host-dragging
+another participant, and real touch-event dispatch. No second human account was created (owner
+approved skipping that): a temporary keydown debug shim (`document.addEventListener('keydown', ...)`
+calling `commands.addBot`, in `lobby-room-container.tsx`, never committed) added a bot to Team A,
+giving the host a genuinely *other* participant to drag - `movePlayer` fired and both columns'
+counts updated correctly (Team A 2/5 → 1/5, Team B 0/5 → 1/5).
+
+**Correction to the 2026-08-28 note above**: touch events are NOT gated behind
+`'ontouchstart' in window` - react-native-web's `ResponderSystem.attachListeners()`
+(`useResponderEvents/ResponderSystem.js`) unconditionally attaches
+`touchstart`/`touchmove`/`touchend`/`touchcancel` document listeners regardless of touch capability.
+The previous session's `TouchEvent` dispatch attempt failed for an unrelated reason (see below, not
+re-diagnosed this session) - a real `new TouchEvent(...)` built with real `new Touch(...)` objects
+(not a plain object literal) and dispatched directly on the row's DOM node **did** trigger
+`onMoveShouldSetPanResponder`/`onPanResponderMove`/`onPanResponderRelease` and completed a genuine
+`switchTeam` (self, trollotron, Team A → Team B) on a plain desktop Chrome profile with no device
+emulation needed. Confirms `usePlayerDrag`'s single implementation truly does cover touch, not just
+mouse.
+
+**Bug found and fixed while setting up the host-drag-another-participant test**:
+`TeamColumn`'s outer `View` (`team-column.tsx`) had a hardcoded `style={{ width: '100%' }}`. This
+is correct when the two columns stack vertically (mobile/narrow, `flexDirection: 'column'`, RN's
+default `alignItems: 'stretch'` already fills the width) but broke once the parent switches to
+`flexDirection: 'row'` at the `$md` breakpoint (`lobby-room-screen.tsx`, `minWidth: 900` per
+`tamagui.config.ts`): each column still claimed 100% of the row's width, so Team B was pushed
+completely outside `PageShell`'s 1080px cap with no way to reach it (join/kick/drag all broken) on
+**any desktop-width browser** - not a narrow-viewport-only issue. Root cause was two-fold: the fixed
+width, and flexbox's default `min-width: auto` refusing to shrink a flex item below its content's
+natural width even once `flex: 1` is set. Fixed by changing the style to
+`{ flex: 1, minWidth: 0 }` - fills full width when stacked (RN's stretch default), shares the row
+equally when side-by-side. This is very likely why a two-browser Versus lobby test was never
+actually exercised end-to-end before now at normal desktop window widths; worth a quick manual
+sanity check next time this screen is touched. Committed separately from this note.
+
+**Debugging note for next time synthetic drag events don't register**: dispatching
+`mousedown`/`mousemove`/`mouseup` (or `touchstart`/`touchmove`/`touchend`) via
+`element.dispatchEvent(new MouseEvent(...))` only reaches RN-Web's `PanResponder` if the
+coordinates are real CSS pixels (`getBoundingClientRect()`/`elementFromPoint`), not screenshot
+pixels - this environment's screenshot tool and `window.innerWidth`/`devicePixelRatio` did not
+agree 1:1, so coordinates eyeballed from a screenshot landed on the wrong element and silently
+no-opped (no error, no responder claimed, nothing moved). Always re-derive the target element and
+click point from live `getBoundingClientRect()`/`elementFromPoint()` calls in the same page, not
+from screenshot pixel-picking.
 
 ## 6. In-match UI (rounds, voting, loadouts) - split into two tandas
 
