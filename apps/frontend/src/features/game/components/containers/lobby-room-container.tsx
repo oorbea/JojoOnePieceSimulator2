@@ -88,6 +88,7 @@ export function LobbyRoomContainer() {
   const [configSaved, setConfigSaved] = useState(false)
   const [configRequestId, setConfigRequestId] = useState<string | null>(null)
   const [configError, setConfigError] = useState<string | undefined>(undefined)
+  const [configErrorHandledFor, setConfigErrorHandledFor] = useState<string | null>(null)
 
   const snapshot = socket.snapshot ?? detail.data?.game ?? null
   const you = socket.you ?? detail.data?.you ?? null
@@ -187,6 +188,25 @@ export function LobbyRoomContainer() {
     }
   }
 
+  // Attribute a WS error to our own in-flight config submit (requestId
+  // match) and flip saving/saved/error accordingly - adjusted directly
+  // during render off a "have we handled this error yet" key, same
+  // pattern as the reseed block above and for the same reason (dodges
+  // react-hooks/set-state-in-effect). The toast below stays in a real
+  // effect since it's a one-shot notification to an external system, not
+  // local state.
+  const lastErrorKey = socket.lastError
+    ? `${socket.lastError.requestId ?? ''}:${socket.lastError.message}`
+    : null
+  if (lastErrorKey && lastErrorKey !== configErrorHandledFor) {
+    setConfigErrorHandledFor(lastErrorKey)
+    if (configRequestId && socket.lastError!.requestId === configRequestId) {
+      setConfigError(socket.lastError!.message)
+      setConfigSaving(false)
+      setConfigSaved(false)
+    }
+  }
+
   useEffect(() => {
     if (!socket.terminal) return
     const cleanupAndLeave = (message: string) => {
@@ -203,19 +223,12 @@ export function LobbyRoomContainer() {
 
   useEffect(() => {
     if (!socket.lastError) return
-    // Toast fires for every WS error, config-related or not. Separately, if
-    // this error answers our own in-flight config submit (requestId match),
-    // also surface it inline on the config panel. Not clearing
+    // Toast fires for every WS error, config-related or not. Not clearing
     // configRequestId here - a later successful reseed supersedes it, and a
     // stale id from an already-completed submit can't spuriously re-match
     // since lastError itself only changes on a new incoming error.
     showErrorToast(new AppError(socket.lastError.message, { code: socket.lastError.code }))
-    if (configRequestId && socket.lastError.requestId === configRequestId) {
-      setConfigError(socket.lastError.message)
-      setConfigSaving(false)
-      setConfigSaved(false)
-    }
-  }, [socket.lastError, configRequestId])
+  }, [socket.lastError])
 
   if (!snapshot || !you) {
     return <LoadingScreen />
