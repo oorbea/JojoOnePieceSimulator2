@@ -37,34 +37,24 @@ Nothing has been committed. Before adding anything new, stage and commit what's 
 verified (backend lobby-management commit, frontend lobby-UI commit - or one combined commit, ask
 the owner which they prefer if unclear). Do not let new work pile up uncommitted on top of this.
 
-## 2. Backend: HTTP/WS endpoint tests (gap, not forgotten)
+## 2. Backend: HTTP/WS endpoint tests - DONE (was already shipped, this section was stale)
 
-**Why it's missing**: `game_endpoints_test.go` and `game_ws_endpoints_test.go` don't exist **at
-all**, not even for routes that predate this tanda. Building one needs a local fake set
-(`IUserRepository`, `IStageRepository`, `IGamePowerPool`, `IAssignmentWeights`, `ITiebreaker`)
-mirroring what `apps/backend/internal/application/services/game_service_test.go` already has in
-the `services_test` package - nothing reusable exists in the `endpoints_test` package today.
+**2026-08-31 correction**: this section still described a gap that had already been closed by
+commit `1ddead1` ("Add HTTP/WS endpoint test coverage for game lobbies"), the same commit §0 above
+already lists as merged. Both files exist and cover everything originally asked for:
+- `apps/backend/internal/infrastructure/api/endpoints/game_endpoints_test.go` - real
+  `idgen.UUIDGenerator[T]{}` + `gamestore.NewMemoryGameStore()`, local fakes for
+  `IUserRepository`/`IStageRepository`/`IStandRepository`/`IDevilFruitRepository`/`IGamePowerPool`/
+  `IAssignmentWeights`/`ITiebreaker` mirroring `game_service_test.go`, reuses
+  `stand_endpoints_test.go`'s `fakeTokenIssuer`/`doRequest`. Covers `GET /games/public` (200, no
+  `code`/`participants` leak, auth-required), `GET /games/preview` (non-participant 200, unknown
+  code 404, works for PRIVATE), `POST /games/{id}/join` (403 `LOBBY_PRIVATE`, 409 `LOBBY_LOCKED`),
+  `PATCH /games/{id}/config` (host 200, non-host 403 `NOT_HOST`, non-participant 403).
+- `apps/backend/internal/infrastructure/api/endpoints/game_ws_endpoints_test.go` - table tests for
+  `dispatch`'s `SWITCH_TEAM`/`MOVE_PLAYER`/`KICK`/`TRANSFER_HOST`/`SET_LOCK`/`UPDATE_CONFIG`
+  (success + not-host-forbidden), plus `TestForwardEvents_KickedParticipant_ClosesOwnSocket`.
 
-**What to do**: create `apps/backend/internal/infrastructure/api/endpoints/game_endpoints_test.go`.
-- Reuse `idgen.UUIDGenerator[T]{}` (real, `apps/backend/internal/infrastructure/idgen`) for id
-  generation instead of a fake - it's already dependency-free and used exactly this way elsewhere.
-- Reuse `gamestore.NewMemoryGameStore()` (real, not a fake) as the `ports.IGameStore` - no need to
-  fake this either.
-- You DO need to write local fakes for `ports.IUserRepository`, `ports.IStageRepository`/
-  `ports.IStageCatalog`, `ports.IGamePowerPool`, `ports.IAssignmentWeights`, `ports.ITiebreaker` -
-  copy the shape from `game_service_test.go`'s `fakeStageCatalog`/`fakeGamePowerPool`/
-  `fakeAssignmentWeights`/`fakeTiebreaker` (same file, `internal/application/services/`), just
-  re-declared in the `endpoints_test` package since Go doesn't let you import test-only types
-  across packages.
-- Follow `stand_endpoints_test.go`'s `fakeTokenIssuer` (already exists in the `endpoints_test`
-  package, reusable as-is) and its `doRequest`/`httptest.NewRecorder` pattern.
-- Priority coverage (the genuinely new surface from this tanda): `GET /games/public` (200, no
-  `code`/`participants` in body), `GET /games/preview?code=` (200 for non-participant, 404 unknown
-  code, works for a PRIVATE lobby), `POST /games/{id}/join` (403 `LOBBY_PRIVATE` on a private
-  lobby, 409 `LOBBY_LOCKED` on a locked one), `PATCH /games/{id}/config` (host-only, 403 otherwise).
-- `game_ws_endpoints_test.go`: at minimum, table-test `dispatch`'s new cases
-  (`SWITCH_TEAM`/`MOVE_PLAYER`/`KICK`/`TRANSFER_HOST`/`SET_LOCK`/`UPDATE_CONFIG`) and the
-  kicked-participant-closes-own-socket behavior in `forwardEvents`.
+No further action needed here.
 
 ## 3. Frontend: config-edit UI (host edits an existing lobby's settings)
 
