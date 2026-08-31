@@ -14,62 +14,31 @@ import { useGameDetail } from '@/features/game/hooks/use-game-detail'
 import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { useMatchHotkeys } from '@/features/game/hooks/use-match-hotkeys'
+import {
+  applyModeChange,
+  buildUpdateConfigPayload,
+  configFormFromSnapshot,
+  TEAM_SIZE_LIMITS,
+  type ConfigFormState,
+} from '@/features/game/lib/config-form'
 import { formatCode } from '@/features/game/lib/game-code'
 import { startGate } from '@/features/game/lib/lobby-rules'
 import { shouldReveal } from '@/features/game/lib/loadout-reveal'
 import { shareJoinCode } from '@/features/game/lib/share'
 import { voteOptions } from '@/features/game/lib/vote-options'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
-import type { GameConfig, PoolFilter } from '@/features/game/types/game.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
-import type { GameMode, LobbyVisibility, Manga, RevealSpeed } from '@/shared/lib/zod'
+import type { GameMode, RevealSpeed, Manga } from '@/shared/lib/zod'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
 
-const GAUNTLET_MIN = 1
-const GAUNTLET_MAX = 10
-const VERSUS_MIN = 1
-const VERSUS_MAX = 5
-
-// Local edit-form state for the config panel, seeded from snapshot.config
-// (and snapshot.mode, which lives outside GameConfig) whenever the lobby
-// hasn't been locally edited yet. Kept separate from the live snapshot so
-// typing/toggling doesn't fight incoming STATE frames from other clients.
-type ConfigFormState = {
-  mode: GameMode
-  stageMangas: Manga[]
-  powerMangas: Manga[]
-  teamSize: number
-  allowBots: boolean
-  visibility: LobbyVisibility
-  votingWindowSeconds: number
-  summaryDurationSeconds: number
-  revealSpeed: RevealSpeed
-  poolFilter: PoolFilter
-}
-
 // REVEAL_SPEED_CYCLE fixes the order onCycleRevealSpeed steps through -
 // slowest to fastest, so repeated presses read as "speeding the sorteo up"
 // rather than a confusing wraparound.
 const REVEAL_SPEED_CYCLE: RevealSpeed[] = ['RELAXED', 'NORMAL', 'SWIFT']
-
-function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormState {
-  return {
-    mode,
-    stageMangas: config.stageMangas,
-    powerMangas: config.powerMangas,
-    teamSize: config.teamSize,
-    allowBots: config.allowBots,
-    visibility: config.visibility,
-    votingWindowSeconds: config.votingWindowSeconds,
-    summaryDurationSeconds: config.summaryDurationSeconds,
-    revealSpeed: config.revealSpeed,
-    poolFilter: config.poolFilter,
-  }
-}
 
 export function LobbyRoomContainer() {
   const router = useRouter()
@@ -117,6 +86,8 @@ export function LobbyRoomContainer() {
   const [configSeededFor, setConfigSeededFor] = useState<string | null>(null)
   const [configSaving, setConfigSaving] = useState(false)
   const [configSaved, setConfigSaved] = useState(false)
+  const [configRequestId, setConfigRequestId] = useState<string | null>(null)
+  const [configError, setConfigError] = useState<string | undefined>(undefined)
 
   const snapshot = socket.snapshot ?? detail.data?.game ?? null
   const you = socket.you ?? detail.data?.you ?? null
@@ -206,6 +177,14 @@ export function LobbyRoomContainer() {
   if (snapshot && configVersionKey !== configSeededFor) {
     setConfigForm(configFormFromSnapshot(snapshot.mode, snapshot.config))
     setConfigSeededFor(configVersionKey)
+    // A fresh snapshot landing is also how a successful UPDATE_CONFIG round
+    // trip surfaces (there's no separate ack) - so treat it as "save
+    // succeeded" too, clearing any in-flight saving/error state.
+    if (configSeededFor !== null) {
+      setConfigSaving(false)
+      setConfigSaved(true)
+      setConfigError(undefined)
+    }
   }
 
   useEffect(() => {
@@ -224,8 +203,19 @@ export function LobbyRoomContainer() {
 
   useEffect(() => {
     if (!socket.lastError) return
+    // Toast fires for every WS error, config-related or not. Separately, if
+    // this error answers our own in-flight config submit (requestId match),
+    // also surface it inline on the config panel. Not clearing
+    // configRequestId here - a later successful reseed supersedes it, and a
+    // stale id from an already-completed submit can't spuriously re-match
+    // since lastError itself only changes on a new incoming error.
     showErrorToast(new AppError(socket.lastError.message, { code: socket.lastError.code }))
-  }, [socket.lastError])
+    if (configRequestId && socket.lastError.requestId === configRequestId) {
+      setConfigError(socket.lastError.message)
+      setConfigSaving(false)
+      setConfigSaved(false)
+    }
+  }, [socket.lastError, configRequestId])
 
   if (!snapshot || !you) {
     return <LoadingScreen />
@@ -292,45 +282,25 @@ export function LobbyRoomContainer() {
   const form = configForm ?? configFormFromSnapshot(snapshot.mode, snapshot.config)
 
   const handleChangeConfigMode = (mode: GameMode) => {
-    setConfigForm((current) => {
-      const base = current ?? form
-      if (mode === 'GAUNTLET') {
-        return {
-          ...base,
-          mode,
-          allowBots: false,
-          teamSize: Math.min(Math.max(base.teamSize, GAUNTLET_MIN), GAUNTLET_MAX),
-        }
-      }
-      return { ...base, mode, teamSize: Math.min(Math.max(base.teamSize, VERSUS_MIN), VERSUS_MAX) }
-    })
+    setConfigForm((current) => applyModeChange(current ?? form, mode))
   }
+
+  const configOffline = socket.status !== 'open'
 
   // Submits a full config replacement built from `next` (not from whatever
   // `form` happens to be at call time) - UPDATE_CONFIG is a full replacement,
   // and reading `form` here would race React's state batching for callers
   // that also just called setConfigForm in the same event (see
-  // handleToggleConfigManga below).
+  // handleToggleConfigManga below). Saving/saved/error state now derives
+  // purely from the real WS round trip: error via the lastError/requestId
+  // match above, success via the reseed-on-CONFIG_UPDATED block above.
   const submitConfigForm = (next: ConfigFormState) => {
+    if (configOffline) return
     setConfigSaving(true)
     setConfigSaved(false)
-    commands.updateConfig({
-      mode: next.mode,
-      stageMangas: next.stageMangas,
-      powerMangas: next.powerMangas,
-      abilitySource: snapshot.config.abilitySource,
-      teamSize: next.teamSize,
-      allowBots: next.allowBots,
-      visibility: next.visibility,
-      votingWindowSeconds: next.votingWindowSeconds,
-      summaryDurationSeconds: next.summaryDurationSeconds,
-      revealSpeed: next.revealSpeed,
-      poolFilter: next.poolFilter,
-    })
-    setTimeout(() => {
-      setConfigSaving(false)
-      setConfigSaved(true)
-    }, 500)
+    setConfigError(undefined)
+    const requestId = commands.updateConfig(buildUpdateConfigPayload(next, snapshot.config.abilitySource))
+    setConfigRequestId(requestId)
   }
 
   // The manga selectors now live on the main lobby screen (MangaRow), always
@@ -446,8 +416,8 @@ export function LobbyRoomContainer() {
       onToggleConfigStageManga={handleToggleConfigStageManga}
       onToggleConfigPowerManga={handleToggleConfigPowerManga}
       configTeamSize={form.teamSize}
-      configTeamSizeMin={form.mode === 'GAUNTLET' ? GAUNTLET_MIN : VERSUS_MIN}
-      configTeamSizeMax={form.mode === 'GAUNTLET' ? GAUNTLET_MAX : VERSUS_MAX}
+      configTeamSizeMin={TEAM_SIZE_LIMITS[form.mode].min}
+      configTeamSizeMax={TEAM_SIZE_LIMITS[form.mode].max}
       onChangeConfigTeamSize={(teamSize) => setConfigForm({ ...form, teamSize })}
       configAllowBots={form.allowBots}
       onToggleConfigAllowBots={() => setConfigForm({ ...form, allowBots: !form.allowBots })}
@@ -476,8 +446,9 @@ export function LobbyRoomContainer() {
       onRemoveConfigBan={handleRemoveConfigBan}
       onBanMatchingConfig={handleBanMatchingConfig}
       onClearConfigPoolFilter={handleClearConfigPoolFilter}
-      configSaving={configSaving}
+      configSaving={configSaving || configOffline}
       configSaved={configSaved}
+      configError={configError}
       onSubmitConfig={handleSubmitConfig}
       live={socket.live}
       revealPhase={loadoutReveal.phase}
