@@ -34,7 +34,7 @@ function baseGameConfig(overrides: Partial<GameConfig> = {}): GameConfig {
     visibility: 'PUBLIC',
     votingWindowSeconds: 45,
     poolFilter: { standRarities: ['COMMON'], fruitRarities: [], fruitTypes: [], banned: ['x'] },
-    revealSpeed: 'FAST',
+    revealSpeed: 'SWIFT',
     summaryDurationSeconds: 90,
     ...overrides,
   }
@@ -64,7 +64,7 @@ describe('buildUpdateConfigPayload', () => {
     // Only teamSize differs from the "original" baseForm() - every other
     // field should still be carried through unchanged, in full.
     const form = baseForm({ teamSize: 3 })
-    const payload = buildUpdateConfigPayload(form, 'CHOSEN')
+    const payload = buildUpdateConfigPayload(form, 'INVENTORY')
 
     expect(payload.teamSize).toBe(3)
     expect(payload.mode).toBe(form.mode)
@@ -76,7 +76,7 @@ describe('buildUpdateConfigPayload', () => {
     expect(payload.summaryDurationSeconds).toBe(form.summaryDurationSeconds)
     expect(payload.revealSpeed).toBe(form.revealSpeed)
     expect(payload.poolFilter).toBe(form.poolFilter)
-    expect(payload.abilitySource).toBe('CHOSEN')
+    expect(payload.abilitySource).toBe('INVENTORY')
   })
 })
 
