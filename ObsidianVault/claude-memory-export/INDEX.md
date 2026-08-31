@@ -15,3 +15,6 @@
 - [No co-author, atomic commits](feedback_no_coauthor_atomic_commits.md) — 2026-08-14: never add Co-Authored-By trailer, split unrelated changes into separate commits
 - [Sorteo reel + roster redesign shipped 2026-08-17](sorteo_roster_redesign_2026-08-17.md) — reel geometry bug fixed (justify="center" landed past strip end), haki wording, per-locale loadout text, roster shows only avatar+username with hover card/modal
 - [Backend tests must run via Docker](feedback_backend_tests_via_docker.md) — Windows App Control blocks host `go test` binaries on this machine; use `docker compose ... backend-test go test ./...`, not a workaround
+- [Round-resolved vote tally shipped 2026-08-28](game_round_result_2026-08-28.md) — per-option counts + voter avatars inline; required splitting Game.resolveRound/CompleteRound to make RESOLVING a real observable pause; two-browser tie walkthrough still pending
+- [Sorteo V1 pacing shipped 2026-08-30](sorteo_v1_pacing_2026-08-30.md) — jugador-por-jugador tempo, big power-reveal card, synced skip, RevealSpeed config; per-power FX explicitly planned-only, see vault gameplay-power-fx.md
+- [Vault ops must use obsidian-skills](feedback_obsidian_skills_mandatory.md) — 2026-08-31: never mcp__obsidian-vault__* (wrong vault, points to BrainTrust), use obsidian:* skills for this repo's ObsidianVault/
