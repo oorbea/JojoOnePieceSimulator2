@@ -146,6 +146,36 @@ component, and `NumberStepper` gained a `stacked` `SettingRow` layout. Full rati
 [[game-match-assignment-frontend]]'s "Lobby manga selector moved out of Lobby settings" section -
 not re-derived here.
 
+## Config-edit panel hardened (2026-08-31)
+
+Audit-and-close pass on [[game-lobby-todo]]'s §3, which had gone stale describing the config-edit
+panel as unbuilt when it had actually shipped. Two things worth keeping as reusable patterns:
+
+- **`requestId`-correlation to attribute a WS error to a specific in-flight command.**
+  `useGameSocketStore`'s `send()` already returns the `requestId` it stamps on the outgoing
+  `ClientCommand` (see [[game-realtime-transport]]'s protocol section - the backend only ever used
+  `requestId` to correlate its own `ERROR` frame back to the command that caused it, but nothing on
+  the frontend was reading it back for that purpose before this). `LobbyRoomContainer` now captures
+  the `requestId` from its `UPDATE_CONFIG` submit and compares it against `socket.lastError.requestId`
+  when an `ERROR` frame lands, so the config panel can show "your edit was rejected" instead of a
+  generic toast (kept as well, unconditionally, for every WS error). Any future command with its own
+  submit-state UI (saving/saved/error) can reuse the same trick instead of inventing a new one -
+  there's nothing config-panel-specific about it.
+- **`lib/config-form.ts`** is now the single source of truth for `TEAM_SIZE_LIMITS` (GAUNTLET 1-10,
+  VERSUS 1-5), previously duplicated between `lobby-room-container.tsx` and
+  `create-lobby-container.tsx`. Also holds `ConfigFormState`, `clampTeamSize`,
+  `configFormFromSnapshot`, `applyModeChange`, `buildUpdateConfigPayload` (always builds a full
+  replacement payload, never a patch, mirroring `CreateGameRequest`). Both create and edit flows
+  should keep pulling from here rather than re-deriving limits locally.
+
+Also fixed while auditing: three host-only field values in `lobby-config-panel.tsx` (reveal speed,
+privacy, allow-bots labels) were raw strings outside a `GlowText`, unlike their non-host siblings -
+a real RN `Invariant Violation` crash on native, not a style nit. And added `InfoHint` parity with
+`create-lobby-screen.tsx` on every config field, reusing the existing `game.create.help.*` keys
+(zero new i18n keys). Component tests for this feature existed nowhere before this pass
+(`features/game/components/**/__tests__/` didn't exist) - added coverage for `config-form.ts` and
+`lobby-config-panel.tsx`. Full writeup and commit hashes in [[game-lobby-todo]]'s §3.
+
 Related: [[game-lobby-management]], [[gameplay-game-modes]], [[frontend-stack]],
 [[frontend-responsive-frutiger-aero]], [[i18n-multi-language]], [[zettelkasten-workflow]],
 [[norma-tooltips-y-ayuda-contextual]], [[game-match-assignment-frontend]].
