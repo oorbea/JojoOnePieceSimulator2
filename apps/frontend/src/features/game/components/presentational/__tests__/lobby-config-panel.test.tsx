@@ -1,5 +1,6 @@
 import { fireEvent, renderWithProviders, screen } from '@/test/render'
 import type { PoolFilter } from '@/features/game/types/game.types'
+import type { Manga } from '@/shared/lib/zod'
 
 import { LobbyConfigPanel } from '../lobby-config-panel'
 
@@ -10,8 +11,8 @@ function baseProps(overrides: Partial<React.ComponentProps<typeof LobbyConfigPan
     isHost: true,
     mode: 'GAUNTLET' as const,
     onChangeMode: jest.fn(),
-    stageMangas: ['JOJO'] as const,
-    powerMangas: ['JOJO'] as const,
+    stageMangas: ['JOJO'] as Manga[],
+    powerMangas: ['JOJO'] as Manga[],
     teamSize: 5,
     teamSizeMin: 1,
     teamSizeMax: 10,
