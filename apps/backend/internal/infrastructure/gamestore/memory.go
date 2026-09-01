@@ -19,6 +19,10 @@ type entry struct {
 	game      *game.Game
 	code      string
 	updatedAt time.Time
+	// ttl, when non-zero, overrides the reaper's olderThan for this entry
+	// alone - set by SaveWithTTL so a terminal game expires on its own much
+	// shorter schedule instead of lingering for the full lobby TTL.
+	ttl time.Duration
 }
 
 // MemoryGameStore is an in-memory ports.IGameStore, safe for concurrent use.
@@ -91,7 +95,15 @@ func (s *MemoryGameStore) Code(_ context.Context, id game.GameID) (string, error
 	return e.code, nil
 }
 
-func (s *MemoryGameStore) Save(_ context.Context, g *game.Game) error {
+func (s *MemoryGameStore) Save(ctx context.Context, g *game.Game) error {
+	return s.SaveWithTTL(ctx, g, 0)
+}
+
+// SaveWithTTL implements ports.IGameStore. This store has no per-key
+// expiry of its own - the Reaper drives expiry by calling DeleteExpired
+// with the configured lobby TTL - so the override is recorded on the entry
+// and honored there instead.
+func (s *MemoryGameStore) SaveWithTTL(_ context.Context, g *game.Game, ttl time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -101,6 +113,7 @@ func (s *MemoryGameStore) Save(_ context.Context, g *game.Game) error {
 	}
 	e.game = g
 	e.updatedAt = s.nowFunc()
+	e.ttl = ttl
 	return nil
 }
 
@@ -121,10 +134,16 @@ func (s *MemoryGameStore) DeleteExpired(_ context.Context, olderThan time.Durati
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	cutoff := s.nowFunc().Add(-olderThan)
+	now := s.nowFunc()
 	removed := 0
 	for id, e := range s.byID {
-		if e.updatedAt.Before(cutoff) {
+		// An entry saved with its own shorter TTL (a terminal game, see
+		// SaveWithTTL) expires on that schedule instead of olderThan.
+		lifetime := olderThan
+		if e.ttl > 0 {
+			lifetime = e.ttl
+		}
+		if e.updatedAt.Before(now.Add(-lifetime)) {
 			delete(s.byCode, e.code)
 			delete(s.byID, id)
 			removed++

@@ -8,6 +8,7 @@ import { JoinCodeCard } from '@/features/game/components/presentational/join-cod
 import { LobbyConfigPanel } from '@/features/game/components/presentational/lobby-config-panel'
 import { LobbyLockRow } from '@/features/game/components/presentational/lobby-lock-row'
 import { MangaRow } from '@/features/game/components/presentational/manga-row'
+import { MatchResultScreen } from '@/features/game/components/presentational/match/match-result-screen'
 import { MatchScreen } from '@/features/game/components/presentational/match/match-screen'
 import { SquadRoster } from '@/features/game/components/presentational/squad-roster'
 import { StartBar } from '@/features/game/components/presentational/start-bar'
@@ -99,6 +100,10 @@ type Props = {
   reducedMotion: boolean
   onVote: (optionId: string) => void
   onSkipResult: () => void
+  onModalOpenChange?: (open: boolean) => void
+  onBackToLobbies: () => void
+  onRematch: () => void
+  rematchError?: string | null
 }
 
 export function LobbyRoomScreen({
@@ -164,11 +169,44 @@ export function LobbyRoomScreen({
   reducedMotion,
   onVote,
   onSkipResult,
+  onModalOpenChange,
+  onBackToLobbies,
+  onRematch,
+  rematchError,
 }: Props) {
   const { t } = useTranslation()
   const capacity = snapshot.config.teamSize
   const [configExpanded, setConfigExpanded] = useState(false)
   const dropZones = useDropZones()
+
+  // A terminal game stays on this same route and renders its own result
+  // screen instead of bouncing to /play - the same in-place precedent
+  // MatchScreen already set for the match itself.
+  if (snapshot.state === 'FINISHED' || snapshot.state === 'ABORTED') {
+    return (
+      <PageShell align="top" scroll maxWidth={1080}>
+        <MatchResultScreen
+          snapshot={snapshot}
+          you={you}
+          isHost={you.isHost}
+          onBackToLobbies={onBackToLobbies}
+          onRematch={onRematch}
+          rematchError={rematchError}
+          onModalOpenChange={onModalOpenChange}
+        />
+        <ConfirmSheet
+          visible={!!confirmSheet}
+          title={confirmSheet?.title ?? ''}
+          message={confirmSheet?.message ?? ''}
+          confirmLabel={confirmSheet?.confirmLabel ?? ''}
+          isConfirming={confirming}
+          onConfirm={confirmSheet?.onConfirm ?? (() => {})}
+          onCancel={onCancelConfirm}
+          tone={confirmSheet?.tone}
+        />
+      </PageShell>
+    )
+  }
 
   return (
     <PageShell align="top" scroll maxWidth={1080}>
@@ -310,6 +348,7 @@ export function LobbyRoomScreen({
           onAbort={onAbort}
           onVote={onVote}
           onSkipResult={onSkipResult}
+          onModalOpenChange={onModalOpenChange}
         />
       )}
 

@@ -53,6 +53,7 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, game.ErrParticipantNotFound),
 		errors.Is(err, game.ErrBotsNotAllowed),
 		errors.Is(err, services.ErrNotABot),
+		errors.Is(err, services.ErrGameNotOver),
 		errors.Is(err, game.ErrNoStagesAvailable),
 		errors.Is(err, game.ErrEmptyStageMangas),
 		errors.Is(err, game.ErrEmptyPowerMangas),

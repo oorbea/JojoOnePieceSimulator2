@@ -100,6 +100,20 @@ type GameAborted struct{ Reason string }
 
 func (GameAborted) Name() string { return "GAME_ABORTED" }
 
+// RematchReady announces that a new lobby has been created from a finished
+// or aborted one, carrying its whole roster over (see
+// services.GameService.Rematch). GameID is the NEW game's id.
+//
+// Unlike every other event here, this one is never produced by a Game's own
+// state machine - a terminal Game is never mutated again. The application
+// layer publishes it on the *old* game's event stream so every client still
+// sitting on the result screen can follow the roster to the new lobby, not
+// just whoever pressed the button. It lives alongside the rest so the
+// transport keeps one uniform "domain event -> wire frame" mapping.
+type RematchReady struct{ GameID GameID }
+
+func (RematchReady) Name() string { return "REMATCH_READY" }
+
 // TeamChanged is emitted by SwitchTeam whenever a participant actually
 // moves teams (not on the already-there no-op).
 type TeamChanged struct {

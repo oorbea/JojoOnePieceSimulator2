@@ -112,6 +112,12 @@ type GameSocketState = {
   reconnectAttempts: number
   nextRetryAt: number | null
   live: LiveMatchState
+  /** The id of the new lobby a REMATCH created from this (finished/aborted)
+   * game, or null. Set from the REMATCH_READY frame, which the server
+   * publishes to EVERY client on the old game - so all of them navigate,
+   * not just whoever pressed the button. The container reads this and
+   * routes; nothing else consumes it. */
+  rematchGameId: string | null
 
   attach: (gameId: string, socketFactory?: SocketFactory) => void
   detach: () => void
@@ -269,6 +275,14 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         case SERVER_FRAME.GAME_ABORTED: {
           const payload = frame.payload as { reason?: string } | undefined
           set({ terminal: { kind: 'ABORTED', reason: payload?.reason ?? '' } })
+          break
+        }
+        case SERVER_FRAME.REMATCH_READY: {
+          // Published on THIS (old) game's stream by the server, to every
+          // connected client - so the whole roster follows the host over to
+          // the new lobby instead of only the person who pressed Rematch.
+          const payload = frame.payload as { gameId?: string } | undefined
+          if (payload?.gameId) set({ rematchGameId: payload.gameId })
           break
         }
         case SERVER_FRAME.ERROR: {
@@ -476,6 +490,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
     reconnectAttempts: 0,
     nextRetryAt: null,
     live: INITIAL_LIVE,
+    rematchGameId: null,
 
     attach: (gameId, socketFactory) => {
       if (socketFactory) socketFactoryRef = socketFactory
@@ -494,6 +509,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           reconnectAttempts: 0,
           nextRetryAt: null,
           live: INITIAL_LIVE,
+          rematchGameId: null,
         })
       }
       refCount += 1
@@ -536,6 +552,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         reconnectAttempts: 0,
         nextRetryAt: null,
         live: INITIAL_LIVE,
+        rematchGameId: null,
       })
     },
 

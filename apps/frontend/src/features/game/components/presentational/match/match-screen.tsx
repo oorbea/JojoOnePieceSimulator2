@@ -36,6 +36,8 @@ type Props = {
   onAbort: () => void
   onVote: (optionId: string) => void
   onSkipResult: () => void
+  /** Forwarded straight through to MatchRoster - see its own prop doc. */
+  onModalOpenChange?: (open: boolean) => void
 }
 
 // Renders once the lobby has moved past LOBBY. While isRevealing, the
@@ -60,6 +62,7 @@ export function MatchScreen({
   onAbort,
   onVote,
   onSkipResult,
+  onModalOpenChange,
 }: Props) {
   const { t } = useTranslation()
   const round = currentRound(snapshot)
@@ -127,7 +130,11 @@ export function MatchScreen({
             gameState={snapshot.state}
           />
 
-          <MatchRoster snapshot={snapshot} selfId={you.participantId} />
+          <MatchRoster
+            snapshot={snapshot}
+            selfId={you.participantId}
+            onModalOpenChange={onModalOpenChange}
+          />
 
           {showTiedPanel && round ? (
             <RoundResultPanel

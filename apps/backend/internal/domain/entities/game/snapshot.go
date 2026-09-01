@@ -1,6 +1,8 @@
 package game
 
 import (
+	"time"
+
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -31,6 +33,12 @@ type Snapshot struct {
 	Teams        []TeamSnapshot
 	Stages       []StageSnapshot
 	Rounds       []RoundSnapshot
+	// PhaseEndsAt mirrors Game.phaseEndsAt - the deadline of whichever timed
+	// phase State names, so a process restart mid-vote/reveal/summary/result
+	// can re-arm the timer with the remaining time instead of wedging the
+	// game in that phase forever. Additive: nil is the safe default every
+	// snapshot written before this field existed decodes to.
+	PhaseEndsAt *time.Time
 }
 
 // ConfigSnapshot mirrors Config. Visibility/VotingWindowSeconds/PoolFilter
@@ -172,6 +180,10 @@ func (g *Game) Snapshot() Snapshot {
 		Teams:        make([]TeamSnapshot, 0, len(g.teams)),
 		Stages:       make([]StageSnapshot, 0, len(g.stages)),
 		Rounds:       make([]RoundSnapshot, 0, len(g.rounds)),
+	}
+	if g.phaseEndsAt != nil {
+		t := *g.phaseEndsAt
+		s.PhaseEndsAt = &t
 	}
 
 	for _, pid := range g.order {
@@ -476,6 +488,13 @@ func Restore(s Snapshot) (*Game, error) {
 		teams:        teams,
 		stages:       stages,
 		evaluator:    DefaultLoadoutEvaluator{},
+	}
+	// Additive since the durable-phase-deadline change; nil for any snapshot
+	// written before it, which simply means "no deadline recorded" (see
+	// Game.phaseEndsAt / GameService.rearmPhaseTimerLocked's legacy path).
+	if s.PhaseEndsAt != nil {
+		t := *s.PhaseEndsAt
+		g.phaseEndsAt = &t
 	}
 
 	for _, ps := range s.Participants {

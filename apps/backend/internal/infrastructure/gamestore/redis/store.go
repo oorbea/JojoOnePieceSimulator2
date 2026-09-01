@@ -249,6 +249,19 @@ func (s *Store) Code(ctx context.Context, id game.GameID) (string, error) {
 
 // Save implements ports.IGameStore.
 func (s *Store) Save(ctx context.Context, g *game.Game) error {
+	return s.SaveWithTTL(ctx, g, 0)
+}
+
+// SaveWithTTL implements ports.IGameStore. ttl replaces the store's
+// configured lobby TTL for this write only - all three keys and the public
+// index score move to it together, exactly as an ordinary Save moves them
+// to s.ttl. A terminal game also drops straight out of the public lobby
+// browser here without any extra call, since saveScript re-derives
+// IsPubliclyJoinable (false once state leaves LOBBY) and ZREMs on it.
+func (s *Store) SaveWithTTL(ctx context.Context, g *game.Game, ttl time.Duration) error {
+	if ttl <= 0 {
+		ttl = s.ttl
+	}
 	payload, err := encode(g, s.now())
 	if err != nil {
 		return err
@@ -256,10 +269,10 @@ func (s *Store) Save(ctx context.Context, g *game.Game) error {
 	opCtx, cancel := s.opContext(ctx)
 	defer cancel()
 
-	score := s.now().Add(s.ttl).UnixMilli()
+	score := s.now().Add(ttl).UnixMilli()
 	res, err := saveScript.Run(opCtx, s.client,
 		[]string{idKey(g.ID()), codeOfKey(g.ID()), publicIndexKey()},
-		payload, s.ttl.Milliseconds(), publicFlag(g), score, g.ID().String(),
+		payload, ttl.Milliseconds(), publicFlag(g), score, g.ID().String(),
 	).Int()
 	if err != nil {
 		return fmt.Errorf("saving game %s: %w", g.ID(), err)

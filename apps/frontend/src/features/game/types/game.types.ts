@@ -114,11 +114,25 @@ export type GameRound = {
   result?: { winner: string; decidedByCoinFlip: boolean }
 }
 
+// Mirrors dto.ParticipantOutcomeResponse - one seat as it stood the moment
+// the game ended. teamId is what a VERSUS client compares against
+// GameResult.winner to decide whether that seat won; in GAUNTLET the whole
+// squad shares one collective outcome, so this carries identity only.
+export type ParticipantOutcome = {
+  participantId: string
+  displayName: string
+  teamId: string
+  bot: boolean
+}
+
 export type GameResult = {
   mode: GameMode
   winner: string
   roundsPlayed: number
   aborted: boolean
+  // Optional: a game finished by a backend predating the result screen
+  // carries no participant outcomes.
+  participants?: ParticipantOutcome[]
 }
 
 // Mirrors dto.GameSnapshotResponse.

@@ -2,12 +2,10 @@ package services_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
-	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
 // TestCastVote_ResultEndsAt_TracksThenClearsOnCompleteRound mirrors
@@ -106,7 +104,5 @@ func TestAbortGame_DuringResolving_ClearsResultEndsAt(t *testing.T) {
 
 	advanceResult(deps)
 
-	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
-		t.Fatalf("GetGame after abort+advance: err = %v, want ErrGameNotFound", err)
-	}
+	assertStillReadableTerminal(t, svc, g.ID())
 }
