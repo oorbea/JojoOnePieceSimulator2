@@ -2,6 +2,7 @@ package services_test
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"sort"
 	"sync"
@@ -348,13 +349,18 @@ var _ services.Clock = (*fakeClock)(nil)
 
 // --- fixtures ---
 
-var stageIDCounter byte
+// Counters are uint32 written across the id's last four bytes, not a single
+// byte: as a byte they wrapped back to 0 once a package's tests made more
+// than 255 fixtures, and a zero id makes every constructor below fail with
+// "id is required". Nothing about the tests changes, they just stop running
+// out of distinct ids.
+var stageIDCounter uint32
 
 func mustStage(t *testing.T, manga enums.Manga, order int, name string) game.Stage {
 	t.Helper()
 	stageIDCounter++
 	var id game.StageID
-	id[15] = stageIDCounter
+	binary.BigEndian.PutUint32(id[12:], stageIDCounter)
 	s, err := game.NewStage(id, manga, order, name, "a test stage", "")
 	if err != nil {
 		t.Fatalf("mustStage: %v", err)
@@ -362,13 +368,13 @@ func mustStage(t *testing.T, manga enums.Manga, order int, name string) game.Sta
 	return s
 }
 
-var powerIDCounter byte
+var powerIDCounter uint32
 
 func mustStand(t *testing.T, name string) *powers.Stand {
 	t.Helper()
 	powerIDCounter++
 	var id powers.PowerID
-	id[15] = powerIDCounter
+	binary.BigEndian.PutUint32(id[12:], powerIDCounter)
 	skills := []string{"skill"}
 	power, err := powers.NewPower(id, name, "description", enums.Common, &skills, "")
 	if err != nil {
@@ -385,7 +391,7 @@ func mustDevilFruit(t *testing.T, name string) *powers.DevilFruit {
 	t.Helper()
 	powerIDCounter++
 	var id powers.PowerID
-	id[15] = powerIDCounter
+	binary.BigEndian.PutUint32(id[12:], powerIDCounter)
 	skills := []string{"skill"}
 	power, err := powers.NewPower(id, name, "description", enums.Common, &skills, "")
 	if err != nil {
