@@ -1,4 +1,5 @@
 import { Bot, Clock, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
@@ -6,6 +7,7 @@ import { BanByFilterFields } from '@/features/game/components/presentational/fie
 import { BanlistField, type BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
 import { PowerPoolFields } from '@/features/game/components/presentational/fields/power-pool-fields'
+import { computePoolCounts, poolShortfalls } from '@/features/game/lib/pool-stats'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -102,6 +104,19 @@ export function LobbyConfigPanel({
     triggerRef: versusTooltipRef,
     triggerProps: versusTooltipProps,
   } = useTooltipTrigger(isHost ? t('game.create.help.modeVersus') : undefined)
+
+  // The catalog is "known" once at least one banlist candidate has loaded -
+  // banlistItems comes from useStands()/useDevilFruits() query results
+  // further up the container tree, so an empty array here can mean either
+  // "still loading" or "genuinely empty catalog"; treating both as unknown
+  // is the safer default (never a false insufficient-pool alarm while
+  // loading, at the cost of also skipping the check on a truly empty
+  // catalog, an edge case this project doesn't otherwise support).
+  const poolCounts = useMemo(() => computePoolCounts(banlistItems, poolFilter.banned), [banlistItems, poolFilter.banned])
+  const poolShortfallList = useMemo(
+    () => poolShortfalls(poolCounts, powerMangas, teamSize, banlistItems.length > 0),
+    [poolCounts, powerMangas, teamSize, banlistItems.length]
+  )
 
   return (
     <YStack width="100%" gap="$3">
@@ -295,7 +310,14 @@ export function LobbyConfigPanel({
         </YStack>
       </GlassPanel>
 
-      <PowerPoolFields editable={isHost} activeCount={poolActiveCount} onClearAll={onClearPoolFilter}>
+      <PowerPoolFields
+        editable={isHost}
+        activeCount={poolActiveCount}
+        onClearAll={onClearPoolFilter}
+        counts={poolCounts}
+        shortfalls={poolShortfallList}
+        powerMangas={powerMangas}
+      >
         <BanByFilterFields editable={isHost} items={banlistItems} onBanMatching={onBanMatching} />
         <BanlistField
           editable={isHost}
@@ -303,6 +325,7 @@ export function LobbyConfigPanel({
           items={banlistItems}
           onAddBan={onAddBan}
           onRemoveBan={onRemoveBan}
+          onClearBanlist={onClearPoolFilter}
         />
       </PowerPoolFields>
 
