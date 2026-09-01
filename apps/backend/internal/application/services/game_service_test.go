@@ -277,6 +277,11 @@ type fakeClock struct {
 
 func newFakeClock() *fakeClock { return &fakeClock{now: time.Unix(0, 0)} }
 
+// newFakeClockAt starts a clock at an arbitrary instant - used by the
+// phase-deadline tests to stand up a "restarted" service whose clock is
+// already partway into a window the previous instance armed.
+func newFakeClockAt(now time.Time) *fakeClock { return &fakeClock{now: now} }
+
 func (c *fakeClock) Now() time.Time {
 	c.mu.Lock()
 	defer c.mu.Unlock()
