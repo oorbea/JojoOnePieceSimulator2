@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 )
@@ -42,6 +43,39 @@ type Game struct {
 	// symmetry with revealReady, by AssignLoadouts/CompleteRound too, though
 	// it only matters once the Game actually enters Summary).
 	summaryReady map[ParticipantID]struct{}
+	// phaseEndsAt is the wall-clock deadline of whichever timed phase the
+	// Game is currently sitting in (ASSIGNING's sorteo, SUMMARY, VOTING,
+	// TIEBREAK, RESOLVING). Exactly ONE field rather than four named
+	// deadlines because those phases are mutually exclusive by construction -
+	// the application layer's own timer map already guarantees a single
+	// pending timer per Game (see services.GameService's timers field doc) -
+	// and State() says unambiguously which phase a persisted deadline belongs
+	// to. nil means "no timed phase in flight", which is also what every
+	// snapshot written before this field existed decodes to.
+	//
+	// The domain never enforces or acts on this value; it exists purely so a
+	// deadline armed by one process survives a restart and can be re-armed by
+	// the next (see GameService.rearmPhaseTimerLocked).
+	phaseEndsAt *time.Time
+}
+
+// SetPhaseDeadline records the wall-clock deadline of the timed phase the
+// Game is currently in, so it survives persistence and a process restart.
+// Called by the application layer's schedule* functions right where they
+// record their in-process deadline.
+func (g *Game) SetPhaseDeadline(t time.Time) {
+	g.phaseEndsAt = &t
+}
+
+// PhaseEndsAt reports the persisted deadline of the Game's current timed
+// phase. The bool is false when none was ever recorded - either the Game
+// isn't in a timed phase, or it was restored from a snapshot written before
+// this field existed.
+func (g *Game) PhaseEndsAt() (time.Time, bool) {
+	if g.phaseEndsAt == nil {
+		return time.Time{}, false
+	}
+	return *g.phaseEndsAt, true
 }
 
 // NewGame builds a Game in the LOBBY state with host already seated. teams

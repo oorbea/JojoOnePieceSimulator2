@@ -29,6 +29,13 @@ type IGameStore interface {
 	// Save persists g's current state and refreshes its TTL. g must have
 	// already been Create'd.
 	Save(ctx context.Context, g *game.Game) error
+	// SaveWithTTL is Save with an explicit, shorter-lived TTL for this write
+	// only, instead of the store's configured lobby TTL. It exists for
+	// terminal games: a FINISHED/ABORTED game must stay readable long enough
+	// for its players to see the result screen, but nowhere near as long as
+	// an abandoned lobby (see services.FinishedGameTTL). A ttl of 0 behaves
+	// exactly like Save.
+	SaveWithTTL(ctx context.Context, g *game.Game, ttl time.Duration) error
 	// Delete removes id (and its code index) entirely.
 	Delete(ctx context.Context, id game.GameID) error
 	// DeleteExpired removes every Game last saved more than olderThan ago,

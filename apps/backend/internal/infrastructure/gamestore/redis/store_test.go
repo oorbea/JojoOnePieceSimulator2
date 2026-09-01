@@ -190,6 +190,61 @@ func TestStore_Save_RefreshesTTLOnAllThreeKeys(t *testing.T) {
 	}
 }
 
+// TestStore_SaveWithTTL_UsesTheShorterTTL covers the terminal-game save: a
+// FINISHED/ABORTED game stays readable, but on its own much shorter clock
+// rather than the store's configured lobby TTL.
+func TestStore_SaveWithTTL_UsesTheShorterTTL(t *testing.T) {
+	s := newTestStore(t)
+	client := rawClient(t)
+	ctx := context.Background()
+	g, code := newFreshGame(t, 9)
+	t.Cleanup(func() { _ = s.Delete(ctx, g.ID()) })
+
+	if err := s.Create(ctx, code, g); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	const short = 5 * time.Second
+	if err := s.SaveWithTTL(ctx, g, short); err != nil {
+		t.Fatalf("SaveWithTTL: %v", err)
+	}
+
+	keys := []string{
+		"jojo:game:id:" + g.ID().String(),
+		"jojo:game:code:" + code,
+		"jojo:game:codeof:" + g.ID().String(),
+	}
+	for _, k := range keys {
+		ttl, err := client.PTTL(ctx, k).Result()
+		if err != nil {
+			t.Fatalf("PTTL(%s): %v", k, err)
+		}
+		if ttl > short {
+			t.Errorf("PTTL(%s) = %s, want <= the %s override (not the store's full 1m lobby TTL)", k, ttl, short)
+		}
+		if ttl <= 0 {
+			t.Errorf("PTTL(%s) = %s, want the key to still be alive", k, ttl)
+		}
+	}
+
+	// Still readable - the whole point of not deleting it.
+	if _, err := s.Get(ctx, g.ID()); err != nil {
+		t.Fatalf("Get after SaveWithTTL: %v", err)
+	}
+
+	// A zero ttl means "use the store default", so Save keeps working.
+	if err := s.SaveWithTTL(ctx, g, 0); err != nil {
+		t.Fatalf("SaveWithTTL(0): %v", err)
+	}
+	ttl, err := client.PTTL(ctx, keys[0]).Result()
+	if err != nil {
+		t.Fatalf("PTTL: %v", err)
+	}
+	if ttl <= short {
+		t.Errorf("PTTL after SaveWithTTL(0) = %s, want the store's full TTL back", ttl)
+	}
+}
+
 func TestStore_Delete_RemovesAllThreeKeys(t *testing.T) {
 	s := newTestStore(t)
 	client := rawClient(t)

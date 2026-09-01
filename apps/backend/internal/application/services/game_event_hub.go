@@ -33,6 +33,17 @@ type GameEvent struct {
 	// published - the transport uses it to compute SUMMARY_OPENED's
 	// closesAt, same pattern as VotingWindow.
 	SummaryWindow time.Duration
+	// ClosesAt is the authoritative wall-clock deadline of the timed phase
+	// this event opened, read straight out of GameService's own
+	// votingEnds/summaryEnds maps at publish time (see GameService.publish).
+	// Only VOTING_OPENED/TIEBREAK_OPENED/SUMMARY_OPENED ever carry one; for
+	// every other event - and for a timed event published from a path that
+	// somehow has no recorded deadline - the zero value means "not a timed
+	// frame", and the transport falls back to synthesizing one from the
+	// window duration. Stamping it here rather than in the transport is what
+	// keeps the client's countdown from drifting by however long hub
+	// delivery took.
+	ClosesAt time.Time
 }
 
 // GameEventHub is an in-process, single-instance pub/sub for GameEvents,

@@ -1,4 +1,5 @@
 import { Bot, ChevronLeft, Globe, Lock, Swords, Users } from '@tamagui/lucide-icons-2'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
@@ -7,6 +8,7 @@ import { BanlistField, type BannableItem } from '@/features/game/components/pres
 import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
 import { PowerPoolFields } from '@/features/game/components/presentational/fields/power-pool-fields'
 import { MangaRow } from '@/features/game/components/presentational/manga-row'
+import { computePoolCounts, poolShortfalls } from '@/features/game/lib/pool-stats'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -95,6 +97,14 @@ export function CreateLobbyScreen({
     triggerRef: versusTooltipRef,
     triggerProps: versusTooltipProps,
   } = useTooltipTrigger(t('game.create.help.modeVersus'))
+
+  // See lobby-config-panel.tsx's identical computation for why
+  // banlistItems.length > 0 stands in for "catalog known" here.
+  const poolCounts = useMemo(() => computePoolCounts(banlistItems, poolFilter.banned), [banlistItems, poolFilter.banned])
+  const poolShortfallList = useMemo(
+    () => poolShortfalls(poolCounts, powerMangas, teamSize, banlistItems.length > 0),
+    [poolCounts, powerMangas, teamSize, banlistItems.length]
+  )
 
   return (
     <PageShell align="top" scroll maxWidth={720}>
@@ -230,7 +240,14 @@ export function CreateLobbyScreen({
         </YStack>
       </GlassPanel>
 
-      <PowerPoolFields editable activeCount={poolActiveCount} onClearAll={onClearPoolFilter}>
+      <PowerPoolFields
+        editable
+        activeCount={poolActiveCount}
+        onClearAll={onClearPoolFilter}
+        counts={poolCounts}
+        shortfalls={poolShortfallList}
+        powerMangas={powerMangas}
+      >
         <BanByFilterFields editable items={banlistItems} onBanMatching={onBanMatching} />
         <BanlistField
           editable
@@ -238,6 +255,7 @@ export function CreateLobbyScreen({
           items={banlistItems}
           onAddBan={onAddBan}
           onRemoveBan={onRemoveBan}
+          onClearBanlist={onClearPoolFilter}
         />
       </PowerPoolFields>
 

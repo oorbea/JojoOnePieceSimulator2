@@ -94,6 +94,34 @@ func TestPoolFilter_RejectsNilBannedID(t *testing.T) {
 	}
 }
 
+func TestPoolFilter_Apply_BanlistOnly(t *testing.T) {
+	// TestPoolFilter_Apply above only exercises the rarity/fruit-type
+	// allowlists; this covers Apply with ONLY a banlist set (no allowlist
+	// at all), banning both a Stand and a DevilFruit in the same call - the
+	// shape the shipped UI actually produces (banlist-only, see §4's UX
+	// passes in the vault).
+	bannedStand := mustStand(t, 1, "Star Platinum", enums.Legendary)
+	keptStand := mustStand(t, 2, "Hermit Purple", enums.Common)
+	bannedFruit := mustDevilFruit(t, 3, "Gomu Gomu no Mi", enums.Rare, enums.Paramecia)
+	keptFruit := mustDevilFruit(t, 4, "Mera Mera no Mi", enums.Epic, enums.Logia)
+
+	f, err := game.NewPoolFilter(nil, nil, nil, []powers.PowerID{bannedStand.ID(), bannedFruit.ID()})
+	if err != nil {
+		t.Fatalf("NewPoolFilter: %v", err)
+	}
+
+	stands, fruits := f.Apply(
+		[]*powers.Stand{bannedStand, keptStand},
+		[]*powers.DevilFruit{bannedFruit, keptFruit},
+	)
+	if len(stands) != 1 || stands[0] != keptStand {
+		t.Fatalf("expected only the unbanned Stand to survive Apply, got %v", stands)
+	}
+	if len(fruits) != 1 || fruits[0] != keptFruit {
+		t.Fatalf("expected only the unbanned DevilFruit to survive Apply, got %v", fruits)
+	}
+}
+
 func TestPoolFilter_Apply(t *testing.T) {
 	legendary := mustStand(t, 1, "Star Platinum", enums.Legendary)
 	common := mustStand(t, 2, "Hermit Purple", enums.Common)

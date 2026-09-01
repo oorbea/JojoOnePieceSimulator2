@@ -257,6 +257,12 @@ func (e *GameEndpoints) readPump(ctx context.Context, conn *websocket.Conn, outb
 			e.sendError(conn, outbound, cmd.RequestID, err)
 			continue
 		}
+		// A nil Game means the command changed nothing about *this* game and
+		// has nothing to resend (REMATCH: it creates a different game and
+		// announces it over the hub instead).
+		if g == nil {
+			continue
+		}
 		e.pushState(ctx, conn, outbound, g, self)
 	}
 }
@@ -306,6 +312,17 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 		return e.svc.MarkRevealReady(ctx, gameID, self)
 	case dto.CommandSummaryReady:
 		return e.svc.MarkSummaryReady(ctx, gameID, self)
+	case dto.CommandRematch:
+		// Rematch returns the NEW game (and its code), which is deliberately
+		// discarded here: this socket belongs to the OLD game, and every
+		// client on it - not just the requester - learns the new id from the
+		// REMATCH_READY frame Rematch publishes on the old game's hub. A nil
+		// Game means dispatch skips its usual STATE resend, which is right:
+		// the old game hasn't changed.
+		if _, _, err := e.svc.Rematch(ctx, gameID, self); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	case dto.CommandSwitchTeam:
 		var p dto.SwitchTeamPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
@@ -397,7 +414,7 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 			if votingWindow == 0 {
 				votingWindow = e.cfg.VotingWindow
 			}
-			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealMs, evt.SummaryWindow)
+			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealMs, evt.SummaryWindow, evt.ClosesAt)
 			if frameType == "" {
 				continue
 			}
@@ -426,12 +443,22 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 // (votes stay hidden until a round resolves - see GameRoundResponse), only
 // an anonymous human-vote count, and never triggers a resend, since it's
 // high-frequency and self-describing.
-// GAME_FINISHED/GAME_ABORTED also skip the resend: by the time these fire,
-// GameService.finalizeLocked has already (or is about to) delete the game
-// from the store, so a fresh STATE fetch would race ErrGameNotFound: the
-// event itself already carries everything a client needs to render the
-// terminal screen.
-func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs time.Duration, summaryWindow time.Duration) (frameType string, payload any, resendState bool) {
+// GAME_FINISHED/GAME_ABORTED DO resend. They used to be exceptions, on the
+// reasoning that finalizeLocked had already deleted the game so a fresh
+// STATE fetch would race ErrGameNotFound - and on the (wrong) claim that the
+// event alone "already carries everything a client needs to render the
+// terminal screen". It never did: the terminal frames carry no rounds, no
+// per-round votes and no stage list, so the final result screen has nothing
+// to recap from. finalizeLocked now saves the game under a short TTL
+// (services.FinishedGameTTL) instead of deleting it, and holds the game's
+// lock for the whole call - which the resend's own read path re-acquires -
+// so the STATE that follows is guaranteed to be the fully-finalized one,
+// never a half-finalized snapshot.
+//
+// closesAt is the authoritative deadline the service stamped on the event
+// at publish time (services.GameEvent.ClosesAt); it is used verbatim for
+// the three timed frames. See frameDeadline for the fallback.
+func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs time.Duration, summaryWindow time.Duration, closesAt time.Time) (frameType string, payload any, resendState bool) {
 	switch e := evt.(type) {
 	case game.PlayerJoined:
 		return dto.FramePlayerJoined, dto.PlayerJoinedPayload{ParticipantID: e.ParticipantID.String()}, true
@@ -447,7 +474,7 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, true
 	case game.VotingOpened:
 		return dto.FrameVotingOpened, dto.VotingOpenedPayload{
-			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(votingWindow).Format(time.RFC3339),
+			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, votingWindow),
 		}, true
 	case game.VoteCast:
 		return dto.FrameVoteCast, dto.VoteCastPayload{
@@ -459,7 +486,7 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, false
 	case game.SummaryOpened:
 		return dto.FrameSummaryOpened, dto.SummaryOpenedPayload{
-			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(summaryWindow).Format(time.RFC3339),
+			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, summaryWindow),
 		}, true
 	case game.SummaryReadyChanged:
 		return dto.FrameSummaryReadyChanged, dto.SummaryReadyChangedPayload{
@@ -467,19 +494,22 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, false
 	case game.TiebreakOpened:
 		return dto.FrameTiebreakOpened, dto.TiebreakOpenedPayload{
-			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(votingWindow).Format(time.RFC3339),
+			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, votingWindow),
 		}, true
 	case game.RoundResolved:
 		return dto.FrameRoundResolved, dto.RoundResolvedPayload{
 			RoundIndex: e.RoundIndex, Winner: string(e.Winner), DecidedByCoinFlip: e.DecidedByCoinFlip,
 		}, true
 	case game.GameFinished:
-		return dto.FrameGameFinished, dto.GameFinishedPayload{Result: dto.GameResultResponse{
-			Mode: e.Result.Mode.String(), Winner: string(e.Result.Winner),
-			RoundsPlayed: e.Result.RoundsPlayed, Aborted: e.Result.Aborted,
-		}}, false
+		return dto.FrameGameFinished, dto.GameFinishedPayload{
+			Result: dto.NewGameResultResponse(e.Result),
+		}, true
 	case game.GameAborted:
-		return dto.FrameGameAborted, dto.GameAbortedPayload{Reason: e.Reason}, false
+		return dto.FrameGameAborted, dto.GameAbortedPayload{Reason: e.Reason}, true
+	case game.RematchReady:
+		// No resend: this frame is about a *different* game, and the old one
+		// is unchanged - the client navigates to the new id instead.
+		return dto.FrameRematchReady, dto.RematchReadyPayload{GameID: e.GameID.String()}, false
 	case game.TeamChanged:
 		return dto.FrameTeamChanged, dto.TeamChangedPayload{
 			ParticipantID: e.ParticipantID.String(), FromTeamID: e.FromTeamID.String(), ToTeamID: e.ToTeamID.String(),
@@ -493,6 +523,25 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 	default:
 		return "", nil, false
 	}
+}
+
+// frameDeadline renders a timed frame's closesAt. It prefers the
+// authoritative deadline the service stamped on the event when it armed the
+// phase's own timer, so the client's countdown matches the server's to the
+// millisecond no matter how long hub delivery took.
+//
+// The time.Now()+window fallback only applies to a zero closesAt, which
+// should not happen for any of the three timed frames: it would mean the
+// event was published without its phase's deadline recorded - i.e. a frame
+// delivered after its own window already closed, or a new emit path that
+// publishes before arming its timer (see GameService.publish's doc). Kept
+// rather than emitting an empty string so a client always gets *some*
+// countdown to render.
+func frameDeadline(closesAt time.Time, window time.Duration) string {
+	if closesAt.IsZero() {
+		return time.Now().Add(window).Format(time.RFC3339)
+	}
+	return closesAt.Format(time.RFC3339)
 }
 
 // pushCurrentState fetches the freshest state for gameID and sends it. Used
