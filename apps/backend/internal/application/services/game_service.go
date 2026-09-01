@@ -47,6 +47,11 @@ var (
 	// ErrCodeGenerationFailed is returned when CreateGame could not find an
 	// unused join code within maxCodeAttempts tries.
 	ErrCodeGenerationFailed = errors.New("could not generate a unique game code")
+
+	// ErrGameNotOver is returned by Rematch when the source Game has not
+	// actually reached FINISHED/ABORTED yet - a rematch of a game still in
+	// progress is meaningless.
+	ErrGameNotOver = errors.New("game is not over yet")
 )
 
 // CreateGameInput carries every field needed to set up a new Game's Config,
@@ -389,6 +394,117 @@ func (s *GameService) pickTeam(g *game.Game) game.TeamID {
 		}
 	}
 	return best.ID()
+}
+
+// Rematch builds a brand new lobby from a finished/aborted one, carrying
+// the whole roster over so nobody has to re-enter a join code: same Config,
+// the same seated humans on the matching teams, the same bots in the same
+// positions, a fresh GameID, a fresh join code, state LOBBY. Host-only, and
+// only valid once the source game is actually over.
+//
+// The source aggregate is left completely untouched - not reset back through
+// its own state machine, not re-saved. A terminal Game is terminal; its
+// history row and its own result screen must both stay intact, and a
+// rematch is a *new* game, not a rewound one.
+func (s *GameService) Rematch(ctx context.Context, gameID game.GameID, requesterID game.ParticipantID) (*game.Game, string, error) {
+	// A plain read under the source game's lock: nothing here mutates it, so
+	// withGame (which would publish and re-save) is the wrong tool.
+	old, err := s.GetGame(ctx, gameID)
+	if err != nil {
+		return nil, "", err
+	}
+	if requesterID != old.HostID() {
+		return nil, "", game.ErrNotHost
+	}
+	if old.State() != enums.Finished && old.State() != enums.Aborted {
+		return nil, "", ErrGameNotOver
+	}
+
+	cfg := old.Config()
+	teams, err := s.buildTeams(cfg.Mode())
+	if err != nil {
+		return nil, "", err
+	}
+	stages, err := s.loadStages(ctx, cfg)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Old team -> new team by position. Both lists come from the same mode,
+	// so they're the same length and the same order (Squad; or Team A/Team
+	// B), which is what keeps a Versus rematch's sides intact.
+	teamFor := make(map[game.TeamID]game.TeamID, len(teams))
+	oldTeams := old.Teams()
+	for i, t := range oldTeams {
+		if i < len(teams) {
+			teamFor[t.ID()] = teams[i].ID()
+		}
+	}
+	newTeamOf := func(p *game.Participant) game.TeamID {
+		if id, ok := teamFor[p.TeamID()]; ok {
+			return id
+		}
+		return teams[0].ID()
+	}
+
+	oldHost, ok := old.Participant(old.HostID())
+	if !ok || oldHost.UserID() == nil {
+		return nil, "", game.ErrParticipantNotFound
+	}
+	host, err := game.NewHumanParticipant(s.partIDs.NewID(), *oldHost.UserID(), oldHost.DisplayName(), newTeamOf(oldHost))
+	if err != nil {
+		return nil, "", err
+	}
+	host.SetAvatar(oldHost.AvatarThumbKey(), oldHost.GooglePicture())
+
+	g, err := game.NewGame(s.gameIDs.NewID(), cfg, host, teams, stages)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Everyone else, in the source game's own join order.
+	for _, p := range old.Participants() {
+		if p.ID() == oldHost.ID() {
+			continue
+		}
+		if p.IsBot() {
+			bot, err := game.NewBotParticipant(s.partIDs.NewID(), p.DisplayName(), newTeamOf(p))
+			if err != nil {
+				return nil, "", err
+			}
+			if err := g.AddBot(bot); err != nil {
+				return nil, "", err
+			}
+			continue
+		}
+		if p.UserID() == nil {
+			continue
+		}
+		seat, err := game.NewHumanParticipant(s.partIDs.NewID(), *p.UserID(), p.DisplayName(), newTeamOf(p))
+		if err != nil {
+			return nil, "", err
+		}
+		seat.SetAvatar(p.AvatarThumbKey(), p.GooglePicture())
+		if err := g.Join(seat); err != nil {
+			return nil, "", err
+		}
+	}
+
+	for attempt := 0; attempt < maxCodeAttempts; attempt++ {
+		code := s.generateCode()
+		if err := s.store.Create(ctx, code, g); err != nil {
+			if errors.Is(err, ports.ErrGameCodeTaken) {
+				continue
+			}
+			return nil, "", err
+		}
+		// Announced on the OLD game's hub, so every client still connected
+		// to the finished game learns the new id - not just whoever asked.
+		evt := game.RematchReady{GameID: g.ID()}
+		s.hub.Publish(GameEvent{GameID: gameID, Name: evt.Name(), Event: evt})
+		return g, code, nil
+	}
+	return nil, "", ErrCodeGenerationFailed
 }
 
 // LeaveGame removes participantID from the Game entirely.
