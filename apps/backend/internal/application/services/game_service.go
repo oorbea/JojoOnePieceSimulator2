@@ -1130,12 +1130,45 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 
 // publish drains every DomainEvent g has accumulated since the last call
 // and fans them out over hub.
+//
+// Timed events (VOTING_OPENED/TIEBREAK_OPENED/SUMMARY_OPENED) are stamped
+// with the authoritative deadline this service already computed for that
+// phase, so the transport never has to re-synthesize time.Now()+window and
+// drift by however long hub delivery took. This is only correct because
+// every path that emits one of those events calls its schedule* function
+// inside the same withGame closure, BEFORE withGame calls publish: the
+// non-reassigning beginRound path, openVotingAfterSummary,
+// openSummaryAfterReveal, MarkRevealReady/MarkSummaryReady's skip paths and
+// closeVoting's first-tie revote path all do. Any new emit path must keep
+// that ordering or its frame silently falls back to the synthesized value.
 func (s *GameService) publish(g *game.Game) {
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
 	revealMs := revealDurationFor(g)
 	summaryWindow := time.Duration(g.Config().SummaryDurationSeconds()) * time.Second
+
+	id := g.ID()
+	s.timersMu.Lock()
+	votingEndsAt, hasVotingEnd := s.votingEnds[id]
+	summaryEndsAt, hasSummaryEnd := s.summaryEnds[id]
+	s.timersMu.Unlock()
+
 	for _, e := range g.PullEvents() {
-		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window, RevealMs: revealMs, SummaryWindow: summaryWindow})
+		var closesAt time.Time
+		switch e.(type) {
+		case game.VotingOpened, game.TiebreakOpened:
+			if hasVotingEnd {
+				closesAt = votingEndsAt
+			}
+		case game.SummaryOpened:
+			if hasSummaryEnd {
+				closesAt = summaryEndsAt
+			}
+		}
+		s.hub.Publish(GameEvent{
+			GameID: id, Name: e.Name(), Event: e,
+			VotingWindow: window, RevealMs: revealMs, SummaryWindow: summaryWindow,
+			ClosesAt: closesAt,
+		})
 	}
 }
 
