@@ -48,6 +48,13 @@ const (
 	// (owner decision, 2026-08-30), mirroring CommandRevealReady exactly.
 	// See services.GameService.MarkSummaryReady.
 	CommandSummaryReady = "SUMMARY_READY"
+	// CommandRematch asks for a brand new lobby carrying this finished/
+	// aborted game's whole roster over, so nobody re-enters a join code.
+	// Host-only, terminal-state-only, takes no payload (it always means
+	// "again, same seats"). See services.GameService.Rematch; the new game's
+	// id comes back to every connected client as a REMATCH_READY frame, not
+	// as a reply to the requester alone.
+	CommandRematch = "REMATCH"
 )
 
 // AddBotPayload is CommandAddBot's payload.
@@ -271,7 +278,16 @@ const (
 	FrameRevealReadyChanged  = "REVEAL_READY_CHANGED"
 	FrameSummaryOpened       = "SUMMARY_OPENED"
 	FrameSummaryReadyChanged = "SUMMARY_READY_CHANGED"
+	FrameRematchReady        = "REMATCH_READY"
 )
+
+// RematchReadyPayload announces the new lobby a REMATCH created from this
+// (finished/aborted) one. It is published on the OLD game's stream, so every
+// client still on the result screen can follow the roster over, not just
+// whoever asked - GameID is the NEW game's id to navigate to.
+type RematchReadyPayload struct {
+	GameID string `json:"gameId"`
+}
 
 // VotingOpenedPayload/TiebreakOpenedPayload carry a transport-computed
 // closesAt: the domain event itself carries no deadline (the voting window

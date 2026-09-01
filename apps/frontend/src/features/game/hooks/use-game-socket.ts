@@ -16,6 +16,7 @@ export function useGameSocket(gameId: string | null) {
   const lastError = useGameSocketStore((s) => s.lastError)
   const nextRetryAt = useGameSocketStore((s) => s.nextRetryAt)
   const live = useGameSocketStore((s) => s.live)
+  const rematchGameId = useGameSocketStore((s) => s.rematchGameId)
   const send = useGameSocketStore((s) => s.send)
   const retryNow = useGameSocketStore((s) => s.retryNow)
   const attach = useGameSocketStore((s) => s.attach)
@@ -46,6 +47,7 @@ export function useGameSocket(gameId: string | null) {
     lastError,
     nextRetryAt,
     live,
+    rematchGameId,
     send,
     retryNow,
     markAssignmentRevealed,

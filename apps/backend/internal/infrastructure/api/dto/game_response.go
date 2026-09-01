@@ -162,10 +162,47 @@ type GameRoundResponse struct {
 
 // GameResultResponse mirrors game.GameResult.
 type GameResultResponse struct {
-	Mode         string `json:"mode"`
-	Winner       string `json:"winner"`
-	RoundsPlayed int    `json:"roundsPlayed"`
-	Aborted      bool   `json:"aborted"`
+	Mode   string `json:"mode"`
+	Winner string `json:"winner"`
+	// Participants is every seat as it stood the moment the game ended, in
+	// join order - what the final result screen renders per-player outcomes
+	// from. game.GameResult has always carried it (both modes' Outcome()
+	// populate it); it was simply never mapped onto the wire before the
+	// result screen existed.
+	Participants []ParticipantOutcomeResponse `json:"participants,omitempty"`
+	RoundsPlayed int                          `json:"roundsPlayed"`
+	Aborted      bool                         `json:"aborted"`
+}
+
+// ParticipantOutcomeResponse mirrors game.ParticipantOutcome. TeamID is what
+// a Versus client compares against GameResultResponse.Winner to decide
+// whether a given seat won; in Gauntlet the whole squad shares one collective
+// outcome and this carries identity only.
+type ParticipantOutcomeResponse struct {
+	ParticipantID string `json:"participantId"`
+	DisplayName   string `json:"displayName"`
+	TeamID        string `json:"teamId"`
+	Bot           bool   `json:"bot"`
+}
+
+// NewGameResultResponse maps a domain GameResult onto the wire. Shared by
+// the STATE snapshot and the GAME_FINISHED frame so the two can never drift
+// into carrying different shapes for the same result.
+func NewGameResultResponse(res game.GameResult) GameResultResponse {
+	out := GameResultResponse{
+		Mode: res.Mode.String(), Winner: string(res.Winner),
+		RoundsPlayed: res.RoundsPlayed, Aborted: res.Aborted,
+		Participants: make([]ParticipantOutcomeResponse, 0, len(res.Participants)),
+	}
+	for _, p := range res.Participants {
+		out.Participants = append(out.Participants, ParticipantOutcomeResponse{
+			ParticipantID: p.ParticipantID.String(),
+			DisplayName:   p.DisplayName,
+			TeamID:        p.TeamID.String(),
+			Bot:           p.Bot,
+		})
+	}
+	return out
 }
 
 // GameSnapshotResponse is the shared, viewer-independent half of a game's
@@ -371,10 +408,8 @@ func NewGameStateResponse(
 	var result *GameResultResponse
 	if g.State() == enums.Finished || g.State() == enums.Aborted {
 		if res, err := g.Result(); err == nil {
-			result = &GameResultResponse{
-				Mode: res.Mode.String(), Winner: string(res.Winner),
-				RoundsPlayed: res.RoundsPlayed, Aborted: res.Aborted,
-			}
+			r := NewGameResultResponse(res)
+			result = &r
 		}
 	}
 

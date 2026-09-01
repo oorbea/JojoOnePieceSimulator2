@@ -2,14 +2,12 @@ package services_test
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
-	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
 // TestVotingEndsAt_TracksThenClearsOnEarlyClose mirrors RevealEndsAt's own
@@ -223,9 +221,7 @@ func TestAbortGame_DuringVoting_ClearsVotingEndsAt(t *testing.T) {
 	// abort, this is where it would fire against a Game already deleted.
 	deps.clock.Advance(30 * time.Second)
 
-	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
-		t.Fatalf("GetGame after abort+advance: err = %v, want ErrGameNotFound", err)
-	}
+	assertStillReadableTerminal(t, svc, g.ID())
 }
 
 // TestCastVote_PublishesHumanVoteProgress is the end-to-end proof that the

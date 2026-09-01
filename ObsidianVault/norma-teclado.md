@@ -52,12 +52,18 @@ por completo si: hay foco en un `input`/`textarea`/`select`/`contenteditable`, h
 modificadora pulsada, o el caller marca `blocked` (overlay abierto). Sin esto, un atajo de una tecla
 dispara mientras alguien escribe en cualquier campo de texto de la misma pantalla.
 
-**Hueco conocido, no silencioso**: hoy `blocked` solo refleja `ConfirmSheet` (el contenedor lo
-controla directamente). El `LoadoutModal` vive dentro de `MatchRoster` (deliberado - es el
-componente que ya tiene `mangas` en mano para el contenido del modal), así que los atajos no se
-suprimen todavía mientras ese modal está abierto. No es grave (no hay ningún input de texto detrás),
-pero está pendiente si se quiere cerrar del todo - requeriría subir ese estado o un mecanismo de
-"qué overlay está abierto" compartido.
+**Hueco cerrado (2026-09-01)**: `blocked` cubre ya los dos overlays. `ConfirmSheet` lo controla el
+contenedor directamente; el `LoadoutModal` sigue viviendo dentro de `MatchRoster` (deliberado - es
+el componente que ya tiene `mangas` en mano para el contenido del modal) y avisa hacia arriba con un
+callback opcional `onModalOpenChange?: (open: boolean) => void`, que `MatchScreen` reenvía tal cual
+y el contenedor espeja en un estado `rosterModalOpen`. El guard queda
+`blocked: !!confirmSheet || rosterModalOpen`.
+
+El patrón a repetir si aparece un tercer overlay: **no** subir el estado del overlay al contenedor
+(perdería la cohesión de quien ya tiene los datos del modal), sino añadir otro callback de
+notificación y un booleano espejo. Dentro de `MatchRoster` todo abrir/cerrar pasa por un único
+`openModal(participant | null)` para que la notificación no pueda desincronizarse del estado real -
+si se añade una tercera vía de apertura, tiene que pasar por ese mismo embudo.
 
 ## Esc cierra overlays
 

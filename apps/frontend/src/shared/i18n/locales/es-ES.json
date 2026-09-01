@@ -465,6 +465,26 @@
       "abortedByHost": "El anfitrión ha cancelado esta partida.",
       "finished": "Esta partida ha terminado."
     },
+    "result": {
+      "title": "Resultado final",
+      "winnerTeam": "Gana {{team}}",
+      "survived": "El escuadrón ha sobrevivido",
+      "fell": "El escuadrón ha caído",
+      "aborted": "Partida cancelada",
+      "abortedNotice": "El anfitrión canceló esta partida antes de terminarla.",
+      "roundsPlayed": "{{count}} ronda(s) jugada(s)",
+      "recapTitle": "Ronda a ronda",
+      "roundLabel": "Ronda {{index}} - {{stage}}",
+      "outcomesTitle": "Jugadores",
+      "youWon": "Tu equipo ha ganado.",
+      "youLost": "Tu equipo ha perdido.",
+      "back": "Volver a las salas",
+      "backA11y": "Salir de esta partida y volver a la lista de salas",
+      "rematch": "Revancha",
+      "rematchA11y": "Crear una sala nueva con los mismos jugadores",
+      "rematchError": "No se ha podido crear la revancha. Inténtalo otra vez.",
+      "summaryA11y": "Resultado final de esta partida"
+    },
     "a11y": {
       "playerRow": "{{name}}"
     }

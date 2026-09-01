@@ -2,6 +2,7 @@ package game_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
@@ -315,6 +316,51 @@ func TestRestoreRejectsMalformedBallot(t *testing.T) {
 func TestRestoreOfZeroSnapshot(t *testing.T) {
 	if _, err := game.Restore(game.Snapshot{}); err == nil {
 		t.Fatal("expected error restoring a zero Snapshot (invalid mode/state/manga)")
+	}
+}
+
+// TestSnapshotRoundTrip_PhaseEndsAt pins the durable phase deadline: a
+// deadline set on the aggregate survives Snapshot/Restore, and a snapshot
+// that never carried one (every payload written before the field existed)
+// restores to "no deadline recorded" rather than a zero time.
+func TestSnapshotRoundTrip_PhaseEndsAt(t *testing.T) {
+	g, _ := newGauntletGame(t, oneStage(t), 1)
+
+	if _, ok := g.PhaseEndsAt(); ok {
+		t.Fatal("a fresh Game must report no phase deadline")
+	}
+
+	deadline := time.Now().Add(42 * time.Second).UTC().Truncate(time.Millisecond)
+	g.SetPhaseDeadline(deadline)
+
+	snap := g.Snapshot()
+	if snap.PhaseEndsAt == nil {
+		t.Fatal("Snapshot.PhaseEndsAt is nil, want the deadline just set")
+	}
+	if !snap.PhaseEndsAt.Equal(deadline) {
+		t.Fatalf("Snapshot.PhaseEndsAt = %v, want %v", *snap.PhaseEndsAt, deadline)
+	}
+
+	restored, err := game.Restore(snap)
+	if err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	got, ok := restored.PhaseEndsAt()
+	if !ok {
+		t.Fatal("restored Game reports no phase deadline, want one")
+	}
+	if !got.Equal(deadline) {
+		t.Fatalf("restored PhaseEndsAt = %v, want %v", got, deadline)
+	}
+
+	// Legacy snapshot: no deadline recorded at all.
+	snap.PhaseEndsAt = nil
+	legacy, err := game.Restore(snap)
+	if err != nil {
+		t.Fatalf("Restore (legacy): %v", err)
+	}
+	if _, ok := legacy.PhaseEndsAt(); ok {
+		t.Fatal("a snapshot without PhaseEndsAt must restore to no deadline")
 	}
 }
 

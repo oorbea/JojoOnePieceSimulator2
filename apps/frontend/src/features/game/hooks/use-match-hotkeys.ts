@@ -9,8 +9,11 @@ type UseMatchHotkeysInput = {
   revealing: boolean
   /** True while the loadout-summary screen (2026-08-30) is showing. */
   summaryOpen: boolean
-  /** True while any overlay that should own all keyboard input is showing
-   * (ConfirmSheet, LoadoutModal) - hotkeys stay fully suppressed. */
+  /** True while any overlay that should own all keyboard input is showing -
+   * hotkeys stay fully suppressed. Both overlays are covered now:
+   * ConfirmSheet, which the container owns directly, and LoadoutModal, whose
+   * state deliberately stays inside MatchRoster and reaches the container
+   * through that component's onModalOpenChange callback. */
   blocked: boolean
   onVote: (index: number) => void
   onSkipReveal: () => void

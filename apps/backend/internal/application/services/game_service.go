@@ -47,6 +47,11 @@ var (
 	// ErrCodeGenerationFailed is returned when CreateGame could not find an
 	// unused join code within maxCodeAttempts tries.
 	ErrCodeGenerationFailed = errors.New("could not generate a unique game code")
+
+	// ErrGameNotOver is returned by Rematch when the source Game has not
+	// actually reached FINISHED/ABORTED yet - a rematch of a game still in
+	// progress is meaningless.
+	ErrGameNotOver = errors.New("game is not over yet")
 )
 
 // CreateGameInput carries every field needed to set up a new Game's Config,
@@ -161,6 +166,14 @@ type GameService struct {
 	// client joining/reconnecting mid-summary gets the real remaining time.
 	// Same process-memory-only caveat as revealEnds/votingEnds/resultEnds.
 	summaryEnds map[game.GameID]time.Time
+
+	finalizedMu sync.Mutex
+	// finalized remembers which Games this process has already recorded
+	// history for, so a post-finish Reconnect/Disconnect (both legal against
+	// a terminal game, both routed through withGame's Finished branch) does
+	// not re-issue the inserts on every client reload. Purely an
+	// optimization - the inserts themselves are idempotent.
+	finalized map[game.GameID]struct{}
 }
 
 // NewGameService builds a GameService. history may be nil until an
@@ -192,6 +205,7 @@ func NewGameService(
 		votingEnds:  make(map[game.GameID]time.Time),
 		resultEnds:  make(map[game.GameID]time.Time),
 		summaryEnds: make(map[game.GameID]time.Time),
+		finalized:   make(map[game.GameID]struct{}),
 	}
 }
 
@@ -380,6 +394,117 @@ func (s *GameService) pickTeam(g *game.Game) game.TeamID {
 		}
 	}
 	return best.ID()
+}
+
+// Rematch builds a brand new lobby from a finished/aborted one, carrying
+// the whole roster over so nobody has to re-enter a join code: same Config,
+// the same seated humans on the matching teams, the same bots in the same
+// positions, a fresh GameID, a fresh join code, state LOBBY. Host-only, and
+// only valid once the source game is actually over.
+//
+// The source aggregate is left completely untouched - not reset back through
+// its own state machine, not re-saved. A terminal Game is terminal; its
+// history row and its own result screen must both stay intact, and a
+// rematch is a *new* game, not a rewound one.
+func (s *GameService) Rematch(ctx context.Context, gameID game.GameID, requesterID game.ParticipantID) (*game.Game, string, error) {
+	// A plain read under the source game's lock: nothing here mutates it, so
+	// withGame (which would publish and re-save) is the wrong tool.
+	old, err := s.GetGame(ctx, gameID)
+	if err != nil {
+		return nil, "", err
+	}
+	if requesterID != old.HostID() {
+		return nil, "", game.ErrNotHost
+	}
+	if old.State() != enums.Finished && old.State() != enums.Aborted {
+		return nil, "", ErrGameNotOver
+	}
+
+	cfg := old.Config()
+	teams, err := s.buildTeams(cfg.Mode())
+	if err != nil {
+		return nil, "", err
+	}
+	stages, err := s.loadStages(ctx, cfg)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Old team -> new team by position. Both lists come from the same mode,
+	// so they're the same length and the same order (Squad; or Team A/Team
+	// B), which is what keeps a Versus rematch's sides intact.
+	teamFor := make(map[game.TeamID]game.TeamID, len(teams))
+	oldTeams := old.Teams()
+	for i, t := range oldTeams {
+		if i < len(teams) {
+			teamFor[t.ID()] = teams[i].ID()
+		}
+	}
+	newTeamOf := func(p *game.Participant) game.TeamID {
+		if id, ok := teamFor[p.TeamID()]; ok {
+			return id
+		}
+		return teams[0].ID()
+	}
+
+	oldHost, ok := old.Participant(old.HostID())
+	if !ok || oldHost.UserID() == nil {
+		return nil, "", game.ErrParticipantNotFound
+	}
+	host, err := game.NewHumanParticipant(s.partIDs.NewID(), *oldHost.UserID(), oldHost.DisplayName(), newTeamOf(oldHost))
+	if err != nil {
+		return nil, "", err
+	}
+	host.SetAvatar(oldHost.AvatarThumbKey(), oldHost.GooglePicture())
+
+	g, err := game.NewGame(s.gameIDs.NewID(), cfg, host, teams, stages)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Everyone else, in the source game's own join order.
+	for _, p := range old.Participants() {
+		if p.ID() == oldHost.ID() {
+			continue
+		}
+		if p.IsBot() {
+			bot, err := game.NewBotParticipant(s.partIDs.NewID(), p.DisplayName(), newTeamOf(p))
+			if err != nil {
+				return nil, "", err
+			}
+			if err := g.AddBot(bot); err != nil {
+				return nil, "", err
+			}
+			continue
+		}
+		if p.UserID() == nil {
+			continue
+		}
+		seat, err := game.NewHumanParticipant(s.partIDs.NewID(), *p.UserID(), p.DisplayName(), newTeamOf(p))
+		if err != nil {
+			return nil, "", err
+		}
+		seat.SetAvatar(p.AvatarThumbKey(), p.GooglePicture())
+		if err := g.Join(seat); err != nil {
+			return nil, "", err
+		}
+	}
+
+	for attempt := 0; attempt < maxCodeAttempts; attempt++ {
+		code := s.generateCode()
+		if err := s.store.Create(ctx, code, g); err != nil {
+			if errors.Is(err, ports.ErrGameCodeTaken) {
+				continue
+			}
+			return nil, "", err
+		}
+		// Announced on the OLD game's hub, so every client still connected
+		// to the finished game learns the new id - not just whoever asked.
+		evt := game.RematchReady{GameID: g.ID()}
+		s.hub.Publish(GameEvent{GameID: gameID, Name: evt.Name(), Event: evt})
+		return g, code, nil
+	}
+	return nil, "", ErrCodeGenerationFailed
 }
 
 // LeaveGame removes participantID from the Game entirely.
@@ -630,19 +755,20 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 // timer (see its field doc) and records the deadline in s.revealEnds for
 // RevealEndsAt to serve to (re)connecting clients.
 func (s *GameService) scheduleRevealDelay(g *game.Game) {
-	id := g.ID()
-	d := revealDurationFor(g)
+	s.schedulePhaseTimer(g)
+}
 
-	s.timersMu.Lock()
-	s.revealEnds[id] = s.clock.Now().Add(d)
-	s.timersMu.Unlock()
-
-	timer := s.clock.AfterFunc(d, func() {
-		s.openSummaryAfterReveal(context.Background(), id)
-	})
-	s.timersMu.Lock()
-	s.timers[id] = timer
-	s.timersMu.Unlock()
+// schedulePhaseTimer arms a full fresh window for whichever timed phase g
+// has just entered - the body the four schedule* wrappers all share. It is
+// the same armPhaseTimer the re-arm path uses, so a scheduled deadline and a
+// re-armed one are recorded identically (in-process map + persisted on the
+// aggregate).
+func (s *GameService) schedulePhaseTimer(g *game.Game) {
+	pt, ok := s.phaseTimerFor(g)
+	if !ok {
+		return
+	}
+	s.armPhaseTimer(g, pt, s.clock.Now().Add(pt.window))
 }
 
 // openSummaryAfterReveal is scheduleRevealDelay's callback: it re-acquires
@@ -675,19 +801,7 @@ func (s *GameService) openSummaryAfterReveal(ctx context.Context, id game.GameID
 // SummaryDurationSeconds, mirroring scheduleRevealDelay exactly. Once the
 // delay elapses, openVotingAfterSummary opens the actual vote.
 func (s *GameService) scheduleSummaryDelay(g *game.Game) {
-	id := g.ID()
-	d := time.Duration(g.Config().SummaryDurationSeconds()) * time.Second
-
-	s.timersMu.Lock()
-	s.summaryEnds[id] = s.clock.Now().Add(d)
-	s.timersMu.Unlock()
-
-	timer := s.clock.AfterFunc(d, func() {
-		s.openVotingAfterSummary(context.Background(), id)
-	})
-	s.timersMu.Lock()
-	s.timers[id] = timer
-	s.timersMu.Unlock()
+	s.schedulePhaseTimer(g)
 }
 
 // openVotingAfterSummary is scheduleSummaryDelay's callback: it re-acquires
@@ -771,19 +885,7 @@ func (s *GameService) SummaryEndsAt(id game.GameID) (time.Time, bool) {
 // delay elapses, completeRoundAfterResult does what closeVoting used to do
 // immediately: Game.CompleteRound + beginRound (if there's a next round).
 func (s *GameService) scheduleResultDelay(g *game.Game) {
-	id := g.ID()
-	d := game.ResultDuration
-
-	s.timersMu.Lock()
-	s.resultEnds[id] = s.clock.Now().Add(d)
-	s.timersMu.Unlock()
-
-	timer := s.clock.AfterFunc(d, func() {
-		s.completeRoundAfterResult(context.Background(), id)
-	})
-	s.timersMu.Lock()
-	s.timers[id] = timer
-	s.timersMu.Unlock()
+	s.schedulePhaseTimer(g)
 }
 
 // completeRoundAfterResult is scheduleResultDelay's callback: it
@@ -961,12 +1063,21 @@ func (s *GameService) Reconnect(ctx context.Context, gameID game.GameID, partici
 
 // --- Reads ---
 
-// GetGame returns the live Game identified by id.
+// GetGame returns the live Game identified by id. It also re-arms the phase
+// timer when this process has none for a game in a timed phase - this read
+// path is what a reconnecting client's RESYNC/initial snapshot goes through
+// (see pushCurrentState), so connecting to a game stranded by a restart is
+// what heals it.
 func (s *GameService) GetGame(ctx context.Context, id game.GameID) (*game.Game, error) {
 	mu := s.locks.get(id)
 	mu.Lock()
 	defer mu.Unlock()
-	return s.store.Get(ctx, id)
+	g, err := s.store.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	s.rearmPhaseTimerLocked(g)
+	return g, nil
 }
 
 // GetGameByCode returns the live Game currently indexed under code.
@@ -1092,6 +1203,10 @@ func (s *GameService) withGame(ctx context.Context, id game.GameID, fn func(g *g
 	if err != nil {
 		return nil, err
 	}
+	// Before any mutation: if this process has no timer for a Game sitting in
+	// a timed phase (a restart, or a game this instance has never touched),
+	// re-establish it from the persisted deadline.
+	s.rearmPhaseTimerLocked(g)
 
 	if err := fn(g); err != nil {
 		s.publish(g)
@@ -1109,33 +1224,110 @@ func (s *GameService) withGame(ctx context.Context, id game.GameID, fn func(g *g
 	return g, nil
 }
 
-// finalizeLocked records g's outcome (best-effort, tolerating a nil
-// history port) and removes it from the store. Callers must already hold
-// g's lock.
+// FinishedGameTTL is how long a FINISHED/ABORTED game stays readable in the
+// store before it expires. Deliberately short and deliberately NOT the
+// lobby TTL (config.Config.GameLobbyTTL, 2h): a terminal game only needs to
+// outlive its players reading the result screen, and keeping it around for
+// hours would be a pure storage cost with nothing to join.
+//
+// It lives here rather than next to defaultGameLobbyTTL because that const
+// is package-private to internal/config, which the application layer must
+// not import.
+const FinishedGameTTL = 15 * time.Minute
+
+// finalizeLocked records g's outcome (best-effort, tolerating a nil history
+// port) and saves it back under a short TTL. Callers must already hold g's
+// lock.
+//
+// It used to Delete the game outright the instant it reached
+// FINISHED/ABORTED, which made a result screen impossible: the terminal
+// frame and the client's follow-up read raced, and the read almost always
+// lost with ErrGameNotFound. The aggregate now survives for
+// FinishedGameTTL, long enough for every client to fetch the final STATE.
+// It disappears from the public lobby browser regardless - both store
+// implementations re-derive IsPubliclyJoinable on save, and that is false
+// the moment state leaves LOBBY.
 func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
-	if result, err := g.Result(); err != nil {
-		log.Printf("computing result for finished game %s: %v", g.ID(), err)
-	} else if s.history != nil {
-		if err := s.history.Record(ctx, result); err != nil {
-			log.Printf("recording history for game %s: %v", g.ID(), err)
+	id := g.ID()
+
+	// Record history exactly once per game, however many times a post-finish
+	// Reconnect/Disconnect re-enters this branch. Both are legal against a
+	// finished game and both flow through withGame's Finished branch, so
+	// without this a reconnecting client would re-issue the inserts on every
+	// reload. Correctness does not depend on it - the inserts are idempotent
+	// (see the repository's ON CONFLICT DO NOTHING) - this only avoids the
+	// pointless round trips.
+	s.finalizedMu.Lock()
+	_, already := s.finalized[id]
+	if !already {
+		s.finalized[id] = struct{}{}
+	}
+	s.finalizedMu.Unlock()
+
+	if !already {
+		if result, err := g.Result(); err != nil {
+			log.Printf("computing result for finished game %s: %v", id, err)
+		} else if s.history != nil {
+			if err := s.history.Record(ctx, result); err != nil {
+				log.Printf("recording history for game %s: %v", id, err)
+			}
 		}
 	}
 
-	if err := s.store.Delete(ctx, g.ID()); err != nil {
-		log.Printf("deleting finished game %s: %v", g.ID(), err)
+	if err := s.store.SaveWithTTL(ctx, g, FinishedGameTTL); err != nil {
+		log.Printf("saving finished game %s: %v", id, err)
 	}
-	s.cancelTimer(g.ID())
-	s.locks.delete(g.ID())
+	s.cancelTimer(id)
+	// Deliberately NOT s.locks.delete(id) here, unlike the pre-result-screen
+	// version of this method. The aggregate stays live and readable now, so
+	// evicting its mutex would let a later reader and a concurrent
+	// Reconnect/Disconnect serialize on two *different* mutex instances for
+	// the same logical game - i.e. no serialization at all. The lock map's
+	// own entry is a few words; leaking one per finished game until the
+	// process restarts is far cheaper than that race.
 }
 
 // publish drains every DomainEvent g has accumulated since the last call
 // and fans them out over hub.
+//
+// Timed events (VOTING_OPENED/TIEBREAK_OPENED/SUMMARY_OPENED) are stamped
+// with the authoritative deadline this service already computed for that
+// phase, so the transport never has to re-synthesize time.Now()+window and
+// drift by however long hub delivery took. This is only correct because
+// every path that emits one of those events calls its schedule* function
+// inside the same withGame closure, BEFORE withGame calls publish: the
+// non-reassigning beginRound path, openVotingAfterSummary,
+// openSummaryAfterReveal, MarkRevealReady/MarkSummaryReady's skip paths and
+// closeVoting's first-tie revote path all do. Any new emit path must keep
+// that ordering or its frame silently falls back to the synthesized value.
 func (s *GameService) publish(g *game.Game) {
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
 	revealMs := revealDurationFor(g)
 	summaryWindow := time.Duration(g.Config().SummaryDurationSeconds()) * time.Second
+
+	id := g.ID()
+	s.timersMu.Lock()
+	votingEndsAt, hasVotingEnd := s.votingEnds[id]
+	summaryEndsAt, hasSummaryEnd := s.summaryEnds[id]
+	s.timersMu.Unlock()
+
 	for _, e := range g.PullEvents() {
-		s.hub.Publish(GameEvent{GameID: g.ID(), Name: e.Name(), Event: e, VotingWindow: window, RevealMs: revealMs, SummaryWindow: summaryWindow})
+		var closesAt time.Time
+		switch e.(type) {
+		case game.VotingOpened, game.TiebreakOpened:
+			if hasVotingEnd {
+				closesAt = votingEndsAt
+			}
+		case game.SummaryOpened:
+			if hasSummaryEnd {
+				closesAt = summaryEndsAt
+			}
+		}
+		s.hub.Publish(GameEvent{
+			GameID: id, Name: e.Name(), Event: e,
+			VotingWindow: window, RevealMs: revealMs, SummaryWindow: summaryWindow,
+			ClosesAt: closesAt,
+		})
 	}
 }
 
@@ -1169,28 +1361,171 @@ func revealDurationFor(g *game.Game) time.Duration {
 // which now only seeds new lobbies that don't specify one - see
 // buildConfig.
 func (s *GameService) scheduleVotingTimer(g *game.Game) {
+	s.schedulePhaseTimer(g)
+}
+
+// phaseTimerKind names which of the four per-phase deadline maps a pending
+// timer belongs to. Only one is ever populated for a given GameID at a time
+// (see the timers field doc), which is also why the aggregate persists a
+// single phaseEndsAt rather than four.
+type phaseTimerKind int
+
+const (
+	phaseReveal phaseTimerKind = iota
+	phaseSummary
+	phaseVoting
+	phaseResult
+)
+
+// phaseTimer describes the timed phase a Game is currently sitting in: which
+// deadline map owns it, how long a *full* window of that phase lasts for
+// this particular lobby, and what to run when it expires.
+type phaseTimer struct {
+	fire   func()
+	kind   phaseTimerKind
+	window time.Duration
+}
+
+// phaseTimerFor derives g's timed phase from its state alone. State is
+// authoritative and needs nothing else to exist (no Round, no loadouts), so
+// both the schedule path - which calls this right after the transition that
+// entered the phase - and the re-arm path, which calls it on a Game freshly
+// loaded from the store, agree by construction. ok is false for LOBBY and
+// the two terminal states, which have no timer.
+func (s *GameService) phaseTimerFor(g *game.Game) (phaseTimer, bool) {
 	id := g.ID()
-	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
+	switch g.State() {
+	case enums.Assigning:
+		return phaseTimer{kind: phaseReveal, window: revealDurationFor(g), fire: func() {
+			s.openSummaryAfterReveal(context.Background(), id)
+		}}, true
+	case enums.Summary:
+		return phaseTimer{kind: phaseSummary, window: time.Duration(g.Config().SummaryDurationSeconds()) * time.Second, fire: func() {
+			s.openVotingAfterSummary(context.Background(), id)
+		}}, true
+	case enums.Voting, enums.Tiebreak:
+		return phaseTimer{kind: phaseVoting, window: time.Duration(g.Config().VotingWindowSeconds()) * time.Second, fire: func() {
+			if _, err := s.CloseVotingWindow(context.Background(), id); err != nil {
+				switch {
+				case errors.Is(err, ports.ErrGameNotFound), errors.Is(err, game.ErrVotingClosed),
+					errors.Is(err, game.ErrInvalidStateTransition):
+					// Benign: the Game was already finished/aborted/removed,
+					// or another instance's re-armed timer got there first,
+					// before this timer fired.
+				default:
+					log.Printf("closing voting window for game %s: %v", id, err)
+				}
+			}
+		}}, true
+	case enums.Resolving:
+		return phaseTimer{kind: phaseResult, window: game.ResultDuration, fire: func() {
+			s.completeRoundAfterResult(context.Background(), id)
+		}}, true
+	case enums.Lobby, enums.Finished, enums.Aborted:
+		return phaseTimer{}, false
+	default:
+		return phaseTimer{}, false
+	}
+}
+
+// endsMapFor returns the deadline map owning kind. Callers must already hold
+// timersMu.
+func (s *GameService) endsMapFor(kind phaseTimerKind) map[game.GameID]time.Time {
+	switch kind {
+	case phaseReveal:
+		return s.revealEnds
+	case phaseSummary:
+		return s.summaryEnds
+	case phaseVoting:
+		return s.votingEnds
+	case phaseResult:
+		return s.resultEnds
+	default:
+		return s.votingEnds
+	}
+}
+
+// armPhaseTimer is the one place a phase deadline is recorded and its timer
+// started, shared by the four schedule* wrappers and by
+// rearmPhaseTimerLocked so the two can never drift. It records deadline both
+// in this process's own map (for the *EndsAt accessors a connecting client
+// reads) and on the aggregate itself via SetPhaseDeadline, so the deadline
+// survives persistence and a restart.
+//
+// Any timer already pending for this Game is stopped first: the schedule
+// paths mostly cancelTimer beforehand anyway, but the re-arm path can race
+// one in, and two live timers for the same Game would fire the same
+// transition twice.
+func (s *GameService) armPhaseTimer(g *game.Game, pt phaseTimer, deadline time.Time) {
+	id := g.ID()
+	g.SetPhaseDeadline(deadline)
+
+	remaining := deadline.Sub(s.clock.Now())
+	if remaining < 0 {
+		remaining = 0
+	}
 
 	s.timersMu.Lock()
-	s.votingEnds[id] = s.clock.Now().Add(window)
+	s.endsMapFor(pt.kind)[id] = deadline
+	if prev, ok := s.timers[id]; ok {
+		prev.Stop()
+		delete(s.timers, id)
+	}
 	s.timersMu.Unlock()
 
-	timer := s.clock.AfterFunc(window, func() {
-		ctx := context.Background()
-		if _, err := s.CloseVotingWindow(ctx, id); err != nil {
-			switch {
-			case errors.Is(err, ports.ErrGameNotFound), errors.Is(err, game.ErrVotingClosed):
-				// Benign: the Game was already finished/aborted/removed
-				// before this timer fired.
-			default:
-				log.Printf("closing voting window for game %s: %v", id, err)
-			}
-		}
-	})
+	timer := s.clock.AfterFunc(remaining, pt.fire)
+
 	s.timersMu.Lock()
 	s.timers[id] = timer
 	s.timersMu.Unlock()
+}
+
+// rearmPhaseTimerLocked re-establishes the in-process timer for a Game that
+// is sitting in a timed phase but has no live timer in THIS process -
+// exactly what a backend restart mid-vote/reveal/summary/result leaves
+// behind, since s.timers and the four deadline maps are process memory only.
+// Without it such a game wedges in that phase forever: no timer will ever
+// fire to close it, and a client gets no deadline to count down against.
+//
+// Called from two places: inside withGame right after store.Get succeeds
+// (before any mutation), and from GetGame's read path - the latter is what
+// heals a reconnecting client, since RESYNC/pushCurrentState goes through it.
+// Callers must already hold g's lock.
+//
+// Multi-instance safety: no leader election or distributed lock is needed.
+// If two instances both load the same game and both re-arm, both callbacks
+// eventually run; the loser's hits ErrInvalidStateTransition/ErrVotingClosed
+// (or ErrGameNotFound), which every callback here already swallows as
+// benign. The residual gap is accepted: a game nobody ever loads or connects
+// to is never re-armed at all and simply expires by its lobby TTL, exactly
+// as it does today.
+func (s *GameService) rearmPhaseTimerLocked(g *game.Game) {
+	pt, ok := s.phaseTimerFor(g)
+	if !ok {
+		return
+	}
+
+	id := g.ID()
+	s.timersMu.Lock()
+	_, alreadyArmed := s.timers[id]
+	s.timersMu.Unlock()
+	if alreadyArmed {
+		// This instance is already driving the phase - re-arming would stop
+		// a perfectly good timer and restart an identical one.
+		return
+	}
+
+	deadline, ok := g.PhaseEndsAt()
+	if !ok {
+		// Legacy snapshot written before phaseEndsAt existed (or a phase
+		// entered by a build that didn't record one). A full fresh window is
+		// generous but bounded - strictly better than leaving the game
+		// wedged with no timer at all. The stamped deadline is only
+		// persisted if a mutation happens to save the aggregate afterwards;
+		// until then every load simply re-derives the same fallback.
+		deadline = s.clock.Now().Add(pt.window)
+	}
+	s.armPhaseTimer(g, pt, deadline)
 }
 
 func (s *GameService) cancelTimer(id game.GameID) {

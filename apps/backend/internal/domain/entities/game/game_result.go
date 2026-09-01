@@ -7,8 +7,9 @@ import (
 
 // ParticipantOutcome snapshots one Participant's identity at the moment a
 // Game finished/aborted, so ports.IGameHistory can record who played
-// without holding a live reference into the Game (which is deleted from
-// the store right after). UserID is nil for a bot.
+// without holding a live reference into the Game (which expires from the
+// store shortly after - see services.FinishedGameTTL). UserID is nil for a
+// bot.
 type ParticipantOutcome struct {
 	ParticipantID ParticipantID
 	UserID        *user.UserID

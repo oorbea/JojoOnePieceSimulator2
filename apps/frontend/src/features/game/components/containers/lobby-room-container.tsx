@@ -89,6 +89,12 @@ export function LobbyRoomContainer() {
   const [configRequestId, setConfigRequestId] = useState<string | null>(null)
   const [configError, setConfigError] = useState<string | undefined>(undefined)
   const [configErrorHandledFor, setConfigErrorHandledFor] = useState<string | null>(null)
+  // LoadoutModal's open state lives inside MatchRoster (it owns `mangas` for
+  // the modal's content); it reports up through onModalOpenChange purely so
+  // the hotkey guard below can see it.
+  const [rosterModalOpen, setRosterModalOpen] = useState(false)
+  const [rematchRequestId, setRematchRequestId] = useState<string | null>(null)
+  const [rematchError, setRematchError] = useState<string | null>(null)
 
   const snapshot = socket.snapshot ?? detail.data?.game ?? null
   const you = socket.you ?? detail.data?.you ?? null
@@ -150,12 +156,12 @@ export function LobbyRoomContainer() {
     optionCount: hotkeyOptions.length,
     revealing: loadoutReveal.isRevealing,
     summaryOpen: snapshot?.state === 'SUMMARY',
-    // ConfirmSheet is the one overlay this container itself owns and can
-    // check synchronously. LoadoutModal's open/closed state lives inside
-    // MatchRoster (deliberately - it's the component that already has
-    // `mangas` in hand for the modal's content), so hotkeys aren't
-    // suppressed while it's open yet - a small known gap, not a silent one.
-    blocked: !!confirmSheet,
+    // Both overlays are covered. ConfirmSheet this container owns outright;
+    // LoadoutModal's state stays inside MatchRoster (deliberately - it's the
+    // component that already has `mangas` in hand for the modal's content)
+    // and reports up through its onModalOpenChange callback, which is what
+    // rosterModalOpen mirrors.
+    blocked: !!confirmSheet || rosterModalOpen,
     onVote: (index) => {
       const option = hotkeyOptions[index]
       if (option) handleVote(option.id)
@@ -205,21 +211,41 @@ export function LobbyRoomContainer() {
       setConfigSaving(false)
       setConfigSaved(false)
     }
+    // Same correlation, other in-flight command: a rejected REMATCH shows
+    // up inline on the result screen on top of the generic toast. Handled
+    // in this block rather than an effect of its own for the same
+    // set-state-in-effect reason, and keyed on the same "already handled"
+    // marker so one error frame can only ever be attributed once.
+    if (rematchRequestId && socket.lastError!.requestId === rematchRequestId) {
+      setRematchError(t('game.result.rematchError'))
+    }
   }
 
+  // Only KICKED bounces now. FINISHED and ABORTED both stay on this route
+  // and render MatchResultScreen instead (the game is deliberately kept
+  // readable server-side for a short TTL precisely so they can) - being
+  // removed from a lobby is the one terminal case with nothing left to show
+  // you, so it keeps its toast-and-redirect exactly as it was.
   useEffect(() => {
-    if (!socket.terminal) return
-    const cleanupAndLeave = (message: string) => {
-      queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
-      resetSocket()
-      router.replace('/play' as never)
-      showErrorToast(new AppError(message))
-    }
-    if (socket.terminal.kind === 'KICKED') cleanupAndLeave(t('game.terminal.kicked'))
-    else if (socket.terminal.kind === 'ABORTED') cleanupAndLeave(t('game.terminal.abortedByHost'))
-    else if (socket.terminal.kind === 'FINISHED') cleanupAndLeave(t('game.terminal.finished'))
+    if (socket.terminal?.kind !== 'KICKED') return
+    queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
+    resetSocket()
+    router.replace('/play' as never)
+    showErrorToast(new AppError(t('game.terminal.kicked')))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per terminal transition
   }, [socket.terminal])
+
+  // A REMATCH_READY frame reaches every client still on the finished game,
+  // so all of them follow the host into the new lobby together. Guarded
+  // against re-navigating to the game we're already on.
+  useEffect(() => {
+    const next = socket.rematchGameId
+    if (!next || next === id) return
+    queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
+    resetSocket()
+    router.replace(`/play/${next}` as never)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once per rematch
+  }, [socket.rematchGameId])
 
   useEffect(() => {
     if (!socket.lastError) return
@@ -240,6 +266,19 @@ export function LobbyRoomContainer() {
     setStarting(true)
     commands.start()
     setTimeout(() => setStarting(false), 3000)
+  }
+
+  // Same cleanup the leave/kick paths use, minus any error toast: leaving a
+  // finished game is a normal exit, not a failure.
+  const handleBackToLobbies = () => {
+    queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
+    resetSocket()
+    router.replace('/play' as never)
+  }
+
+  const handleRematch = () => {
+    setRematchError(null)
+    setRematchRequestId(commands.rematch())
   }
 
   const handleLeave = () => {
@@ -474,6 +513,10 @@ export function LobbyRoomContainer() {
       reducedMotion={reducedMotion}
       onVote={handleVote}
       onSkipResult={socket.dismissResult}
+      onModalOpenChange={setRosterModalOpen}
+      onBackToLobbies={handleBackToLobbies}
+      onRematch={handleRematch}
+      rematchError={rematchError}
     />
   )
 }
