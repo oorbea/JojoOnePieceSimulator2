@@ -17,6 +17,10 @@ export function useGameCommands() {
     revealReady: () => send(CLIENT_COMMAND.REVEAL_READY),
     summaryReady: () => send(CLIENT_COMMAND.SUMMARY_READY),
     resync: () => send(CLIENT_COMMAND.RESYNC),
+    // Host-only, and only once the game is over. The new lobby's id comes
+    // back as a REMATCH_READY frame on this same (old) game's socket, so
+    // every client follows the roster over - not just the one that sent it.
+    rematch: () => send(CLIENT_COMMAND.REMATCH),
     switchTeam: (teamId: string) => send(CLIENT_COMMAND.SWITCH_TEAM, { teamId }),
     movePlayer: (participantId: string, teamId: string) =>
       send(CLIENT_COMMAND.MOVE_PLAYER, { participantId, teamId }),
