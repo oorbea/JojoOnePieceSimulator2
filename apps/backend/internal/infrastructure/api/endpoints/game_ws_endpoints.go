@@ -257,6 +257,12 @@ func (e *GameEndpoints) readPump(ctx context.Context, conn *websocket.Conn, outb
 			e.sendError(conn, outbound, cmd.RequestID, err)
 			continue
 		}
+		// A nil Game means the command changed nothing about *this* game and
+		// has nothing to resend (REMATCH: it creates a different game and
+		// announces it over the hub instead).
+		if g == nil {
+			continue
+		}
 		e.pushState(ctx, conn, outbound, g, self)
 	}
 }
@@ -306,6 +312,17 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 		return e.svc.MarkRevealReady(ctx, gameID, self)
 	case dto.CommandSummaryReady:
 		return e.svc.MarkSummaryReady(ctx, gameID, self)
+	case dto.CommandRematch:
+		// Rematch returns the NEW game (and its code), which is deliberately
+		// discarded here: this socket belongs to the OLD game, and every
+		// client on it - not just the requester - learns the new id from the
+		// REMATCH_READY frame Rematch publishes on the old game's hub. A nil
+		// Game means dispatch skips its usual STATE resend, which is right:
+		// the old game hasn't changed.
+		if _, _, err := e.svc.Rematch(ctx, gameID, self); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	case dto.CommandSwitchTeam:
 		var p dto.SwitchTeamPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
@@ -489,6 +506,10 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, true
 	case game.GameAborted:
 		return dto.FrameGameAborted, dto.GameAbortedPayload{Reason: e.Reason}, true
+	case game.RematchReady:
+		// No resend: this frame is about a *different* game, and the old one
+		// is unchanged - the client navigates to the new id instead.
+		return dto.FrameRematchReady, dto.RematchReadyPayload{GameID: e.GameID.String()}, false
 	case game.TeamChanged:
 		return dto.FrameTeamChanged, dto.TeamChangedPayload{
 			ParticipantID: e.ParticipantID.String(), FromTeamID: e.FromTeamID.String(), ToTeamID: e.ToTeamID.String(),

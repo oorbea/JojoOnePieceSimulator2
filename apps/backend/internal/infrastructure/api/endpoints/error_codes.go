@@ -103,6 +103,8 @@ func errorCode(err error) string {
 		return "BOTS_NOT_ALLOWED"
 	case errors.Is(err, services.ErrNotABot):
 		return "NOT_A_BOT"
+	case errors.Is(err, services.ErrGameNotOver):
+		return "GAME_NOT_OVER"
 	case errors.Is(err, game.ErrNoStagesAvailable):
 		return "NO_STAGES_AVAILABLE"
 	case errors.Is(err, game.ErrEmptyStageMangas):
