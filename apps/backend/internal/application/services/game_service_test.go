@@ -41,10 +41,25 @@ type fakeGameStore struct {
 	mu     sync.Mutex
 	byID   map[game.GameID]*game.Game
 	byCode map[string]game.GameID
+	// savedTTL records the TTL each game was last saved under (0 = the
+	// store's default), so tests can assert a terminal game got the short
+	// one instead of lingering for the full lobby TTL.
+	savedTTL map[game.GameID]time.Duration
 }
 
 func newFakeGameStore() *fakeGameStore {
-	return &fakeGameStore{byID: make(map[game.GameID]*game.Game), byCode: make(map[string]game.GameID)}
+	return &fakeGameStore{
+		byID:     make(map[game.GameID]*game.Game),
+		byCode:   make(map[string]game.GameID),
+		savedTTL: make(map[game.GameID]time.Duration),
+	}
+}
+
+// ttlFor reports the TTL id was last saved under (0 = the store's default).
+func (s *fakeGameStore) ttlFor(id game.GameID) time.Duration {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.savedTTL[id]
 }
 
 func (s *fakeGameStore) Create(_ context.Context, code string, g *game.Game) error {
@@ -93,13 +108,18 @@ func (s *fakeGameStore) Code(_ context.Context, id game.GameID) (string, error) 
 	return "", ports.ErrGameNotFound
 }
 
-func (s *fakeGameStore) Save(_ context.Context, g *game.Game) error {
+func (s *fakeGameStore) Save(ctx context.Context, g *game.Game) error {
+	return s.SaveWithTTL(ctx, g, 0)
+}
+
+func (s *fakeGameStore) SaveWithTTL(_ context.Context, g *game.Game, ttl time.Duration) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.byID[g.ID()]; !ok {
 		return ports.ErrGameNotFound
 	}
 	s.byID[g.ID()] = g
+	s.savedTTL[g.ID()] = ttl
 	return nil
 }
 
@@ -408,6 +428,9 @@ type gameTestDeps struct {
 	hub      *services.GameEventHub
 	clock    *fakeClock
 	users    *fakeUserRepository
+	// finishedID is set by the finished-game helpers so a test can keep
+	// asserting against a game after the aggregate itself has gone terminal.
+	finishedID game.GameID
 }
 
 // newTestGameService builds a GameService with every port faked, all
@@ -548,6 +571,24 @@ func revealDurationOf(g *game.Game) time.Duration {
 // advanceReveal).
 func advanceResult(deps *gameTestDeps) {
 	deps.clock.Advance(game.ResultDuration)
+}
+
+// assertStillReadableTerminal replaces the "GetGame must now return
+// ErrGameNotFound" assertions these tests used to make. finalizeLocked no
+// longer deletes a terminal game - it saves it under services.
+// FinishedGameTTL so its players can actually read the final result screen
+// (the instant delete was the real blocker for one). What these tests were
+// ever really pinning is that the game reached a terminal state and no stale
+// timer dragged it back out of one, which is what this asserts instead.
+func assertStillReadableTerminal(t *testing.T, svc *services.GameService, id game.GameID) {
+	t.Helper()
+	g, err := svc.GetGame(context.Background(), id)
+	if err != nil {
+		t.Fatalf("GetGame on a finalized game: err = %v, want it to still be readable", err)
+	}
+	if g.State() != enums.Finished && g.State() != enums.Aborted {
+		t.Fatalf("state after finalize = %v, want FINISHED or ABORTED", g.State())
+	}
 }
 
 // --- creation / membership ---
@@ -918,9 +959,7 @@ func TestAbortGame_DuringReveal_NeverOpensVoting(t *testing.T) {
 	advanceReveal(deps, gauntletInput().PowerMangas)
 	advanceSummary(deps)
 
-	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
-		t.Fatalf("GetGame after abort+advance: err = %v, want ErrGameNotFound", err)
-	}
+	assertStillReadableTerminal(t, svc, g.ID())
 }
 
 func TestGauntlet_FallMajority_FinishesAndFinalizes(t *testing.T) {
@@ -962,9 +1001,7 @@ func TestGauntlet_FallMajority_FinishesAndFinalizes(t *testing.T) {
 		t.Fatalf("result = %+v, want Winner=FALL, Aborted=false", results[0])
 	}
 
-	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
-		t.Fatalf("GetGame after finish: err = %v, want ErrGameNotFound", err)
-	}
+	assertStillReadableTerminal(t, svc, g.ID())
 }
 
 func TestGauntlet_ClearAllStages_Victory(t *testing.T) {
@@ -1280,9 +1317,7 @@ func TestDisconnect_LastHuman_AbortsAndFinalizes(t *testing.T) {
 	if len(results) != 1 || !results[0].Aborted {
 		t.Fatalf("results = %+v, want one aborted result", results)
 	}
-	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
-		t.Fatalf("GetGame after abort: err = %v, want ErrGameNotFound", err)
-	}
+	assertStillReadableTerminal(t, svc, g.ID())
 }
 
 func TestFinalize_NilHistory_DoesNotError(t *testing.T) {
@@ -1297,9 +1332,7 @@ func TestFinalize_NilHistory_DoesNotError(t *testing.T) {
 	if _, err := svc.Disconnect(context.Background(), g.ID(), g.HostID()); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
-	if _, err := svc.GetGame(context.Background(), g.ID()); !errors.Is(err, ports.ErrGameNotFound) {
-		t.Fatalf("GetGame after abort: err = %v, want ErrGameNotFound", err)
-	}
+	assertStillReadableTerminal(t, svc, g.ID())
 }
 
 // --- concurrency ---

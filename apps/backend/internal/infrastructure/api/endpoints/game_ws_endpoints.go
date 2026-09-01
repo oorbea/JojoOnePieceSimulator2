@@ -426,11 +426,17 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 // (votes stay hidden until a round resolves - see GameRoundResponse), only
 // an anonymous human-vote count, and never triggers a resend, since it's
 // high-frequency and self-describing.
-// GAME_FINISHED/GAME_ABORTED also skip the resend: by the time these fire,
-// GameService.finalizeLocked has already (or is about to) delete the game
-// from the store, so a fresh STATE fetch would race ErrGameNotFound: the
-// event itself already carries everything a client needs to render the
-// terminal screen.
+// GAME_FINISHED/GAME_ABORTED DO resend. They used to be exceptions, on the
+// reasoning that finalizeLocked had already deleted the game so a fresh
+// STATE fetch would race ErrGameNotFound - and on the (wrong) claim that the
+// event alone "already carries everything a client needs to render the
+// terminal screen". It never did: the terminal frames carry no rounds, no
+// per-round votes and no stage list, so the final result screen has nothing
+// to recap from. finalizeLocked now saves the game under a short TTL
+// (services.FinishedGameTTL) instead of deleting it, and holds the game's
+// lock for the whole call - which the resend's own read path re-acquires -
+// so the STATE that follows is guaranteed to be the fully-finalized one,
+// never a half-finalized snapshot.
 //
 // closesAt is the authoritative deadline the service stamped on the event
 // at publish time (services.GameEvent.ClosesAt); it is used verbatim for
@@ -478,12 +484,11 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 			RoundIndex: e.RoundIndex, Winner: string(e.Winner), DecidedByCoinFlip: e.DecidedByCoinFlip,
 		}, true
 	case game.GameFinished:
-		return dto.FrameGameFinished, dto.GameFinishedPayload{Result: dto.GameResultResponse{
-			Mode: e.Result.Mode.String(), Winner: string(e.Result.Winner),
-			RoundsPlayed: e.Result.RoundsPlayed, Aborted: e.Result.Aborted,
-		}}, false
+		return dto.FrameGameFinished, dto.GameFinishedPayload{
+			Result: dto.NewGameResultResponse(e.Result),
+		}, true
 	case game.GameAborted:
-		return dto.FrameGameAborted, dto.GameAbortedPayload{Reason: e.Reason}, false
+		return dto.FrameGameAborted, dto.GameAbortedPayload{Reason: e.Reason}, true
 	case game.TeamChanged:
 		return dto.FrameTeamChanged, dto.TeamChangedPayload{
 			ParticipantID: e.ParticipantID.String(), FromTeamID: e.FromTeamID.String(), ToTeamID: e.ToTeamID.String(),
