@@ -1,4 +1,4 @@
-import { fireEvent, renderWithProviders, screen } from '@/test/render'
+import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 import type { StandResponse } from '@/features/stands/types/stands.types'
 
 import { StandCard } from '../stand-card'
@@ -44,10 +44,17 @@ describe('StandCard', () => {
     const onDelete = jest.fn()
     await renderWithProviders(<StandCard stand={baseStand()} onEdit={onEdit} onDelete={onDelete} />)
 
-    fireEvent.press(screen.getByLabelText('Edit Star Platinum'))
+    // Each press gets its own awaited act() - two bare fireEvent.press
+    // calls back to back leave overlapping act scopes that corrupt
+    // React's act-nesting for whatever test renders next in this file.
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Edit Star Platinum'))
+    })
     expect(onEdit).toHaveBeenCalledTimes(1)
 
-    fireEvent.press(screen.getByLabelText('Delete Star Platinum'))
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Delete Star Platinum'))
+    })
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
 })
