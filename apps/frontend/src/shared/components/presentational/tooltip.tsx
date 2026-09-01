@@ -93,6 +93,20 @@ export function useHoverTrigger(opts?: HoverTriggerOptions) {
     }
   }, [delayMs, show])
 
+  // Neither timer is tied to `visible` or any other state the existing
+  // effects clean up, so a trigger unmounting mid-delay (web hover) or
+  // mid-auto-hide-window (native long-press) would otherwise fire `show`/
+  // `hide` against a gone component - harmless here since both only ever
+  // touch this hook's own refs/state, but it leaks the timer and is the
+  // documented root cause of tooltip.test.tsx's flakiness under parallel
+  // runs (a still-pending timer from one test firing during the next).
+  useEffect(() => {
+    return () => {
+      clearShowTimer()
+      clearHideTimer()
+    }
+  }, [])
+
   // Neither platform's hover/focus events fire when the trigger scrolls out
   // from under a stationary pointer/finger, so without this the bubble is
   // left stuck floating on screen, anchored to wherever the trigger used to
