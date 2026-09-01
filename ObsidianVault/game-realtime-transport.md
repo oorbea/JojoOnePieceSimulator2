@@ -56,10 +56,17 @@ lookup works over the socket with zero new mapping), `RESYNC_REQUIRED`.
 
 **Event + snapshot rule**: after any state-changing event, the connection sends a fresh `STATE`.
 The client never reconstructs state from deltas, a hub-dropped event self-heals on the next one,
-and ordering races are transient since `STATE` always arrives last and always wins. `VOTE_CAST`,
-`GAME_FINISHED`, and `GAME_ABORTED` are the exceptions — the first is high-frequency and
-self-describing, the latter two fire right as/after `GameService.finalizeLocked` deletes the game
-from the store, so a fresh `STATE` fetch would just race `ErrGameNotFound`.
+and ordering races are transient since `STATE` always arrives last and always wins. `VOTE_CAST` is
+the one remaining exception — high-frequency and self-describing.
+
+**Cambiado 2026-09-01** ([[game-final-result-2026-09-01]]): `GAME_FINISHED` y `GAME_ABORTED` ya
+**no** son excepciones y vuelven a mandar `STATE` como todo lo demás. Antes no podían, porque
+`GameService.finalizeLocked` borraba la partida del store justo al emitirlas y un `STATE` fresco
+competía contra `ErrGameNotFound`. Ahora `finalizeLocked` la **guarda bajo un TTL corto propio** en
+vez de borrarla, así que un juego terminado o abortado sigue siendo legible el tiempo suficiente
+para que la pantalla de resultado final lo renderice (y para que un cliente que reconecta justo
+después siga viendo el resultado en lugar de un 404). El borrado sigue existiendo, solo que lo hace
+vencer el TTL, no la transición terminal.
 
 ## Votes hidden until a round resolves (the owner's explicit call)
 

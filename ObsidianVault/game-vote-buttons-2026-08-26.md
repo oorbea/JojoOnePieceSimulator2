@@ -132,20 +132,25 @@ manual pass. Still open for a session with two real accounts.
 
 - Round-resolved feedback (who won, was it a coin flip) - nothing renders `ROUND_RESOLVED` beyond
   clearing the countdown.
-- The final result screen - `GAME_FINISHED` still just toasts and bounces to `/play`.
+- ~~The final result screen - `GAME_FINISHED` still just toasts and bounces to `/play`.~~
+  **RESUELTO 2026-09-01** - ver [[game-final-result-2026-09-01]]. Un juego terminado o abortado se
+  queda en su ruta y renderiza `MatchResultScreen`; solo `KICKED` sigue redirigiendo.
 - `ports.IInventory` still has no adapter.
 - `GET /games/preview?code=`, `DELETE /games/{id}/participants/me` - still deferred.
 - The `Seq` counter on `GameEvent` to detect (not just self-heal) a hub drop.
 - `game_endpoints_test.go`/`game_ws_endpoints_test.go` HTTP/WS coverage gap from §2 - still open
   (this tanda added direct `buildEventFrame` tests to the existing `game_ws_endpoints_test.go`, but
   the broader route-level suite from §2 is unrelated and still missing).
-- `VOTING_OPENED`/`TIEBREAK_OPENED`'s `closesAt` is still transport-synthesized
+- ~~`VOTING_OPENED`/`TIEBREAK_OPENED`'s `closesAt` is still transport-synthesized
   (`time.Now()+window`) separately from the new authoritative `votingEndsAt` - they can drift by
-  however long hub delivery took. `forwardEvents` already has `e.svc`/`gameID` in scope to fix this
-  cleanly later; not folded into this tanda.
-- A backend restart mid-vote still loses `s.timers`/`s.votingEnds` entirely (in-process only, same
+  however long hub delivery took.~~ **RESUELTO 2026-09-01** - `closesAt` se sella ahora desde el
+  deadline autoritativo del servicio al construir el frame, exactamente por la vía
+  (`e.svc`/`gameID` en `forwardEvents`) que esta nota anticipaba.
+- ~~A backend restart mid-vote still loses `s.timers`/`s.votingEnds` entirely (in-process only, same
   category as the pre-existing `revealEnds` gap) - wedges the lobby in `VOTING` with no client-facing
-  deadline and no timer that will ever close the window.
+  deadline and no timer that will ever close the window.~~ **RESUELTO 2026-09-01** - el deadline de
+  la fase temporizada se persiste en el agregado y se re-arma al cargar, así que un reinicio reanuda
+  la ventana en vez de dejar la sala encallada. Cubre `revealEnds` igual que `votingEnds`.
 
 Related: [[game-lobby-todo]], [[gameplay-game-modes]], [[gameplay-application-layer]],
 [[game-realtime-transport]], [[game-match-assignment-frontend]], [[norma-teclado]],
