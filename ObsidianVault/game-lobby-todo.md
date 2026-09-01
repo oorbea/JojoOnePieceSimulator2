@@ -123,7 +123,7 @@ Verified: `tsc --noEmit` clean, full frontend suite green - 46 suites / 482 test
 before this pass, exactly the two new test files, nothing broken). Committed as `1d93c68`,
 `ef0e8e9`, `721d76b` on `develop`.
 
-## 4. Frontend: power-pool restriction UI (rarity/fruit-type/banlist)
+## 4. Frontend: power-pool restriction UI (rarity/fruit-type/banlist) - DONE (2026-09-01)
 
 **Backend is ready**: `PoolFilterPayload` (`apps/backend/internal/infrastructure/api/dto/game_ws.go`)
 accepts `standRarities`/`fruitRarities`/`fruitTypes`/`banned` and is already part of
@@ -145,6 +145,26 @@ accepts `standRarities`/`fruitRarities`/`fruitTypes`/`banned` and is already par
   state and pass it through on submit.
 - i18n: `game.pool.*` (title, rarities, fruitTypes, banlist, banlistSearch, banlistEmpty, banned,
   removeBan, clearAll) in all three locales.
+
+**2026-09-01 hardening pass**: the rarity/fruit-type chips above were never built (superseded by
+the "UX pass"/"Segundo UX pass" decisions already recorded earlier in this section's history, see
+[[game-lobby-frontend]] - banlist-only, `BanByFilterFields` covers bulk-ban-by-criteria instead of
+a whitelist). What this pass actually closed: a new leaf module
+`features/game/lib/pool-stats.ts` (`computePoolCounts`/`poolShortfalls`/`searchPoolItems`, unit
+tested in isolation), wired into `power-pool-fields.tsx` (a shortfall warning banner visible while
+collapsed, plus a remaining-count line per selected power manga) and `banlist-field.tsx`
+(diacritic-insensitive multi-token search replacing the old plain `includes()`, clear-search and
+clear-banlist buttons, kind badges, result-count copy) - both `lobby-config-panel.tsx` and
+`create-lobby-screen.tsx` compute the new counts/shortfalls locally via `useMemo`, no container or
+endpoint changes needed. 13 new `game.pool.*` i18n keys in all three locales. Backend: audited
+`checkPoolSufficiency`/`beginRound`'s per-round `PoolFilter.Apply` and confirmed no feature gap
+existed, only a test-coverage gap - closed with
+`game_service_pool_filter_test.go` (Gauntlet + Versus across every round, both exhaustion paths,
+JoJo-only irrelevant-fruit case, actual-occupancy vs configured-capacity, `EditLobbyConfig` path)
+plus one new `pool_filter_test.go` case. Verified: backend `go build`/`go vet`/`go test ./...`
+clean; frontend `tsc --noEmit` clean, `pnpm lint` 0 errors, `pnpm test:ci` green 48 suites / 511
+tests. Full writeup in [[game-lobby-frontend]]'s dated section. Merged to `develop`
+(`acefa7a..a57fa12`, fast-forward).
 
 ## 5. Frontend: drag-to-move-player (MANDATORY as of 2026-08-28, not optional anymore)
 

@@ -176,6 +176,70 @@ a real RN `Invariant Violation` crash on native, not a style nit. And added `Inf
 (`features/game/components/**/__tests__/` didn't exist) - added coverage for `config-form.ts` and
 `lobby-config-panel.tsx`. Full writeup and commit hashes in [[game-lobby-todo]]'s §3.
 
+## Power-pool hardening (§4 closed, 2026-09-01)
+
+Closed [[game-lobby-todo]]'s §4 for real - the banlist-only UI (see this note's "UX pass" and
+"Segundo UX pass" sections above) had no remaining-count feedback, no shortfall warning, and a
+plain `includes()` substring search with no diacritic folding, no result-count copy, and no way to
+clear a search or the whole banlist from the field itself.
+
+- **New leaf module** `features/game/lib/pool-stats.ts` - `computePoolCounts` (per-kind
+  total/remaining over the catalog minus a Set of banned ids, never negative, ignores stale banned
+  ids no longer in the catalog), `poolShortfalls` (mirrors the backend's `checkPoolSufficiency` in
+  `game_service.go`: JOJO's selected power manga needs enough Stands, ONE_PIECE's needs enough
+  Devil Fruits, only for mangas actually selected - **deliberately stricter than the backend**,
+  which checks actual seated occupancy; the UI has no live roster here, so it uses the configured
+  `teamSize` instead), and `searchPoolItems` (NFD-normalize + lowercase diacritic folding, every
+  whitespace-split query token must match AND order-independent, excludes already-banned ids,
+  respects a result limit while reporting the true total). Declares its own structural `PoolItem`
+  type instead of importing `BannableItem` from `banlist-field.tsx`, on purpose - keeps this a leaf
+  module with no lib→component edge, importable from jest's `logic` project.
+- `power-pool-fields.tsx` now renders a warning banner (`GlassPanel` + `AlertTriangle`, `role=alert`
+  via `a11yProps`) ABOVE the `FilterDisclosure` so it stays visible while collapsed, plus a
+  remaining-count line per selected power manga inside the disclosure body. `FilterDisclosure`
+  itself was left untouched (it's shared with Stands/Stages filters).
+- `banlist-field.tsx`'s search now goes through `searchPoolItems`, gained a clear-search
+  `GlossButton` (circle, `X` icon, shown only while the query is non-empty), a clear-banlist
+  `GlossButton` behind a new optional `onClearBanlist` prop (shown only when `editable && banned.
+  length > 0`), a per-result kind badge (Stand vs Devil Fruit, since same-named powers exist across
+  both catalogs), and result-count/no-matches copy.
+- Both `lobby-config-panel.tsx` and `create-lobby-screen.tsx` compute `counts`/`shortfalls` locally
+  via `useMemo` straight from `banlistItems`/`poolFilter.banned`/`powerMangas`/`teamSize`, all of
+  which they already had - **no container or endpoint changes needed**, confirmed by reading the
+  container tree first rather than assuming a new query was required.
+- `banlistItems.length > 0` stands in for "catalog known" in both screens (`poolShortfalls`'s
+  `catalogKnown` param) - `banlistItems` comes from `useStands()`/`useDevilFruits()` further up the
+  tree, so an empty array can mean either "still loading" or "genuinely empty catalog"; treating
+  both as unknown avoids a false shortfall alarm while loading, at the cost of skipping the check on
+  a truly empty catalog (an edge case this project doesn't otherwise support).
+- i18n: 13 new keys under `game.pool.*` in all three locales (`remainingTitle`, `remainingStands`,
+  `remainingFruits`, `insufficientStands`, `insufficientFruits`, `banlistClear(Hint)`,
+  `banlistClearSearch(Hint)`, `banlistNoMatches`, `banlistResultCount`, `kindStand`,
+  `kindDevilFruit`) - no em/en dashes, passes `copy.test.ts`.
+- **Gotcha hit while writing `banlist-field.test.tsx`**: `fireEvent.press`/`fireEvent.changeText`
+  against this component's `GlossButton`/`GlassField` need `await act(async () => { ... })`, not a
+  bare synchronous `act(() => { ... })` - the latter left the query text/state update unflushed by
+  the time the next assertion ran (`skills-field.test.tsx` already used the `await act(async...)`
+  form for its one `changeText` call; this pass needed it on every interaction, including
+  `fireEvent.press`, not just `changeText`).
+- Backend: `checkPoolSufficiency`/`beginRound`'s per-round `PoolFilter.Apply` were audited and
+  confirmed already mode-agnostic and covering both power kinds - purely a test-coverage gap, no
+  production code changed. New
+  `apps/backend/internal/application/services/game_service_pool_filter_test.go` covers Gauntlet +
+  Versus (per-round reassignment proven across all `VersusRounds`), both exhaustion paths, the
+  JoJo-only irrelevant-fruit-exhaustion case, actual-occupancy vs configured-capacity, and the
+  `EditLobbyConfig` path the frontend's config-edit panel actually uses. `pool_filter_test.go` also
+  gained a banlist-only (no allowlist) `Apply` case banning both a Stand and a DevilFruit in one
+  call.
+
+Verified: backend `go build`/`go vet`/`go test ./...` clean (via Docker, host `go test` still
+blocked - see [[feedback_backend_tests_via_docker]]); frontend `tsc --noEmit` clean, `pnpm lint` 0
+errors (pre-existing CRLF prettier warnings only, environment artifact unrelated to this pass),
+`pnpm test:ci` green 48 suites / 511 tests (`--maxWorkers=2` to avoid the documented
+`use-loadout-reveal`/`tooltip` full-parallel flake - see `norma-verificacion-docker.md`). Merged to
+`develop` as a fast-forward (3 atomic commits: `pool-stats.ts` + tests, UI wiring + i18n, backend
+tests).
+
 Related: [[game-lobby-management]], [[gameplay-game-modes]], [[frontend-stack]],
 [[frontend-responsive-frutiger-aero]], [[i18n-multi-language]], [[zettelkasten-workflow]],
 [[norma-tooltips-y-ayuda-contextual]], [[game-match-assignment-frontend]].
