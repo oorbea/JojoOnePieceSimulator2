@@ -117,13 +117,20 @@ subir el estado, añadir otra notificación. Ver [[norma-teclado]].
   corrida - la flakiness ya documentada en [[norma-verificacion-docker]], no una regresión. Bajar a
   `--maxWorkers=3` da una corrida completa estable.
 
+**Cerrado (2026-09-01, mismo día, tanda de limpieza aparte)**: las dos minas de tests quedaron
+arregladas - `stand-card`/`stage-card`/`devil-fruit-card` ya envuelven cada `fireEvent.press` en su
+propio `await act(async () => ...)` (mismo idiom que `stand-form-modal.test.tsx`), y
+`useHoverTrigger` limpia `showTimer`/`hideTimer` en un `useEffect` de desmontaje - un timer vivo ya
+no puede disparar contra un componente desmontado ni colarse en el siguiente test. Verificado: suite
+completa 51/51 (551/551 tests) en Docker, `--maxWorkers=3`. Si `tooltip.test.tsx` vuelve a dar
+flaky, ya no es por esto - mirar el patrón de contención por paralelismo documentado en
+[[norma-verificacion-docker]].
+
 ## Pendiente
 
 - El walkthrough en vivo a dos navegadores (empate real, reconexión a media votación, pase
   keyboard-only) sigue abierto desde 2026-08-26; esta tanda no lo desbloquea ni lo cierra.
 - Per-power visual FX sigue siendo **plan documentado, no construido** - [[gameplay-power-fx]].
-- Las dos minas de tests descritas arriba (`fireEvent.press` sin await en las tres `*-card`, y el
-  timer sin limpiar de `useHoverTrigger`).
 
 Related: [[game-lobby-todo]], [[game-vote-buttons-2026-08-26]], [[game-round-result-2026-08-28]],
 [[game-realtime-transport]], [[game-match-assignment-frontend]], [[norma-teclado]],
