@@ -1,4 +1,4 @@
-import { fireEvent, renderWithProviders, screen } from '@/test/render'
+import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 import enGB from '@/shared/i18n/locales/en-GB.json'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 
@@ -33,10 +33,17 @@ describe('DevilFruitCard', () => {
     const onDelete = jest.fn()
     await renderWithProviders(<DevilFruitCard devilFruit={baseFruit()} onEdit={onEdit} onDelete={onDelete} />)
 
-    fireEvent.press(screen.getByLabelText('Edit Gomu Gomu no Mi'))
+    // Each press gets its own awaited act() - two bare fireEvent.press
+    // calls back to back leave overlapping act scopes that corrupt
+    // React's act-nesting for whatever test renders next in this file.
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Edit Gomu Gomu no Mi'))
+    })
     expect(onEdit).toHaveBeenCalledTimes(1)
 
-    fireEvent.press(screen.getByLabelText('Delete Gomu Gomu no Mi'))
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Delete Gomu Gomu no Mi'))
+    })
     expect(onDelete).toHaveBeenCalledTimes(1)
   })
 })
