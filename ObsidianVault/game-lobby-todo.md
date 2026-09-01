@@ -123,7 +123,7 @@ Verified: `tsc --noEmit` clean, full frontend suite green - 46 suites / 482 test
 before this pass, exactly the two new test files, nothing broken). Committed as `1d93c68`,
 `ef0e8e9`, `721d76b` on `develop`.
 
-## 4. Frontend: power-pool restriction UI (rarity/fruit-type/banlist)
+## 4. Frontend: power-pool restriction UI (rarity/fruit-type/banlist) - DONE (2026-09-01)
 
 **Backend is ready**: `PoolFilterPayload` (`apps/backend/internal/infrastructure/api/dto/game_ws.go`)
 accepts `standRarities`/`fruitRarities`/`fruitTypes`/`banned` and is already part of
@@ -145,6 +145,26 @@ accepts `standRarities`/`fruitRarities`/`fruitTypes`/`banned` and is already par
   state and pass it through on submit.
 - i18n: `game.pool.*` (title, rarities, fruitTypes, banlist, banlistSearch, banlistEmpty, banned,
   removeBan, clearAll) in all three locales.
+
+**2026-09-01 hardening pass**: the rarity/fruit-type chips above were never built (superseded by
+the "UX pass"/"Segundo UX pass" decisions already recorded earlier in this section's history, see
+[[game-lobby-frontend]] - banlist-only, `BanByFilterFields` covers bulk-ban-by-criteria instead of
+a whitelist). What this pass actually closed: a new leaf module
+`features/game/lib/pool-stats.ts` (`computePoolCounts`/`poolShortfalls`/`searchPoolItems`, unit
+tested in isolation), wired into `power-pool-fields.tsx` (a shortfall warning banner visible while
+collapsed, plus a remaining-count line per selected power manga) and `banlist-field.tsx`
+(diacritic-insensitive multi-token search replacing the old plain `includes()`, clear-search and
+clear-banlist buttons, kind badges, result-count copy) - both `lobby-config-panel.tsx` and
+`create-lobby-screen.tsx` compute the new counts/shortfalls locally via `useMemo`, no container or
+endpoint changes needed. 13 new `game.pool.*` i18n keys in all three locales. Backend: audited
+`checkPoolSufficiency`/`beginRound`'s per-round `PoolFilter.Apply` and confirmed no feature gap
+existed, only a test-coverage gap - closed with
+`game_service_pool_filter_test.go` (Gauntlet + Versus across every round, both exhaustion paths,
+JoJo-only irrelevant-fruit case, actual-occupancy vs configured-capacity, `EditLobbyConfig` path)
+plus one new `pool_filter_test.go` case. Verified: backend `go build`/`go vet`/`go test ./...`
+clean; frontend `tsc --noEmit` clean, `pnpm lint` 0 errors, `pnpm test:ci` green 48 suites / 511
+tests. Full writeup in [[game-lobby-frontend]]'s dated section. Merged to `develop`
+(`acefa7a..a57fa12`, fast-forward).
 
 ## 5. Frontend: drag-to-move-player (MANDATORY as of 2026-08-28, not optional anymore)
 
@@ -278,12 +298,25 @@ option bars + voter avatars, reusing `voteOptions`' label/tone mapping via a new
 `RESOLVING` and, as a second variant, above the revote's own `VoteBar` during `TIEBREAK`; a local-only
 `dismissResult()`/`resultDismissed` in the socket store drives the "skip" button - the server alone
 decides when RESOLVING actually ends, skip only hides the panel client-side. Still out of scope: the
-final result screen (`GAME_FINISHED` still just toasts and bounces to `/play`).
-- `LoadoutModal`'s open state isn't wired into the new hotkey `blocked` guard yet (lives inside
-  `MatchRoster`, not the container) — small, documented gap, see [[norma-teclado.md]].
-- No automated test for `use-roving-group.ts`'s web-only keyboard branch — `hooks/__tests__` always
-  runs under jest's native project per the current `jest.config.js` split, where the web branch
-  never engages. Needs either a new jsdom hooks lane or relocating this one test.
+final result screen (`GAME_FINISHED` still just toasts and bounces to `/play`) - **cerrado ya, ver
+la sección siguiente**.
+- ~~`LoadoutModal`'s open state isn't wired into the new hotkey `blocked` guard yet.~~ **RESUELTO
+  2026-09-01** via `onModalOpenChange`, ver [[norma-teclado]].
+- ~~No automated test for `use-roving-group.ts`'s web-only keyboard branch.~~ **RESUELTO 2026-09-01**
+  con el carril `.web.test.tsx` (proyecto jsdom), 14 tests.
+
+**Pantalla de resultado final + rematch - DONE (2026-09-01)**, ver
+[[game-final-result-2026-09-01]] para el writeup completo: cierra el último hueco de §6. Backend:
+`closesAt` sellado desde el deadline autoritativo, deadline de fase persistido y re-armado al cargar
+(un reinicio ya no encalla la sala), un juego terminado sigue legible bajo un TTL corto en vez de
+borrarse al instante, y un caso de uso real de rematch. Frontend: `MatchResultScreen` (veredicto,
+recap ronda a ronda, outcome por asiento) con `matchRecap()` puro y testeado, la fila de tally
+extraída a `vote-tally-row.tsx` y compartida con el panel de ronda viva, y el guard `blocked` de los
+hotkeys ya cubriendo ambos overlays. Verificado: backend 14 paquetes ok, frontend 51 suites / 551
+tests, typecheck y lint en verde.
+- Per-power visual FX sigue fuera de alcance a propósito ([[gameplay-power-fx]]).
+- El walkthrough en vivo a dos navegadores (empate real, reconexión a media votación, pase
+  keyboard-only) sigue pendiente desde 2026-08-26 - no lo desbloquea esta tanda.
 
 **Sorteo redesign to V1's jugador-por-jugador pacing — DONE (2026-08-30, owner request)**, see
 [[game-match-assignment-frontend]]'s dated section for the full writeup: the reveal replays

@@ -24,6 +24,11 @@ export const CLIENT_COMMAND = {
   // decision, 2026-08-30), mirroring REVEAL_READY exactly - no payload,
   // always applies to the caller.
   SUMMARY_READY: 'SUMMARY_READY',
+  // REMATCH asks for a brand new lobby carrying this finished/aborted
+  // game's whole roster over. Host-only, terminal-state-only, no payload -
+  // the new game's id comes back to every connected client as a
+  // REMATCH_READY frame, not as a reply to the requester alone.
+  REMATCH: 'REMATCH',
 } as const
 
 export type ClientCommandType = (typeof CLIENT_COMMAND)[keyof typeof CLIENT_COMMAND]
@@ -58,6 +63,7 @@ export const SERVER_FRAME = {
   REVEAL_READY_CHANGED: 'REVEAL_READY_CHANGED',
   SUMMARY_OPENED: 'SUMMARY_OPENED',
   SUMMARY_READY_CHANGED: 'SUMMARY_READY_CHANGED',
+  REMATCH_READY: 'REMATCH_READY',
 } as const
 
 export type ServerFrameType = (typeof SERVER_FRAME)[keyof typeof SERVER_FRAME]
@@ -79,3 +85,7 @@ export type RoundResolvedPayload = { roundIndex: number; winner: string; decided
 export type GameFinishedPayload = { result: GameResult }
 export type GameAbortedPayload = { reason: string }
 export type ResyncRequiredPayload = { reason: string }
+// Published on the OLD (finished/aborted) game's stream - gameId is the NEW
+// lobby to navigate to, so every client on the result screen follows the
+// roster over, not just whoever pressed Rematch.
+export type RematchReadyPayload = { gameId: string }

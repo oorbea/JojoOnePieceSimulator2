@@ -1,13 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
-import { VoterAvatar } from '@/features/game/components/presentational/match/voter-avatar'
+import { VoteTallyRow } from '@/features/game/components/presentational/match/vote-tally-row'
 import { voteTally } from '@/features/game/lib/vote-options'
 import type { GameRound, GameSnapshot, GameViewer } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { MeterBar } from '@/shared/components/presentational/meter-bar'
 
 type Props = {
   snapshot: GameSnapshot
@@ -71,58 +70,16 @@ export function RoundResultPanel({ snapshot, you, round, variant, onSkip }: Prop
         </GlowText>
       ) : (
         <YStack gap="$2.5">
-          {entries.map((entry) => {
-            const label = entry.labelKey ? t(entry.labelKey) : (entry.label ?? entry.id)
-            const isWinner = variant === 'result' && round.result?.winner === entry.id
-            return (
-              <YStack key={entry.id} gap="$1.5">
-                <XStack items="center" gap="$2.5">
-                  <YStack flex={1}>
-                    <GlowText level="label">{label}</GlowText>
-                    <MeterBar
-                      value={entry.count / maxCount}
-                      tone={
-                        entry.tone === 'red' ? 'red' : entry.tone === 'green' ? 'green' : 'blue'
-                      }
-                      a11yLabel={t('game.match.result.votesA11y', {
-                        count: entry.count,
-                        option: label,
-                      })}
-                    />
-                  </YStack>
-                  <GlowText level="label" tone="soft" minW={24}>
-                    {entry.count}
-                  </GlowText>
-                </XStack>
-                {entry.voterIds.length > 0 ? (
-                  <XStack
-                    flexWrap="wrap"
-                    gap="$1.5"
-                    style={
-                      isWinner
-                        ? ({
-                            outlineWidth: 2,
-                            outlineColor: '$channelActive',
-                            outlineStyle: 'solid',
-                          } as object)
-                        : undefined
-                    }
-                  >
-                    {entry.voterIds.map((id) => {
-                      const participant = snapshot.participants.find((p) => p.id === id)
-                      return participant ? (
-                        <VoterAvatar
-                          key={id}
-                          participant={participant}
-                          isSelf={id === you.participantId}
-                        />
-                      ) : null
-                    })}
-                  </XStack>
-                ) : null}
-              </YStack>
-            )
-          })}
+          {entries.map((entry) => (
+            <VoteTallyRow
+              key={entry.id}
+              entry={entry}
+              maxCount={maxCount}
+              isWinner={variant === 'result' && round.result?.winner === entry.id}
+              participants={snapshot.participants}
+              selfParticipantId={you.participantId}
+            />
+          ))}
         </YStack>
       )}
     </GlassPanel>

@@ -13,6 +13,12 @@ import type { GameParticipant, GameSnapshot } from '@/features/game/types/game.t
 type Props = {
   snapshot: GameSnapshot
   selfId: string
+  /** Fired whenever the loadout modal opens or closes. This component keeps
+   * owning that state (it's the one with `mangas` in hand for the modal's
+   * content), but the container needs to know an overlay is up so it can
+   * suppress the single-key match hotkeys - see use-match-hotkeys' `blocked`.
+   * Optional: a caller that has no hotkeys to suppress just omits it. */
+  onModalOpenChange?: (open: boolean) => void
 }
 
 // VERSUS: two tone-colored columns (reusing the lobby's team tone mapping).
@@ -23,10 +29,18 @@ type Props = {
 // since it's the one that owns "which participant's modal is open" and has
 // `mangas` in hand. Only rendered once the sorteo overlay (RevealStage) has
 // finished, so every participant here already has their full loadout.
-export function MatchRoster({ snapshot, selfId }: Props) {
+export function MatchRoster({ snapshot, selfId, onModalOpenChange }: Props) {
   const { t } = useTranslation()
   const mangas = snapshot.config.powerMangas
   const [modalParticipant, setModalParticipant] = useState<GameParticipant | null>(null)
+
+  // Single funnel for every open/close, so the notification can never drift
+  // out of sync with the state itself (both the roving-group activation and
+  // the tile press go through here).
+  const openModal = (participant: GameParticipant | null) => {
+    setModalParticipant(participant)
+    onModalOpenChange?.(participant !== null)
+  }
 
   // Render order (teams flattened in VERSUS, snapshot order in GAUNTLET) is
   // the same order arrow-key roving moves through - one flat group across
@@ -39,7 +53,7 @@ export function MatchRoster({ snapshot, selfId }: Props) {
   const { getItemProps } = useRovingGroup({
     groupId: 'roster-tile',
     count: orderedParticipants.length,
-    onActivate: (index) => setModalParticipant(orderedParticipants[index]),
+    onActivate: (index) => openModal(orderedParticipants[index]),
   })
 
   const renderTile = (p: GameParticipant) => {
@@ -50,7 +64,7 @@ export function MatchRoster({ snapshot, selfId }: Props) {
         participant={p}
         isSelf={p.id === selfId}
         mangas={mangas}
-        onOpenModal={setModalParticipant}
+        onOpenModal={openModal}
         itemProps={getItemProps(index)}
       />
     )
@@ -62,7 +76,7 @@ export function MatchRoster({ snapshot, selfId }: Props) {
       participant={modalParticipant}
       isSelf={modalParticipant?.id === selfId}
       mangas={mangas}
-      onClose={() => setModalParticipant(null)}
+      onClose={() => openModal(null)}
     />
   )
 

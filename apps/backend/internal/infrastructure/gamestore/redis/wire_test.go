@@ -2,6 +2,7 @@ package redis
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -171,6 +172,57 @@ func TestDecodeToleratesMissingAvatarFields(t *testing.T) {
 	if host.AvatarThumbKey() != "" || host.GooglePicture() != "" {
 		t.Errorf("expected empty avatar fields on a legacy payload, got thumb=%q google=%q",
 			host.AvatarThumbKey(), host.GooglePicture())
+	}
+}
+
+// TestEncodeDecodeRoundTrip_PhaseEndsAt covers the durable phase deadline
+// across the wire encoding, plus the legacy payload that predates the field.
+func TestEncodeDecodeRoundTrip_PhaseEndsAt(t *testing.T) {
+	g := buildTestGame(t)
+	deadline := time.Now().Add(37 * time.Second).UTC().Truncate(time.Second)
+	g.SetPhaseDeadline(deadline)
+
+	payload, err := encode(g, time.Now())
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	if !strings.Contains(string(payload), "phaseEndsAt") {
+		t.Fatalf("encoded payload carries no phaseEndsAt: %s", payload)
+	}
+
+	restored, err := decode(payload)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	got, ok := restored.PhaseEndsAt()
+	if !ok {
+		t.Fatal("phase deadline lost across the wire encoding")
+	}
+	if !got.Equal(deadline) {
+		t.Fatalf("PhaseEndsAt = %v, want %v", got, deadline)
+	}
+
+	// A payload written before this field existed must still decode cleanly
+	// (the additive-omitempty rule on snapshotVersion), leaving no deadline.
+	var env map[string]any
+	if err := json.Unmarshal(payload, &env); err != nil {
+		t.Fatalf("unmarshal into map: %v", err)
+	}
+	gameObj, ok := env["game"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected envelope shape, no game object: %+v", env)
+	}
+	delete(gameObj, "phaseEndsAt")
+	legacy, err := json.Marshal(env)
+	if err != nil {
+		t.Fatalf("re-marshal: %v", err)
+	}
+	legacyGame, err := decode(legacy)
+	if err != nil {
+		t.Fatalf("decode legacy (phaseEndsAt-less) payload: %v", err)
+	}
+	if _, ok := legacyGame.PhaseEndsAt(); ok {
+		t.Fatal("a legacy payload must decode to no phase deadline")
 	}
 }
 
