@@ -397,7 +397,7 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 			if votingWindow == 0 {
 				votingWindow = e.cfg.VotingWindow
 			}
-			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealMs, evt.SummaryWindow)
+			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealMs, evt.SummaryWindow, evt.ClosesAt)
 			if frameType == "" {
 				continue
 			}
@@ -431,7 +431,11 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 // from the store, so a fresh STATE fetch would race ErrGameNotFound: the
 // event itself already carries everything a client needs to render the
 // terminal screen.
-func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs time.Duration, summaryWindow time.Duration) (frameType string, payload any, resendState bool) {
+//
+// closesAt is the authoritative deadline the service stamped on the event
+// at publish time (services.GameEvent.ClosesAt); it is used verbatim for
+// the three timed frames. See frameDeadline for the fallback.
+func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs time.Duration, summaryWindow time.Duration, closesAt time.Time) (frameType string, payload any, resendState bool) {
 	switch e := evt.(type) {
 	case game.PlayerJoined:
 		return dto.FramePlayerJoined, dto.PlayerJoinedPayload{ParticipantID: e.ParticipantID.String()}, true
@@ -447,7 +451,7 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, true
 	case game.VotingOpened:
 		return dto.FrameVotingOpened, dto.VotingOpenedPayload{
-			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(votingWindow).Format(time.RFC3339),
+			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, votingWindow),
 		}, true
 	case game.VoteCast:
 		return dto.FrameVoteCast, dto.VoteCastPayload{
@@ -459,7 +463,7 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, false
 	case game.SummaryOpened:
 		return dto.FrameSummaryOpened, dto.SummaryOpenedPayload{
-			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(summaryWindow).Format(time.RFC3339),
+			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, summaryWindow),
 		}, true
 	case game.SummaryReadyChanged:
 		return dto.FrameSummaryReadyChanged, dto.SummaryReadyChangedPayload{
@@ -467,7 +471,7 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 		}, false
 	case game.TiebreakOpened:
 		return dto.FrameTiebreakOpened, dto.TiebreakOpenedPayload{
-			RoundIndex: e.RoundIndex, ClosesAt: time.Now().Add(votingWindow).Format(time.RFC3339),
+			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, votingWindow),
 		}, true
 	case game.RoundResolved:
 		return dto.FrameRoundResolved, dto.RoundResolvedPayload{
@@ -493,6 +497,25 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealMs 
 	default:
 		return "", nil, false
 	}
+}
+
+// frameDeadline renders a timed frame's closesAt. It prefers the
+// authoritative deadline the service stamped on the event when it armed the
+// phase's own timer, so the client's countdown matches the server's to the
+// millisecond no matter how long hub delivery took.
+//
+// The time.Now()+window fallback only applies to a zero closesAt, which
+// should not happen for any of the three timed frames: it would mean the
+// event was published without its phase's deadline recorded - i.e. a frame
+// delivered after its own window already closed, or a new emit path that
+// publishes before arming its timer (see GameService.publish's doc). Kept
+// rather than emitting an empty string so a client always gets *some*
+// countdown to render.
+func frameDeadline(closesAt time.Time, window time.Duration) string {
+	if closesAt.IsZero() {
+		return time.Now().Add(window).Format(time.RFC3339)
+	}
+	return closesAt.Format(time.RFC3339)
 }
 
 // pushCurrentState fetches the freshest state for gameID and sends it. Used
