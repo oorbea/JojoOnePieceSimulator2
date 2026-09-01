@@ -58,6 +58,13 @@ type wireGame struct {
 	Teams        []wireTeam        `json:"teams"`
 	Stages       []wireStage       `json:"stages"`
 	Rounds       []wireRound       `json:"rounds"`
+	// PhaseEndsAt is additive/omitempty with a safe default, exactly like
+	// Visibility/RevealSpeed on wireConfig - a payload written before this
+	// field existed decodes as nil, which game.Restore keeps as "no deadline
+	// recorded" and GameService.rearmPhaseTimerLocked handles by arming a
+	// fresh full window rather than wedging. So no snapshotVersion bump, per
+	// that const's own stated criterion.
+	PhaseEndsAt *time.Time `json:"phaseEndsAt,omitempty"`
 }
 
 // Mangas is a legacy field - see game.ConfigSnapshot's doc comment. A
@@ -186,6 +193,7 @@ func toWire(s game.Snapshot) wireGame {
 		Teams:        make([]wireTeam, 0, len(s.Teams)),
 		Stages:       make([]wireStage, 0, len(s.Stages)),
 		Rounds:       make([]wireRound, 0, len(s.Rounds)),
+		PhaseEndsAt:  s.PhaseEndsAt,
 	}
 
 	for _, p := range s.Participants {
@@ -329,6 +337,7 @@ func fromWire(w wireGame) game.Snapshot {
 		Teams:        make([]game.TeamSnapshot, 0, len(w.Teams)),
 		Stages:       make([]game.StageSnapshot, 0, len(w.Stages)),
 		Rounds:       make([]game.RoundSnapshot, 0, len(w.Rounds)),
+		PhaseEndsAt:  w.PhaseEndsAt,
 	}
 
 	for _, wp := range w.Participants {
