@@ -161,6 +161,14 @@ type GameService struct {
 	// client joining/reconnecting mid-summary gets the real remaining time.
 	// Same process-memory-only caveat as revealEnds/votingEnds/resultEnds.
 	summaryEnds map[game.GameID]time.Time
+
+	finalizedMu sync.Mutex
+	// finalized remembers which Games this process has already recorded
+	// history for, so a post-finish Reconnect/Disconnect (both legal against
+	// a terminal game, both routed through withGame's Finished branch) does
+	// not re-issue the inserts on every client reload. Purely an
+	// optimization - the inserts themselves are idempotent.
+	finalized map[game.GameID]struct{}
 }
 
 // NewGameService builds a GameService. history may be nil until an
@@ -192,6 +200,7 @@ func NewGameService(
 		votingEnds:  make(map[game.GameID]time.Time),
 		resultEnds:  make(map[game.GameID]time.Time),
 		summaryEnds: make(map[game.GameID]time.Time),
+		finalized:   make(map[game.GameID]struct{}),
 	}
 }
 
@@ -1099,23 +1108,67 @@ func (s *GameService) withGame(ctx context.Context, id game.GameID, fn func(g *g
 	return g, nil
 }
 
-// finalizeLocked records g's outcome (best-effort, tolerating a nil
-// history port) and removes it from the store. Callers must already hold
-// g's lock.
+// FinishedGameTTL is how long a FINISHED/ABORTED game stays readable in the
+// store before it expires. Deliberately short and deliberately NOT the
+// lobby TTL (config.Config.GameLobbyTTL, 2h): a terminal game only needs to
+// outlive its players reading the result screen, and keeping it around for
+// hours would be a pure storage cost with nothing to join.
+//
+// It lives here rather than next to defaultGameLobbyTTL because that const
+// is package-private to internal/config, which the application layer must
+// not import.
+const FinishedGameTTL = 15 * time.Minute
+
+// finalizeLocked records g's outcome (best-effort, tolerating a nil history
+// port) and saves it back under a short TTL. Callers must already hold g's
+// lock.
+//
+// It used to Delete the game outright the instant it reached
+// FINISHED/ABORTED, which made a result screen impossible: the terminal
+// frame and the client's follow-up read raced, and the read almost always
+// lost with ErrGameNotFound. The aggregate now survives for
+// FinishedGameTTL, long enough for every client to fetch the final STATE.
+// It disappears from the public lobby browser regardless - both store
+// implementations re-derive IsPubliclyJoinable on save, and that is false
+// the moment state leaves LOBBY.
 func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
-	if result, err := g.Result(); err != nil {
-		log.Printf("computing result for finished game %s: %v", g.ID(), err)
-	} else if s.history != nil {
-		if err := s.history.Record(ctx, result); err != nil {
-			log.Printf("recording history for game %s: %v", g.ID(), err)
+	id := g.ID()
+
+	// Record history exactly once per game, however many times a post-finish
+	// Reconnect/Disconnect re-enters this branch. Both are legal against a
+	// finished game and both flow through withGame's Finished branch, so
+	// without this a reconnecting client would re-issue the inserts on every
+	// reload. Correctness does not depend on it - the inserts are idempotent
+	// (see the repository's ON CONFLICT DO NOTHING) - this only avoids the
+	// pointless round trips.
+	s.finalizedMu.Lock()
+	_, already := s.finalized[id]
+	if !already {
+		s.finalized[id] = struct{}{}
+	}
+	s.finalizedMu.Unlock()
+
+	if !already {
+		if result, err := g.Result(); err != nil {
+			log.Printf("computing result for finished game %s: %v", id, err)
+		} else if s.history != nil {
+			if err := s.history.Record(ctx, result); err != nil {
+				log.Printf("recording history for game %s: %v", id, err)
+			}
 		}
 	}
 
-	if err := s.store.Delete(ctx, g.ID()); err != nil {
-		log.Printf("deleting finished game %s: %v", g.ID(), err)
+	if err := s.store.SaveWithTTL(ctx, g, FinishedGameTTL); err != nil {
+		log.Printf("saving finished game %s: %v", id, err)
 	}
-	s.cancelTimer(g.ID())
-	s.locks.delete(g.ID())
+	s.cancelTimer(id)
+	// Deliberately NOT s.locks.delete(id) here, unlike the pre-result-screen
+	// version of this method. The aggregate stays live and readable now, so
+	// evicting its mutex would let a later reader and a concurrent
+	// Reconnect/Disconnect serialize on two *different* mutex instances for
+	// the same logical game - i.e. no serialization at all. The lock map's
+	// own entry is a few words; leaking one per finished game until the
+	// process restarts is far cheaper than that race.
 }
 
 // publish drains every DomainEvent g has accumulated since the last call
