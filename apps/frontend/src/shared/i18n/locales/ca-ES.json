@@ -465,6 +465,26 @@
       "abortedByHost": "L'amfitrió ha cancel·lat aquesta partida.",
       "finished": "Aquesta partida ha acabat."
     },
+    "result": {
+      "title": "Resultat final",
+      "winnerTeam": "Guanya {{team}}",
+      "survived": "L'escamot ha sobreviscut",
+      "fell": "L'escamot ha caigut",
+      "aborted": "Partida cancel·lada",
+      "abortedNotice": "L'amfitrió va cancel·lar aquesta partida abans d'acabar-la.",
+      "roundsPlayed": "{{count}} ronda(es) jugada(es)",
+      "recapTitle": "Ronda a ronda",
+      "roundLabel": "Ronda {{index}} - {{stage}}",
+      "outcomesTitle": "Jugadors",
+      "youWon": "El teu equip ha guanyat.",
+      "youLost": "El teu equip ha perdut.",
+      "back": "Tornar a les sales",
+      "backA11y": "Sortir d'aquesta partida i tornar a la llista de sales",
+      "rematch": "Revenja",
+      "rematchA11y": "Crear una sala nova amb els mateixos jugadors",
+      "rematchError": "No s'ha pogut crear la revenja. Torna-ho a provar.",
+      "summaryA11y": "Resultat final d'aquesta partida"
+    },
     "a11y": {
       "playerRow": "{{name}}"
     }

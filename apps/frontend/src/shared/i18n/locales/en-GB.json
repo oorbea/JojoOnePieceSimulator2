@@ -465,6 +465,26 @@
       "abortedByHost": "The host cancelled this game.",
       "finished": "This game has finished."
     },
+    "result": {
+      "title": "Final result",
+      "winnerTeam": "{{team}} wins",
+      "survived": "The squad survived",
+      "fell": "The squad fell",
+      "aborted": "Game cancelled",
+      "abortedNotice": "The host cancelled this game before it finished.",
+      "roundsPlayed": "{{count}} round(s) played",
+      "recapTitle": "Round by round",
+      "roundLabel": "Round {{index}} - {{stage}}",
+      "outcomesTitle": "Players",
+      "youWon": "Your team won.",
+      "youLost": "Your team lost.",
+      "back": "Back to lobbies",
+      "backA11y": "Leave this game and go back to the lobby list",
+      "rematch": "Rematch",
+      "rematchA11y": "Start a new lobby with the same players",
+      "rematchError": "Could not start a rematch. Try again.",
+      "summaryA11y": "Final result of this game"
+    },
     "a11y": {
       "playerRow": "{{name}}"
     }
