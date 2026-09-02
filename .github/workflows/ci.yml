@@ -140,7 +140,10 @@ jobs:
           POSTGRES_USER: ci
           POSTGRES_PASSWORD: ci
           POSTGRES_DB: ci
-          JWT_SECRET: ci-placeholder
+          # Only interpolated into the rendered compose config, never used to
+          # boot the app - but it still has to clear config.go's 32-character
+          # minJWTSecretLen, or this job becomes a trap the day it does.
+          JWT_SECRET: ci-placeholder-not-a-real-secret-32chars
         run: |
           docker compose \
             -f deployments/docker-compose.yml \
