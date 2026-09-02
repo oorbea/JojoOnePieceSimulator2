@@ -5,7 +5,7 @@ import { initReactI18next } from 'react-i18next'
 import caES from '@/shared/i18n/locales/ca-ES.json'
 import enGB from '@/shared/i18n/locales/en-GB.json'
 import esES from '@/shared/i18n/locales/es-ES.json'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 
 // Every supported locale, in the same order as the backend's
 // enums.Locales() (apps/backend .../domain/enums/locale.go).

@@ -1,4 +1,4 @@
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 // Pure, presentation-agnostic helpers behind §4's power-pool hardening pass
 // (see ObsidianVault/game-lobby-todo.md §4 and game-lobby-frontend.md's UX

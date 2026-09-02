@@ -1,40 +1,12 @@
 import { z } from 'zod'
 
-import {
-  powerTranslationsFormSchema,
-  type TranslationFormValues,
-} from '@/shared/lib/power-translations'
-import {
-  fruitTypeSchema,
-  raritySchema,
-  type FruitType,
-  type Locale,
-  type PictureStatus,
-  type Rarity,
-} from '@/shared/lib/zod'
+import { powerTranslationsFormSchema } from '@/shared/lib/power-translations'
+import { fruitTypeSchema, raritySchema, type FruitType, type Rarity } from '@/shared/contracts/enums'
 
-// Mirrors the backend's dto.DevilFruitResponse.
-export type DevilFruitResponse = {
-  id: string
-  name: string
-  description: string
-  rarity: Rarity
-  skills: string[]
-  picture: string
-  pictureThumb: string
-  pictureStatus: PictureStatus
-  fruitType: FruitType
-}
-
-// Mirrors dto.DevilFruitRequest — same body for create (POST) and update
-// (PUT). Translations replaced the old flat description/skills - see
-// stands.types.ts's StandInput for the identical reasoning.
-export type DevilFruitInput = {
-  name: string
-  translations: Partial<Record<Locale, TranslationFormValues>>
-  rarity: Rarity
-  fruitType: FruitType
-}
+// DevilFruitResponse/DevilFruitInput are generated
+// (dto.DevilFruitResponse/DevilFruitRequest) - Go decides the shape, this
+// is a rename re-export. See ObsidianVault/contratos-tipos-generados.md.
+export type { DevilFruitResponse, DevilFruitRequest as DevilFruitInput } from '@/shared/contracts/dto'
 
 export const devilFruitFormSchema = z.object({
   name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
@@ -45,6 +17,8 @@ export const devilFruitFormSchema = z.object({
 
 export type DevilFruitFormValues = z.infer<typeof devilFruitFormSchema>
 
+// Not generated - same reasoning as StandFilters (stands.types.ts):
+// ports.DevilFruitFilters is server-side only, never marshaled.
 export type DevilFruitFilters = {
   rarity?: Rarity
   fruitType?: FruitType

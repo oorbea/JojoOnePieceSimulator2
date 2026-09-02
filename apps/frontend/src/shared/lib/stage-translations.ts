@@ -1,7 +1,8 @@
 import { z } from 'zod'
 
 import { SUPPORTED_LOCALES } from '@/shared/i18n'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
+import type { StageTranslationRequest } from '@/shared/contracts/dto'
 
 // Stage's translations shape (description only, no skills - see the vault's
 // game-stage-content.md) is close enough to Power's that reuse was tempting,
@@ -12,7 +13,9 @@ import type { Locale } from '@/shared/lib/zod'
 // a "which locales are required" flag, this is a small sibling module - the
 // "all-or-nothing per optional locale" superRefine simply doesn't apply here.
 
-export type StageTranslationFormValues = { description: string }
+// Aliased to the generated wire shape - see power-translations.ts's
+// TranslationFormValues for why.
+export type StageTranslationFormValues = StageTranslationRequest
 export type StageTranslationsFormValues = Record<Locale, StageTranslationFormValues>
 
 // A function, not a singleton: react-hook-form's defaultValues become the

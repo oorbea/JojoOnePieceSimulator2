@@ -51,7 +51,14 @@ for cross-feature primitives, plus:
 - `shared/api/` — the axios client, auth/ETag interceptors, error
   normalization, the root query-key factory.
 - `shared/lib/` — platform-agnostic wrappers (`secure-storage`,
-  `async-storage`) and shared Zod schemas mirroring backend enums.
+  `async-storage`) and small hand-written schemas that compose generated
+  contracts (e.g. the translation-form superRefines) — never a hand-mirror
+  of a backend enum.
 - `shared/stores/` — app-wide zustand state (currently: session).
 - `shared/config/` — validated environment access.
-- `shared/types/` — DTO primitives shared across features.
+- `shared/contracts/` — **generated, do not edit.** The single source of
+  every wire DTO, enum, and WS command/frame shape, produced from Go by
+  `apps/backend/cmd/typegen`. If you need a type or schema for something
+  the backend sends or receives, import it from here (or from a feature's
+  `types/` file that re-exports it) — never redeclare it. See
+  `ObsidianVault/contratos-tipos-generados.md`.

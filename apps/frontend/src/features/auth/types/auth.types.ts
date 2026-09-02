@@ -1,8 +1,3 @@
-import type { UserResponse } from '@/shared/types/api'
-
-export type AuthGoogleResponse = {
-  accessToken: string
-  tokenType: string
-  expiresAt: string
-  user: UserResponse
-}
+// AuthGoogleResponse was a hand-mirror of dto.LoginResponse; now a rename
+// re-export of the generated type.
+export type { LoginResponse as AuthGoogleResponse } from '@/shared/contracts/dto'

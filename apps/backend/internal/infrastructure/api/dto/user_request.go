@@ -14,7 +14,7 @@ import (
 // is a 400, not a silent no-op.
 type UpdateProfileRequest struct {
 	Username string  `json:"username"`
-	Language *string `json:"language,omitempty"`
+	Language *string `json:"language,omitempty" ts:"Locale"`
 }
 
 // Validate checks Username against the same rule ChangeUsername enforces
@@ -59,7 +59,7 @@ func (r AdminUpdateUserRequest) Validate() error {
 // UpdateRoleRequest is the JSON body accepted by admin-only
 // PATCH /users/{id}/role.
 type UpdateRoleRequest struct {
-	Role string `json:"role"`
+	Role string `json:"role" ts:"UserRole"`
 }
 
 // Validate parses Role into an enums.UserRole, collecting a clear message on

@@ -1,7 +1,7 @@
 import { hasAllLoadouts, revealSlotKinds, type LoadoutSlotKind } from '@/features/game/lib/match-rules'
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameSnapshot } from '@/features/game/types/game.types'
-import type { Manga, RevealSpeed } from '@/shared/lib/zod'
+import type { Manga, RevealSpeed } from '@/shared/contracts/enums'
 
 // shouldReveal gates the sorteo on "an assignment frame arrived since the
 // last reveal" AND "the snapshot has actually caught up" AND "the game is

@@ -31,7 +31,7 @@ import {
   fromTranslationsResponse,
   toTranslationsPayload,
 } from '@/shared/lib/power-translations'
-import { fruitTypeSchema, raritySchema, type Locale } from '@/shared/lib/zod'
+import { fruitTypeSchema, raritySchema, type Locale } from '@/shared/contracts/enums'
 
 // A function, not a constant object - see stands-container.tsx's
 // createDefaultValues for why.

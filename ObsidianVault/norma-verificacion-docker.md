@@ -58,11 +58,22 @@ flake de `StageCard` ya documentado en [[game-match-assignment-frontend]]. Si un
 la corrida completa y pasa en aislamiento, es candidato a este mismo patrón antes de asumir una
 regresión real.
 
+## Contratos generados (2026-09-02)
+
+Desde [[contratos-tipos-generados]], `/verify` tiene un §4 propio: si el diff toca
+`apps/backend/cmd/typegen/**`, `dto/**`, `enums/**`, `apierr/**`, o
+`apps/frontend/src/shared/contracts/**`, regenerar y diffear es obligatorio (`make types-check-docker`,
+o el equivalente `docker compose ... run --rm typegen go run ./cmd/typegen` + `git diff --exit-code`
+en el host). Un cambio en esas rutas de backend implica **también** correr la suite de frontend
+aunque el diff todavía no tenga ningún fichero `apps/frontend/**` - regenerar debe producir uno.
+
 ## Mecanismo para no olvidarlo
 
 - Skill `/verify` (`.claude/skills/verify/SKILL.md`) - detecta qué se tocó (diff contra la rama
   base) y lanza los comandos Docker correspondientes.
 - Hook `Stop` en `settings.json` que recuerda los comandos exactos si hay cambios sin verificar al
   intentar terminar - configurado vía el skill `update-config`, no a mano.
+- CI (`.github/workflows/ci.yml`) tiene su propio job `contracts` que hace lo mismo en cada push -
+  ver [[contratos-tipos-generados]].
 
-Related: [[docker-setup]], [[zettelkasten-workflow]], [[game-vote-buttons-2026-08-26]].
+Related: [[docker-setup]], [[zettelkasten-workflow]], [[game-vote-buttons-2026-08-26]], [[contratos-tipos-generados]].

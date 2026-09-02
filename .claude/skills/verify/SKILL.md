@@ -19,7 +19,20 @@ files=$( { git status --porcelain | awk '{print $2}'; git diff --name-only "$bas
 
 - Any `apps/backend/**` in `$files` → run the backend checks (§2).
 - Any `apps/frontend/**` in `$files` → run the frontend checks (§3).
-- Neither → nothing to verify, say so and stop.
+- Any of these in `$files` → ALSO run the contracts check (§4), which is cheap and catches drift
+  the other two suites structurally cannot:
+  ```
+  apps/backend/cmd/typegen/**
+  apps/backend/internal/infrastructure/api/dto/**
+  apps/backend/internal/domain/enums/**
+  apps/backend/internal/infrastructure/api/apierr/**
+  apps/frontend/src/shared/contracts/**
+  ```
+- A change under any of those **backend** paths implies the frontend suite too, even with no
+  `apps/frontend/**` file in `$files` yet: regenerating is supposed to produce one, and
+  `pnpm typecheck` is what proves the new contract still compiles against the hand-written form
+  schemas that compose it (stand/devil-fruit/stage forms, translation superRefines).
+- None of the above → nothing to verify, say so and stop.
 
 ## 2. Backend — Docker, never host `go test`
 
@@ -65,7 +78,33 @@ If `pnpm test:ci` shows a handful of failures under full worker parallelism that
 or with `pnpm jest --ci --maxWorkers=2`, that's the known Docker flake pattern (see
 `norma-verificacion-docker.md`) — re-run once before treating it as a real regression.
 
-## 4. Report
+## 4. Contracts — regenerate and diff
+
+```
+docker compose -f deployments/docker-compose.yml -f deployments/docker-compose.test.yml \
+  run --rm typegen go run ./cmd/typegen
+git diff --exit-code -- apps/frontend/src/shared/contracts \
+  && test -z "$(git status --porcelain -- apps/frontend/src/shared/contracts)"
+```
+
+(`apps/backend/Makefile`'s `types-check-docker` target wraps exactly this.)
+
+A non-empty diff, or a new untracked file under `shared/contracts/`, is a **failure**, not
+information: it means the Go source moved (a DTO field, an enum member, an error code, the WS
+frame/command tables) and `apps/frontend/src/shared/contracts/` wasn't regenerated to match. Fix by
+committing the result of the run above, then re-run §3 — the regenerated types may no longer
+compile against the hand-written form schemas that compose them.
+
+The generator runs in its own `typegen` compose service, not `backend-test` — that service only
+bind-mounts `apps/backend` and cannot write `apps/frontend`. The diff/status check runs on the
+**host**, not inside the container: `golang:alpine` has no git, and `.git` isn't mounted into the
+`typegen` service on purpose (mounting it just to run `git diff` risks corrupting the index from a
+Linux container against a Windows checkout, for no benefit — see the same reasoning in
+`ObsidianVault/contratos-tipos-generados.md`). Host `git` itself is fine here; only freshly-built
+`go test` binaries are blocked by this machine's Application Control policy, and `cmd/typegen`
+neither is one nor imports anything that would trip it.
+
+## 5. Report
 
 State plainly, per file/suite: build ✓/✗, vet ✓/✗, tests N/N, lint errors (warnings from this
 Windows checkout's `core.autocrlf=true` are not failures — 0 errors is the bar). If anything failed,

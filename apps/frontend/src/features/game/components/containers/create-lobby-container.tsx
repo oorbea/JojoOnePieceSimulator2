@@ -8,7 +8,7 @@ import { useCreateGame } from '@/features/game/hooks/use-create-game'
 import { TEAM_SIZE_LIMITS, clampTeamSize } from '@/features/game/lib/config-form'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { toAppError } from '@/shared/api/errors'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga } from '@/shared/contracts/enums'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
 

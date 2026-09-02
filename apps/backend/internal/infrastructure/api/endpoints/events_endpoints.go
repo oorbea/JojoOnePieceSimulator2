@@ -13,19 +13,12 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
 
 // heartbeatInterval keeps the SSE connection from looking idle to any
 // intermediary (proxy, load balancer) that might otherwise time it out.
 const heartbeatInterval = 20 * time.Second
-
-// pictureEventDTO is PictureEvent's wire shape - camelCase to match every
-// other response DTO in this API.
-type pictureEventDTO struct {
-	Kind      string `json:"kind"`
-	SubjectID string `json:"subjectId"`
-	Status    string `json:"status"`
-}
 
 // EventsEndpoints serves the admin-only SSE stream of picture pipeline
 // events (PENDING -> READY/FAILED), replacing client-side polling.
@@ -115,7 +108,7 @@ func (e *EventsEndpoints) stream(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			data, err := json.Marshal(pictureEventDTO{
+			data, err := json.Marshal(dto.PictureEventPayload{
 				Kind:      evt.Kind.String(),
 				SubjectID: evt.SubjectID,
 				Status:    evt.Status.String(),

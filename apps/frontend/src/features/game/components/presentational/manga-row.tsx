@@ -5,7 +5,7 @@ import { XStack, YStack } from 'tamagui'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { InfoHint } from '@/shared/components/presentational/info-hint'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 const MANGAS: Manga[] = ['JOJO', 'ONE_PIECE']
 

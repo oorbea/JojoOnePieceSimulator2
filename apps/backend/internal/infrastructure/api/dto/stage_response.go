@@ -9,13 +9,13 @@ import (
 // StageResponse is the JSON representation of a Stage.
 type StageResponse struct {
 	ID            string `json:"id"`
-	Manga         string `json:"manga"`
+	Manga         string `json:"manga" ts:"Manga"`
 	Order         int    `json:"order"`
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	Picture       string `json:"picture"`
 	PictureThumb  string `json:"pictureThumb"`
-	PictureStatus string `json:"pictureStatus"`
+	PictureStatus string `json:"pictureStatus" ts:"PictureStatus"`
 }
 
 // NewStageResponse builds a StageResponse from a domain Stage, resolving its

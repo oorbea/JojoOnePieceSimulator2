@@ -6,7 +6,7 @@ import type { BannableItem, StandStatKey } from '@/features/game/components/pres
 import { GlassSelect, type GlassSelectOption } from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { fruitTypeSchema, raritySchema, standStatSchema, type FruitType, type Rarity } from '@/shared/lib/zod'
+import { fruitTypeSchema, raritySchema, standStatSchema, type FruitType, type Rarity } from '@/shared/contracts/enums'
 
 const RARITIES: Rarity[] = raritySchema.options
 const FRUIT_TYPES: FruitType[] = fruitTypeSchema.options

@@ -11,12 +11,12 @@ type DevilFruitResponse struct {
 	ID            string   `json:"id"`
 	Name          string   `json:"name"`
 	Description   string   `json:"description"`
-	Rarity        string   `json:"rarity"`
+	Rarity        string   `json:"rarity" ts:"PowerRarity"`
 	Skills        []string `json:"skills"`
 	Picture       string   `json:"picture"`
 	PictureThumb  string   `json:"pictureThumb"`
-	PictureStatus string   `json:"pictureStatus"`
-	FruitType     string   `json:"fruitType"`
+	PictureStatus string   `json:"pictureStatus" ts:"PictureStatus"`
+	FruitType     string   `json:"fruitType" ts:"FruitType"`
 }
 
 // NewDevilFruitResponse builds a DevilFruitResponse from a domain DevilFruit,

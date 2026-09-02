@@ -14,7 +14,7 @@ import type {
   GameRound,
   GameSnapshot,
 } from '@/features/game/types/game.types'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 const INITIAL_LIVE: LiveMatchState = {
   assignmentSeq: 0,
