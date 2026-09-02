@@ -15,24 +15,24 @@ import (
 type GameConfigResponse struct {
 	// StageMangas and PowerMangas are independent - see game.Config's doc
 	// comment.
-	StageMangas            []string           `json:"stageMangas"`
-	PowerMangas            []string           `json:"powerMangas"`
-	AbilitySource          string             `json:"abilitySource"`
+	StageMangas            []string           `json:"stageMangas" ts:"[]Manga"`
+	PowerMangas            []string           `json:"powerMangas" ts:"[]Manga"`
+	AbilitySource          string             `json:"abilitySource" ts:"AbilitySource"`
 	TeamSize               int                `json:"teamSize"`
 	AllowBots              bool               `json:"allowBots"`
-	Visibility             string             `json:"visibility"`
+	Visibility             string             `json:"visibility" ts:"LobbyVisibility"`
 	VotingWindowSeconds    int                `json:"votingWindowSeconds"`
 	PoolFilter             PoolFilterResponse `json:"poolFilter"`
-	RevealSpeed            string             `json:"revealSpeed"`
+	RevealSpeed            string             `json:"revealSpeed" ts:"RevealSpeed"`
 	SummaryDurationSeconds int                `json:"summaryDurationSeconds"`
 }
 
 // PoolFilterResponse mirrors game.PoolFilter. Empty arrays mean "no
 // restriction", exactly like the domain type.
 type PoolFilterResponse struct {
-	StandRarities []string `json:"standRarities"`
-	FruitRarities []string `json:"fruitRarities"`
-	FruitTypes    []string `json:"fruitTypes"`
+	StandRarities []string `json:"standRarities" ts:"[]PowerRarity"`
+	FruitRarities []string `json:"fruitRarities" ts:"[]PowerRarity"`
+	FruitTypes    []string `json:"fruitTypes" ts:"[]FruitType"`
 	Banned        []string `json:"banned"`
 }
 
@@ -77,13 +77,13 @@ type GameTeamResponse struct {
 type GameLoadoutResponse struct {
 	Stand           *StandResponse      `json:"stand,omitempty"`
 	DevilFruit      *DevilFruitResponse `json:"devilFruit,omitempty"`
-	Spin            string              `json:"spin"`
-	Hamon           string              `json:"hamon"`
-	FruitMastery    string              `json:"fruitMastery"`
-	ArmamentHaki    string              `json:"armamentHaki"`
-	ObservationHaki string              `json:"observationHaki"`
-	ConquerorHaki   string              `json:"conquerorHaki"`
-	PhysicalForm    string              `json:"physicalForm"`
+	Spin            string              `json:"spin" ts:"SpinLevel"`
+	Hamon           string              `json:"hamon" ts:"HamonLevel"`
+	FruitMastery    string              `json:"fruitMastery" ts:"FruitMastery"`
+	ArmamentHaki    string              `json:"armamentHaki" ts:"HakiLevel"`
+	ObservationHaki string              `json:"observationHaki" ts:"HakiLevel"`
+	ConquerorHaki   string              `json:"conquerorHaki" ts:"HakiLevel"`
+	PhysicalForm    string              `json:"physicalForm" ts:"PhysicalForm"`
 }
 
 // GameParticipantResponse mirrors game.Participant. AvatarThumb is resolved
@@ -94,7 +94,7 @@ type GameParticipantResponse struct {
 	UserID      *string              `json:"userId,omitempty"`
 	DisplayName string               `json:"displayName"`
 	TeamID      string               `json:"teamId"`
-	Kind        string               `json:"kind"`
+	Kind        string               `json:"kind" ts:"ParticipantKind"`
 	Connected   bool                 `json:"connected"`
 	AvatarThumb string               `json:"avatarThumb"`
 	Loadout     *GameLoadoutResponse `json:"loadout,omitempty"`
@@ -109,13 +109,13 @@ type GameParticipantResponse struct {
 // and does come straight off the domain Stage.
 type GameStageResponse struct {
 	ID            string `json:"id"`
-	Manga         string `json:"manga"`
+	Manga         string `json:"manga" ts:"Manga"`
 	Order         int    `json:"order"`
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	Picture       string `json:"picture"`
 	PictureThumb  string `json:"pictureThumb"`
-	PictureStatus string `json:"pictureStatus"`
+	PictureStatus string `json:"pictureStatus" ts:"PictureStatus"`
 }
 
 // StageTextResolver resolves a Stage's description for a specific viewer
@@ -162,7 +162,7 @@ type GameRoundResponse struct {
 
 // GameResultResponse mirrors game.GameResult.
 type GameResultResponse struct {
-	Mode   string `json:"mode"`
+	Mode   string `json:"mode" ts:"GameModeKind"`
 	Winner string `json:"winner"`
 	// Participants is every seat as it stood the moment the game ended, in
 	// join order - what the final result screen renders per-player outcomes
@@ -210,8 +210,8 @@ func NewGameResultResponse(res game.GameResult) GameResultResponse {
 type GameSnapshotResponse struct {
 	ID           string                    `json:"id"`
 	Code         string                    `json:"code"`
-	State        string                    `json:"state"`
-	Mode         string                    `json:"mode"`
+	State        string                    `json:"state" ts:"GameState"`
+	Mode         string                    `json:"mode" ts:"GameModeKind"`
 	HostID       string                    `json:"hostId"`
 	Locked       bool                      `json:"locked"`
 	Config       GameConfigResponse        `json:"config"`
@@ -221,18 +221,18 @@ type GameSnapshotResponse struct {
 	Result       *GameResultResponse       `json:"result,omitempty"`
 	// RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a
 	// pending reveal - see NewGameStateResponse's deadlines param.
-	RevealEndsAt *string `json:"revealEndsAt,omitempty"`
+	RevealEndsAt *string `json:"revealEndsAt,omitempty" ts:"datetime"`
 	// VotingEndsAt is set (RFC3339) only while the game is VOTING/TIEBREAK
 	// with a pending window - the deadline a client reconnecting mid-vote
 	// needs, since the VOTING_OPENED/TIEBREAK_OPENED frames that carry
 	// closesAt are one-shot and long gone by then.
-	VotingEndsAt *string `json:"votingEndsAt,omitempty"`
+	VotingEndsAt *string `json:"votingEndsAt,omitempty" ts:"datetime"`
 	// ResultEndsAt is set (RFC3339) only while the game is RESOLVING with a
 	// pending result display - see GameService.ResultEndsAt.
-	ResultEndsAt *string `json:"resultEndsAt,omitempty"`
+	ResultEndsAt *string `json:"resultEndsAt,omitempty" ts:"datetime"`
 	// SummaryEndsAt is set (RFC3339) only while the game is SUMMARY with a
 	// pending loadout-summary display - see GameService.SummaryEndsAt.
-	SummaryEndsAt *string `json:"summaryEndsAt,omitempty"`
+	SummaryEndsAt *string `json:"summaryEndsAt,omitempty" ts:"datetime"`
 }
 
 // GameViewerResponse is the cheap, per-viewer convenience block - everything
@@ -561,10 +561,10 @@ func resolveParticipantAvatar(ctx context.Context, avatarThumbKey, googlePicture
 // public browser joins by GameID, not by code.
 type PublicLobbyResponse struct {
 	GameID              string   `json:"gameId"`
-	Mode                string   `json:"mode"`
+	Mode                string   `json:"mode" ts:"GameModeKind"`
 	HostDisplayName     string   `json:"hostDisplayName"`
-	AbilitySource       string   `json:"abilitySource"`
-	Mangas              []string `json:"mangas"`
+	AbilitySource       string   `json:"abilitySource" ts:"AbilitySource"`
+	Mangas              []string `json:"mangas" ts:"[]Manga"`
 	PlayerCount         int      `json:"playerCount"`
 	MaxPlayers          int      `json:"maxPlayers"`
 	VotingWindowSeconds int      `json:"votingWindowSeconds"`
@@ -600,7 +600,7 @@ type PublicLobbyListResponse struct {
 type LobbyPreviewResponse struct {
 	PublicLobbyResponse
 	Code       string `json:"code"`
-	Visibility string `json:"visibility"`
+	Visibility string `json:"visibility" ts:"LobbyVisibility"`
 }
 
 // NewLobbyPreviewResponse builds a LobbyPreviewResponse.

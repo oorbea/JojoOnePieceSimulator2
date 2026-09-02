@@ -1,18 +1,24 @@
 import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
+import { assertContract } from '@/shared/api/assert-contract'
+import { stageResponseSchema } from '@/shared/contracts/dto'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import type { StageTranslationFormValues } from '@/shared/lib/stage-translations'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 import type { StageFilters, StageInput, StageResponse } from '@/features/stages/types/stages.types'
 
 export async function getStages(filters?: StageFilters): Promise<StageResponse[]> {
   const response = await apiClient.get<StageResponse[]>('/stages', { params: filters })
+  if (__DEV__) {
+    for (const stage of response.data) assertContract(stageResponseSchema, stage, 'GET /stages[]')
+  }
   return response.data
 }
 
 export async function getStage(id: string): Promise<StageResponse> {
   const response = await apiClient.get<StageResponse>(`/stages/${id}`)
+  if (__DEV__) assertContract(stageResponseSchema, response.data, 'GET /stages/:id')
   return response.data
 }
 

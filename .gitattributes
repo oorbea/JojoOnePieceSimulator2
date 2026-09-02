@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# cmd/typegen always writes LF. Forcing it here means a Windows checkout
+# with core.autocrlf=true can't silently rewrite these to CRLF and make
+# `make types-check`/CI's contracts job disagree with the working tree for
+# reasons that look like a generator bug but aren't.
+apps/frontend/src/shared/contracts/** text eol=lf

@@ -6,13 +6,38 @@
 COMPOSE := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.dev.yml
 COMPOSE_TEST := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.test.yml
 
-.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down test-docker test-vips-docker test-integration-docker
+.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down test-docker test-vips-docker test-integration-docker types types-check types-docker types-check-docker
 
 sqlc:
 	sqlc generate
 
 swagger:
 	go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/app/main.go -o docs --parseInternal
+
+# cmd/typegen is the single producer of apps/frontend/src/shared/contracts/ -
+# see ObsidianVault/contratos-tipos-generados.md. `types` runs on the host
+# (the App Control issue documented above is specific to freshly-built
+# `go test` binaries; cmd/typegen imports no networking and isn't affected).
+types:
+	go run ./cmd/typegen -out ../frontend/src/shared/contracts
+
+# Fails, naming the stale file, instead of silently leaving a stale
+# contracts/ on disk. This is what CI's `contracts` job runs.
+types-check:
+	go run ./cmd/typegen -out ../frontend/src/shared/contracts -check
+
+# Docker fallback for `types`, using the same App-Control workaround as
+# test-docker - see docker-compose.test.yml's `typegen` service.
+types-docker:
+	$(COMPOSE_TEST) run --rm typegen go run ./cmd/typegen
+
+# Regenerates in the container, then diffs ON THE HOST: golang:alpine has no
+# git, and .git isn't mounted into the typegen service - mounting it just to
+# run `git diff` would risk corrupting the index from a Linux container
+# against a Windows checkout for no benefit.
+types-check-docker: types-docker
+	cd ../.. && git diff --exit-code -- apps/frontend/src/shared/contracts \
+	  && test -z "$$(git status --porcelain -- apps/frontend/src/shared/contracts)"
 
 # `up` is already applied automatically on backend startup (see
 # internal/infrastructure/postgres/migrate.go) - kept here for parity/CI.

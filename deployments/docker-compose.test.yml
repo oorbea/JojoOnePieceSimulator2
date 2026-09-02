@@ -53,6 +53,29 @@ services:
     networks:
       - public-net
 
+  # Regenerates apps/frontend/src/shared/contracts/ from cmd/typegen. Not
+  # part of backend-test: that service only bind-mounts apps/backend, so it
+  # physically cannot write apps/frontend. This is the only compose service
+  # that writes into the host checkout on purpose - it mounts apps/ (not the
+  # repo root) so it can read apps/backend and write apps/frontend.
+  #
+  # Usage (from apps/backend):
+  #   docker compose -f ../../deployments/docker-compose.yml \
+  #                   -f ../../deployments/docker-compose.test.yml \
+  #                   run --rm typegen go run ./cmd/typegen
+  # (apps/backend/Makefile's types-docker/types-check-docker targets wrap
+  # this. The diff/check half runs on the HOST afterwards, not in this
+  # container - golang:alpine has no git, and .git isn't mounted here.)
+  typegen:
+    image: golang:1.26-alpine3.22
+    working_dir: /repo/apps/backend
+    volumes:
+      - ../apps:/repo/apps
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      GOTOOLCHAIN: auto
+
 volumes:
   go-mod-cache:
   go-build-cache:

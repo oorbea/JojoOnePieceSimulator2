@@ -34,7 +34,7 @@ import {
   fromTranslationsResponse,
   toTranslationsPayload,
 } from '@/shared/lib/power-translations'
-import { raritySchema, standStatSchema, type Locale } from '@/shared/lib/zod'
+import { raritySchema, standStatSchema, type Locale } from '@/shared/contracts/enums'
 
 // Every stat filter key StandFilters exposes, in the order the "more
 // filters" panel renders them - one useState per key would be six near
@@ -68,8 +68,17 @@ function createDefaultValues(): StandFormValues {
 }
 
 function toInput(values: StandFormValues): StandInput {
-  const { translations, ...rest } = values
-  return { ...rest, translations: toTranslationsPayload(translations) }
+  const { translations, evolvesFromId, ...rest } = values
+  // The generated StandInput's evolvesFromId is `?:` (omittable), not
+  // `| null` - the backend's *string,omitempty can't distinguish an
+  // explicit null from an absent key, so there's nothing lost in dropping
+  // the key instead of sending null. The form itself keeps `| null` (a
+  // controlled <select>'s "no evolution" needs a concrete falsy value).
+  return {
+    ...rest,
+    translations: toTranslationsPayload(translations),
+    evolvesFromId: evolvesFromId ?? undefined,
+  }
 }
 
 export function StandsContainer() {

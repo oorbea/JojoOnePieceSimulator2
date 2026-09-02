@@ -11,7 +11,7 @@ import type { StandResponse } from '@/features/stands/types/stands.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { InsetRing, WiiCard } from '@/shared/components/presentational/wii-card'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 type Props = {
   participant: GameParticipant

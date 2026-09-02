@@ -4,7 +4,7 @@ import { LoadoutCard } from '@/features/game/components/presentational/match/loa
 import { ParticipantTile } from '@/features/game/components/presentational/match/participant-tile'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import type { RovingItemProps } from '@/shared/hooks/use-roving-group'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 import { TooltipCard, useHoverTrigger } from '@/shared/components/presentational/tooltip'
 
 const HOVER_CARD_DELAY_MS = 500

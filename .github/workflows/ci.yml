@@ -86,6 +86,50 @@ jobs:
       - name: Test
         run: pnpm test:ci
 
+  contracts:
+    name: Contracts (generated types up to date)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: apps/backend/go.mod
+          cache-dependency-path: apps/backend/go.sum
+
+      # No libvips here: cmd/typegen walks internal/infrastructure/api/dto,
+      # internal/domain/enums, and internal/infrastructure/api/apierr, and
+      # imports nothing behind the vips build tag.
+      - name: Regenerate frontend contracts
+        run: go run ./cmd/typegen
+
+      # Runs twice on purpose: a generator with nondeterministic output
+      # (e.g. from unordered Go map iteration) would pass a single run and
+      # then flake forever after on develop - fail it here instead.
+      - name: Regenerate again (determinism check)
+        run: go run ./cmd/typegen
+
+      # git diff alone is blind to a brand-new generated file that was
+      # never committed (a new DTO added in Go, generated but not staged) -
+      # git status --porcelain catches that half.
+      - name: Fail if generated contracts are stale
+        run: |
+          cd ../..
+          if ! git diff --exit-code -- apps/frontend/src/shared/contracts; then
+            echo "::error::Generated contracts are stale. Run 'make types' (or 'make types-docker') in apps/backend and commit the result."
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain -- apps/frontend/src/shared/contracts)" ]; then
+            echo "::error::apps/frontend/src/shared/contracts has untracked/uncommitted files. Run 'make types' in apps/backend and commit the result."
+            git status --porcelain -- apps/frontend/src/shared/contracts
+            exit 1
+          fi
+
   backend-image:
     name: Build backend image
     runs-on: ubuntu-latest
@@ -156,7 +200,7 @@ jobs:
     # not the job id).
     name: ci-success
     runs-on: ubuntu-latest
-    needs: [backend, frontend, backend-image, frontend-image, compose-config]
+    needs: [backend, frontend, contracts, backend-image, frontend-image, compose-config]
     # Single required status check - adding/renaming jobs above never
     # requires touching branch protection settings again.
     steps:

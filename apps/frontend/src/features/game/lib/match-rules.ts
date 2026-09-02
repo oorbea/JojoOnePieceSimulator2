@@ -1,6 +1,6 @@
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameLoadout, GameRound, GameSnapshot } from '@/features/game/types/game.types'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 // currentRound mirrors "the round a client should be looking at right now" -
 // the backend never sends a round index explicitly for this, it's simply

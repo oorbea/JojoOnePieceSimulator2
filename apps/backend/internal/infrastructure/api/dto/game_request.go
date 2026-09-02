@@ -14,18 +14,18 @@ import (
 // the service's configured window, and an absent PoolFilter means "no
 // restriction" - see services.GameService.buildConfig.
 type CreateGameRequest struct {
-	Mode string `json:"mode"`
+	Mode string `json:"mode" ts:"GameModeKind"`
 	// StageMangas and PowerMangas are independent - see game.Config's doc
 	// comment.
-	StageMangas            []string           `json:"stageMangas"`
-	PowerMangas            []string           `json:"powerMangas"`
-	AbilitySource          string             `json:"abilitySource"`
+	StageMangas            []string           `json:"stageMangas" ts:"[]Manga"`
+	PowerMangas            []string           `json:"powerMangas" ts:"[]Manga"`
+	AbilitySource          string             `json:"abilitySource" ts:"AbilitySource"`
 	TeamSize               int                `json:"teamSize"`
 	AllowBots              bool               `json:"allowBots"`
-	Visibility             string             `json:"visibility,omitempty"`
+	Visibility             string             `json:"visibility,omitempty" ts:"LobbyVisibility"`
 	VotingWindowSeconds    int                `json:"votingWindowSeconds,omitempty"`
 	PoolFilter             *PoolFilterPayload `json:"poolFilter,omitempty"`
-	RevealSpeed            string             `json:"revealSpeed,omitempty"`
+	RevealSpeed            string             `json:"revealSpeed,omitempty" ts:"RevealSpeed"`
 	SummaryDurationSeconds int                `json:"summaryDurationSeconds,omitempty"`
 }
 

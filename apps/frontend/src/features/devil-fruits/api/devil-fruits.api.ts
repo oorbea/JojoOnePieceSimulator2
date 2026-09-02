@@ -1,6 +1,8 @@
 import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
+import { assertContract } from '@/shared/api/assert-contract'
+import { devilFruitResponseSchema } from '@/shared/contracts/dto'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import type { TranslationFormValues } from '@/shared/lib/power-translations'
 import type {
@@ -11,11 +13,17 @@ import type {
 
 export async function getDevilFruits(filters?: DevilFruitFilters): Promise<DevilFruitResponse[]> {
   const response = await apiClient.get<DevilFruitResponse[]>('/devil-fruits', { params: filters })
+  if (__DEV__) {
+    for (const fruit of response.data) {
+      assertContract(devilFruitResponseSchema, fruit, 'GET /devil-fruits[]')
+    }
+  }
   return response.data
 }
 
 export async function getDevilFruit(id: string): Promise<DevilFruitResponse> {
   const response = await apiClient.get<DevilFruitResponse>(`/devil-fruits/${id}`)
+  if (__DEV__) assertContract(devilFruitResponseSchema, response.data, 'GET /devil-fruits/:id')
   return response.data
 }
 

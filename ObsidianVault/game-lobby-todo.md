@@ -325,8 +325,10 @@ extraída a `vote-tally-row.tsx` y compartida con el panel de ronda viva, y el g
 hotkeys ya cubriendo ambos overlays. Verificado: backend 14 paquetes ok, frontend 51 suites / 551
 tests, typecheck y lint en verde.
 - Per-power visual FX sigue fuera de alcance a propósito ([[gameplay-power-fx]]).
-- El walkthrough en vivo a dos navegadores (empate real, reconexión a media votación, pase
-  keyboard-only) sigue pendiente desde 2026-08-26 - no lo desbloquea esta tanda.
+- ~~El walkthrough en vivo a dos navegadores (empate real, reconexión a media votación, pase
+  keyboard-only) sigue pendiente desde 2026-08-26 - no lo desbloquea esta tanda.~~ **HECHO
+  2026-09-02**, ver la entrada de §6 más abajo y [[game-round-result-live-walkthrough-2026-09-02]] -
+  esta línea quedó desactualizada un día tras escribirse.
 
 **Sorteo redesign to V1's jugador-por-jugador pacing — DONE (2026-08-30, owner request)**, see
 [[game-match-assignment-frontend]]'s dated section for the full writeup: the reveal replays

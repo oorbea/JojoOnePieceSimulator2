@@ -12,7 +12,7 @@ import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 import { LOCALE_ENDONYMS, SUPPORTED_LOCALES } from '@/shared/i18n'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
 

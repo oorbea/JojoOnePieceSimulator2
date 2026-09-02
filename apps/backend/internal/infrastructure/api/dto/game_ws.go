@@ -106,9 +106,9 @@ type SetLockPayload struct {
 // PoolFilterPayload is the wire form of game.PoolFilter, shared by
 // CreateGameRequest and CommandUpdateConfig.
 type PoolFilterPayload struct {
-	StandRarities []string `json:"standRarities,omitempty"`
-	FruitRarities []string `json:"fruitRarities,omitempty"`
-	FruitTypes    []string `json:"fruitTypes,omitempty"`
+	StandRarities []string `json:"standRarities,omitempty" ts:"[]PowerRarity"`
+	FruitRarities []string `json:"fruitRarities,omitempty" ts:"[]PowerRarity"`
+	FruitTypes    []string `json:"fruitTypes,omitempty" ts:"[]FruitType"`
 	Banned        []string `json:"banned,omitempty"`
 }
 
@@ -179,18 +179,18 @@ func parseMangas(raw []string, field string, errs *[]string) []enums.Manga {
 // lobby's Config, the same shape CreateGameRequest builds a Config from
 // plus the fields the host can only set once a lobby exists.
 type UpdateConfigPayload struct {
-	Mode string `json:"mode"`
+	Mode string `json:"mode" ts:"GameModeKind"`
 	// StageMangas and PowerMangas are independent - see game.Config's doc
 	// comment.
-	StageMangas            []string           `json:"stageMangas"`
-	PowerMangas            []string           `json:"powerMangas"`
-	AbilitySource          string             `json:"abilitySource"`
+	StageMangas            []string           `json:"stageMangas" ts:"[]Manga"`
+	PowerMangas            []string           `json:"powerMangas" ts:"[]Manga"`
+	AbilitySource          string             `json:"abilitySource" ts:"AbilitySource"`
 	TeamSize               int                `json:"teamSize"`
 	AllowBots              bool               `json:"allowBots"`
-	Visibility             string             `json:"visibility"`
+	Visibility             string             `json:"visibility" ts:"LobbyVisibility"`
 	VotingWindowSeconds    int                `json:"votingWindowSeconds"`
 	PoolFilter             *PoolFilterPayload `json:"poolFilter,omitempty"`
-	RevealSpeed            string             `json:"revealSpeed,omitempty"`
+	RevealSpeed            string             `json:"revealSpeed,omitempty" ts:"RevealSpeed"`
 	SummaryDurationSeconds int                `json:"summaryDurationSeconds,omitempty"`
 }
 
@@ -297,12 +297,12 @@ type RematchReadyPayload struct {
 // countdown UI.
 type VotingOpenedPayload struct {
 	RoundIndex int    `json:"roundIndex"`
-	ClosesAt   string `json:"closesAt"`
+	ClosesAt   string `json:"closesAt" ts:"datetime"`
 }
 
 type TiebreakOpenedPayload struct {
 	RoundIndex int    `json:"roundIndex"`
-	ClosesAt   string `json:"closesAt"`
+	ClosesAt   string `json:"closesAt" ts:"datetime"`
 }
 
 // VoteCastPayload carries the round's human-vote progress and nothing else:
@@ -332,7 +332,7 @@ type RevealReadyChangedPayload struct {
 // SUMMARY window instead of VOTING.
 type SummaryOpenedPayload struct {
 	RoundIndex int    `json:"roundIndex"`
-	ClosesAt   string `json:"closesAt"`
+	ClosesAt   string `json:"closesAt" ts:"datetime"`
 }
 
 // SummaryReadyChangedPayload mirrors RevealReadyChangedPayload exactly,
@@ -396,4 +396,75 @@ type PlayerKickedPayload struct {
 
 type LobbyLockChangedPayload struct {
 	Locked bool `json:"locked"`
+}
+
+// FrameSpec pairs a server frame type with the payload shape it carries. A
+// nil Payload means the frame carries no payload on the wire (GAME_STARTED,
+// CONFIG_UPDATED, which today send struct{}{}).
+type FrameSpec struct {
+	Type    string
+	Payload any
+}
+
+// FramePayloads is the authoritative frame-type -> payload-shape table.
+// cmd/typegen emits ServerFrame's discriminated union from it, and
+// endpoints/frame_table_test.go asserts it covers exactly the Frame* const
+// set (in both directions), so a frame can never carry a payload shape the
+// generated TypeScript doesn't know about. This exists because the real
+// frame->payload mapping lives in a switch over domain event *names* in
+// game_ws_endpoints.go's buildEventFrame, which can't itself be walked
+// mechanically: it doesn't cover STATE or ERROR (sent from elsewhere), and
+// two frames send a literal struct{}{}.
+var FramePayloads = []FrameSpec{
+	{FrameState, GameStateResponse{}},
+	{FramePlayerJoined, PlayerJoinedPayload{}},
+	{FramePlayerLeft, PlayerLeftPayload{}},
+	{FrameHostReassigned, HostReassignedPayload{}},
+	{FrameGameStarted, nil},
+	{FrameLoadoutsAssigned, LoadoutsAssignedPayload{}},
+	{FrameVotingOpened, VotingOpenedPayload{}},
+	{FrameVoteCast, VoteCastPayload{}},
+	{FrameTiebreakOpened, TiebreakOpenedPayload{}},
+	{FrameRoundResolved, RoundResolvedPayload{}},
+	{FrameGameFinished, GameFinishedPayload{}},
+	{FrameGameAborted, GameAbortedPayload{}},
+	{FrameError, ErrorResponse{}},
+	{FrameResyncRequired, ResyncRequiredPayload{}},
+	{FrameTeamChanged, TeamChangedPayload{}},
+	{FramePlayerKicked, PlayerKickedPayload{}},
+	{FrameLobbyLockChanged, LobbyLockChangedPayload{}},
+	{FrameConfigUpdated, nil},
+	{FrameRevealReadyChanged, RevealReadyChangedPayload{}},
+	{FrameSummaryOpened, SummaryOpenedPayload{}},
+	{FrameSummaryReadyChanged, SummaryReadyChangedPayload{}},
+	{FrameRematchReady, RematchReadyPayload{}},
+}
+
+// CommandSpec mirrors FrameSpec for the client->server direction.
+type CommandSpec struct {
+	Type    string
+	Payload any
+}
+
+// CommandPayloads is CommandPayloads' authoritative command-type ->
+// payload-shape table, on the same footing as FramePayloads. nil means the
+// command takes no payload (LEAVE, START, ABORT, RESYNC, REVEAL_READY,
+// SUMMARY_READY, REMATCH - each always means "the caller, right now").
+var CommandPayloads = []CommandSpec{
+	{CommandLeave, nil},
+	{CommandAddBot, AddBotPayload{}},
+	{CommandRemoveBot, RemoveBotPayload{}},
+	{CommandStart, nil},
+	{CommandAbort, nil},
+	{CommandVote, VotePayload{}},
+	{CommandResync, nil},
+	{CommandSwitchTeam, SwitchTeamPayload{}},
+	{CommandMovePlayer, MovePlayerPayload{}},
+	{CommandKick, KickPayload{}},
+	{CommandTransferHost, TransferHostPayload{}},
+	{CommandSetLock, SetLockPayload{}},
+	{CommandUpdateConfig, UpdateConfigPayload{}},
+	{CommandRevealReady, nil},
+	{CommandSummaryReady, nil},
+	{CommandRematch, nil},
 }

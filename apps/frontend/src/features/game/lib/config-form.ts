@@ -5,7 +5,7 @@ import type {
   LobbyVisibility,
   Manga,
   RevealSpeed,
-} from '@/shared/lib/zod'
+} from '@/shared/contracts/enums'
 
 // Local edit-form state for the config panel, seeded from snapshot.config
 // (and snapshot.mode, which lives outside GameConfig) whenever the lobby

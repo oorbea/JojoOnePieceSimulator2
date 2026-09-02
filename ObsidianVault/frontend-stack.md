@@ -36,7 +36,7 @@ All deps installed via CLI only, never hand-edited into `package.json` (user har
 - `app/` = routes only, thin shims rendering a container.
 - `src/features/<feature>/` owns its api/hooks/stores/types/components. Cross-feature imports ONLY through the feature's `index.ts` barrel.
 - Inside a feature: `components/containers` (data/nav/forms wiring) vs `components/presentational` (pure Tamagui UI, props in/JSX out).
-- `src/shared/` mirrors the same split — axios client, ETag/auth interceptors, Zod schemas mirroring backend enums, storage wrappers, session store.
+- `src/shared/` mirrors the same split — axios client, ETag/auth interceptors, storage wrappers, session store. `src/shared/contracts/` is **generated** (Go decides, see [[contratos-tipos-generados]]) — `src/shared/lib/` never hand-mirrors a backend enum or DTO anymore, it only composes generated schemas (e.g. the translation-form superRefines).
 - `src/providers/` composes app-wide providers (Query, Tamagui, SafeArea) once in `AppProviders`.
 - Full convention doc lives in-repo: `apps/frontend/src/features/README.md`. Copy `src/features/_template/` to start a feature.
 
@@ -147,4 +147,4 @@ that's exactly why the layout bugs in [[frontend-responsive-frutiger-aero]] (dea
 - CI: `.github/workflows/ci.yml`'s `Frontend` job gained a `pnpm test:ci` (`jest --ci`) step after
   Lint — job renamed to "Frontend (typecheck + lint + test)".
 
-Related: [[docker-setup]], [[backend-contract]]
+Related: [[docker-setup]], [[backend-contract]], [[contratos-tipos-generados]]

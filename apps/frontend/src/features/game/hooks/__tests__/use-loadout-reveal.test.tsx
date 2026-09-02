@@ -11,7 +11,7 @@ import {
   revealDurationMs,
 } from '@/features/game/lib/loadout-reveal'
 import type { GameParticipant } from '@/features/game/types/game.types'
-import type { Manga, RevealSpeed } from '@/shared/lib/zod'
+import type { Manga, RevealSpeed } from '@/shared/contracts/enums'
 
 async function advance(ms: number) {
   await act(async () => {
