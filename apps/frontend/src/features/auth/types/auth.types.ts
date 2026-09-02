@@ -1,4 +1,4 @@
-import type { UserResponse } from '@/shared/types/api'
+import type { UserResponse } from '@/shared/contracts/dto'
 
 export type AuthGoogleResponse = {
   accessToken: string
