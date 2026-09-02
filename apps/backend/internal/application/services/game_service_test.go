@@ -15,7 +15,21 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
+
+// noResponsePictures/noResponseStageText/noResponsePowerText are trivial
+// dto resolver stand-ins, same shape as dto_test's own noPictures/
+// noStageText (unexported there, so re-declared here) - good enough since
+// this test only cares about GameRoundResponse.TiedVotes, never about the
+// resolved picture URLs or translated copy.
+func noResponsePictures(_ context.Context, key string) (string, error) { return key, nil }
+
+func noResponseStageText(_ context.Context, _ game.StageID) (string, error) { return "", nil }
+
+func noResponsePowerText(_ context.Context, _ powers.PowerID) (ports.PowerContent, error) {
+	return ports.PowerContent{}, nil
+}
 
 // --- fakes ---
 
@@ -1244,6 +1258,92 @@ func TestCloseVoting_Tie_OpensRevoteThenUsesTiebreaker(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("no RoundResolved event observed")
+	}
+}
+
+// TestCastVote_Tie_DTOStateCarriesTiedVotes closes the gap between
+// dto's own TestNewGameStateResponse_TiedVotes (which hand-builds a Game
+// already sitting in TIEBREAK via direct domain calls - g.CastVote/
+// g.CloseVoting - never touching GameService at all) and what actually
+// happens in production: a client's second CastVote reaching the tie
+// through GameService.CastVote -> closeVoting -> withGame, exactly like
+// game_ws_endpoints.go's dispatch does for a real CAST_VOTE command. This
+// is the path a 2026-09-02 live two-browser walkthrough found broken (see
+// ObsidianVault/game-round-result-live-walkthrough-2026-09-02.md): the
+// tied-vote breakdown never rendered during TIEBREAK. If GameService ever
+// regressed to hand back a Game whose TiedVotes doesn't survive the exact
+// dto.NewGameStateResponse call game_ws_endpoints.go's pushState makes,
+// this catches it even though the hand-built dto test would not.
+func TestCastVote_Tie_DTOStateCarriesTiedVotes(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, versusInput(1))
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+	advanceReveal(deps, versusInput(1).PowerMangas)
+	advanceSummary(deps)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame after reveal: %v", err)
+	}
+
+	teamA := game.OptionID(g.Teams()[0].ID().String())
+	teamB := game.OptionID(g.Teams()[1].ID().String())
+
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+
+	g, err = svc.CastVote(context.Background(), g.ID(), g.HostID(), teamA)
+	if err != nil {
+		t.Fatalf("host vote: %v", err)
+	}
+	g, err = svc.CastVote(context.Background(), g.ID(), joinerParticipant, teamB)
+	if err != nil {
+		t.Fatalf("joiner vote: %v", err)
+	}
+	if g.State() != enums.Tiebreak {
+		t.Fatalf("state after tie = %v, want TIEBREAK", g.State())
+	}
+
+	// Exactly what game_ws_endpoints.go's pushState builds and sends as the
+	// STATE frame after TIEBREAK_OPENED.
+	resp, err := dto.NewGameStateResponse(context.Background(), g, code, g.HostID(),
+		noResponsePictures, noResponsePictures, noResponsePictures, noResponsePictures,
+		noResponseStageText, noResponsePowerText, noResponsePowerText, dto.GameStateDeadlines{})
+	if err != nil {
+		t.Fatalf("NewGameStateResponse: %v", err)
+	}
+
+	if resp.Game.State != "TIEBREAK" {
+		t.Fatalf("resp.Game.State = %q, want TIEBREAK", resp.Game.State)
+	}
+	round := resp.Game.Rounds[len(resp.Game.Rounds)-1]
+	if round.Result != nil {
+		t.Fatalf("Result = %+v, want nil while still TIEBREAK", round.Result)
+	}
+	if len(round.TiedVotes) != 2 {
+		t.Fatalf("TiedVotes = %+v, want the 2 votes that tied", round.TiedVotes)
+	}
+	if round.TiedVotes[g.HostID().String()] != string(teamA) {
+		t.Errorf("TiedVotes[host] = %q, want %q", round.TiedVotes[g.HostID().String()], teamA)
+	}
+	if round.TiedVotes[joinerParticipant.String()] != string(teamB) {
+		t.Errorf("TiedVotes[joiner] = %q, want %q", round.TiedVotes[joinerParticipant.String()], teamB)
 	}
 }
 

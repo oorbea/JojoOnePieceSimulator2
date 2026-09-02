@@ -125,6 +125,110 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeRoundTrip_TiedVotes guards the exact class of bug
+// TestEncodeDecodeRoundTrip's RevealSpeed/SummaryDurationSeconds checks
+// already guard for wireConfig: wireRound.TiedVotes was added after
+// wireRound already existed and was missed, so every real Redis Save
+// encoded a tied round's TiedVotes fine but the very next Get silently
+// decoded it back to nil - Save persisted no error, decode raised no
+// error, only the field was gone (a 2026-09-02 live two-browser
+// walkthrough found the TIEBREAK vote-breakdown panel never rendering;
+// hitting GET /api/v1/games/:id mid-TIEBREAK showed tiebreakUsed=true but
+// no tiedVotes key at all). game.Snapshot()/Restore() alone (what
+// game_response_test.go's TestNewGameStateResponse_TiedVotes and
+// game_service_test.go's TestCastVote_Tie_DTOStateCarriesTiedVotes both
+// exercise) never touches this package's separate wireRound type, so
+// neither test could have caught it - only a round trip through this
+// package's own encode/decode does.
+func TestEncodeDecodeRoundTrip_TiedVotes(t *testing.T) {
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	host, err := game.NewHumanParticipant(game.ParticipantID{1}, user.UserID{1}, "host", game.TeamID{10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant host: %v", err)
+	}
+	second, err := game.NewHumanParticipant(game.ParticipantID{2}, user.UserID{2}, "second", game.TeamID{10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant second: %v", err)
+	}
+	team, err := game.NewTeam(game.TeamID{10}, "Squad", 0)
+	if err != nil {
+		t.Fatalf("NewTeam: %v", err)
+	}
+	stage, err := game.NewStage(game.StageID{1}, enums.Jojo, 0, "Phantom Blood", "a test stage", "")
+	if err != nil {
+		t.Fatalf("NewStage: %v", err)
+	}
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{team}, []game.Stage{stage})
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	if err := g.Join(second); err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+	if err := g.Start(g.HostID()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	pools := map[game.TeamID]*game.AvailablePowers{team.ID(): game.NewAvailablePowers(nil, nil)}
+	builder := game.NewLoadoutBuilder(cfg.PowerMangas(), game.DefaultAssignmentWeights(), zeroWireRandom{})
+	if err := g.AssignLoadouts(builder, pools); err != nil {
+		t.Fatalf("AssignLoadouts: %v", err)
+	}
+	if err := g.OpenVoting(zeroWireRandom{}); err != nil {
+		t.Fatalf("OpenVoting: %v", err)
+	}
+	if err := g.CastVote(host.ID(), "SURVIVE"); err != nil {
+		t.Fatalf("CastVote host: %v", err)
+	}
+	if err := g.CastVote(second.ID(), "FALL"); err != nil {
+		t.Fatalf("CastVote second: %v", err)
+	}
+	if tied, err := g.CloseVoting(); err != nil || !tied {
+		t.Fatalf("CloseVoting: tied=%v err=%v", tied, err)
+	}
+
+	payload, err := encode(g, time.Now())
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	restored, err := decode(payload)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	rounds := restored.Rounds()
+	if len(rounds) != 1 {
+		t.Fatalf("rounds = %d, want 1", len(rounds))
+	}
+	round := rounds[0]
+	if !round.TiebreakUsed {
+		t.Fatal("TiebreakUsed lost across the wire round trip")
+	}
+	if len(round.TiedVotes) != 2 {
+		t.Fatalf("TiedVotes = %+v, want the 2 votes that tied (lost across the wire round trip)", round.TiedVotes)
+	}
+	if round.TiedVotes[host.ID()] != "SURVIVE" {
+		t.Errorf("TiedVotes[host] = %q, want SURVIVE", round.TiedVotes[host.ID()])
+	}
+	if round.TiedVotes[second.ID()] != "FALL" {
+		t.Errorf("TiedVotes[second] = %q, want FALL", round.TiedVotes[second.ID()])
+	}
+}
+
+// zeroWireRandom is a deterministic game.RandomSource - always 0.
+type zeroWireRandom struct{}
+
+func (zeroWireRandom) IntN(n int) int {
+	if n <= 0 {
+		return 0
+	}
+	return 0
+}
+
+var _ game.RandomSource = zeroWireRandom{}
+
 // TestDecodeToleratesMissingAvatarFields confirms a payload written before
 // avatarThumbKey/googlePicture existed still decodes cleanly - the
 // additive-omitempty-field rule documented on wire.go's snapshotVersion,
