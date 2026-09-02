@@ -12,9 +12,9 @@ import (
 // clear message instead of a JSON decode error.
 type DevilFruitRequest struct {
 	Name         string                        `json:"name"`
-	Translations map[string]TranslationRequest `json:"translations"`
-	Rarity       string                        `json:"rarity"`
-	FruitType    string                        `json:"fruitType"`
+	Translations map[string]TranslationRequest `json:"translations" ts:"map[Locale]"`
+	Rarity       string                        `json:"rarity" ts:"PowerRarity"`
+	FruitType    string                        `json:"fruitType" ts:"FruitType"`
 }
 
 // Validate converts the request into a services.DevilFruitInput, collecting

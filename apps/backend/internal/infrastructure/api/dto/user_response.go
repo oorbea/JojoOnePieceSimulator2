@@ -15,9 +15,9 @@ type UserResponse struct {
 	CompleteName string `json:"completeName"`
 	Avatar       string `json:"avatar"`
 	AvatarThumb  string `json:"avatarThumb"`
-	AvatarStatus string `json:"avatarStatus"`
-	Role         string `json:"role"`
-	Language     string `json:"language"`
+	AvatarStatus string `json:"avatarStatus" ts:"PictureStatus"`
+	Role         string `json:"role" ts:"UserRole"`
+	Language     string `json:"language" ts:"Locale"`
 }
 
 // resolveAvatar picks the avatar to show: the user's own uploaded avatar
