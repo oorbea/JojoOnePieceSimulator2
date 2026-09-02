@@ -184,6 +184,30 @@ export function voteProgress(snapshot: GameSnapshot, live: LiveMatchState): { ca
   return { cast, total }
 }
 
+// roundResultPanelVariant decides which RoundResultPanel variant (if any)
+// belongs above the vote bar right now: 'tie' once a TIEBREAK revote has
+// opened and the round it tied on has a captured breakdown to show, or
+// 'result' once RESOLVING has produced a winner - whichever applies, never
+// both. null the rest of the time, and once the local viewer has dismissed
+// it for this round (see LiveMatchState.resultDismissed's doc - reset on
+// every VOTING_OPENED/TIEBREAK_OPENED/ROUND_RESOLVED so the next round's
+// panel starts visible again). Pulled out of match-screen.tsx as its own
+// pure function (2026-09-02) so this exact gating - what a live
+// two-browser walkthrough found the 'tie' case silently failing on - is
+// unit-testable on its own, the same as every other piece of view logic in
+// this file.
+export function roundResultPanelVariant(
+  snapshot: GameSnapshot,
+  live: LiveMatchState
+): 'tie' | 'result' | null {
+  if (live.resultDismissed) return null
+  const round = currentRound(snapshot)
+  if (!round) return null
+  if (snapshot.state === 'TIEBREAK' && round.tiedVotes) return 'tie'
+  if (snapshot.state === 'RESOLVING' && round.result) return 'result'
+  return null
+}
+
 // secondsUntil clamps to zero rather than going negative once a countdown
 // has passed its closesAt - the server, not the client, is authoritative on
 // when voting actually closes.

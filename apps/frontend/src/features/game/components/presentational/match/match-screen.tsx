@@ -9,7 +9,7 @@ import { StageBanner } from '@/features/game/components/presentational/match/sta
 import { VoteBar } from '@/features/game/components/presentational/match/vote-bar'
 import { VotingStatusBar } from '@/features/game/components/presentational/match/voting-status-bar'
 import { ConnectionBanner } from '@/features/game/components/presentational/connection-banner'
-import { currentRound, voteProgress } from '@/features/game/lib/match-rules'
+import { currentRound, roundResultPanelVariant, voteProgress } from '@/features/game/lib/match-rules'
 import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import { voteOptions } from '@/features/game/lib/vote-options'
 import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
@@ -70,9 +70,9 @@ export function MatchScreen({
   const now = useNow(1000, votingOpen && live.votingClosesAt !== null)
   const options = votingOpen ? voteOptions(snapshot, you) : []
   const progress = voteProgress(snapshot, live)
-  const showResolvedPanel =
-    snapshot.state === 'RESOLVING' && !!round?.result && !live.resultDismissed
-  const showTiedPanel = snapshot.state === 'TIEBREAK' && !!round?.tiedVotes && !live.resultDismissed
+  const panelVariant = roundResultPanelVariant(snapshot, live)
+  const showResolvedPanel = panelVariant === 'result'
+  const showTiedPanel = panelVariant === 'tie'
 
   return (
     <>
