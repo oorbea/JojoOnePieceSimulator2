@@ -72,6 +72,16 @@ doesn't read them):
 | `SERVER_USER` | SSH user on the server |
 | `SSH_PRIVATE_KEY` | SSH private key authorized on the server |
 
+The auth ones are the easiest to get wrong (a bad value fails at boot or,
+worse, silently locks the owner out of every admin route), so they are spelled
+out here too — they are ordinary `.env.example` entries, not extra secrets:
+
+| Name | Kind | Purpose |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` | `[SECRET]` | OAuth client id the backend verifies every Google ID token's `aud` against. Not secret in itself (client ids are public), but must be the *same* value as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` or every login 401s. |
+| `JWT_SECRET` | `[SECRET]` | HS256 signing key for this backend's own access tokens. **At least 32 characters** — `config.go` refuses to boot below that. Rotating it invalidates every issued token (no refresh tokens: everyone logs in again). |
+| `ADMIN_EMAILS` | `[CONFIG]` | Comma-separated Google account emails promoted to `ADMIN` on login, matched case-insensitively. Empty means nobody is an admin, i.e. the whole admin UI is unreachable. |
+
 ### Branch protection
 
 CI must block merging to `main` until it passes:
