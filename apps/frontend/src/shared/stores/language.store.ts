@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import { AsyncStorage } from '@/shared/lib/async-storage'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 import i18n, { DEFAULT_LOCALE, detectDeviceLocale } from '@/shared/i18n'
 
 const LANGUAGE_STORAGE_KEY = 'jops.language'

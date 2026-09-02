@@ -11,7 +11,7 @@ import {
 } from '@/features/profile/api/profile.api'
 import { profileKeys } from '@/features/profile/api/profile.keys'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 import { showSuccessToast } from '@/shared/lib/toast'
 import { useSessionStore } from '@/shared/stores/session.store'
 

@@ -1,7 +1,7 @@
 import type { VoteTallyEntry } from '@/features/game/lib/vote-options'
 import { voteTally } from '@/features/game/lib/vote-options'
 import type { GameSnapshot, GameViewer } from '@/features/game/types/game.types'
-import type { GameMode } from '@/shared/lib/zod'
+import type { GameMode } from '@/shared/contracts/enums'
 
 // One round as the final result screen recaps it: the stage that was played
 // and how the vote broke down, in the same fixed option order (and with the

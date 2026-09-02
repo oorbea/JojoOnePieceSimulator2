@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 
 import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 import { createEmptyStageTranslationsForm } from '@/shared/lib/stage-translations'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 import { stageFormSchema, type StageFormValues } from '@/features/stages/types/stages.types'
 
 import { StageFormModal } from '../stage-form-modal'

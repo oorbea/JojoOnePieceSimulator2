@@ -4,7 +4,7 @@ import {
   stageTranslationsFormSchema,
   type StageTranslationFormValues,
 } from '@/shared/lib/stage-translations'
-import { mangaSchema, type Locale, type Manga, type PictureStatus } from '@/shared/lib/zod'
+import { mangaSchema, type Locale, type Manga, type PictureStatus } from '@/shared/contracts/enums'
 
 // Mirrors the backend's dto.StageResponse (apps/backend .../dto/stage_response.go).
 export type StageResponse = {

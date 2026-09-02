@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import type { Locale, PictureStatus, Role } from '@/shared/lib/zod'
+import type { Locale, PictureStatus, Role } from '@/shared/contracts/enums'
 
 // Mirrors the backend's dto.UserResponse (apps/backend .../dto/user_response.go)
 // once the /users/me routes land. `avatar`/`avatarThumb` are presigned URLs

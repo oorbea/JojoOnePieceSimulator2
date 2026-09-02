@@ -9,7 +9,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { FruitType, Rarity, StandStat } from '@/shared/lib/zod'
+import type { FruitType, Rarity, StandStat } from '@/shared/contracts/enums'
 
 /** Every `StandResponse` stat field `BanByFilterFields` can filter on. */
 export type StandStatKey =

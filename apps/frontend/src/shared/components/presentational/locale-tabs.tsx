@@ -2,7 +2,7 @@ import { XStack, YStack } from 'tamagui'
 
 import { LOCALE_ENDONYMS, SUPPORTED_LOCALES } from '@/shared/i18n'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 
 import { ChannelBarItem } from './channel-bar'
 import { GlowText } from './glow-text'

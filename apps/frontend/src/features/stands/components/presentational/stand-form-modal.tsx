@@ -17,7 +17,7 @@ import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { DEFAULT_LOCALE } from '@/shared/i18n'
-import { raritySchema, standStatSchema, type Locale } from '@/shared/lib/zod'
+import { raritySchema, standStatSchema, type Locale } from '@/shared/contracts/enums'
 import type { StandFormValues } from '@/features/stands/types/stands.types'
 
 const STAT_FIELD_NAMES: (keyof StandFormValues)[] = [

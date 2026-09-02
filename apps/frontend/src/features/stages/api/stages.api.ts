@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 import { apiClient } from '@/shared/api/client'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import type { StageTranslationFormValues } from '@/shared/lib/stage-translations'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 import type { StageFilters, StageInput, StageResponse } from '@/features/stages/types/stages.types'
 
 export async function getStages(filters?: StageFilters): Promise<StageResponse[]> {

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { SUPPORTED_LOCALES } from '@/shared/i18n'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 
 // Stage's translations shape (description only, no skills - see the vault's
 // game-stage-content.md) is close enough to Power's that reuse was tempting,

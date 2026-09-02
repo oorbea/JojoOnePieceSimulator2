@@ -30,7 +30,7 @@ import {
   fromStageTranslationsResponse,
   toStageTranslationsPayload,
 } from '@/shared/lib/stage-translations'
-import { mangaSchema, type Locale } from '@/shared/lib/zod'
+import { mangaSchema, type Locale } from '@/shared/contracts/enums'
 
 // A function, not a constant object - same reasoning as StandsContainer's
 // createDefaultValues: reset()/useForm's defaultValues become this form's

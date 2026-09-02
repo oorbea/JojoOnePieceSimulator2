@@ -19,7 +19,7 @@ import { SettingRow } from '@/shared/components/presentational/setting-row'
 import { TooltipBubble, useTooltipTrigger } from '@/shared/components/presentational/tooltip'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { GameMode, LobbyVisibility, Manga } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga } from '@/shared/contracts/enums'
 
 type Props = {
   onBack: () => void

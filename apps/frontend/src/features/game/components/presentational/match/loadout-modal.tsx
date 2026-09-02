@@ -16,7 +16,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 type Props = {
   visible: boolean

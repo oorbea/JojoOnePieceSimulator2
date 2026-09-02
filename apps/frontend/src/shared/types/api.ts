@@ -1,12 +1,5 @@
-import type {
-  ErrorResponse,
-  FruitType,
-  Locale,
-  PictureStatus,
-  Rarity,
-  Role,
-  StandStat,
-} from '@/shared/lib/zod'
+import type { FruitType, Locale, PictureStatus, Rarity, Role, StandStat } from '@/shared/contracts/enums'
+import type { ErrorResponse } from '@/shared/contracts/errors'
 
 // Shared DTO primitives mirroring apps/backend/internal/infrastructure/api/dto.
 // Feature-specific response shapes (StandResponse, DevilFruitResponse, ...)
