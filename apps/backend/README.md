@@ -46,5 +46,6 @@ read path:
 request goes straight to Postgres/R2 - `make test`/`go run` need no Redis.
 With Redis configured, any error or timeout from it (bounded by
 `REDIS_OP_TIMEOUT`) is treated as a cache miss, never as a request failure -
-an outage degrades latency, not availability. See `.env.example` for every
-`CACHE_*`/`REDIS_*` variable and its default.
+an outage degrades latency, not availability. See `deployments/.env.example`
+(there is no `apps/backend/.env.example` - the whole stack shares one) for
+every `CACHE_*`/`REDIS_*` variable and its default.
