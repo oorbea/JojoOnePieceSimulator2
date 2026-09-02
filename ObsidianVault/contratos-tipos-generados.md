@@ -131,8 +131,10 @@ Se queda a mano deliberadamente, cada uno con comentario explicando por qué:
   `.parse()` — un 200 que falla validación estricta reventaría dentro del `queryFn` de TanStack
   Query, que reintenta por defecto y acaba en error boundary: convertiría un campo quitado sin más
   en una pantalla rota, tres veces. El chequeo real contra el drift es el job `contracts` de CI,
-  que lo caza en el origen antes de que llegue a un cliente. Cableado en `GET /games/:id` y
-  `GET /stands` como prueba de concepto; el resto de módulos api queda como follow-up mecánico.
+  que lo caza en el origen antes de que llegue a un cliente. **Cableado en los 6 módulos api**
+  (`game.getGame`, `stands.getStands/getStand`, `devil-fruits.getDevilFruits/getDevilFruit`,
+  `stages.getStages/getStage`, `profile.getMe`, `auth.postGoogleAuth`) — completado 2026-09-02,
+  commit `0f0b9bc`; ya no queda follow-up pendiente aquí.
   **Verificado, no asumido**: en un `pnpm build:web` real, `if (__DEV__)` **no** se elimina del
   bundle de producción (export en un solo bundle, sin code-splitting por ruta) — el código de
   `assertContract` sí viaja, pero `__DEV__` evalúa a `false` en runtime así que la rama de
