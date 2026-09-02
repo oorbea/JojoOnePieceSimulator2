@@ -1,22 +1,9 @@
 import { z } from 'zod'
 
-import type { Locale, PictureStatus, Role } from '@/shared/contracts/enums'
-
-// Mirrors the backend's dto.UserResponse (apps/backend .../dto/user_response.go)
-// once the /users/me routes land. `avatar`/`avatarThumb` are presigned URLs
-// (own upload if present, else the Google picture) — never object-storage
-// keys, and never null: an unset avatar is "".
-export type ProfileUser = {
-  id: string
-  email: string
-  username: string
-  completeName: string
-  avatar: string
-  avatarThumb: string
-  avatarStatus: PictureStatus
-  role: Role
-  language: Locale
-}
+import type { Locale } from '@/shared/contracts/enums'
+// ProfileUser was a byte-identical hand-mirror of dto.UserResponse; now a
+// straight rename re-export of the generated type.
+export type { UserResponse as ProfileUser } from '@/shared/contracts/dto'
 
 export type UpdateUsernameInput = {
   username: string
