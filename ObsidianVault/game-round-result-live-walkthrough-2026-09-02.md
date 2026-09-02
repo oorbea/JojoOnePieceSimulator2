@@ -91,8 +91,13 @@ ended.
 
 **Delegated to a subagent** (per owner instruction, 2026-09-02: send bugs found during this
 walkthrough to a subagent to investigate/fix/commit atomically, no co-author, so live testing could
-keep iterating) rather than fixed inline. See git log around this date for the actual root cause and
-fix - update this note once known if it turns out to be something other than the lead above.
+keep iterating) rather than fixed inline.
+
+**Root cause (actual, found on the second pass)**: `apps/backend/internal/infrastructure/gamestore/redis/wire.go` keeps its own `wireRound` wire-format struct, deliberately separate from `game.RoundSnapshot`. When `RoundSnapshot.TiedVotes` was added 2026-08-28, `wireRound` never got a matching field - so `Game.CloseVoting` setting `round.TiedVotes` encoded fine into the in-memory object and the very next Redis `Save` even succeeded (no error), but the following `Get` (which every `withGame`/`GetGame` call does, including the STATE resend right after `TIEBREAK_OPENED`) silently decoded `TiedVotes` back to `nil`. Confirmed live: a `GET /api/v1/games/:id` mid-TIEBREAK showed `tiebreakUsed:true` but no `tiedVotes`/`votes` keys at all - proof the domain-level tie logic was correct and the loss was specifically in the Redis wire round-trip. The first investigation pass missed this because its tests only exercised `game.Snapshot()`/`game.Restore()` (domain-level) or an in-memory store holding the live pointer, never `infrastructure/gamestore/redis`'s separate wire type - which is what `local-up`'s actual Docker stack uses.
+
+**Fix**: added `TiedVotes []wireVote` (additive, `omitempty`) to `wireRound`, wired through `toWire`/`fromWire`. New test `TestEncodeDecodeRoundTrip_TiedVotes` in `wire_test.go` round-trips a real tied round through this package's own `encode`/`decode` and asserts `TiedVotes` survives - confirmed it fails without the fix, passes with it. Committed `eeca6b5` on top of `9c0aa5c`.
+
+**Re-verified live** (same session, rebuilt backend on `eeca6b5`, fresh Versus 1v1, real 1-1 tie via keyboard hotkeys): the tied-vote breakdown panel now renders correctly on both clients the moment TIEBREAK opens - "Empate - revotación" header, "Saltar" skip button, "Team A 1 / Team B 1" tally, both host (Spanish) and guest (English) UI. Bug closed.
 
 ### Subagent investigation result (2026-09-02)
 
