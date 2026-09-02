@@ -304,6 +304,16 @@ la sección siguiente**.
   2026-09-01** via `onModalOpenChange`, ver [[norma-teclado]].
 - ~~No automated test for `use-roving-group.ts`'s web-only keyboard branch.~~ **RESUELTO 2026-09-01**
   con el carril `.web.test.tsx` (proyecto jsdom), 14 tests.
+- ~~El walkthrough en vivo a dos navegadores (empate real, reconexión, keyboard-only) sigue
+  pendiente~~ **HECHO 2026-09-02**, ver [[game-round-result-live-walkthrough-2026-09-02]]:
+  reconexión mid-vote y empate→revoto→cara-o-cruz confirmados en vivo con dos cuentas Google reales,
+  con hotkeys de teclado (`1`-`9`/`S`) casteando los votos reales del empate, no clicks de ratón.
+  **Bug real encontrado y cerrado**: el panel de desglose de votos empatados no se pintaba durante
+  TIEBREAK - causa real en `infrastructure/gamestore/redis/wire.go` (`wireRound` nunca tuvo campo
+  `TiedVotes`, así que sobrevivía en memoria y se perdía en cada round-trip por Redis); arreglado,
+  test de round-trip añadido, verificado en vivo tras el fix (panel ya se pinta en ambos clientes).
+  El pase keyboard-only quedó cubierto por el propio empate por hotkey; Tab/roving-tabindex ya
+  estaba unit-testeado desde antes ([[norma-teclado]]), no repetido aquí.
 
 **Pantalla de resultado final + rematch - DONE (2026-09-01)**, ver
 [[game-final-result-2026-09-01]] para el writeup completo: cierra el último hueco de §6. Backend:
