@@ -12,7 +12,7 @@ Solo hobby/learning project (JoJo + One Piece stand/devil-fruit simulator). **Pr
 
 Known weak spots (owner-flagged, not visible from code alone):
 - Picture pipeline (libvips) is fragile — see [[cicd_picture_pipeline]] for the CI build-tag requirement.
-- Auth/session flow incomplete — Google login works, rest of session lifecycle is WIP.
+- ~~Auth/session flow incomplete — Google login works, rest of session lifecycle is WIP.~~ **Corrected 2026-09-02** ([[auth-hardening-2026-09-02]]): the flow is complete and verified in prod. What was actually missing was test coverage (now added) and accurate docs (now fixed). JWT-in-query-string for SSE/WS, `localStorage` on web, and no refresh tokens are accepted trade-offs, not gaps.
 
 **Why:** owner is sole contributor, building for learning/fun, not shipping to real users yet.
 **How to apply:** don't assume production concerns (scaling, multi-tenant auth hardening) unless asked; flag auth/picture-pipeline fragility when touching those areas; ADRs/docs here are for the owner's own future reference, not team onboarding.
