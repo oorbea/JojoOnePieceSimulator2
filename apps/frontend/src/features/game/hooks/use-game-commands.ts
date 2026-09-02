@@ -1,5 +1,5 @@
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
-import { CLIENT_COMMAND } from '@/features/game/types/game-ws.types'
+import { CLIENT_COMMAND } from '@/shared/contracts/ws'
 import type { UpdateGameConfigInput } from '@/features/game/types/game.types'
 
 // Typed command senders over the socket store's raw send() - one function
