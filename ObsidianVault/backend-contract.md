@@ -46,15 +46,23 @@ Backend also has a caching layer for Stand repo + picture storage (ETag/Cache-Co
 
 ## JSON shape
 
-camelCase. Errors: `{error, details?[]}`.
+camelCase. Errors: `{error, code?, details?[]}` — `code` is a stable machine-readable identifier
+(e.g. `STAND_NOT_FOUND`), see [[contratos-tipos-generados]].
 
-## Enums (strings)
+## Enums, DTOs, WS payloads, error codes — generated, not hand-listed here
 
-- rarity: `COMMON|RARE|EPIC|LEGENDARY`
-- stand stats: `E|D|C|B|A|INFINITE|NULL`
-- fruitType: `PARAMECIA|ZOAN|LOGIA|SPECIAL_PARAMECIA|ANCIENT_ZOAN|MYTHICAL_ZOAN`
-- role: `REGULAR|ADMIN`
-- pictureStatus: `NONE|PENDING|READY|FAILED`
+**2026-09-02**: this section used to hand-list enum values here (it had drifted: rarity was
+documented as `COMMON|RARE|EPIC|LEGENDARY`, missing the `MYTHICAL` tier added since — a live
+example of exactly the problem [[contratos-tipos-generados]] solves). The actual, always-current
+values now live in code on both sides and nowhere else:
+
+- Backend source of truth: `apps/backend/internal/domain/enums/*.go` (22 enums),
+  `apps/backend/internal/infrastructure/api/dto/*.go` (every request/response shape),
+  `apps/backend/internal/infrastructure/api/apierr/codes.go` (69 error codes).
+- Frontend: `apps/frontend/src/shared/contracts/{enums,dto,ws,errors}.ts` — generated from the
+  above by `apps/backend/cmd/typegen`, regenerate with `make types` (or `make types-docker`).
+
+See [[contratos-tipos-generados]] for the full design and how to add a new enum/DTO/frame.
 
 ## Users (added 2026-08-04)
 
@@ -82,4 +90,4 @@ as `/events`.
 
 DevilFruit (CRUD, filtering, picture handling), Stand (with cache layer), pictures (background processing + status).
 
-Related: [[frontend-stack]]
+Related: [[frontend-stack]], [[contratos-tipos-generados]]
