@@ -125,9 +125,15 @@ states.
 
 ## Known follow-up, not done this tanda
 
-None new. The Redis-cache-decorator gap for `stage_repository.go` (flagged
+~~None new. The Redis-cache-decorator gap for `stage_repository.go` (flagged
 in [[stages_admin_crud_2026-08-11]]) still stands - `FilterStageRows` is a
-live Postgres round trip on every admin request, same as before.
+live Postgres round trip on every admin request, same as before.~~
+
+> [!done] Closed 2026-09-02
+> `cache.StageRepository` now decorates the Stage adapter read-through:
+> `Filter`/`List`/`FindByID` are cached per locale, `Stages` per manga, and
+> every write flushes the whole `stages` namespace. Details and design
+> decisions in [[stage-redis-cache-2026-09-02]].
 
 Related: [[game-stage-content]], [[admin-panel-crud-ux-fixes]],
-[[picture-events-sse]].
+[[picture-events-sse]], [[stage-redis-cache-2026-09-02]].
