@@ -139,7 +139,16 @@ type wireRound struct {
 	Stage        wireStage        `json:"stage"`
 	Ballot       wireBallot       `json:"ballot"`
 	TiebreakUsed bool             `json:"tiebreakUsed"`
-	Result       *wireRoundResult `json:"result,omitempty"`
+	// TiedVotes mirrors game.RoundSnapshot.TiedVotes (added 2026-08-28,
+	// after this wire type already existed - the field was missed here
+	// then, silently dropping it on every Redis round trip: Save encoded
+	// fine, but the very next Get decoded a Round with TiedVotes back to
+	// nil, since wireRound had nowhere to put it. omitempty is safe/
+	// backward-compatible the same way every other addition here is - an
+	// absent value just means "no tied votes to show", game.Restore's
+	// existing default for a nil TiedVotes.
+	TiedVotes []wireVote       `json:"tiedVotes,omitempty"`
+	Result    *wireRoundResult `json:"result,omitempty"`
 }
 
 type wireBallot struct {
@@ -235,6 +244,12 @@ func toWire(s game.Snapshot) wireGame {
 			Stage:        toWireStage(r.Stage),
 			Ballot:       toWireBallot(r.Ballot),
 			TiebreakUsed: r.TiebreakUsed,
+		}
+		if r.TiedVotes != nil {
+			wr.TiedVotes = make([]wireVote, len(r.TiedVotes))
+			for i, v := range r.TiedVotes {
+				wr.TiedVotes[i] = wireVote{ParticipantID: v.ParticipantID, Option: string(v.Option)}
+			}
 		}
 		if r.Result != nil {
 			wr.Result = &wireRoundResult{Winner: string(r.Result.Winner), DecidedByCoinFlip: r.Result.DecidedByCoinFlip}
@@ -379,6 +394,12 @@ func fromWire(w wireGame) game.Snapshot {
 			Stage:        fromWireStage(wr.Stage),
 			Ballot:       fromWireBallot(wr.Ballot),
 			TiebreakUsed: wr.TiebreakUsed,
+		}
+		if wr.TiedVotes != nil {
+			r.TiedVotes = make([]game.VoteSnapshot, len(wr.TiedVotes))
+			for i, v := range wr.TiedVotes {
+				r.TiedVotes[i] = game.VoteSnapshot{ParticipantID: v.ParticipantID, Option: game.OptionID(v.Option)}
+			}
 		}
 		if wr.Result != nil {
 			r.Result = &game.RoundResultSnapshot{
