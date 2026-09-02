@@ -1,32 +1,12 @@
 import { z } from 'zod'
 
-import {
-  stageTranslationsFormSchema,
-  type StageTranslationFormValues,
-} from '@/shared/lib/stage-translations'
-import { mangaSchema, type Locale, type Manga, type PictureStatus } from '@/shared/contracts/enums'
+import { stageTranslationsFormSchema } from '@/shared/lib/stage-translations'
+import { mangaSchema, type Manga } from '@/shared/contracts/enums'
 
-// Mirrors the backend's dto.StageResponse (apps/backend .../dto/stage_response.go).
-export type StageResponse = {
-  id: string
-  manga: Manga
-  order: number
-  name: string
-  description: string
-  picture: string
-  pictureThumb: string
-  pictureStatus: PictureStatus
-}
-
-// Mirrors dto.StageRequest - same body shape for both create (POST) and
-// update (PUT). Unlike StandInput's translations (only en-GB mandatory),
-// every locale is required here - see the vault's game-stage-content.md.
-export type StageInput = {
-  manga: Manga
-  order: number
-  name: string
-  translations: Record<Locale, StageTranslationFormValues>
-}
+// StageResponse/StageInput are generated (dto.StageResponse/StageRequest) -
+// Go decides the shape, this is a rename re-export. See
+// ObsidianVault/contratos-tipos-generados.md.
+export type { StageResponse, StageRequest as StageInput } from '@/shared/contracts/dto'
 
 export const stageFormSchema = z.object({
   manga: mangaSchema,
@@ -37,6 +17,8 @@ export const stageFormSchema = z.object({
 
 export type StageFormValues = z.infer<typeof stageFormSchema>
 
+// Not generated - same reasoning as stands.types.ts's StandFilters:
+// ports.StageFilters is server-side only, never marshaled.
 export type StageFilters = {
   manga?: Manga
   q?: string

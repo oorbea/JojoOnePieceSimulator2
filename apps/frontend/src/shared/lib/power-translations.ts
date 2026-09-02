@@ -2,13 +2,18 @@ import { z } from 'zod'
 
 import { SUPPORTED_LOCALES } from '@/shared/i18n'
 import type { Locale } from '@/shared/contracts/enums'
+import type { TranslationRequest } from '@/shared/contracts/dto'
 
 // Shared between the Stand and Devil Fruit admin forms - both Powers carry
 // the exact same translations shape (description + skills per locale, see
 // the vault's i18n-multi-language.md). One module instead of duplicating
 // this in each feature's types file.
 
-export type TranslationFormValues = { description: string; skills: string[] }
+// Aliased (not re-declared) to the generated wire shape, so a field added
+// to dto.TranslationRequest surfaces as a type error at every call site
+// here instead of silently drifting - see
+// ObsidianVault/contratos-tipos-generados.md's note on toTranslationsPayload.
+export type TranslationFormValues = TranslationRequest
 export type PowerTranslationsFormValues = Record<Locale, TranslationFormValues>
 
 // Factories, not singletons: react-hook-form's defaultValues become the

@@ -1,54 +1,12 @@
 import { z } from 'zod'
 
-import {
-  powerTranslationsFormSchema,
-  type TranslationFormValues,
-} from '@/shared/lib/power-translations'
-import {
-  raritySchema,
-  standStatSchema,
-  type Locale,
-  type PictureStatus,
-  type Rarity,
-  type StandStat,
-} from '@/shared/contracts/enums'
+import { powerTranslationsFormSchema } from '@/shared/lib/power-translations'
+import { raritySchema, standStatSchema, type Rarity, type StandStat } from '@/shared/contracts/enums'
 
-// Mirrors the backend's dto.StandResponse (apps/backend .../dto/stand_response.go).
-// `evolvesFrom` nests recursively — the backend returns the full parent
-// Stand, not just its id.
-export type StandResponse = {
-  id: string
-  name: string
-  description: string
-  rarity: Rarity
-  skills: string[]
-  picture: string
-  pictureThumb: string
-  pictureStatus: PictureStatus
-  attackPower: StandStat
-  speed: StandStat
-  attackRange: StandStat
-  endurance: StandStat
-  precision: StandStat
-  potential: StandStat
-  evolvesFrom: StandResponse | null
-}
-
-// Mirrors dto.StandRequest — same body shape for both create (POST) and
-// update (PUT). Translations replaced the old flat description/skills once
-// power_translations landed - see the vault's i18n-multi-language.md.
-export type StandInput = {
-  name: string
-  translations: Partial<Record<Locale, TranslationFormValues>>
-  rarity: Rarity
-  attackPower: StandStat
-  speed: StandStat
-  attackRange: StandStat
-  endurance: StandStat
-  precision: StandStat
-  potential: StandStat
-  evolvesFromId: string | null
-}
+// StandResponse/StandInput are generated (dto.StandResponse/StandRequest) -
+// Go decides the shape, this is a rename re-export. See
+// ObsidianVault/contratos-tipos-generados.md.
+export type { StandResponse, StandRequest as StandInput } from '@/shared/contracts/dto'
 
 export const standFormSchema = z.object({
   name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
@@ -65,6 +23,10 @@ export const standFormSchema = z.object({
 
 export type StandFormValues = z.infer<typeof standFormSchema>
 
+// Not generated: ports.StandFilters (the Go type this shape corresponds to)
+// carries no json tags and is never itself marshaled - it's built
+// server-side from query params, so this describes what the client SENDS,
+// not a wire response shape. Client-only convenience type.
 export type StandFilters = {
   rarity?: Rarity
   attackPower?: StandStat
