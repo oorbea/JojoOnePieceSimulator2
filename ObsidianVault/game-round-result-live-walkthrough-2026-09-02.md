@@ -121,14 +121,43 @@ view logic in this feature (`voteProgress`, `currentRound`, `hasAllLoadouts` all
 and added 6 unit tests covering the 'tie' case, the 0-0-tie no-panel case, the 'result' case, the
 dismissed case, no-round, and stale-tiedVotes-outside-TIEBREAK. All pass on current code.
 
-Bottom line: the current code, as far as every layer could be independently verified, is correct. If
-the live repro is still reproducible on a fresh `local-up` build, the next step is a real live
-walkthrough with `get_page_text` + `read_network_requests` capturing the actual WS `STATE` frame bytes
-during the TIEBREAK window (not just the rendered DOM) to see whether the wire payload itself is
-missing `tiedVotes` in that specific run - which would point back at something environment/timing
-specific this session couldn't reproduce statically (e.g. a stale frontend bundle in that particular
-`local-up` container predating this feature, or a genuine race not covered by the mutex reasoning
-above that only a live capture would show).
+Bottom line (superseded below): the current code, as far as every layer could be independently
+verified with in-memory-store tests, is correct. If the live repro is still reproducible on a fresh
+`local-up` build, the next step is a real live walkthrough with `get_page_text` +
+`read_network_requests` capturing the actual WS `STATE` frame bytes during the TIEBREAK window (not
+just the rendered DOM) to see whether the wire payload itself is missing `tiedVotes` in that specific
+run.
+
+### Actual root cause, found 2026-09-02 (second pass)
+
+The owner re-ran the live repro on top of the first pass's commit and it still failed - then hit
+`GET /api/v1/games/:id` directly mid-TIEBREAK and got `{"state":"TIEBREAK","rounds":[{"index":0,
+"tiebreakUsed":true}]}` - **no `tiedVotes` key at all**, `tiebreakUsed: true` present. That pointed
+straight at persistence, not the DTO layer (already proven correct) or the render layer.
+
+Found it: `apps/backend/internal/infrastructure/gamestore/redis/wire.go` keeps its own `wireRound`
+struct, deliberately separate from `game.RoundSnapshot` (JSON tags are an infra concern, per the
+package's own doc comment) - and `wireRound` was never given a `TiedVotes` field when
+`RoundSnapshot.TiedVotes` was added 2026-08-28. `toWire`/`fromWire` simply had nowhere to put it, so
+every real Redis `Save` encoded a tied round fine but the very next `Get` (which every `withGame`/
+`GetGame` call triggers, i.e. immediately, on the very `pushCurrentState` that follows
+`TIEBREAK_OPENED`) silently decoded `TiedVotes` back to `nil`. `TiebreakUsed` survived because
+`wireRound` does have that field. This is exactly the class of bug `wire_test.go`'s existing
+`RevealSpeed`/`SummaryDurationSeconds` round-trip checks were written to catch for `wireConfig` - just
+never extended to `wireRound` when `TiedVotes` was added.
+
+Why the previous pass's tests didn't catch it: `TestNewGameStateResponse_TiedVotes` (dto package) and
+the new `TestCastVote_Tie_DTOStateCarriesTiedVotes` (services package) both only exercise
+`game.Snapshot()`/`game.Restore()` (or an in-memory store holding the live `*Game` pointer) - neither
+ever touches `infrastructure/gamestore/redis`'s separate wire type. Only a round trip through this
+package's own `encode`/`decode` does.
+
+**Fix**: added `TiedVotes []wireVote` (`omitempty`, additive/backward-compatible per this file's own
+`snapshotVersion` doc - no version bump needed) to `wireRound`, and populated/restored it in
+`toWire`/`fromWire`, mirroring the existing `wireBallot.Votes` pattern. Added
+`TestEncodeDecodeRoundTrip_TiedVotes` to `wire_test.go`, following the exact convention
+`TestEncodeDecodeRoundTrip`'s own doc comment describes for this bug class - confirmed it fails
+without the fix (`TiedVotes = map[], want the 2 votes that tied`) and passes with it.
 
 ## Environment note (not an app bug)
 
