@@ -3,6 +3,7 @@ import {
   hasAllLoadouts,
   loadoutSlots,
   revealSlotKinds,
+  roundResultPanelVariant,
   secondsUntil,
   voteProgress,
 } from '@/features/game/lib/match-rules'
@@ -321,6 +322,57 @@ describe('voteProgress', () => {
   it('returns 0/0 with no current round', () => {
     const snap = snapshot({ rounds: [] })
     expect(voteProgress(snap, INITIAL_LIVE)).toEqual({ cast: 0, total: 0 })
+  })
+})
+
+describe('roundResultPanelVariant', () => {
+  it("is 'tie' during TIEBREAK once the round carries a tied-vote breakdown", () => {
+    const snap = snapshot({
+      state: 'TIEBREAK',
+      rounds: [round({ index: 0, tiedVotes: { p1: 'SURVIVE', p2: 'FALL' } })],
+    })
+    expect(roundResultPanelVariant(snap, INITIAL_LIVE)).toBe('tie')
+  })
+
+  it("is null during TIEBREAK if the round has no tiedVotes yet (e.g. a genuine 0-0 timeout tie)", () => {
+    const snap = snapshot({ state: 'TIEBREAK', rounds: [round({ index: 0 })] })
+    expect(roundResultPanelVariant(snap, INITIAL_LIVE)).toBeNull()
+  })
+
+  it("is 'result' during RESOLVING once the round has a winner", () => {
+    const snap = snapshot({
+      state: 'RESOLVING',
+      rounds: [round({ index: 0, result: { winner: 'SURVIVE', decidedByCoinFlip: false } })],
+    })
+    expect(roundResultPanelVariant(snap, INITIAL_LIVE)).toBe('result')
+  })
+
+  it('is null once the local viewer dismissed it, regardless of state', () => {
+    const snap = snapshot({
+      state: 'TIEBREAK',
+      rounds: [round({ index: 0, tiedVotes: { p1: 'SURVIVE', p2: 'FALL' } })],
+    })
+    const live: LiveMatchState = { ...INITIAL_LIVE, resultDismissed: true }
+    expect(roundResultPanelVariant(snap, live)).toBeNull()
+  })
+
+  it('is null with no current round', () => {
+    const snap = snapshot({ state: 'TIEBREAK', rounds: [] })
+    expect(roundResultPanelVariant(snap, INITIAL_LIVE)).toBeNull()
+  })
+
+  it('is null outside TIEBREAK/RESOLVING even with stale tiedVotes/result left on the round', () => {
+    const snap = snapshot({
+      state: 'VOTING',
+      rounds: [
+        round({
+          index: 0,
+          tiedVotes: { p1: 'SURVIVE', p2: 'FALL' },
+          result: { winner: 'SURVIVE', decidedByCoinFlip: false },
+        }),
+      ],
+    })
+    expect(roundResultPanelVariant(snap, INITIAL_LIVE)).toBeNull()
   })
 })
 
