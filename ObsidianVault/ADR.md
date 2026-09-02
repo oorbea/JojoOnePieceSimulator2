@@ -20,7 +20,7 @@ Solo hobby/learning project. CI/CD to prod set up 2026-08-02 (see [[cicd-deploym
 
 ## Known weak spots (flagged by owner, not derivable from code)
 - Picture pipeline (vips) is fragile — CI must build/test with `-tags vips`, easy to break with a plain `go test ./...` step. **Fixed 2026-08-02**: `.github/workflows/ci.yml`'s backend job now runs both `go test ./...` and `go test -tags vips ./...` (libvips-dev installed on the runner first). Neither libvips nor its Go binding are touched by the storage fallback chain added 2026-08-09 — see [[storage-fallback-chain]].
-- Auth/session flow is incomplete — Google login exists, rest of the session/auth lifecycle is WIP.
+- ~~Auth/session flow is incomplete — Google login exists, rest of the session/auth lifecycle is WIP.~~ **No longer true, corrected 2026-09-02** — see [[auth-hardening-2026-09-02]]. The flow is complete and verified in prod: Google ID token verification (`aud` pinned to `GOOGLE_CLIENT_ID`), HS256 JWT with alg/issuer/exp validation and a ≥32-char secret enforced at boot, per-IP login rate limit, `RequireAuth`/`RequireAdmin`, admin promotion by `ADMIN_EMAILS`. Three risks are *accepted*, not missing work: JWT in the query string for SSE/WS ([[picture-events-sse]], [[game-realtime-transport]]), session in `localStorage` on web ([[frontend-stack]]), and no refresh tokens ([[backend-contract]] — 24h JWT, 401 means re-login).
 
 ## Decisions worth remembering
 - Solo project: docs are for the owner's own future reference, not team onboarding.

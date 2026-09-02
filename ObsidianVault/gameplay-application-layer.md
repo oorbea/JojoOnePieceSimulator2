@@ -196,8 +196,13 @@ the WebSocket + HTTP transport, the stage catalog schema/CRUD, and `IGameHistory
 transport half. What's genuinely still missing:
 
 - `ports.IInventory` — `AbilitySource=INVENTORY` still returns 501 `INVENTORY_NOT_SUPPORTED`.
-- Frontend: no WebSocket client yet (`socket.io-client` is installed but unwired), no game UI, no
-  admin screens for the new `/stages` CRUD.
+- ~~Frontend: no WebSocket client yet (`socket.io-client` is installed but unwired), no game UI, no
+  admin screens for the new `/stages` CRUD.~~ **Done — corrected 2026-09-02.** This line stayed
+  stale long after the fact: the frontend has a full browser-native `WebSocket` client
+  (`src/features/game/stores/game-socket.store.ts` — refcounted connection sharing, exponential
+  backoff, `RESYNC` on reconnect), the game UI, and the `/stages` admin screens. `socket.io-client`
+  was never imported by any of it and has now been uninstalled — see
+  [[socket-io-cleanup-2026-09-02]].
 - A `Seq` field on `services.GameEvent` so the transport can *detect* a hub drop instead of relying
   entirely on the event+snapshot rule to self-heal it (see [[game-realtime-transport]]).
 - `GET /games/preview?code=` (a pre-join preview) and `DELETE /games/{id}/participants/me` (leave

@@ -15,8 +15,10 @@ native (iOS/Android) is configured and ready without restructuring.
 - **React Hook Form** + **Zod** (forms + validation)
 - **Tamagui** (UI kit, universal styling, compiled)
 - **Axios** (HTTP client)
-- **socket.io-client** (installed, unwired — the backend has no websocket
-  endpoint yet)
+- **Native `WebSocket`** for the game's realtime transport — no socket.io.
+  The client lives in `src/features/game/stores/game-socket.store.ts`
+  (refcounted connection, exponential backoff, RESYNC on reconnect) and
+  talks to the backend's `/api/v1/games/{id}/ws` endpoint.
 - **pnpm** (package manager)
 - **Expo PWA** (manifest + service worker in `public/`)
 
@@ -46,7 +48,11 @@ bundle at build time — never put secrets here). See `.env.example`:
 
 - `EXPO_PUBLIC_API_URL` — backend base URL, e.g. `http://localhost:8080/api/v1`
 - `EXPO_PUBLIC_GOOGLE_*_CLIENT_ID` — Google OAuth client IDs (web/iOS/Android)
-- `EXPO_PUBLIC_SOCKET_URL` — reserved for when the backend gets a websocket
+- `EXPO_PUBLIC_SOCKET_URL` — websocket base URL, e.g.
+  `ws://localhost:8080/api/v1`. Consumed by
+  `src/features/game/lib/socket-url.ts` to build the game socket URL; it is
+  optional, and leaving it unset is the documented "realtime unavailable,
+  fall back to REST polling" signal.
 
 `src/shared/config/env.ts` validates these with Zod at boot — a missing or
 malformed var fails loudly instead of surfacing as a mystery `undefined`
