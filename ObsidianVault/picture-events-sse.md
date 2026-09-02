@@ -42,10 +42,14 @@ New `internal/infrastructure/api/endpoints/events_endpoints.go`: `GET /api/v1/ev
 JWT via `?token=` query param (falls back to `Authorization` header) via a small helper local to
 `events_endpoints.go` - *not* a change to the shared `RequireAuth` middleware, so no other route
 gains query-param auth. The token lands in chi's `middleware.Logger` output and (in prod) Nginx
-Proxy Manager's access log, given `JWT_TTL=8h`. Accepted for v1 as the standard/only practical way
-to authenticate `EventSource`. A harder mitigation (a `POST /api/v1/events/ticket` minting a
-short-TTL single-use ticket just for the SSE connection) is a reasonable follow-up if this ever
-needs hardening - not built now.
+Proxy Manager's access log, and stays usable there for the whole of `JWT_TTL` — which is **24h**,
+not the 8h this note claimed until 2026-09-02. `deployments/.env.example` ships `JWT_TTL=24h` and
+`config.go`'s `defaultJWTTTL` is `24 * time.Hour`, so 24h is what is deployed; [[backend-contract]]
+said 24h all along. The note was wrong, the value was not — see [[auth-hardening-2026-09-02]].
+Still accepted for v1 as the standard/only practical way to authenticate `EventSource`, with the
+longer window making the follow-up slightly more attractive than the old text implied: a harder
+mitigation (a `POST /api/v1/events/ticket` minting a short-TTL single-use ticket just for the SSE
+connection) is a reasonable next step if this ever needs hardening - not built now.
 
 `router.go`: `middleware.Timeout(60s)` was global, which would have killed the stream at 60s.
 Moved it from the top-level `r.Use` into two inner `r.Group`s (health/swagger, and the
