@@ -80,15 +80,23 @@ func main() {
 
 	standRepository := repositories.NewStandRepository(pool)
 	devilFruitRepository := repositories.NewDevilFruitRepository(pool)
+	// stageRepository only needs the pool, and is built here (rather than
+	// further down with the rest of the game feature) so it can be decorated
+	// alongside the other two catalogues below.
+	stageRepository := repositories.NewStageRepository(pool)
 
-	// standRepo/devilFruitRepo/pictures start as the undecorated adapters;
-	// all three get wrapped with a Redis-backed cache below when one is
-	// configured. The picture worker and each catalogue's service must
-	// receive the *same* decorated repo, or a background transcode
-	// publishing READY/FAILED would invalidate one copy of the cache while
-	// readers kept hitting the other.
+	// standRepo/devilFruitRepo/stageRepo/stageCatalog/pictures start as the
+	// undecorated adapters; all get wrapped with a Redis-backed cache below
+	// when one is configured. The picture worker and each catalogue's
+	// service must receive the *same* decorated repo, or a background
+	// transcode publishing READY/FAILED would invalidate one copy of the
+	// cache while readers kept hitting the other. stageRepo/stageCatalog are
+	// two views of one decorator instance for exactly that reason: admin
+	// CRUD and GameService read the same table through the same cache.
 	var standRepo ports.IStandRepository = standRepository
 	var devilFruitRepo ports.IDevilFruitRepository = devilFruitRepository
+	var stageRepo ports.IStageRepository = stageRepository
+	var stageCatalog ports.IStageCatalog = stageRepository
 	var pictures ports.IPictureStorage = pictureStorage
 
 	if cfg.CacheEnabled && cfg.RedisURL != "" {
@@ -109,21 +117,22 @@ func main() {
 		standRepo = cache.NewStandRepository(standRepo, redisCache, cfg.CacheStandTTL, cfg.CacheNotFoundTTL)
 		devilFruitRepo = cache.NewDevilFruitRepository(devilFruitRepo, redisCache, cfg.CacheDevilFruitTTL, cfg.CacheNotFoundTTL)
 		pictures = cache.NewPictureStorage(pictures, redisCache, cfg.CachePresignTTL)
+		// One decorator, both ports: it wraps the concrete adapter (which
+		// satisfies cache.StageStore) rather than the narrowed stageRepo, so
+		// the admin path and the gameplay path share a single cache.
+		cachedStages := cache.NewStageRepository(stageRepository, redisCache, cfg.CacheStageTTL, cfg.CacheNotFoundTTL)
+		stageRepo = cachedStages
+		stageCatalog = cachedStages
 	}
 
 	userRepository := repositories.NewUserRepository(pool)
 	var userRepo ports.IUserRepository = userRepository
 
-	// stageRepository is constructed here (moved ahead of where the game
-	// feature used to build it) purely so it can join pictureTargets below -
-	// it only needs the pool, nothing else in this section depends on it.
-	stageRepository := repositories.NewStageRepository(pool)
-
 	pictureTargets := map[enums.PictureSubjectKind]services.PictureTarget{
 		enums.StandSubject:      {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
 		enums.DevilFruitSubject: {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
 		enums.UserSubject:       {Publisher: services.NewUserPicturePublisher(userRepo), KeyPrefix: "users"},
-		enums.StageSubject:      {Publisher: services.NewStagePicturePublisher(stageRepository), KeyPrefix: "stages"},
+		enums.StageSubject:      {Publisher: services.NewStagePicturePublisher(stageRepo), KeyPrefix: "stages"},
 	}
 
 	// pictureHub fans out PENDING->READY/FAILED transitions to connected SSE
@@ -206,7 +215,7 @@ func main() {
 	gameReaper := gamestore.NewReaper(gameStore, cfg.GameLobbyTTL, cfg.GameLobbyReapInterval)
 	go gameReaper.Start(ctx)
 
-	stageService := services.NewStageService(stageRepository, idgen.UUIDGenerator[game.StageID]{},
+	stageService := services.NewStageService(stageRepo, idgen.UUIDGenerator[game.StageID]{},
 		pictures, imageProcessor, pictureWorker, picturePolicy)
 	stageEndpoints := endpoints.NewStageEndpoints(stageService)
 
@@ -220,7 +229,7 @@ func main() {
 		idgen.UUIDGenerator[game.ParticipantID]{},
 		idgen.UUIDGenerator[game.TeamID]{},
 		userRepo,
-		stageRepository,
+		stageCatalog,
 		gameinfra.NewRepoPowerPool(standRepo, devilFruitRepo),
 		gameinfra.NewDefaultWeights(),
 		gameinfra.NewCoinFlipTiebreaker(gameRNG),
@@ -230,7 +239,7 @@ func main() {
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: cfg.GameVotingWindow},
 	)
-	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepository, standRepo, devilFruitRepo, userRepo, tokenIssuer, ctx, endpoints.GameWSConfig{
+	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepo, standRepo, devilFruitRepo, userRepo, tokenIssuer, ctx, endpoints.GameWSConfig{
 		VotingWindow:             cfg.GameVotingWindow,
 		AllowedOrigins:           cfg.CORSAllowedOrigins,
 		ResolveStandPicture:      standService.PictureURL,
