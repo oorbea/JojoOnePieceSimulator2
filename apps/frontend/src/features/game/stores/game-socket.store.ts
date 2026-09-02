@@ -1,9 +1,10 @@
 import { create } from 'zustand'
+import { z } from 'zod'
 
 import { reconnectDelay } from '@/features/game/lib/backoff'
 import { buildGameSocketUrl } from '@/features/game/lib/socket-url'
 import type { ClientCommandType } from '@/shared/contracts/ws'
-import { SERVER_FRAME } from '@/shared/contracts/ws'
+import { SERVER_FRAME, serverFrameSchema } from '@/shared/contracts/ws'
 import type { GameResult, GameStateResponse } from '@/features/game/types/game.types'
 import { useSessionStore } from '@/shared/stores/session.store'
 
@@ -199,17 +200,34 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
 
     ws.onmessage = (event: MessageEvent) => {
       if (socket !== ws) return
-      let frame: { type?: string; requestId?: string; payload?: unknown }
+      let raw: unknown
       try {
-        frame = JSON.parse(event.data as string)
+        raw = JSON.parse(event.data as string)
       } catch {
         return
       }
-      if (!frame || typeof frame.type !== 'string') return
+
+      // Validated against the generated discriminated union instead of a
+      // blind cast: a backend field ADDED to a payload is safe (zod v4
+      // strips unknown keys by default), a field removed/renamed fails the
+      // parse for that one frame - handled the same way an already-unknown
+      // frame type always has, below (a feed entry, nothing else touched;
+      // STATE additionally means the previous snapshot is simply never
+      // replaced, since the branch below never runs).
+      const parsed = serverFrameSchema.safeParse(raw)
+      if (!parsed.success) {
+        if (__DEV__) {
+          console.error('[game-socket] dropped an unparseable frame:', z.prettifyError(parsed.error))
+        }
+        const rawType = (raw as { type?: unknown } | null)?.type
+        pushFeed(typeof rawType === 'string' ? rawType : 'UNKNOWN')
+        return
+      }
+      const frame = parsed.data
 
       switch (frame.type) {
         case SERVER_FRAME.STATE: {
-          const payload = frame.payload as GameStateResponse
+          const payload = frame.payload
           set((state) => {
             let live = state.live
 
@@ -258,9 +276,9 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           break
         }
         case SERVER_FRAME.PLAYER_KICKED: {
-          const payload = frame.payload as { participantId?: string } | undefined
+          const payload = frame.payload
           const self = get().snapshot?.you.participantId
-          if (payload?.participantId && payload.participantId === self) {
+          if (payload.participantId && payload.participantId === self) {
             set({ terminal: { kind: 'KICKED' } })
           } else {
             pushFeed(frame.type)
@@ -268,29 +286,29 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           break
         }
         case SERVER_FRAME.GAME_FINISHED: {
-          const payload = frame.payload as { result?: GameResult } | undefined
-          if (payload?.result) set({ terminal: { kind: 'FINISHED', result: payload.result } })
+          const payload = frame.payload
+          set({ terminal: { kind: 'FINISHED', result: payload.result } })
           break
         }
         case SERVER_FRAME.GAME_ABORTED: {
-          const payload = frame.payload as { reason?: string } | undefined
-          set({ terminal: { kind: 'ABORTED', reason: payload?.reason ?? '' } })
+          const payload = frame.payload
+          set({ terminal: { kind: 'ABORTED', reason: payload.reason ?? '' } })
           break
         }
         case SERVER_FRAME.REMATCH_READY: {
           // Published on THIS (old) game's stream by the server, to every
           // connected client - so the whole roster follows the host over to
           // the new lobby instead of only the person who pressed Rematch.
-          const payload = frame.payload as { gameId?: string } | undefined
-          if (payload?.gameId) set({ rematchGameId: payload.gameId })
+          const payload = frame.payload
+          if (payload.gameId) set({ rematchGameId: payload.gameId })
           break
         }
         case SERVER_FRAME.ERROR: {
-          const payload = frame.payload as { error?: string; code?: string } | undefined
+          const payload = frame.payload
           set({
             lastError: {
-              message: payload?.error ?? 'Unknown error',
-              code: payload?.code,
+              message: payload.error ?? 'Unknown error',
+              code: payload.code,
               requestId: frame.requestId,
             },
           })
@@ -304,20 +322,16 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           // Ignored when it's for a round we're no longer voting on (a late
           // frame arriving after ROUND_RESOLVED already cleared
           // votingRoundIndex, or for a stale previous round).
-          const payload = frame.payload as
-            { roundIndex?: number; votesCast?: number; voters?: number } | undefined
+          const payload = frame.payload
           set((state) => {
-            if (
-              payload?.roundIndex === undefined ||
-              payload.roundIndex !== state.live.votingRoundIndex
-            ) {
+            if (payload.roundIndex !== state.live.votingRoundIndex) {
               return {}
             }
             return {
               live: {
                 ...state.live,
-                votesCast: payload.votesCast ?? null,
-                voters: payload.voters ?? null,
+                votesCast: payload.votesCast,
+                voters: payload.voters,
               },
             }
           })
@@ -325,22 +339,22 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         }
         case SERVER_FRAME.REVEAL_READY_CHANGED: {
           // Absolute values, never an increment - same shape as VOTE_CAST.
-          const payload = frame.payload as { ready?: number; total?: number } | undefined
+          const payload = frame.payload
           set((state) => ({
             live: {
               ...state.live,
-              revealReadyCount: payload?.ready ?? null,
-              revealReadyTotal: payload?.total ?? null,
+              revealReadyCount: payload.ready,
+              revealReadyTotal: payload.total,
             },
           }))
           break
         }
         case SERVER_FRAME.SUMMARY_OPENED: {
-          const payload = frame.payload as { roundIndex?: number; closesAt?: string } | undefined
+          const payload = frame.payload
           set((state) => ({
             live: {
               ...state.live,
-              summaryEndsAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
+              summaryEndsAt: Date.parse(payload.closesAt) || null,
               // Fresh SUMMARY window, fresh ready set - mirrors
               // Game.OpenSummary resetting summaryReady server-side.
               summaryReadyCount: null,
@@ -352,12 +366,12 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         case SERVER_FRAME.SUMMARY_READY_CHANGED: {
           // Absolute values, never an increment - same shape as VOTE_CAST/
           // REVEAL_READY_CHANGED.
-          const payload = frame.payload as { ready?: number; total?: number } | undefined
+          const payload = frame.payload
           set((state) => ({
             live: {
               ...state.live,
-              summaryReadyCount: payload?.ready ?? null,
-              summaryReadyTotal: payload?.total ?? null,
+              summaryReadyCount: payload.ready,
+              summaryReadyTotal: payload.total,
             },
           }))
           break
@@ -367,15 +381,15 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           // still be pre-assignment - never touch snapshot/feed from this
           // case. hasAllLoadouts/currentRound (match-rules.ts) gate the
           // actual reveal on the snapshot catching up.
-          const payload = frame.payload as { roundIndex?: number; revealMs?: number } | undefined
-          const revealMs = payload?.revealMs ?? null
+          const payload = frame.payload
+          const revealMs = payload.revealMs
           set((state) => ({
             live: {
               ...state.live,
               assignmentSeq: state.live.assignmentSeq + 1,
-              assignedRoundIndex: payload?.roundIndex ?? null,
+              assignedRoundIndex: payload.roundIndex,
               revealMs,
-              revealEndsAt: revealMs !== null ? Date.now() + revealMs : null,
+              revealEndsAt: Date.now() + revealMs,
               // Fresh ASSIGNING window, fresh ready set - mirrors
               // Game.AssignLoadouts resetting revealReady server-side.
               revealReadyCount: null,
@@ -385,12 +399,12 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           break
         }
         case SERVER_FRAME.VOTING_OPENED: {
-          const payload = frame.payload as { roundIndex?: number; closesAt?: string } | undefined
+          const payload = frame.payload
           set((state) => ({
             live: {
               ...state.live,
-              votingRoundIndex: payload?.roundIndex ?? null,
-              votingClosesAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
+              votingRoundIndex: payload.roundIndex,
+              votingClosesAt: Date.parse(payload.closesAt) || null,
               tiebreak: false,
               revealMs: null,
               revealEndsAt: null,
@@ -412,12 +426,12 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           break
         }
         case SERVER_FRAME.TIEBREAK_OPENED: {
-          const payload = frame.payload as { roundIndex?: number; closesAt?: string } | undefined
+          const payload = frame.payload
           set((state) => ({
             live: {
               ...state.live,
-              votingRoundIndex: payload?.roundIndex ?? null,
-              votingClosesAt: payload?.closesAt ? Date.parse(payload.closesAt) || null : null,
+              votingRoundIndex: payload.roundIndex,
+              votingClosesAt: Date.parse(payload.closesAt) || null,
               tiebreak: true,
               revealMs: null,
               revealEndsAt: null,

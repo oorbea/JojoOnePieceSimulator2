@@ -58,6 +58,48 @@ function factory(url: string) {
   return new FakeWebSocket(url) as unknown as WebSocket
 }
 
+// The store now validates every frame against the generated
+// serverFrameSchema (game-socket.store.ts), so a STATE payload must be a
+// complete, valid GameSnapshotResponse/GameViewerResponse - a real backend
+// never sends a partial one. Tests build on this base via a shallow
+// `game`/`you` override so each case's `.toEqual` still holds (the store
+// stores the payload wholesale, so actual and expected are built from the
+// same merge).
+function validGame(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'g1',
+    code: 'ABCDEF',
+    state: 'LOBBY',
+    mode: 'GAUNTLET',
+    hostId: 'p1',
+    locked: false,
+    config: {
+      stageMangas: ['ONE_PIECE'],
+      powerMangas: ['ONE_PIECE'],
+      abilitySource: 'RANDOM',
+      teamSize: 4,
+      allowBots: true,
+      visibility: 'PRIVATE',
+      votingWindowSeconds: 30,
+      poolFilter: { standRarities: [], fruitRarities: [], fruitTypes: [], banned: [] },
+      revealSpeed: 'NORMAL',
+      summaryDurationSeconds: 10,
+    },
+    teams: [],
+    participants: [],
+    rounds: [],
+    ...overrides,
+  }
+}
+
+function validYou(overrides: Record<string, unknown> = {}) {
+  return { participantId: 'p1', teamId: 't1', isHost: true, hasVoted: false, ...overrides }
+}
+
+function validState(gameOverrides: Record<string, unknown> = {}, youOverrides: Record<string, unknown> = {}) {
+  return { game: validGame(gameOverrides), you: validYou(youOverrides) }
+}
+
 beforeEach(() => {
   FakeWebSocket.instances = []
   useGameSocketStore.getState().reset()
@@ -89,11 +131,11 @@ describe('useGameSocketStore', () => {
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
-    const snapshotA = { game: { id: 'g1', locked: false }, you: { participantId: 'p1' } }
+    const snapshotA = validState({ locked: false })
     ws.receive({ type: 'STATE', payload: snapshotA })
     expect(useGameSocketStore.getState().snapshot).toEqual(snapshotA)
 
-    const snapshotB = { game: { id: 'g1', locked: true }, you: { participantId: 'p1' } }
+    const snapshotB = validState({ locked: true })
     ws.receive({ type: 'STATE', payload: snapshotB })
     expect(useGameSocketStore.getState().snapshot).toEqual(snapshotB)
   })
@@ -102,7 +144,7 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    const snapshot = { game: { id: 'g1' }, you: { participantId: 'p1' } }
+    const snapshot = validState()
     ws.receive({ type: 'STATE', payload: snapshot })
 
     ws.receive({ type: 'PLAYER_JOINED', payload: { participantId: 'p2' } })
@@ -114,10 +156,10 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    const snapshot = { game: { id: 'g1' }, you: { participantId: 'p1' } }
+    const snapshot = validState()
     ws.receive({ type: 'STATE', payload: snapshot })
 
-    ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1 } })
+    ws.receive({ type: 'VOTE_CAST', payload: { roundIndex: 0, votesCast: 1, voters: 3 } })
     expect(useGameSocketStore.getState().snapshot).toEqual(snapshot)
     expect(useGameSocketStore.getState().feed.length).toBe(0)
   })
@@ -141,7 +183,7 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'STATE', payload: { game: { id: 'g1' }, you: { participantId: 'p1' } } })
+    ws.receive({ type: 'STATE', payload: validState() })
 
     ws.receive({ type: 'PLAYER_KICKED', payload: { participantId: 'p2' } })
     expect(useGameSocketStore.getState().terminal).toBeNull()
@@ -186,10 +228,10 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    const snapshot = { game: { id: 'g1' }, you: { participantId: 'p1' } }
+    const snapshot = validState()
     ws.receive({ type: 'STATE', payload: snapshot })
 
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
 
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
     expect(useGameSocketStore.getState().live.assignedRoundIndex).toBe(0)
@@ -217,10 +259,7 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: {
-        game: { id: 'g1', revealEndsAt: '2100-01-01T00:00:20.000Z' },
-        you: { participantId: 'p1' },
-      },
+      payload: validState({ revealEndsAt: '2100-01-01T00:00:20.000Z' }),
     })
 
     const live = useGameSocketStore.getState().live
@@ -237,10 +276,7 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: {
-        game: { id: 'g1', revealEndsAt: '2100-01-01T00:00:20.000Z' },
-        you: { participantId: 'p1' },
-      },
+      payload: validState({ revealEndsAt: '2100-01-01T00:00:20.000Z' }),
     })
 
     expect(useGameSocketStore.getState().live.revealEndsAt).toBe(revealEndsAtBefore)
@@ -251,8 +287,8 @@ describe('useGameSocketStore', () => {
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 1 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 1, revealMs: 18350 } })
 
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(2)
     expect(useGameSocketStore.getState().live.assignedRoundIndex).toBe(1)
@@ -317,7 +353,7 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
     expect(useGameSocketStore.getState().live.assignmentSeq).toBeGreaterThan(
       useGameSocketStore.getState().live.revealedAssignmentSeq
     )
@@ -332,7 +368,7 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
 
     useGameSocketStore.getState().reset()
 
@@ -361,7 +397,7 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws1 = FakeWebSocket.instances[0]
     ws1.open()
-    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
 
     useGameSocketStore.getState().attach('g2', factory)
@@ -373,7 +409,7 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().attach('g1', factory)
     const ws1 = FakeWebSocket.instances[0]
     ws1.open()
-    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0 } })
+    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
 
     // retryNow() connects immediately (bypassing the real reconnect-delay
@@ -466,10 +502,7 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: {
-        game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:10.000Z' },
-        you: { participantId: 'p1' },
-      },
+      payload: validState({ votingEndsAt: '2100-01-01T00:00:10.000Z' }),
     })
 
     expect(useGameSocketStore.getState().live.votingClosesAt).toBe(
@@ -489,10 +522,7 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: {
-        game: { id: 'g1', votingEndsAt: '2100-01-01T00:00:20.000Z' },
-        you: { participantId: 'p1' },
-      },
+      payload: validState({ votingEndsAt: '2100-01-01T00:00:20.000Z' }),
     })
 
     expect(useGameSocketStore.getState().live.votingClosesAt).toBe(votingClosesAtBefore)
@@ -509,10 +539,7 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'STATE',
-      payload: {
-        game: { id: 'g1', resultEndsAt: '2100-01-01T00:00:06.000Z' },
-        you: { participantId: 'p1' },
-      },
+      payload: validState({ resultEndsAt: '2100-01-01T00:00:06.000Z' }),
     })
 
     expect(useGameSocketStore.getState().live.resultEndsAt).toBe(
@@ -547,10 +574,7 @@ describe('useGameSocketStore', () => {
     ws.open()
     ws.receive({
       type: 'STATE',
-      payload: {
-        game: { id: 'g1', resultEndsAt: '2100-01-01T00:00:06.000Z' },
-        you: { participantId: 'p1' },
-      },
+      payload: validState({ resultEndsAt: '2100-01-01T00:00:06.000Z' }),
     })
     useGameSocketStore.getState().dismissResult()
 
@@ -571,5 +595,36 @@ describe('useGameSocketStore', () => {
     useGameSocketStore.getState().dismissResult()
 
     expect(useGameSocketStore.getState().live.resultDismissed).toBe(true)
+  })
+
+  // Frames are now validated against the generated serverFrameSchema
+  // (game-socket.store.ts) instead of blindly cast - these two prove the
+  // fail-soft policy: a frame that fails validation degrades the same way
+  // an unrecognized frame type already did (a feed entry, nothing else
+  // touched), rather than throwing or corrupting state with a
+  // partially-wrong payload.
+  it('a STATE frame missing required fields keeps the previous snapshot instead of adopting a broken one', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    const snapshot = validState()
+    ws.receive({ type: 'STATE', payload: snapshot })
+
+    // Missing `config`, `teams`, `participants`, `rounds`, etc. - a real
+    // backend never sends this, but this is exactly the shape a field
+    // rename/removal would produce.
+    ws.receive({ type: 'STATE', payload: { game: { id: 'g1' }, you: { participantId: 'p1' } } })
+
+    expect(useGameSocketStore.getState().snapshot).toEqual(snapshot)
+    expect(useGameSocketStore.getState().feed.length).toBe(1)
+  })
+
+  it('a frame whose type is unrecognized still lands in the feed and does not throw', () => {
+    useGameSocketStore.getState().attach('g1', factory)
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    expect(() => ws.receive({ type: 'SOME_FUTURE_FRAME', payload: { whatever: true } })).not.toThrow()
+    expect(useGameSocketStore.getState().feed.length).toBe(1)
   })
 })
