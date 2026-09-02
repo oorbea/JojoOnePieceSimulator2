@@ -165,12 +165,14 @@ refreshed the Stages screen over SSE (native's polling fallback masked it). Repl
 explicit `switch` with one case per kind and a no-op `default`, added `STAGE` to the DTO union, and
 added `stageKeys.allLocales` to the bridge's reconnect resync.
 
-**Known follow-up, not done this tanda**: no `cache/stage_repository.go` Redis decorator exists yet
-(Stand/DevilFruit have one). `stageRepository` in `main.go` stays uncached - functionally fine
-(no staleness risk, since there's no cache to go stale), but every `IStageCatalog.Stages` call in
-`GameService.CreateGame` is a live Postgres round trip, same debt already flagged in
-[[game-lobby-persistence]].
+**~~Known follow-up, not done this tanda~~ - RESOLVED 2026-09-02**: ~~no `cache/stage_repository.go`
+Redis decorator exists yet (Stand/DevilFruit have one). `stageRepository` in `main.go` stays
+uncached - functionally fine (no staleness risk, since there's no cache to go stale), but every
+`IStageCatalog.Stages` call in `GameService.CreateGame` is a live Postgres round trip, same debt
+already flagged in [[game-lobby-persistence]].~~ `cache/stage_repository.go` now exists and
+`main.go` hands one decorated instance to both the admin path and `GameService` - see
+[[stage-redis-cache-2026-09-02]].
 
 Related: [[game-lobby-persistence]], [[game-realtime-transport]], [[gameplay-domain-design]],
 [[gameplay-application-layer]], [[i18n-multi-language]], [[admin-panel-crud-ux-fixes]],
-[[picture-events-sse]].
+[[picture-events-sse]], [[stage-redis-cache-2026-09-02]].

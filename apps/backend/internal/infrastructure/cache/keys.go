@@ -22,6 +22,11 @@ const standsNamespace = "stands"
 // same reasoning as standsNamespace.
 const devilFruitsNamespace = "devil_fruits"
 
+// stagesNamespace holds every cached Stage read (Stages, List, Filter,
+// FindByID) and is invalidated as a whole on any write - same reasoning as
+// standsNamespace.
+const stagesNamespace = "stages"
+
 // presignNamespace holds cached presigned picture URLs, keyed by object
 // storage key. Never invalidated wholesale - entries are evicted
 // individually (on Delete) or simply expire.
@@ -67,6 +72,26 @@ func devilFruitFilterKey(filters ports.DevilFruitFilters, locale enums.Locale) s
 	canonical := stringifyStat(filters.Rarity) + "|" + stringifyStat(filters.FruitType) + "|" +
 		derefString(filters.Search)
 	return "filter:" + locale.String() + ":" + hashString(canonical)
+}
+
+// stageFilterKey mirrors standFilterKey/devilFruitFilterKey for
+// ports.StageFilters (manga, search). ANY field added to StageFilters must
+// be added here too, or two different filters silently share one slot.
+func stageFilterKey(filters ports.StageFilters, locale enums.Locale) string {
+	canonical := stringifyStat(filters.Manga) + "|" + derefString(filters.Search)
+	return "filter:" + locale.String() + ":" + hashString(canonical)
+}
+
+// stageCatalogKey keys IStageCatalog.Stages, which takes no locale: the
+// adapter resolves Description at a fixed enums.EnGB, so the key is
+// prefixed with that literal locale rather than skipping the locale
+// dimension - every key in this file carries one. Deliberately a different
+// key shape from stageFilterKey even when a Filter carries the same Manga
+// and nothing else: the admin filter surface and the gameplay catalogue are
+// separate contracts (see ports.IStageCatalog's doc on the fixed EnGB
+// resolution) and may diverge without one silently answering the other.
+func stageCatalogKey(manga enums.Manga) string {
+	return "catalog:" + enums.EnGB.String() + ":" + manga.String()
 }
 
 // stringifyStat renders an optional fmt.Stringer enum field as its String()

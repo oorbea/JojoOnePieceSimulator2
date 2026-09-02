@@ -193,15 +193,16 @@ type Config struct {
 	PictureJobTimeout     time.Duration
 	RedisDialTimeout      time.Duration
 	RedisOpTimeout        time.Duration
-	// CacheStandTTL/CacheDevilFruitTTL/CacheNotFoundTTL bound how long the
-	// Stand/DevilFruit repository caches can serve stale data if an
-	// invalidation is ever missed. CachePresignTTL does the same for cached
-	// presigned picture URLs, and is validated to stay safely under
-	// R2PresignTTL so a served URL is never close to expiring.
+	// CacheStandTTL/CacheDevilFruitTTL/CacheStageTTL/CacheNotFoundTTL bound
+	// how long the Stand/DevilFruit/Stage repository caches can serve stale
+	// data if an invalidation is ever missed. CachePresignTTL does the same
+	// for cached presigned picture URLs, and is validated to stay safely
+	// under R2PresignTTL so a served URL is never close to expiring.
 	// CacheHTTPMaxAge configures the response Cache-Control header
 	// (independent of Redis); 0 disables it.
 	CacheStandTTL        time.Duration
 	CacheDevilFruitTTL   time.Duration
+	CacheStageTTL        time.Duration
 	CacheNotFoundTTL     time.Duration
 	CachePresignTTL      time.Duration
 	CacheHTTPMaxAge      time.Duration
@@ -640,6 +641,15 @@ func Load() (*Config, error) {
 		cacheDevilFruitTTL = parsed
 	}
 
+	cacheStageTTL := defaultCacheStandTTL
+	if raw := os.Getenv("CACHE_STAGE_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing CACHE_STAGE_TTL: %w", err)
+		}
+		cacheStageTTL = parsed
+	}
+
 	cacheNotFoundTTL := defaultCacheNotFoundTTL
 	if raw := os.Getenv("CACHE_NOTFOUND_TTL"); raw != "" {
 		parsed, err := time.ParseDuration(raw)
@@ -781,6 +791,7 @@ func Load() (*Config, error) {
 		CacheEnabled:       cacheEnabled,
 		CacheStandTTL:      cacheStandTTL,
 		CacheDevilFruitTTL: cacheDevilFruitTTL,
+		CacheStageTTL:      cacheStageTTL,
 		CacheNotFoundTTL:   cacheNotFoundTTL,
 		CachePresignTTL:    cachePresignTTL,
 		CacheHTTPMaxAge:    cacheHTTPMaxAge,
