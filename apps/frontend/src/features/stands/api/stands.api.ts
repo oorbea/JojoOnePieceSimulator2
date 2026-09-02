@@ -1,17 +1,25 @@
 import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
+import { assertContract } from '@/shared/api/assert-contract'
+import { standResponseSchema } from '@/shared/contracts/dto'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import type { TranslationFormValues } from '@/shared/lib/power-translations'
 import type { StandFilters, StandInput, StandResponse } from '@/features/stands/types/stands.types'
 
 export async function getStands(filters?: StandFilters): Promise<StandResponse[]> {
   const response = await apiClient.get<StandResponse[]>('/stands', { params: filters })
+  // Dev-only contract check - see assert-contract.ts's doc. Checks the
+  // recursive evolvesFrom shape too, since standResponseSchema covers it.
+  if (__DEV__) {
+    for (const stand of response.data) assertContract(standResponseSchema, stand, 'GET /stands[]')
+  }
   return response.data
 }
 
 export async function getStand(id: string): Promise<StandResponse> {
   const response = await apiClient.get<StandResponse>(`/stands/${id}`)
+  if (__DEV__) assertContract(standResponseSchema, response.data, 'GET /stands/:id')
   return response.data
 }
 
