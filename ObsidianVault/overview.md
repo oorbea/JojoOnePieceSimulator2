@@ -31,6 +31,6 @@ Frontend scaffold complete and verified (`tsc`, `eslint`, `expo export -p web`, 
 
 ## Flagged / not done
 
-- Backend now has a native WebSocket endpoint (`/api/v1/games/{id}/ws`, `coder/websocket`) for the game feature — see [[game-realtime-transport]]. `socket.io-client` is still installed on the frontend but unwired; the eventual client should target the native protocol instead, not socket.io.
+- ~~Backend now has a native WebSocket endpoint (`/api/v1/games/{id}/ws`, `coder/websocket`) for the game feature — see [[game-realtime-transport]]. `socket.io-client` is still installed on the frontend but unwired; the eventual client should target the native protocol instead, not socket.io.~~ **Closed 2026-09-02**: the frontend client landed long ago (`game-socket.store.ts`, browser-native `WebSocket`) and the dead `socket.io-client` dep is now uninstalled — see [[socket-io-cleanup-2026-09-02]].
 - Google OAuth client IDs blank in `.env.example` — auth feature not built yet.
 - No CI. `.github/cicd.yml` exists but empty and in wrong location (should be `.github/workflows/`). Must cover **both** backend (`-tags vips` build/test) and frontend when built.

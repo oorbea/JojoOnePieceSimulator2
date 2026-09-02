@@ -18,17 +18,21 @@ alongside this.
 
 ## Status
 
-Done, backend-only. No frontend WebSocket client and no admin UI for `/stages` yet — see
-[[gameplay-application-layer]]'s updated "still not built" section.
+Done. ~~Backend-only. No frontend WebSocket client and no admin UI for `/stages` yet.~~
+**Updated 2026-09-02**: both landed since — the client is
+`src/features/game/stores/game-socket.store.ts` (browser-native `WebSocket`) and the `/stages`
+admin UI shipped 2026-08-11.
 
 ## Library: `github.com/coder/websocket`, not socket.io
 
 Native WebSocket, `context`-native API (`conn.Read(ctx)`) matching the existing SSE precedent
 (`events_endpoints.go` holds the app's root ctx so the stream dies on shutdown), zero transitive
-deps. The frontend has `socket.io-client` installed but unwired — it stays that way until a later
-tanda migrates the client onto this protocol (`EXPO_PUBLIC_SOCKET_URL` should then point at
-`ws://.../api/v1`, and the client builds
-`${EXPO_PUBLIC_SOCKET_URL}/games/${id}/ws?token=${accessToken}`).
+deps. ~~The frontend has `socket.io-client` installed but unwired — it stays that way until a later
+tanda migrates the client onto this protocol.~~ **Updated 2026-09-02**: the frontend client speaks
+this protocol over the browser's own `WebSocket`; `socket.io-client` was never imported and has
+been uninstalled (see [[socket-io-cleanup-2026-09-02]]). `EXPO_PUBLIC_SOCKET_URL` points at
+`ws://.../api/v1` and `src/features/game/lib/socket-url.ts` builds
+`${EXPO_PUBLIC_SOCKET_URL}/games/${id}/ws?token=${accessToken}`.
 
 ## Protocol (`internal/infrastructure/api/dto/game_ws.go`)
 
