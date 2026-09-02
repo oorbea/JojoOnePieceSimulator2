@@ -1,11 +1,14 @@
 import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
+import { assertContract } from '@/shared/api/assert-contract'
+import { userResponseSchema } from '@/shared/contracts/dto'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
 import type { Locale } from '@/shared/contracts/enums'
 
 export async function getMe(): Promise<ProfileUser> {
   const response = await apiClient.get<ProfileUser>('/users/me')
+  if (__DEV__) assertContract(userResponseSchema, response.data, 'GET /users/me')
   return response.data
 }
 
