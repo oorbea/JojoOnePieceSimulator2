@@ -12,10 +12,10 @@ import (
 // instead of a JSON decode error - same convention as every other catalogue
 // request DTO.
 type StageRequest struct {
-	Manga        string                             `json:"manga"`
+	Manga        string                             `json:"manga" ts:"Manga"`
 	Order        int                                `json:"order"`
 	Name         string                             `json:"name"`
-	Translations map[string]StageTranslationRequest `json:"translations"`
+	Translations map[string]StageTranslationRequest `json:"translations" ts:"map[Locale]"`
 }
 
 // Validate converts the request into a services.StageInput, collecting all

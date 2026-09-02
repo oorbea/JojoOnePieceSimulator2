@@ -16,7 +16,7 @@ type TranslationResponse struct {
 // description/skills), this always carries every locale at once, so an
 // admin can edit them side by side.
 type PowerTranslationsResponse struct {
-	Translations map[string]TranslationResponse `json:"translations"`
+	Translations map[string]TranslationResponse `json:"translations" ts:"map[Locale]"`
 }
 
 func NewPowerTranslationsResponse(t ports.PowerTranslations) PowerTranslationsResponse {
@@ -38,7 +38,7 @@ type StageTranslationResponse struct {
 // Stage, keyed by locale string - same shape as PowerTranslationsResponse,
 // without Skills.
 type StageTranslationsResponse struct {
-	Translations map[string]StageTranslationResponse `json:"translations"`
+	Translations map[string]StageTranslationResponse `json:"translations" ts:"map[Locale]"`
 }
 
 func NewStageTranslationsResponse(t ports.StageTranslations) StageTranslationsResponse {

@@ -13,14 +13,14 @@ import (
 // message instead of a JSON decode error.
 type StandRequest struct {
 	Name          string                        `json:"name"`
-	Translations  map[string]TranslationRequest `json:"translations"`
-	Rarity        string                        `json:"rarity"`
-	AttackPower   string                        `json:"attackPower"`
-	Speed         string                        `json:"speed"`
-	AttackRange   string                        `json:"attackRange"`
-	Endurance     string                        `json:"endurance"`
-	Precision     string                        `json:"precision"`
-	Potential     string                        `json:"potential"`
+	Translations  map[string]TranslationRequest `json:"translations" ts:"map[Locale]"`
+	Rarity        string                        `json:"rarity" ts:"PowerRarity"`
+	AttackPower   string                        `json:"attackPower" ts:"StandStat"`
+	Speed         string                        `json:"speed" ts:"StandStat"`
+	AttackRange   string                        `json:"attackRange" ts:"StandStat"`
+	Endurance     string                        `json:"endurance" ts:"StandStat"`
+	Precision     string                        `json:"precision" ts:"StandStat"`
+	Potential     string                        `json:"potential" ts:"StandStat"`
 	EvolvesFromID *string                       `json:"evolvesFromId,omitempty"`
 }
 
