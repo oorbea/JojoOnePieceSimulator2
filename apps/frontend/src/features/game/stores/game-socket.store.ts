@@ -2,8 +2,8 @@ import { create } from 'zustand'
 
 import { reconnectDelay } from '@/features/game/lib/backoff'
 import { buildGameSocketUrl } from '@/features/game/lib/socket-url'
-import type { ClientCommandType } from '@/features/game/types/game-ws.types'
-import { SERVER_FRAME } from '@/features/game/types/game-ws.types'
+import type { ClientCommandType } from '@/shared/contracts/ws'
+import { SERVER_FRAME } from '@/shared/contracts/ws'
 import type { GameResult, GameStateResponse } from '@/features/game/types/game.types'
 import { useSessionStore } from '@/shared/stores/session.store'
 
