@@ -16,7 +16,7 @@ import {
 import { useProfile } from '@/features/profile/hooks/use-profile'
 import { usernameFormSchema, type UsernameFormValues } from '@/features/profile/types/profile.types'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 
 export function ProfileContainer() {
   const { t } = useTranslation()

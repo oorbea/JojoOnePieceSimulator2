@@ -1,7 +1,7 @@
 import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 import type { BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import type { PoolFilter } from '@/features/game/types/game.types'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 import { LobbyConfigPanel } from '../lobby-config-panel'
 

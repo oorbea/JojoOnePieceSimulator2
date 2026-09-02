@@ -19,7 +19,7 @@ import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { SUPPORTED_LOCALES } from '@/shared/i18n'
-import { mangaSchema, type Locale } from '@/shared/lib/zod'
+import { mangaSchema, type Locale } from '@/shared/contracts/enums'
 import type { StageFormValues } from '@/features/stages/types/stages.types'
 
 type Props = {

@@ -1,4 +1,4 @@
-import { errorResponseSchema } from '@/shared/lib/zod'
+import { errorResponseSchema } from '@/shared/contracts/errors'
 
 // Normalizes the backend's {error, details?[]} shape (and network/unknown
 // failures) into one type every feature can catch and render consistently.

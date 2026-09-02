@@ -11,7 +11,7 @@ import {
   type PictureStatus,
   type Rarity,
   type StandStat,
-} from '@/shared/lib/zod'
+} from '@/shared/contracts/enums'
 
 // Mirrors the backend's dto.StandResponse (apps/backend .../dto/stand_response.go).
 // `evolvesFrom` nests recursively — the backend returns the full parent

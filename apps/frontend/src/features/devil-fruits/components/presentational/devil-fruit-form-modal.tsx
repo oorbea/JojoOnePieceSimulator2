@@ -17,7 +17,7 @@ import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { DEFAULT_LOCALE } from '@/shared/i18n'
-import { fruitTypeSchema, raritySchema, type Locale } from '@/shared/lib/zod'
+import { fruitTypeSchema, raritySchema, type Locale } from '@/shared/contracts/enums'
 import type { DevilFruitFormValues } from '@/features/devil-fruits/types/devil-fruits.types'
 
 type Props = {

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 
 import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 import { createEmptyTranslationsForm } from '@/shared/lib/power-translations'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 import { standFormSchema, type StandFormValues } from '@/features/stands/types/stands.types'
 
 import { StandFormModal } from '../stand-form-modal'

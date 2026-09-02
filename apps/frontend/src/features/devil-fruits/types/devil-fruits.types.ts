@@ -11,7 +11,7 @@ import {
   type Locale,
   type PictureStatus,
   type Rarity,
-} from '@/shared/lib/zod'
+} from '@/shared/contracts/enums'
 
 // Mirrors the backend's dto.DevilFruitResponse.
 export type DevilFruitResponse = {

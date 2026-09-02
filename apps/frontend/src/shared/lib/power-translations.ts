@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { SUPPORTED_LOCALES } from '@/shared/i18n'
-import type { Locale } from '@/shared/lib/zod'
+import type { Locale } from '@/shared/contracts/enums'
 
 // Shared between the Stand and Devil Fruit admin forms - both Powers carry
 // the exact same translations shape (description + skills per locale, see

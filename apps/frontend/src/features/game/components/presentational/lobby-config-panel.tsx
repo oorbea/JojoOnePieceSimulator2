@@ -17,7 +17,7 @@ import { SettingRow } from '@/shared/components/presentational/setting-row'
 import { TooltipBubble, useTooltipTrigger } from '@/shared/components/presentational/tooltip'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { GameMode, LobbyVisibility, Manga, RevealSpeed } from '@/shared/lib/zod'
+import type { GameMode, LobbyVisibility, Manga, RevealSpeed } from '@/shared/contracts/enums'
 
 // Fields mirror create-lobby-screen.tsx's exactly (mode, mangas, team size,
 // voting window, privacy, allow bots, pool filter) since UPDATE_CONFIG is a

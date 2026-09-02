@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import { secureStorage } from '@/shared/lib/secure-storage'
-import type { Locale, Role } from '@/shared/lib/zod'
+import type { Locale, Role } from '@/shared/contracts/enums'
 
 const SESSION_STORAGE_KEY = 'jops.session'
 

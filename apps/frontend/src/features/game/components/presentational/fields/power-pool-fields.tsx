@@ -8,7 +8,7 @@ import { FilterDisclosure } from '@/shared/components/presentational/filter-disc
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { a11yProps } from '@/shared/lib/a11y'
-import type { Manga } from '@/shared/lib/zod'
+import type { Manga } from '@/shared/contracts/enums'
 
 type Props = {
   activeCount: number

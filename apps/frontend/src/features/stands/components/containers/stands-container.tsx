@@ -34,7 +34,7 @@ import {
   fromTranslationsResponse,
   toTranslationsPayload,
 } from '@/shared/lib/power-translations'
-import { raritySchema, standStatSchema, type Locale } from '@/shared/lib/zod'
+import { raritySchema, standStatSchema, type Locale } from '@/shared/contracts/enums'
 
 // Every stat filter key StandFilters exposes, in the order the "more
 // filters" panel renders them - one useState per key would be six near

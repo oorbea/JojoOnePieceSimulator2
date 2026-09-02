@@ -12,7 +12,7 @@ import type {
   PictureStatus,
   RevealSpeed,
   SpinLevel,
-} from '@/shared/lib/zod'
+} from '@/shared/contracts/enums'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 import type { StandResponse } from '@/features/stands/types/stands.types'
 
