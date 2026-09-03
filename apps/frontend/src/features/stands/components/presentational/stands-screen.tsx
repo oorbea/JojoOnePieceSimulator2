@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
+import { DetailModal } from '@/shared/components/presentational/detail-modal'
 import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -18,6 +19,7 @@ import type { Locale } from '@/shared/contracts/enums'
 import type { StandFormValues, StandResponse } from '@/features/stands/types/stands.types'
 
 import { StandCard } from './stand-card'
+import { StandDetail } from './stand-detail'
 import { StandFormModal } from './stand-form-modal'
 
 type ConfirmState = {
@@ -57,15 +59,11 @@ const STAT_FILTER_ORDER: StandStatFilterKey[] = [
   'potential',
 ]
 
-type Props = {
+type BaseProps = {
   stands: StandResponse[]
   isLoading: boolean
   isError: boolean
   onRetry: () => void
-  onCreateNew: () => void
-  onEdit: (stand: StandResponse) => void
-  onDelete: (stand: StandResponse) => void
-  openingEditId: string | null
   search: string
   onSearchChange: (search: string) => void
   rarityFilter: string | null
@@ -82,57 +80,74 @@ type Props = {
   moreFiltersCount: number
   onClearFilters: () => void
   hasActiveFilters: boolean
+  detailStand: StandResponse | null
+  onOpenDetail: (stand: StandResponse) => void
+  onCloseDetail: () => void
+}
+
+type WritableProps = {
+  readOnly?: false
+  onCreateNew: () => void
+  onEdit: (stand: StandResponse) => void
+  onDelete: (stand: StandResponse) => void
+  openingEditId: string | null
   form: FormState
   deleteConfirm: ConfirmState
 }
+
+type ReadOnlyProps = {
+  readOnly: true
+}
+
+type Props = BaseProps & (WritableProps | ReadOnlyProps)
 
 // Pure UI — a card grid of Stands plus the create/edit modal and the delete
 // confirmation. All data fetching, form state, and mutation wiring live in
 // StandsContainer. Search + rarity stay always visible; the six stat
 // filters and evolvesFrom live behind a FilterDisclosure so the always-on
 // row doesn't grow to nine controls.
-export function StandsScreen({
-  stands,
-  isLoading,
-  isError,
-  onRetry,
-  onCreateNew,
-  onEdit,
-  onDelete,
-  openingEditId,
-  search,
-  onSearchChange,
-  rarityFilter,
-  rarityFilterOptions,
-  onRarityFilterChange,
-  statFilters,
-  statFilterOptions,
-  onStatFilterChange,
-  evolvesFromFilter,
-  evolvesFromFilterOptions,
-  onEvolvesFromFilterChange,
-  filtersExpanded,
-  onToggleFilters,
-  moreFiltersCount,
-  onClearFilters,
-  hasActiveFilters,
-  form,
-  deleteConfirm,
-}: Props) {
+export function StandsScreen(props: Props) {
+  const {
+    stands,
+    isLoading,
+    isError,
+    onRetry,
+    search,
+    onSearchChange,
+    rarityFilter,
+    rarityFilterOptions,
+    onRarityFilterChange,
+    statFilters,
+    statFilterOptions,
+    onStatFilterChange,
+    evolvesFromFilter,
+    evolvesFromFilterOptions,
+    onEvolvesFromFilterChange,
+    filtersExpanded,
+    onToggleFilters,
+    moreFiltersCount,
+    onClearFilters,
+    hasActiveFilters,
+    detailStand,
+    onOpenDetail,
+    onCloseDetail,
+  } = props
   const { t } = useTranslation()
   return (
     <YStack flex={1} position="relative">
       <PageShell align="top" scroll maxWidth={960}>
         <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$3">
           <GlowText level="title">{t('stands.title')}</GlowText>
-          <GlossButton
-            tone="green"
-            btnSize="md"
-            onPress={onCreateNew}
-            accessibilityLabel={t('stands.newStand')}
-          >
-            <Plus size={18} color="white" /> {t('stands.newStand')}
-          </GlossButton>
+          {props.readOnly ? null : (
+            <GlossButton
+              tone="green"
+              btnSize="md"
+              onPress={props.onCreateNew}
+              accessibilityLabel={t('stands.newStand')}
+            >
+              <Plus size={18} color="white" /> {t('stands.newStand')}
+            </GlossButton>
+          )}
         </XStack>
 
         <XStack width="100%" flexWrap="wrap" gap="$3">
@@ -214,11 +229,11 @@ export function StandsScreen({
             <GlowText level="label" align="center">
               {t(hasActiveFilters ? 'stands.emptyFilteredTitle' : 'stands.emptyTitle')}
             </GlowText>
-            {hasActiveFilters ? null : (
+            {hasActiveFilters || props.readOnly ? null : (
               <GlossButton
                 tone="green"
                 btnSize="sm"
-                onPress={onCreateNew}
+                onPress={props.onCreateNew}
                 accessibilityLabel={t('stands.newStand')}
               >
                 {t('stands.newStand')}
@@ -227,45 +242,78 @@ export function StandsScreen({
           </GlassPanel>
         ) : (
           <XStack flexWrap="wrap" gap="$4" justify="center">
-            {stands.map((stand) => (
-              <StandCard
-                key={stand.id}
-                stand={stand}
-                onEdit={() => onEdit(stand)}
-                onDelete={() => onDelete(stand)}
-                isEditBusy={openingEditId === stand.id}
-              />
-            ))}
+            {stands.map((stand) =>
+              props.readOnly ? (
+                <StandCard key={stand.id} stand={stand} onOpenDetail={() => onOpenDetail(stand)} readOnly />
+              ) : (
+                <StandCard
+                  key={stand.id}
+                  stand={stand}
+                  onOpenDetail={() => onOpenDetail(stand)}
+                  onEdit={() => props.onEdit(stand)}
+                  onDelete={() => props.onDelete(stand)}
+                  isEditBusy={props.openingEditId === stand.id}
+                />
+              )
+            )}
           </XStack>
         )}
       </PageShell>
 
-      <StandFormModal
-        visible={form.visible}
-        mode={form.mode}
-        control={form.control}
-        errors={form.errors}
-        onSubmit={form.onSubmit}
-        onCancel={form.onCancel}
-        isSaving={form.isSaving}
-        evolvesFromOptions={form.evolvesFromOptions}
-        pictureUri={form.pictureUri}
-        onPickPicture={form.onPickPicture}
-        isPictureBusy={form.isPictureBusy}
-        activeLocale={form.activeLocale}
-        onLocaleChange={form.onLocaleChange}
-        erroredLocales={form.erroredLocales}
-      />
+      <DetailModal
+        visible={detailStand !== null}
+        title={detailStand?.name ?? ''}
+        onClose={onCloseDetail}
+        closeA11y={t('common.close')}
+        footer={
+          detailStand && !props.readOnly ? (
+            <GlossButton
+              tone="blue"
+              btnSize="md"
+              onPress={() => {
+                onCloseDetail()
+                props.onEdit(detailStand)
+              }}
+              accessibilityLabel={t('stands.editA11y', { name: detailStand.name })}
+            >
+              {t('common.edit')}
+            </GlossButton>
+          ) : undefined
+        }
+      >
+        {detailStand ? <StandDetail stand={detailStand} /> : null}
+      </DetailModal>
 
-      <ConfirmSheet
-        visible={deleteConfirm.visible}
-        title={t('stands.deleteConfirmTitle')}
-        message={t('stands.deleteConfirmMessage', { name: deleteConfirm.standName ?? '' })}
-        confirmLabel={t('stands.deleteConfirmButton')}
-        isConfirming={deleteConfirm.isConfirming}
-        onConfirm={deleteConfirm.onConfirm}
-        onCancel={deleteConfirm.onCancel}
-      />
+      {props.readOnly ? null : (
+        <>
+          <StandFormModal
+            visible={props.form.visible}
+            mode={props.form.mode}
+            control={props.form.control}
+            errors={props.form.errors}
+            onSubmit={props.form.onSubmit}
+            onCancel={props.form.onCancel}
+            isSaving={props.form.isSaving}
+            evolvesFromOptions={props.form.evolvesFromOptions}
+            pictureUri={props.form.pictureUri}
+            onPickPicture={props.form.onPickPicture}
+            isPictureBusy={props.form.isPictureBusy}
+            activeLocale={props.form.activeLocale}
+            onLocaleChange={props.form.onLocaleChange}
+            erroredLocales={props.form.erroredLocales}
+          />
+
+          <ConfirmSheet
+            visible={props.deleteConfirm.visible}
+            title={t('stands.deleteConfirmTitle')}
+            message={t('stands.deleteConfirmMessage', { name: props.deleteConfirm.standName ?? '' })}
+            confirmLabel={t('stands.deleteConfirmButton')}
+            isConfirming={props.deleteConfirm.isConfirming}
+            onConfirm={props.deleteConfirm.onConfirm}
+            onCancel={props.deleteConfirm.onCancel}
+          />
+        </>
+      )}
     </YStack>
   )
 }
