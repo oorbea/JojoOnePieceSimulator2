@@ -81,6 +81,7 @@ out here too — they are ordinary `.env.example` entries, not extra secrets:
 | `GOOGLE_CLIENT_ID` | `[SECRET]` | OAuth client id the backend verifies every Google ID token's `aud` against. Not secret in itself (client ids are public), but must be the *same* value as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` or every login 401s. |
 | `JWT_SECRET` | `[SECRET]` | HS256 signing key for this backend's own access tokens. **At least 32 characters** — `config.go` refuses to boot below that. Rotating it invalidates every issued token (no refresh tokens: everyone logs in again). |
 | `ADMIN_EMAILS` | `[CONFIG]` | Comma-separated Google account emails promoted to `ADMIN` on login, matched case-insensitively. Empty means nobody is an admin, i.e. the whole admin UI is unreachable. |
+| `STREAM_TICKET_TTL` | `[CONFIG]` | How long a minted SSE/WebSocket connection ticket stays redeemable (default `30s`). Not a secret — the whole point is that it's short-lived and single-use, unlike the JWT it replaced in `?token=`. See `ObsidianVault/stream-connection-tickets-2026-09-02.md`. |
 
 ### Branch protection
 
