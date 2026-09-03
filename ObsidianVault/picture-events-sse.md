@@ -38,18 +38,17 @@ publishing FAILED without writing FAILED to the DB would desync the event from t
 New `internal/infrastructure/api/endpoints/events_endpoints.go`: `GET /api/v1/events`, admin-only,
 `text/event-stream`, 20s heartbeat comments (`: ping\n\n`) to keep idle proxies from timing it out.
 
-**Auth tradeoff, deliberate**: `EventSource` cannot set custom headers, so this route accepts the
-JWT via `?token=` query param (falls back to `Authorization` header) via a small helper local to
-`events_endpoints.go` - *not* a change to the shared `RequireAuth` middleware, so no other route
-gains query-param auth. The token lands in chi's `middleware.Logger` output and (in prod) Nginx
-Proxy Manager's access log, and stays usable there for the whole of `JWT_TTL` — which is **24h**,
-not the 8h this note claimed until 2026-09-02. `deployments/.env.example` ships `JWT_TTL=24h` and
-`config.go`'s `defaultJWTTTL` is `24 * time.Hour`, so 24h is what is deployed; [[backend-contract]]
-said 24h all along. The note was wrong, the value was not — see [[auth-hardening-2026-09-02]].
-Still accepted for v1 as the standard/only practical way to authenticate `EventSource`, with the
-longer window making the follow-up slightly more attractive than the old text implied: a harder
-mitigation (a `POST /api/v1/events/ticket` minting a short-TTL single-use ticket just for the SSE
-connection) is a reasonable next step if this ever needs hardening - not built now.
+**Auth tradeoff, historical** (closed 2026-09-03, see [[stream-connection-tickets-2026-09-03]]):
+`EventSource` cannot set custom headers, so this route used to accept the full 24h JWT via `?token=`
+(falls back to `Authorization` header). The token landed in chi's `middleware.Logger` output and (in
+prod) Nginx Proxy Manager's access log, staying usable there for the whole of `JWT_TTL` — **24h**,
+not the 8h this note claimed until 2026-09-02 (`deployments/.env.example` ships `JWT_TTL=24h`,
+`config.go`'s `defaultJWTTTL` is `24 * time.Hour`; [[backend-contract]] said 24h all along, only the
+note was wrong — see [[auth-hardening-2026-09-02]]). The follow-up this note used to flag ("a
+`POST /api/v1/events/ticket` minting a short-TTL single-use ticket") is now built: `?token=` is gone,
+and the route accepts only `?ticket=<opaque>` (30s TTL, single-use, purpose+resource scoped) minted
+via `POST /api/v1/events/ticket` behind `RequireAuth`+`RequireAdmin`, or a full `Authorization:
+Bearer` header (unchanged). See [[stream-connection-tickets-2026-09-03]] for the design.
 
 `router.go`: `middleware.Timeout(60s)` was global, which would have killed the stream at 60s.
 Moved it from the top-level `r.Use` into two inner `r.Group`s (health/swagger, and the

@@ -32,7 +32,10 @@ tanda migrates the client onto this protocol.~~ **Updated 2026-09-02**: the fron
 this protocol over the browser's own `WebSocket`; `socket.io-client` was never imported and has
 been uninstalled (see [[socket-io-cleanup-2026-09-02]]). `EXPO_PUBLIC_SOCKET_URL` points at
 `ws://.../api/v1` and `src/features/game/lib/socket-url.ts` builds
-`${EXPO_PUBLIC_SOCKET_URL}/games/${id}/ws?token=${accessToken}`.
+`${EXPO_PUBLIC_SOCKET_URL}/games/${id}/ws?ticket=${ticket}`. **Updated 2026-09-03**: the query param
+used to carry the full access token (`?token=${accessToken}`) - see
+[[stream-connection-tickets-2026-09-03]] for why that's now a short-lived, single-use, game-scoped
+ticket minted fresh per connect via `POST /games/{id}/ws-ticket`.
 
 ## Protocol (`internal/infrastructure/api/dto/game_ws.go`)
 
@@ -96,9 +99,13 @@ vencer el TTL, no la transición terminal.
 
 ## Connection lifecycle (`game_ws_endpoints.go`)
 
-- `GET /api/v1/games/{id}/ws?token=<jwt>` (also accepts `Authorization: Bearer` first) — copies
-  `events_endpoints.go`'s query-param-auth pattern verbatim, same reasoning (browser `WebSocket`,
-  like `EventSource`, can't set headers). Pre-upgrade errors are plain JSON via `handleError`.
+- `GET /api/v1/games/{id}/ws?ticket=<opaque>` (also accepts `Authorization: Bearer` first) — shares
+  `authenticateStream` (`middleware.go`) with `events_endpoints.go`'s stream, same reasoning
+  (browser `WebSocket`, like `EventSource`, can't set headers). **Updated 2026-09-03**: used to be
+  `?token=<jwt>`; see [[stream-connection-tickets-2026-09-03]]. The ticket is minted via
+  `POST /games/{id}/ws-ticket` (same auth as the socket itself: a seated participant), single-use,
+  scoped to this specific game id, burned by `authenticateStream` *before* `websocket.Accept`.
+  Pre-upgrade errors are plain JSON via `handleError`.
 - `originPatterns()` strips the scheme off `CORSConfig.AllowedOrigins` for
   `AcceptOptions.OriginPatterns` (which wants `host[:port]`, not full origin URLs). Empty list ⇒
   same-origin only, mirroring CORS's own deny-by-default.
