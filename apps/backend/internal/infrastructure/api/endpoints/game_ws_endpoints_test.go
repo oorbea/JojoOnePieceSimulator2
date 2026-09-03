@@ -611,35 +611,51 @@ func TestBuildEventFrame_TerminalFrames_ResendStateAndCarryParticipants(t *testi
 }
 
 // TestBuildEventFrame_TimedFrames_UseStampedClosesAt pins the B1 contract:
-// the three timed frames render the authoritative deadline the service
+// all five timed frames render the authoritative deadline the service
 // stamped on the event, never a freshly synthesized time.Now()+window.
 func TestBuildEventFrame_TimedFrames_UseStampedClosesAt(t *testing.T) {
 	stamped := time.Now().Add(97 * time.Second).Truncate(time.Second)
 	window := 30 * time.Second
 
 	cases := []struct {
-		evt       game.DomainEvent
+		evt game.DomainEvent
 		closesAt  func(payload any) string
 		name      string
 		wantFrame string
+		// fallbackWindow is the window buildEventFrame's zero-closesAt
+		// fallback actually uses for this case - window for the four
+		// frames driven by the votingWindow/revealWindow/summaryWindow
+		// args (all passed as `window` below), but game.ResultDuration
+		// for ROUND_RESOLVED, which frameDeadline hardcodes rather than
+		// reading from the envelope.
+		fallbackWindow time.Duration
 	}{
 		{
 			name: "VOTING_OPENED", evt: game.VotingOpened{RoundIndex: 1}, wantFrame: dto.FrameVotingOpened,
-			closesAt: func(p any) string { return p.(dto.VotingOpenedPayload).ClosesAt },
+			closesAt: func(p any) string { return p.(dto.VotingOpenedPayload).ClosesAt }, fallbackWindow: window,
 		},
 		{
 			name: "TIEBREAK_OPENED", evt: game.TiebreakOpened{RoundIndex: 1}, wantFrame: dto.FrameTiebreakOpened,
-			closesAt: func(p any) string { return p.(dto.TiebreakOpenedPayload).ClosesAt },
+			closesAt: func(p any) string { return p.(dto.TiebreakOpenedPayload).ClosesAt }, fallbackWindow: window,
 		},
 		{
 			name: "SUMMARY_OPENED", evt: game.SummaryOpened{RoundIndex: 1}, wantFrame: dto.FrameSummaryOpened,
-			closesAt: func(p any) string { return p.(dto.SummaryOpenedPayload).ClosesAt },
+			closesAt: func(p any) string { return p.(dto.SummaryOpenedPayload).ClosesAt }, fallbackWindow: window,
+		},
+		{
+			name: "LOADOUTS_ASSIGNED", evt: game.LoadoutsAssigned{RoundIndex: 1}, wantFrame: dto.FrameLoadoutsAssigned,
+			closesAt: func(p any) string { return p.(dto.LoadoutsAssignedPayload).ClosesAt }, fallbackWindow: window,
+		},
+		{
+			name: "ROUND_RESOLVED", evt: game.RoundResolved{RoundIndex: 1, Winner: "SURVIVE"}, wantFrame: dto.FrameRoundResolved,
+			closesAt:       func(p any) string { return p.(dto.RoundResolvedPayload).ClosesAt },
+			fallbackWindow: game.ResultDuration,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			frameType, payload, _ := buildEventFrame(tc.evt, window, 0, window, stamped)
+			frameType, payload, _ := buildEventFrame(tc.evt, window, window, window, stamped)
 			if frameType != tc.wantFrame {
 				t.Fatalf("frameType = %q, want %q", frameType, tc.wantFrame)
 			}
@@ -650,13 +666,13 @@ func TestBuildEventFrame_TimedFrames_UseStampedClosesAt(t *testing.T) {
 
 		t.Run(tc.name+"_zero_falls_back", func(t *testing.T) {
 			before := time.Now()
-			_, payload, _ := buildEventFrame(tc.evt, window, 0, window, time.Time{})
+			_, payload, _ := buildEventFrame(tc.evt, window, window, window, time.Time{})
 			got, err := time.Parse(time.RFC3339, tc.closesAt(payload))
 			if err != nil {
 				t.Fatalf("parsing fallback closesAt: %v", err)
 			}
-			if got.Before(before.Add(window - 2*time.Second)) {
-				t.Fatalf("fallback closesAt = %v, want roughly now+%v", got, window)
+			if got.Before(before.Add(tc.fallbackWindow - 2*time.Second)) {
+				t.Fatalf("fallback closesAt = %v, want roughly now+%v", got, tc.fallbackWindow)
 			}
 		})
 	}

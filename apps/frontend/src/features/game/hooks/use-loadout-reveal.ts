@@ -23,12 +23,16 @@ type Params = {
    * human has called this, GameService cuts the pending reveal timer short
    * for everyone, not just the caller's own client. */
   sendRevealReady: () => void
-  /** The backend's own revealMs for this assignment (LOADOUTS_ASSIGNED's
-   * payload, via the socket store's live.revealMs) - authoritative over the
-   * locally-computed total, since GameService.scheduleRevealDelay is what
-   * actually decides when voting opens. null before that frame has arrived
-   * (e.g. a client still on the very first STATE fetch). */
-  serverRevealMs: number | null
+  /** The ASSIGNING phase's authoritative close instant - LOADOUTS_ASSIGNED's
+   * own closesAt (via the socket store's live.revealEndsAt), or a
+   * STATE-adopted game.revealEndsAt on reconnect - since
+   * GameService.scheduleRevealDelay is what actually decides when voting
+   * opens. The local timeline is scaled to fit whatever time remains until
+   * this instant rather than trusting a transported duration, so hub-
+   * delivery latency degrades pacing instead of desyncing "reveal looks
+   * done" from "voting is actually open". null before any frame carrying
+   * it has arrived (e.g. a client still on the very first STATE fetch). */
+  revealEndsAt: number | null
 }
 
 type Result = {
@@ -53,10 +57,11 @@ type Result = {
 // Drives the sorteo overlay: jugador-por-jugador (owner request,
 // 2026-08-30 - see ObsidianVault/game-match-assignment-frontend.md for the
 // all-lanes-at-once design this supersedes), paced by
-// revealTimeline(...) and scaled to serverRevealMs so a constants drift
-// between backend and frontend degrades the pacing rather than desyncing
-// "reveal done" from "voting actually open" (the backend's own timer, not
-// this hook, is what truly gates OpenVoting).
+// revealTimeline(...) and scaled to fit the time remaining until
+// revealEndsAt (LOADOUTS_ASSIGNED's own authoritative closesAt) so a
+// constants drift between backend and frontend degrades the pacing rather
+// than desyncing "reveal done" from "voting actually open" (the backend's
+// own timer, not this hook, is what truly gates OpenVoting).
 //
 // The bug this hook's predecessor had (fixed 2026-08-14, see
 // game-match-assignment-frontend.md): the scheduling effect returned
@@ -78,7 +83,7 @@ export function useLoadoutReveal({
   active,
   markRevealed,
   sendRevealReady,
-  serverRevealMs,
+  revealEndsAt,
 }: Params): Result {
   const mangasKey = mangas.slice().sort().join(',')
   const players: RevealPlayer[] = participants.map((p) => ({
@@ -97,8 +102,11 @@ export function useLoadoutReveal({
     .join(':')
   const phases = revealTimeline(gameId, roundIndex, mangas, players, speed)
   const localTotalMs = phases.reduce((sum, p) => sum + p.durationMs, 0)
-  const scale = serverRevealMs && localTotalMs > 0 ? serverRevealMs / localTotalMs : 1
-  const runKey = `${gameId}:${roundIndex}:${mangasKey}:${playersKey}:${speed}:${serverRevealMs ?? 'local'}`
+  // runKey is an absolute epoch value (stable across renders), never a
+  // Date.now()-derived one - the actual "how much time is left" read only
+  // happens once, inside the scheduling effect below, at the moment a run
+  // is genuinely (re)started.
+  const runKey = `${gameId}:${roundIndex}:${mangasKey}:${playersKey}:${speed}:${revealEndsAt ?? 'local'}`
 
   const [phaseIndex, setPhaseIndex] = useState(0)
   const [revealing, setRevealing] = useState(false)
@@ -135,6 +143,16 @@ export function useLoadoutReveal({
     clearTimers()
 
     if (phases.length === 0) return
+
+    // Read once per run, right as it starts - Date.now() in the render body
+    // would make this impure per-render, which is exactly what the
+    // exhaustive-deps disable below already documents for phases/scale.
+    // remainingMs === 0 (a closesAt already in the past, e.g. a laggy
+    // reconnect) collapses every timer to 0ms and the reveal finishes
+    // instantly - correct: the server is about to open SUMMARY/VOTING
+    // regardless, so there is nothing left to animate toward.
+    const remainingMs = revealEndsAt !== null ? Math.max(0, revealEndsAt - Date.now()) : null
+    const scale = remainingMs !== null && localTotalMs > 0 ? remainingMs / localTotalMs : 1
 
     let elapsedMs = 0
     phases.forEach((p, index) => {

@@ -73,7 +73,6 @@ function live(overrides: Partial<LiveMatchState> = {}): LiveMatchState {
     assignmentSeq: 0,
     revealedAssignmentSeq: 0,
     assignedRoundIndex: null,
-    revealMs: null,
     revealEndsAt: null,
     revealReadyCount: null,
     revealReadyTotal: null,

@@ -176,6 +176,14 @@ problem 2 for real (not just cosmetically, as the old "hide the countdown while 
 than desyncing "reveal looks done" from "voting is actually open". `GameStateResponse` gained
 `revealEndsAt` so a (re)connecting client can resume the countdown.
 
+**Corrección 2026-09-03** ([[game-frame-deadlines-2026-09-03]]): `revealMs` ya no existe en el wire
+- se sustituyó por `closesAt`, el mismo deadline autoritativo que `GameService` sella para
+`VOTING_OPENED`/`TIEBREAK_OPENED`/`SUMMARY_OPENED`, en vez de una duración. `useLoadoutReveal` sigue
+calculando su propia línea de tiempo local (espejo determinista de `reveal.go`), pero ahora la
+escala a `closesAt - Date.now()` en vez de a `serverRevealMs` - mismo mecanismo, mejor fuente:
+aterriza justo en el deadline real del servidor en lugar de arrastrar la latencia de entrega del
+hub en la dirección mala (terminar el sorteo *después* de que la votación ya hubiera abierto).
+
 The reveal is now **poder a poder for every participant at once** (not participant a participant):
 slot N always means the same slot for the whole lobby, driven by one global phase index
 (`intro → [spin, land] × N slots → outro`), shown in a dedicated overlay (`match/reveal-stage.tsx`)

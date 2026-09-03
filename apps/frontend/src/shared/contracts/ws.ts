@@ -30,7 +30,7 @@ export type KickPayload = z.infer<typeof kickPayloadSchema>
 
 export const loadoutsAssignedPayloadSchema = z.object({
   roundIndex: z.number().int(),
-  revealMs: z.number().int(),
+  closesAt: z.iso.datetime({ offset: true }),
 })
 export type LoadoutsAssignedPayload = z.infer<typeof loadoutsAssignedPayloadSchema>
 
@@ -90,6 +90,7 @@ export const roundResolvedPayloadSchema = z.object({
   roundIndex: z.number().int(),
   winner: z.string(),
   decidedByCoinFlip: z.boolean(),
+  closesAt: z.iso.datetime({ offset: true }),
 })
 export type RoundResolvedPayload = z.infer<typeof roundResolvedPayloadSchema>
 

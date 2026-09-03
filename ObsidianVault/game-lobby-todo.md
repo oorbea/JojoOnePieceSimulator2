@@ -337,9 +337,17 @@ full-screen `PowerRevealCard` for a landed Stand/Devil Fruit and a synchronized 
 (`MarkRevealReady`/`REVEAL_READY`) any connected human can trigger. Per-power special visual
 effects (Gomu Gomu no Mi bounce, The World's time-stop, etc.) were explicitly asked for as a
 **documented plan only, not built** — see [[gameplay-power-fx]].
-- `VOTING_OPENED`/`TIEBREAK_OPENED`'s `closesAt` is still transport-synthesized separately from the
+- ~~`VOTING_OPENED`/`TIEBREAK_OPENED`'s `closesAt` is still transport-synthesized separately from the
   new authoritative `votingEndsAt` (can drift by hub-delivery latency) — clean follow-up, not folded
-  in this tanda.
+  in this tanda.~~ **RESUELTO 2026-09-01** para voting/tiebreak/summary (ver
+  [[game-final-result-2026-09-01]]) y **RESUELTO 2026-09-03** para los dos frames que quedaban:
+  `LOADOUTS_ASSIGNED` (mandaba `revealMs`, una duración — el cliente derivaba
+  `Date.now()+revealMs` y arrastraba latencia en la dirección mala, terminando el sorteo *después*
+  de que la votación ya hubiera abierto) y `ROUND_RESOLVED` (no llevaba deadline, `resultEndsAt`
+  sólo llegaba en el STATE siguiente). Los cinco frames temporizados sellan ahora su `closesAt`
+  en `GameService.publish` desde el mapa de deadlines correspondiente
+  (`votingEnds`/`revealEnds`/`resultEnds`/`summaryEnds`) — ver la nota nueva
+  [[game-frame-deadlines-2026-09-03]] para el patrón a seguir en cualquier frame temporizado futuro.
 - If the owner asks for the rest of this, treat it as a fresh planning pass (new Explore + Plan
   agents) - it's a different scale of work than what shipped here.
 

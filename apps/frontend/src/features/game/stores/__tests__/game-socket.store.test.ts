@@ -267,7 +267,7 @@ describe('useGameSocketStore', () => {
     const snapshot = validState()
     ws.receive({ type: 'STATE', payload: snapshot })
 
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
 
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
     expect(useGameSocketStore.getState().live.assignedRoundIndex).toBe(0)
@@ -275,17 +275,18 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().feed.length).toBe(0)
   })
 
-  it('LOADOUTS_ASSIGNED sets revealMs/revealEndsAt from the frame payload', async () => {
+  it("LOADOUTS_ASSIGNED sets revealEndsAt from the frame's own closesAt (never Date.now()+duration)", async () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:20.000Z' } })
 
     const live = useGameSocketStore.getState().live
-    expect(live.revealMs).toBe(18350)
-    expect(live.revealEndsAt).not.toBeNull()
-    expect(live.revealEndsAt).toBeGreaterThanOrEqual(Date.now())
+    // Exact equality, not toBeGreaterThanOrEqual(Date.now()) - the whole
+    // point of this frame's closesAt is that it is NOT relative to when
+    // the frame happened to arrive.
+    expect(live.revealEndsAt).toBe(Date.parse('2100-01-01T00:00:20.000Z'))
   })
 
   it('STATE adopts game.revealEndsAt when no reveal is already tracked (reconnect mid-sorteo)', async () => {
@@ -300,14 +301,13 @@ describe('useGameSocketStore', () => {
 
     const live = useGameSocketStore.getState().live
     expect(live.revealEndsAt).toBe(Date.parse('2100-01-01T00:00:20.000Z'))
-    expect(live.revealMs).not.toBeNull()
   })
 
   it('STATE does not override an already-tracked reveal deadline from LOADOUTS_ASSIGNED', async () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
     const revealEndsAtBefore = useGameSocketStore.getState().live.revealEndsAt
 
     ws.receive({
@@ -323,8 +323,8 @@ describe('useGameSocketStore', () => {
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 1, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 1, closesAt: '2100-01-01T00:00:18.000Z' } })
 
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(2)
     expect(useGameSocketStore.getState().live.assignedRoundIndex).toBe(1)
@@ -334,7 +334,7 @@ describe('useGameSocketStore', () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
 
     ws.receive({
       type: 'VOTING_OPENED',
@@ -345,7 +345,6 @@ describe('useGameSocketStore', () => {
     expect(live.votingRoundIndex).toBe(0)
     expect(live.votingClosesAt).toBe(Date.parse('2100-01-01T00:00:10.000Z'))
     expect(live.tiebreak).toBe(false)
-    expect(live.revealMs).toBeNull()
     expect(live.revealEndsAt).toBeNull()
   })
 
@@ -376,7 +375,7 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'ROUND_RESOLVED',
-      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false, closesAt: '2100-01-01T00:00:06.000Z' },
     })
 
     const live = useGameSocketStore.getState().live
@@ -389,7 +388,7 @@ describe('useGameSocketStore', () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
     expect(useGameSocketStore.getState().live.assignmentSeq).toBeGreaterThan(
       useGameSocketStore.getState().live.revealedAssignmentSeq
     )
@@ -404,7 +403,7 @@ describe('useGameSocketStore', () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
 
     useGameSocketStore.getState().reset()
 
@@ -412,7 +411,6 @@ describe('useGameSocketStore', () => {
       assignmentSeq: 0,
       revealedAssignmentSeq: 0,
       assignedRoundIndex: null,
-      revealMs: null,
       revealEndsAt: null,
       revealReadyCount: null,
       revealReadyTotal: null,
@@ -433,7 +431,7 @@ describe('useGameSocketStore', () => {
     await attach('g1')
     const ws1 = FakeWebSocket.instances[0]
     ws1.open()
-    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
 
     await attach('g2')
@@ -445,7 +443,7 @@ describe('useGameSocketStore', () => {
     await attach('g1')
     const ws1 = FakeWebSocket.instances[0]
     ws1.open()
-    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
+    ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, closesAt: '2100-01-01T00:00:18.000Z' } })
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
 
     // retryNow() connects immediately (bypassing the real reconnect-delay
@@ -524,7 +522,7 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'ROUND_RESOLVED',
-      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false, closesAt: '2100-01-01T00:00:06.000Z' },
     })
 
     const live = useGameSocketStore.getState().live
@@ -565,15 +563,13 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().live.votingClosesAt).toBe(votingClosesAtBefore)
   })
 
-  it('STATE adopts game.resultEndsAt when no result display is already tracked', async () => {
+  it('STATE adopts game.resultEndsAt when no result display is already tracked (reconnect mid-result)', async () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
-    ws.receive({
-      type: 'ROUND_RESOLVED',
-      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
-    })
 
+    // No preceding ROUND_RESOLVED - this is the reconnect path, where the
+    // client never saw the frame at all (RESYNC -> a fresh STATE).
     ws.receive({
       type: 'STATE',
       payload: validState({ resultEndsAt: '2100-01-01T00:00:06.000Z' }),
@@ -584,7 +580,25 @@ describe('useGameSocketStore', () => {
     )
   })
 
-  it('ROUND_RESOLVED resets resultEndsAt/resultDismissed so the next STATE adopts fresh', async () => {
+  it('STATE does not overwrite a resultEndsAt already set by ROUND_RESOLVED', async () => {
+    await attach('g1')
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({
+      type: 'ROUND_RESOLVED',
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false, closesAt: '2100-01-01T00:00:06.000Z' },
+    })
+    const resultEndsAtBefore = useGameSocketStore.getState().live.resultEndsAt
+
+    ws.receive({
+      type: 'STATE',
+      payload: validState({ resultEndsAt: '2100-01-01T00:00:20.000Z' }),
+    })
+
+    expect(useGameSocketStore.getState().live.resultEndsAt).toBe(resultEndsAtBefore)
+  })
+
+  it("ROUND_RESOLVED sets resultEndsAt from its own closesAt and clears resultDismissed", async () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
@@ -597,11 +611,11 @@ describe('useGameSocketStore', () => {
 
     ws.receive({
       type: 'ROUND_RESOLVED',
-      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false },
+      payload: { roundIndex: 0, winner: 'A', decidedByCoinFlip: false, closesAt: '2100-01-01T00:00:06.000Z' },
     })
 
     const live = useGameSocketStore.getState().live
-    expect(live.resultEndsAt).toBeNull()
+    expect(live.resultEndsAt).toBe(Date.parse('2100-01-01T00:00:06.000Z'))
     expect(live.resultDismissed).toBe(false)
   })
 
