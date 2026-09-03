@@ -41,12 +41,12 @@ function Harness({
   mangas,
   participants,
   speed = 'SWIFT',
-  serverRevealMs,
+  revealEndsAt,
 }: {
   mangas: Manga[]
   participants: GameParticipant[]
   speed?: RevealSpeed
-  serverRevealMs: number | null
+  revealEndsAt: number | null
 }) {
   const [revealedOnce, setRevealedOnce] = useState(false)
   const active = !revealedOnce
@@ -59,7 +59,7 @@ function Harness({
     active,
     markRevealed: () => setRevealedOnce(true),
     sendRevealReady: () => {},
-    serverRevealMs,
+    revealEndsAt,
   })
   return (
     <Text testID="state">
@@ -91,7 +91,7 @@ describe('useLoadoutReveal', () => {
     const mangas: Manga[] = ['JOJO']
     const participants = [participant('p1')]
 
-    await render(<Harness mangas={mangas} participants={participants} serverRevealMs={null} />)
+    await render(<Harness mangas={mangas} participants={participants} revealEndsAt={null} />)
 
     // Intro hasn't elapsed yet.
     expect(readState()).toMatchObject({ isRevealing: true, phase: 'intro', participantIndex: -1 })
@@ -105,14 +105,14 @@ describe('useLoadoutReveal', () => {
     expect(readState().isRevealing).toBe(false)
   })
 
-  it('scales every phase by serverRevealMs/localTotal - a constants drift degrades pacing, not sync with the server-authoritative duration', async () => {
+  it('scales every phase to the time remaining until closesAt - a constants drift degrades pacing, not sync with the server-authoritative deadline', async () => {
     const mangas: Manga[] = ['JOJO']
     const participants = [participant('p1')]
     const localTotal = revealDurationMs('g1', 0, mangas, [{ hasStand: false, hasDevilFruit: false, hasArmamentHaki: false, hasObservationHaki: false, hasConquerorHaki: false }], 'SWIFT')
-    const serverRevealMs = localTotal * 2 // server thinks the reveal takes twice as long
+    const revealEndsAt = Date.now() + localTotal * 2 // server thinks the reveal takes twice as long
 
     await render(
-      <Harness mangas={mangas} participants={participants} serverRevealMs={serverRevealMs} />
+      <Harness mangas={mangas} participants={participants} revealEndsAt={revealEndsAt} />
     )
 
     // At the LOCAL intro duration, the scaled version hasn't reached the
@@ -121,7 +121,19 @@ describe('useLoadoutReveal', () => {
     expect(readState().phase).toBe('intro')
 
     // The full scaled duration finishes the whole thing.
-    await advance(serverRevealMs)
+    await advance(localTotal * 2)
+    expect(readState().isRevealing).toBe(false)
+  })
+
+  it('a closesAt already in the past collapses the reveal immediately', async () => {
+    const mangas: Manga[] = ['JOJO']
+    const participants = [participant('p1')]
+
+    await render(
+      <Harness mangas={mangas} participants={participants} revealEndsAt={Date.now() - 1} />
+    )
+
+    await advance(0)
     expect(readState().isRevealing).toBe(false)
   })
 
@@ -140,7 +152,7 @@ describe('useLoadoutReveal', () => {
         active: true,
         markRevealed: () => {},
         sendRevealReady: () => {},
-        serverRevealMs: null,
+        revealEndsAt: null,
       })
       useEffect(() => {
         skipRef.current = result.skip
@@ -161,7 +173,7 @@ describe('useLoadoutReveal', () => {
     const mangas: Manga[] = ['JOJO']
     const participants = [participant('p1')]
 
-    await render(<Harness mangas={mangas} participants={participants} serverRevealMs={null} />)
+    await render(<Harness mangas={mangas} participants={participants} revealEndsAt={null} />)
 
     await advance(REVEAL_INTRO_MS + REVEAL_PLAYER_INTRO_MS + 1)
     expect(readState()).toMatchObject({ phase: 'narrator', participantIndex: 0, slotIndex: 0 })
@@ -175,7 +187,7 @@ describe('useLoadoutReveal', () => {
     const mangas: Manga[] = ['JOJO']
     const participants = [participant('p1'), participant('p2')]
 
-    await render(<Harness mangas={mangas} participants={participants} serverRevealMs={null} />)
+    await render(<Harness mangas={mangas} participants={participants} revealEndsAt={null} />)
 
     const total = revealDurationMs('g1', 0, mangas, [
       { hasStand: false, hasDevilFruit: false, hasArmamentHaki: false, hasObservationHaki: false, hasConquerorHaki: false },

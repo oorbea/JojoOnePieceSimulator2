@@ -1290,25 +1290,31 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 // publish drains every DomainEvent g has accumulated since the last call
 // and fans them out over hub.
 //
-// Timed events (VOTING_OPENED/TIEBREAK_OPENED/SUMMARY_OPENED) are stamped
-// with the authoritative deadline this service already computed for that
-// phase, so the transport never has to re-synthesize time.Now()+window and
-// drift by however long hub delivery took. This is only correct because
-// every path that emits one of those events calls its schedule* function
-// inside the same withGame closure, BEFORE withGame calls publish: the
-// non-reassigning beginRound path, openVotingAfterSummary,
-// openSummaryAfterReveal, MarkRevealReady/MarkSummaryReady's skip paths and
-// closeVoting's first-tie revote path all do. Any new emit path must keep
-// that ordering or its frame silently falls back to the synthesized value.
+// Timed events (VOTING_OPENED/TIEBREAK_OPENED/SUMMARY_OPENED/
+// LOADOUTS_ASSIGNED/ROUND_RESOLVED) are stamped with the authoritative
+// deadline this service already computed for that phase, so the transport
+// never has to re-synthesize time.Now()+window and drift by however long
+// hub delivery took. This is only correct because every path that emits
+// one of those events calls its schedule* function inside the same
+// withGame closure, BEFORE withGame calls publish: the non-reassigning
+// beginRound path (both its AssignLoadouts branch and
+// openVotingAfterSummary), openSummaryAfterReveal,
+// MarkRevealReady/MarkSummaryReady's skip paths, closeVoting's first-tie
+// revote path AND its resolve tail (scheduleResultDelay once the round
+// lands in RESOLVING, covering both a clear winner and ResolveTiebreak)
+// all do. Any new emit path must keep that ordering or its frame silently
+// falls back to the synthesized value.
 func (s *GameService) publish(g *game.Game) {
 	window := time.Duration(g.Config().VotingWindowSeconds()) * time.Second
-	revealMs := revealDurationFor(g)
+	revealWindow := revealDurationFor(g)
 	summaryWindow := time.Duration(g.Config().SummaryDurationSeconds()) * time.Second
 
 	id := g.ID()
 	s.timersMu.Lock()
 	votingEndsAt, hasVotingEnd := s.votingEnds[id]
 	summaryEndsAt, hasSummaryEnd := s.summaryEnds[id]
+	revealEndsAt, hasRevealEnd := s.revealEnds[id]
+	resultEndsAt, hasResultEnd := s.resultEnds[id]
 	s.timersMu.Unlock()
 
 	for _, e := range g.PullEvents() {
@@ -1322,10 +1328,18 @@ func (s *GameService) publish(g *game.Game) {
 			if hasSummaryEnd {
 				closesAt = summaryEndsAt
 			}
+		case game.LoadoutsAssigned:
+			if hasRevealEnd {
+				closesAt = revealEndsAt
+			}
+		case game.RoundResolved:
+			if hasResultEnd {
+				closesAt = resultEndsAt
+			}
 		}
 		s.hub.Publish(GameEvent{
 			GameID: id, Name: e.Name(), Event: e,
-			VotingWindow: window, RevealMs: revealMs, SummaryWindow: summaryWindow,
+			VotingWindow: window, RevealWindow: revealWindow, SummaryWindow: summaryWindow,
 			ClosesAt: closesAt,
 		})
 	}
@@ -1336,9 +1350,12 @@ func (s *GameService) publish(g *game.Game) {
 // - the reveal always runs before that round's Round is created, see
 // scheduleRevealDelay's doc), and each participant's own already-assigned
 // Loadout (nil before AssignLoadouts has run, treated as "landed nothing").
-// Shared by scheduleRevealDelay (to size the actual timer) and publish (to
-// stamp every GameEvent's RevealMs, most importantly LOADOUTS_ASSIGNED's)
-// so the two never compute a different number for the same reveal.
+// Shared by scheduleRevealDelay (to size the actual timer, which is what
+// GameService.revealEnds - and therefore LOADOUTS_ASSIGNED's stamped
+// closesAt - is ultimately derived from) and publish (to stamp every
+// GameEvent's RevealWindow, the fallback window LOADOUTS_ASSIGNED's frame
+// falls back to only if its authoritative closesAt were ever zero) so the
+// two never compute a different number for the same reveal.
 func revealDurationFor(g *game.Game) time.Duration {
 	players := make([]game.RevealPlayer, 0, len(g.Participants()))
 	for _, p := range g.Participants() {

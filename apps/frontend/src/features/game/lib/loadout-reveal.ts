@@ -217,7 +217,7 @@ export function revealTimeline(
 // revealDurationMs is the total sorteo duration for a reveal - the same
 // number GameService.scheduleRevealDelay computes server-side (via
 // revealDurationFor) to delay OpenVoting. Exposed so a client can compute
-// it independently (e.g. for a reconnecting client with no revealMs from a
+// it independently (e.g. for a reconnecting client with no closesAt from a
 // LOADOUTS_ASSIGNED frame to trust).
 export function revealDurationMs(
   gameId: string,
