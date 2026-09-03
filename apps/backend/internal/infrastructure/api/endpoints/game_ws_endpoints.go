@@ -77,21 +77,6 @@ func (r *connRegistry) release(k connKey) (last bool) {
 	return false
 }
 
-// authenticateWS validates the caller the same way RequireAuth does, but
-// additionally accepts ?token=<jwt> - browser WebSocket, like EventSource,
-// cannot set request headers. Same tradeoff and same reasoning as
-// EventsEndpoints.authenticate; kept local to this handler so no other
-// route gains query-param auth.
-func (e *GameEndpoints) authenticateWS(r *http.Request) (ports.Claims, error) {
-	if header := r.Header.Get("Authorization"); strings.HasPrefix(header, bearerPrefix) {
-		return e.issuer.Parse(strings.TrimSpace(header[len(bearerPrefix):]))
-	}
-	if token := r.URL.Query().Get("token"); token != "" {
-		return e.issuer.Parse(token)
-	}
-	return ports.Claims{}, ports.ErrUnauthenticated
-}
-
 // originPatterns strips the scheme off each configured CORS origin, since
 // websocket.AcceptOptions.OriginPatterns wants host[:port] patterns, not
 // full origin URLs. An empty result leaves OriginPatterns nil, meaning only
@@ -115,12 +100,15 @@ func originPatterns(origins []string) []string {
 // See router.go for why this route is mounted outside the normal
 // Timeout+RequireAuth group.
 func (e *GameEndpoints) serveWS(w http.ResponseWriter, r *http.Request) {
-	claims, err := e.authenticateWS(r)
+	// ParseGameID runs before authentication because the ticket must be
+	// checked against this specific game's id (its Resource) - a malformed
+	// id 400s before a ticket is even redeemed/burned.
+	gameID, err := game.ParseGameID(chi.URLParam(r, "id"))
 	if err != nil {
-		handleError(w, ports.ErrUnauthenticated)
+		handleError(w, err)
 		return
 	}
-	gameID, err := game.ParseGameID(chi.URLParam(r, "id"))
+	claims, err := authenticateStream(r, e.issuer, e.tickets, ports.TicketPurposeGameWS, gameID.String())
 	if err != nil {
 		handleError(w, err)
 		return
@@ -136,6 +124,9 @@ func (e *GameEndpoints) serveWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The ticket is already burned by authenticateStream above, before this
+	// Accept - so a rejected origin here costs the ticket. Harmless: the
+	// frontend always re-mints on its next connect attempt.
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		OriginPatterns:  originPatterns(e.cfg.AllowedOrigins),
 		CompressionMode: websocket.CompressionDisabled,

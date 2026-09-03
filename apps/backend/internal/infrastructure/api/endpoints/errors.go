@@ -75,7 +75,7 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, game.ErrInvalidPoolFilter),
 		errors.Is(err, enums.ErrInvalidLobbyVisibility):
 		writeError(w, http.StatusBadRequest, code, err.Error())
-	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken):
+	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken), errors.Is(err, ports.ErrTicketInvalid):
 		writeError(w, http.StatusUnauthorized, code, "unauthenticated")
 	case errors.Is(err, ports.ErrForbidden), errors.Is(err, game.ErrNotHost), errors.Is(err, game.ErrLobbyPrivate):
 		writeError(w, http.StatusForbidden, code, "forbidden")

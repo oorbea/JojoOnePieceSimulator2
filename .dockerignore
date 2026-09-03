@@ -11,3 +11,10 @@ LICENSE
 **/dist
 **/.expo
 **/tamagui-web.css
+**/web-build
+**/coverage
+**/.turbo
+**/*.tsbuildinfo
+**/*.log
+**/.DS_Store
+Thumbs.db

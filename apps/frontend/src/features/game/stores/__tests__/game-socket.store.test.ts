@@ -3,6 +3,8 @@
 // to null and skip opening a socket at all.
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import { useSessionStore } from '@/shared/stores/session.store'
+import { mintGameSocketTicket } from '@/shared/api/stream-tickets'
+import { BASE_RECONNECT_MS } from '@/features/game/lib/backoff'
 
 jest.mock('@/shared/config/env', () => ({
   env: {
@@ -11,6 +13,16 @@ jest.mock('@/shared/config/env', () => ({
     EXPO_PUBLIC_BUILD_ID: 'test',
   },
 }))
+
+// connect() now mints a ticket before opening a socket - mocked here so
+// every existing test (written for a synchronous connect()) keeps working
+// once its attach()/retryNow() call is followed by a flush() (see below).
+// Individual tests override this per-case (mockResolvedValueOnce/
+// mockRejectedValueOnce) to exercise the mint-failure paths.
+jest.mock('@/shared/api/stream-tickets', () => ({
+  mintGameSocketTicket: jest.fn(),
+}))
+const mockMint = jest.mocked(mintGameSocketTicket)
 
 // Minimal fake WebSocket: captures the last instance so the test can drive
 // onopen/onmessage/onclose directly, mirroring the real socket's lifecycle
@@ -58,6 +70,28 @@ function factory(url: string) {
   return new FakeWebSocket(url) as unknown as WebSocket
 }
 
+// connect() has exactly one await point (mintGameSocketTicket) before it
+// either opens a socket or bails out - two microtask ticks is enough margin
+// for that plus zustand's own (synchronous) set() calls in between.
+async function flush() {
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
+// Thin wrapper so every existing test reads the same as before this tanda
+// (attach then immediately use the socket), with the flush the new async
+// connect() requires made explicit at the call site.
+async function attach(gameId: string) {
+  useGameSocketStore.getState().attach(gameId, factory)
+  await flush()
+}
+
+// axios-shaped rejection toAppError (shared/api/errors.ts) recognizes -
+// enough for its `.response?.status` extraction, nothing else.
+function httpError(status: number) {
+  return { response: { status }, message: `http ${status}` }
+}
+
 // The store now validates every frame against the generated
 // serverFrameSchema (game-socket.store.ts), so a STATE payload must be a
 // complete, valid GameSnapshotResponse/GameViewerResponse - a real backend
@@ -102,6 +136,8 @@ function validState(gameOverrides: Record<string, unknown> = {}, youOverrides: R
 
 beforeEach(() => {
   FakeWebSocket.instances = []
+  mockMint.mockReset()
+  mockMint.mockResolvedValue('test-ticket')
   useGameSocketStore.getState().reset()
   useSessionStore.setState({
     session: {
@@ -126,8 +162,8 @@ afterEach(() => {
 })
 
 describe('useGameSocketStore', () => {
-  it('replaces the snapshot wholesale on STATE and never merges', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('replaces the snapshot wholesale on STATE and never merges', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -140,8 +176,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().snapshot).toEqual(snapshotB)
   })
 
-  it('does not touch the snapshot on a delta frame', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('does not touch the snapshot on a delta frame', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     const snapshot = validState()
@@ -152,8 +188,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().feed.length).toBe(1)
   })
 
-  it('VOTE_CAST never touches the snapshot', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('VOTE_CAST never touches the snapshot', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     const snapshot = validState()
@@ -164,8 +200,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().feed.length).toBe(0)
   })
 
-  it('sets terminal ABORTED on GAME_ABORTED and stops reconnecting', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('sets terminal ABORTED on GAME_ABORTED and stops reconnecting', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -179,8 +215,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().status).toBe('closed')
   })
 
-  it('sets terminal KICKED only when the kicked participant is self', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('sets terminal KICKED only when the kicked participant is self', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({ type: 'STATE', payload: validState() })
@@ -192,8 +228,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().terminal).toEqual({ kind: 'KICKED' })
   })
 
-  it('records lastError from an ERROR frame with its requestId', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('records lastError from an ERROR frame with its requestId', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -205,27 +241,27 @@ describe('useGameSocketStore', () => {
     })
   })
 
-  it('ignores a malformed frame instead of throwing', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('ignores a malformed frame instead of throwing', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     expect(() => ws.onmessage?.({ data: 'not json' })).not.toThrow()
   })
 
-  it('reuses one socket for two attach calls with the same gameId', () => {
-    useGameSocketStore.getState().attach('g1', factory)
-    useGameSocketStore.getState().attach('g1', factory)
+  it('reuses one socket for two attach calls with the same gameId', async () => {
+    await attach('g1')
+    await attach('g1')
     expect(FakeWebSocket.instances.length).toBe(1)
   })
 
-  it('does not open a socket without a session token', () => {
+  it('does not open a socket without a session token', async () => {
     useSessionStore.setState({ session: null, isHydrated: true })
-    useGameSocketStore.getState().attach('g1', factory)
+    await attach('g1')
     expect(FakeWebSocket.instances.length).toBe(0)
   })
 
-  it('LOADOUTS_ASSIGNED bumps assignmentSeq without touching snapshot/feed', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('LOADOUTS_ASSIGNED bumps assignmentSeq without touching snapshot/feed', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     const snapshot = validState()
@@ -239,8 +275,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().feed.length).toBe(0)
   })
 
-  it('LOADOUTS_ASSIGNED sets revealMs/revealEndsAt from the frame payload', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('LOADOUTS_ASSIGNED sets revealMs/revealEndsAt from the frame payload', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -252,8 +288,8 @@ describe('useGameSocketStore', () => {
     expect(live.revealEndsAt).toBeGreaterThanOrEqual(Date.now())
   })
 
-  it('STATE adopts game.revealEndsAt when no reveal is already tracked (reconnect mid-sorteo)', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('STATE adopts game.revealEndsAt when no reveal is already tracked (reconnect mid-sorteo)', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -267,8 +303,8 @@ describe('useGameSocketStore', () => {
     expect(live.revealMs).not.toBeNull()
   })
 
-  it('STATE does not override an already-tracked reveal deadline from LOADOUTS_ASSIGNED', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('STATE does not override an already-tracked reveal deadline from LOADOUTS_ASSIGNED', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
@@ -282,8 +318,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().live.revealEndsAt).toBe(revealEndsAtBefore)
   })
 
-  it('bumps assignmentSeq to 2 across two assignment frames', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('bumps assignmentSeq to 2 across two assignment frames', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -294,8 +330,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().live.assignedRoundIndex).toBe(1)
   })
 
-  it('VOTING_OPENED populates live with roundIndex/closesAt, clears tiebreak, and clears the reveal deadline', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('VOTING_OPENED populates live with roundIndex/closesAt, clears tiebreak, and clears the reveal deadline', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
@@ -313,8 +349,8 @@ describe('useGameSocketStore', () => {
     expect(live.revealEndsAt).toBeNull()
   })
 
-  it('TIEBREAK_OPENED populates live the same way with tiebreak true', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('TIEBREAK_OPENED populates live the same way with tiebreak true', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -329,8 +365,8 @@ describe('useGameSocketStore', () => {
     expect(live.tiebreak).toBe(true)
   })
 
-  it('ROUND_RESOLVED clears the countdown and still pushes to feed', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('ROUND_RESOLVED clears the countdown and still pushes to feed', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -349,8 +385,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().feed.length).toBe(1)
   })
 
-  it('markAssignmentRevealed sets revealedAssignmentSeq to the current assignmentSeq', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('markAssignmentRevealed sets revealedAssignmentSeq to the current assignmentSeq', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
@@ -364,8 +400,8 @@ describe('useGameSocketStore', () => {
     expect(live.revealedAssignmentSeq).toBe(live.assignmentSeq)
   })
 
-  it('reset() clears live back to its zero/null initial value', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('reset() clears live back to its zero/null initial value', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
@@ -393,20 +429,20 @@ describe('useGameSocketStore', () => {
     })
   })
 
-  it('a gameId change clears live', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('a gameId change clears live', async () => {
+    await attach('g1')
     const ws1 = FakeWebSocket.instances[0]
     ws1.open()
     ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
 
-    useGameSocketStore.getState().attach('g2', factory)
+    await attach('g2')
 
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(0)
   })
 
-  it('a reconnect for the same gameId preserves live', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('a reconnect for the same gameId preserves live', async () => {
+    await attach('g1')
     const ws1 = FakeWebSocket.instances[0]
     ws1.open()
     ws1.receive({ type: 'LOADOUTS_ASSIGNED', payload: { roundIndex: 0, revealMs: 18350 } })
@@ -416,14 +452,15 @@ describe('useGameSocketStore', () => {
     // setTimeout) - same gameId, so this exercises the "reconnect, not a
     // fresh attach" path without needing fake timers.
     useGameSocketStore.getState().retryNow()
+    await flush()
     const ws2 = FakeWebSocket.instances[1]
     ws2.open()
 
     expect(useGameSocketStore.getState().live.assignmentSeq).toBe(1)
   })
 
-  it('VOTE_CAST writes absolute votesCast/voters when it matches the current voting round', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('VOTE_CAST writes absolute votesCast/voters when it matches the current voting round', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -441,8 +478,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().live.votesCast).toBe(2)
   })
 
-  it('VOTE_CAST for a round that is not the current voting round is ignored', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('VOTE_CAST for a round that is not the current voting round is ignored', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -455,8 +492,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().live.votesCast).toBe(0)
   })
 
-  it('VOTING_OPENED/TIEBREAK_OPENED reset votesCast to 0 and voters to null', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('VOTING_OPENED/TIEBREAK_OPENED reset votesCast to 0 and voters to null', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -475,8 +512,8 @@ describe('useGameSocketStore', () => {
     expect(live.voters).toBeNull()
   })
 
-  it('ROUND_RESOLVED clears votesCast/voters to null', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('ROUND_RESOLVED clears votesCast/voters to null', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -495,8 +532,8 @@ describe('useGameSocketStore', () => {
     expect(live.voters).toBeNull()
   })
 
-  it('STATE adopts game.votingEndsAt when no voting deadline is already tracked (reconnect mid-vote)', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('STATE adopts game.votingEndsAt when no voting deadline is already tracked (reconnect mid-vote)', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
@@ -510,8 +547,8 @@ describe('useGameSocketStore', () => {
     )
   })
 
-  it('STATE does not override an already-tracked voting deadline from VOTING_OPENED', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('STATE does not override an already-tracked voting deadline from VOTING_OPENED', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -528,8 +565,8 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().live.votingClosesAt).toBe(votingClosesAtBefore)
   })
 
-  it('STATE adopts game.resultEndsAt when no result display is already tracked', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('STATE adopts game.resultEndsAt when no result display is already tracked', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -547,8 +584,8 @@ describe('useGameSocketStore', () => {
     )
   })
 
-  it('ROUND_RESOLVED resets resultEndsAt/resultDismissed so the next STATE adopts fresh', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('ROUND_RESOLVED resets resultEndsAt/resultDismissed so the next STATE adopts fresh', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -568,8 +605,8 @@ describe('useGameSocketStore', () => {
     expect(live.resultDismissed).toBe(false)
   })
 
-  it('VOTING_OPENED/TIEBREAK_OPENED reset resultEndsAt/resultDismissed too', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('VOTING_OPENED/TIEBREAK_OPENED reset resultEndsAt/resultDismissed too', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     ws.receive({
@@ -588,8 +625,8 @@ describe('useGameSocketStore', () => {
     expect(live.resultDismissed).toBe(false)
   })
 
-  it('dismissResult sets resultDismissed', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('dismissResult sets resultDismissed', async () => {
+    await attach('g1')
     expect(useGameSocketStore.getState().live.resultDismissed).toBe(false)
 
     useGameSocketStore.getState().dismissResult()
@@ -603,8 +640,8 @@ describe('useGameSocketStore', () => {
   // an unrecognized frame type already did (a feed entry, nothing else
   // touched), rather than throwing or corrupting state with a
   // partially-wrong payload.
-  it('a STATE frame missing required fields keeps the previous snapshot instead of adopting a broken one', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('a STATE frame missing required fields keeps the previous snapshot instead of adopting a broken one', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
     const snapshot = validState()
@@ -619,12 +656,78 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().feed.length).toBe(1)
   })
 
-  it('a frame whose type is unrecognized still lands in the feed and does not throw', () => {
-    useGameSocketStore.getState().attach('g1', factory)
+  it('a frame whose type is unrecognized still lands in the feed and does not throw', async () => {
+    await attach('g1')
     const ws = FakeWebSocket.instances[0]
     ws.open()
 
     expect(() => ws.receive({ type: 'SOME_FUTURE_FRAME', payload: { whatever: true } })).not.toThrow()
     expect(useGameSocketStore.getState().feed.length).toBe(1)
+  })
+
+  // --- connect() mints a ticket before opening a socket (2026-09-03) ---
+
+  it('the socket URL carries the minted ticket', async () => {
+    mockMint.mockResolvedValueOnce('minted-abc')
+    await attach('g1')
+    expect(FakeWebSocket.instances[0].url).toContain('ticket=minted-abc')
+  })
+
+  it('a 403 minting a ticket closes the store without opening a socket or scheduling a retry', async () => {
+    mockMint.mockRejectedValueOnce(httpError(403))
+    useGameSocketStore.getState().attach('g1', factory)
+    await flush()
+
+    expect(useGameSocketStore.getState().status).toBe('closed')
+    expect(FakeWebSocket.instances.length).toBe(0)
+    expect(useGameSocketStore.getState().nextRetryAt).toBeNull()
+  })
+
+  it('a 401 minting a ticket closes the store (the interceptor already cleared the session)', async () => {
+    mockMint.mockRejectedValueOnce(httpError(401))
+    useGameSocketStore.getState().attach('g1', factory)
+    await flush()
+
+    expect(useGameSocketStore.getState().status).toBe('closed')
+    expect(FakeWebSocket.instances.length).toBe(0)
+  })
+
+  it('a network error minting a ticket schedules a reconnect that re-mints', async () => {
+    jest.useFakeTimers()
+    try {
+      mockMint.mockRejectedValueOnce(new Error('network down'))
+      useGameSocketStore.getState().attach('g1', factory)
+      await flush()
+
+      expect(useGameSocketStore.getState().status).toBe('reconnecting')
+      expect(useGameSocketStore.getState().nextRetryAt).not.toBeNull()
+      expect(mockMint).toHaveBeenCalledTimes(1)
+
+      jest.advanceTimersByTime(BASE_RECONNECT_MS)
+      await flush()
+
+      expect(mockMint).toHaveBeenCalledTimes(2)
+      expect(FakeWebSocket.instances.length).toBe(1)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it("detach() during a pending mint opens no socket (the connectGeneration guard)", async () => {
+    let resolveMint: (value: string) => void = () => {}
+    mockMint.mockReturnValueOnce(
+      new Promise<string>((resolve) => {
+        resolveMint = resolve
+      })
+    )
+
+    useGameSocketStore.getState().attach('g1', factory)
+    // The mint above is still in flight - detach before it resolves, the
+    // same race a component unmounting mid-connect would hit.
+    useGameSocketStore.getState().detach()
+    resolveMint('late-ticket')
+    await flush()
+
+    expect(FakeWebSocket.instances.length).toBe(0)
   })
 })

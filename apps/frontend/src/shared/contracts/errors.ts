@@ -67,6 +67,7 @@ export const errorCodeSchema = z.enum([
   'STAGE_NOT_FOUND',
   'STAND_ALREADY_EXISTS',
   'STAND_NOT_FOUND',
+  'STREAM_TICKET_INVALID',
   'TEAM_FULL',
   'TEAM_NOT_FOUND',
   'TEAM_SIZE_MISMATCH',

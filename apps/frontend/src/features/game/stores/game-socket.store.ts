@@ -7,6 +7,8 @@ import type { ClientCommandType } from '@/shared/contracts/ws'
 import { SERVER_FRAME, serverFrameSchema } from '@/shared/contracts/ws'
 import type { GameResult, GameStateResponse } from '@/features/game/types/game.types'
 import { useSessionStore } from '@/shared/stores/session.store'
+import { mintGameSocketTicket } from '@/shared/api/stream-tickets'
+import { toAppError } from '@/shared/api/errors'
 
 export type SocketStatus =
   'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'unavailable'
@@ -140,6 +142,16 @@ let refCount = 0
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let hasConnectedBefore = false
 let feedCounter = 0
+// connectGeneration guards the mint-ticket await connect() now has to make:
+// bumped inside closeSocket() (attach switching games, detach, reset), so a
+// mint that resolves after the caller has moved on can't resurrect a socket
+// for the wrong game. pendingConnect prevents a second, concurrent connect()
+// for the SAME game (attach() re-mounting while a mint is still in flight) -
+// unlike the old synchronous connect(), an async one leaves socket === null
+// for a while, and attach()'s `if (!socket) connect(gameId)` alone can no
+// longer tell "already connecting" from "not connected".
+let connectGeneration = 0
+let pendingConnect = false
 
 function nextFeedId() {
   feedCounter += 1
@@ -159,6 +171,9 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
   }
 
   const closeSocket = () => {
+    // Invalidates any mint that's still in flight from a previous connect()
+    // call - see connectGeneration's doc above.
+    connectGeneration += 1
     clearReconnectTimer()
     if (socket) {
       const s = socket
@@ -176,16 +191,73 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
     set({ feed: feed.slice(-8) })
   }
 
-  const connect = (gameId: string) => {
+  // scheduleReconnect is shared by ws.onclose and connect's own mint-failure
+  // catch, so a failed mint follows exactly the same backoff curve
+  // (reconnectAttempts/nextRetryAt/retryNow) a dropped socket always has.
+  const scheduleReconnect = () => {
+    const attempt = get().reconnectAttempts
+    const delay = reconnectDelay(attempt)
+    set({
+      status: 'reconnecting',
+      reconnectAttempts: attempt + 1,
+      nextRetryAt: Date.now() + delay,
+    })
+    reconnectTimer = setTimeout(() => {
+      const id = get().gameId
+      if (id && !pendingConnect) connect(id)
+    }, delay)
+  }
+
+  const connect = async (gameId: string) => {
     const token = useSessionStore.getState().session?.accessToken
     if (!token) return
-    const url = buildGameSocketUrl(gameId, token)
+    // Checked before minting (a blank ticket never reaches the URL builder
+    // either way) so an unconfigured EXPO_PUBLIC_SOCKET_URL never burns a
+    // ticket for nothing.
+    if (!buildGameSocketUrl(gameId, '')) {
+      set({ status: 'unavailable' })
+      return
+    }
+
+    const gen = ++connectGeneration
+    pendingConnect = true
+    set({ status: hasConnectedBefore ? 'reconnecting' : 'connecting' })
+
+    let ticket: string
+    try {
+      ticket = await mintGameSocketTicket(gameId)
+    } catch (err) {
+      pendingConnect = false
+      // Superseded by a detach/attach-to-another-game while the mint was in
+      // flight - the caller that superseded us already owns status/socket.
+      if (gen !== connectGeneration) return
+
+      const appErr = toAppError(err)
+      if (appErr.status === 401) {
+        // The response interceptor already cleared the session on a 401 -
+        // nothing left to retry here; the session-gated screens handle it.
+        set({ status: 'closed' })
+        return
+      }
+      if (appErr.status === 403 || appErr.status === 404) {
+        // Not seated in this game (or it's gone). Terminal: before tickets,
+        // this same rejection only surfaced as a WS handshake failure the
+        // browser can't inspect, and the store retried it forever.
+        set({ status: 'closed', lastError: { message: appErr.message, code: appErr.code } })
+        return
+      }
+      scheduleReconnect()
+      return
+    }
+    pendingConnect = false
+    if (gen !== connectGeneration) return
+
+    const url = buildGameSocketUrl(gameId, ticket)
     if (!url) {
       set({ status: 'unavailable' })
       return
     }
 
-    set({ status: hasConnectedBefore ? 'reconnecting' : 'connecting' })
     const ws = socketFactoryRef(url)
     socket = ws
 
@@ -480,17 +552,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         set({ status: 'closed' })
         return
       }
-      const attempt = get().reconnectAttempts
-      const delay = reconnectDelay(attempt)
-      set({
-        status: 'reconnecting',
-        reconnectAttempts: attempt + 1,
-        nextRetryAt: Date.now() + delay,
-      })
-      reconnectTimer = setTimeout(() => {
-        const id = get().gameId
-        if (id) connect(id)
-      }, delay)
+      scheduleReconnect()
     }
   }
 
@@ -527,7 +589,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         })
       }
       refCount += 1
-      if (!socket) connect(gameId)
+      if (!socket && !pendingConnect) connect(gameId)
     },
 
     detach: () => {
@@ -549,7 +611,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
       clearReconnectTimer()
       set({ reconnectAttempts: 0 })
       const id = get().gameId
-      if (id) connect(id)
+      if (id && !pendingConnect) connect(id)
     },
 
     reset: () => {

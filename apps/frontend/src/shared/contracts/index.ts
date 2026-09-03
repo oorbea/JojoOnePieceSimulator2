@@ -64,6 +64,7 @@ export type {
   GameParticipantResponse,
   GameSnapshotResponse,
   GameStateResponse,
+  StreamTicketResponse,
   TranslationRequest,
   DevilFruitRequest,
   StandRequest,

@@ -44,6 +44,13 @@ var (
 	// role required for the action.
 	ErrForbidden = errors.New("forbidden")
 
+	// ErrTicketInvalid is returned when a stream connection ticket is
+	// unknown, expired, already redeemed, or was minted for a different
+	// stream/resource. Kept distinct from ErrUnauthenticated so logs and
+	// tests can tell "no credential presented" from "a ticket was presented
+	// but rejected", even though both map to 401.
+	ErrTicketInvalid = errors.New("invalid connection ticket")
+
 	// ErrConstraintViolation is returned when the database rejects a write
 	// because it violates a CHECK, NOT NULL, or foreign key constraint - i.e.
 	// invalid input that Postgres itself caught, as opposed to a uniqueness

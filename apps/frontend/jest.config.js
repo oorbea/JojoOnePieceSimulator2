@@ -34,6 +34,11 @@ module.exports = {
         // moved to `lib/__tests__`: that directory means "pure lib, no
         // platform branching", which is exactly what these hooks are not.
         '<rootDir>/src/**/hooks/__tests__/**/*.web.test.ts?(x)',
+        // PictureEventsBridge (src/providers/) is web-only for the same
+        // reason as the hooks above (Platform.OS === 'web' gate, needs a
+        // real EventSource/document) - same naming convention, different
+        // directory since it's a component, not a hook.
+        '<rootDir>/src/providers/__tests__/**/*.web.test.ts?(x)',
       ],
       // jest-expo's own default only whitelists RN/Expo packages for
       // transform, keyed on the FIRST "node_modules/" segment in a path.

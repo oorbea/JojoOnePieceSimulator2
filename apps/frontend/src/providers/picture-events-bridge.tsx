@@ -9,6 +9,8 @@ import { standKeys } from '@/features/stands/api/stands.keys'
 import { clearEtags } from '@/shared/api/etag'
 import { env } from '@/shared/config/env'
 import { useSessionStore } from '@/shared/stores/session.store'
+import { mintEventsTicket } from '@/shared/api/stream-tickets'
+import { toAppError } from '@/shared/api/errors'
 
 // Backs off the same shape as the polling this replaces (2s -> 4s -> 8s ...
 // capped at 30s), but never gives up permanently - this is now the only
@@ -32,17 +34,27 @@ type PictureEventDTO = {
 // keeps polling as its fallback (see those hooks' Platform.OS gate).
 export function PictureEventsBridge() {
   const accessToken = useSessionStore((state) => state.session?.accessToken ?? null)
+  // The stream is admin-only (events_endpoints.go's stream still re-checks
+  // this itself). Every non-admin session used to open an EventSource
+  // anyway, eat a 403 from the mint, and retry it forever on this same
+  // backoff curve - gating the mount here skips even that first attempt.
+  const isAdmin = useSessionStore((state) => state.session?.user.role === 'ADMIN')
   const queryClient = useQueryClient()
 
   const sourceRef = useRef<EventSource | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reconnectAttemptsRef = useRef(0)
   const hasConnectedBeforeRef = useRef(false)
+  // Guards the mint-ticket await connect() makes below: bumped by
+  // disconnect() so a mint that resolves after the effect has torn down
+  // (session cleared, role changed, unmount) can't open a stale EventSource.
+  const cancelledRef = useRef(false)
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
 
     const disconnect = () => {
+      cancelledRef.current = true
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current)
         reconnectTimerRef.current = null
@@ -51,12 +63,13 @@ export function PictureEventsBridge() {
       sourceRef.current = null
     }
 
-    if (!accessToken) {
+    if (!accessToken || !isAdmin) {
       disconnect()
       hasConnectedBeforeRef.current = false
       reconnectAttemptsRef.current = 0
       return
     }
+    cancelledRef.current = false
 
     const invalidateAll = () => {
       clearEtags()
@@ -90,16 +103,39 @@ export function PictureEventsBridge() {
       }
     }
 
-    // The token used to authenticate this connection is read fresh here on
-    // every (re)connect - not just once - since EventSource has no way to
-    // update credentials on an already-open connection, and the browser's
-    // own auto-retry (which we disable below) would otherwise keep hammering
-    // a URL with a token that may have rotated (re-login) while disconnected.
-    const connect = () => {
-      const token = useSessionStore.getState().session?.accessToken
-      if (!token) return
+    const scheduleRetry = () => {
+      const attempt = reconnectAttemptsRef.current
+      const delay = Math.min(BASE_RECONNECT_MS * 2 ** attempt, MAX_RECONNECT_MS)
+      reconnectAttemptsRef.current += 1
+      reconnectTimerRef.current = setTimeout(connect, delay)
+    }
 
-      const source = new EventSource(`${env.EXPO_PUBLIC_API_URL}/events?token=${encodeURIComponent(token)}`)
+    // A fresh ticket is minted on every (re)connect - not just once - since
+    // EventSource has no way to update credentials on an already-open
+    // connection, and the browser's own auto-retry (which we disable below)
+    // would otherwise keep hammering a URL whose ticket is already burned or
+    // expired.
+    async function connect() {
+      if (!useSessionStore.getState().session?.accessToken) return
+
+      let ticket: string
+      try {
+        ticket = await mintEventsTicket()
+      } catch (err) {
+        if (cancelledRef.current) return
+        const status = toAppError(err).status
+        // 401: the response interceptor already cleared the session: the
+        // effect re-runs with accessToken null and disconnects on its own.
+        // 403: this session isn't (or is no longer) an admin - the stream
+        // has nothing for it, so stop instead of re-minting forever, unlike
+        // the old ?token= loop against a 403 stream.
+        if (status === 401 || status === 403) return
+        scheduleRetry()
+        return
+      }
+      if (cancelledRef.current) return
+
+      const source = new EventSource(`${env.EXPO_PUBLIC_API_URL}/events?ticket=${encodeURIComponent(ticket)}`)
       sourceRef.current = source
 
       source.addEventListener('picture', handlePictureEvent)
@@ -118,17 +154,13 @@ export function PictureEventsBridge() {
         source.close()
         if (sourceRef.current !== source) return // already superseded
         sourceRef.current = null
-
-        const attempt = reconnectAttemptsRef.current
-        const delay = Math.min(BASE_RECONNECT_MS * 2 ** attempt, MAX_RECONNECT_MS)
-        reconnectAttemptsRef.current += 1
-        reconnectTimerRef.current = setTimeout(connect, delay)
+        scheduleRetry()
       }
     }
 
     connect()
     return disconnect
-  }, [accessToken, queryClient])
+  }, [accessToken, isAdmin, queryClient])
 
   return null
 }

@@ -556,6 +556,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/events/ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Issues a single-use ticket to present as ` + "`" + `?ticket=...` + "`" + ` to ` + "`" + `GET /events` + "`" + ` (EventSource can't set headers). Admin-only, same as the stream itself.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Mint an SSE connection ticket",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StreamTicketResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/games": {
             "post": {
                 "security": [
@@ -1069,6 +1112,64 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/ws-ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Issues a single-use ticket, scoped to this game, to present as ` + "`" + `?ticket=...` + "`" + ` to ` + "`" + `GET /games/{id}/ws` + "`" + ` (browsers can't set headers on a WebSocket upgrade). Requires the same authorization the socket itself requires (a seated participant).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Mint a game WebSocket connection ticket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StreamTicketResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -2624,12 +2725,18 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "revealSpeed": {
+                    "type": "string"
+                },
                 "stageMangas": {
                     "description": "StageMangas and PowerMangas are independent - see game.Config's doc\ncomment.",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "summaryDurationSeconds": {
+                    "type": "integer"
                 },
                 "teamSize": {
                     "type": "integer"
@@ -2732,12 +2839,18 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "revealSpeed": {
+                    "type": "string"
+                },
                 "stageMangas": {
                     "description": "StageMangas and PowerMangas are independent - see game.Config's doc\ncomment.",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "summaryDurationSeconds": {
+                    "type": "integer"
                 },
                 "teamSize": {
                     "type": "integer"
@@ -2820,6 +2933,13 @@ const docTemplate = `{
                 "mode": {
                     "type": "string"
                 },
+                "participants": {
+                    "description": "Participants is every seat as it stood the moment the game ended, in\njoin order - what the final result screen renders per-player outcomes\nfrom. game.GameResult has always carried it (both modes' Outcome()\npopulate it); it was simply never mapped onto the wire before the\nresult screen existed.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ParticipantOutcomeResponse"
+                    }
+                },
                 "roundsPlayed": {
                     "type": "integer"
                 },
@@ -2848,6 +2968,12 @@ const docTemplate = `{
                 },
                 "tiebreakUsed": {
                     "type": "boolean"
+                },
+                "tiedVotes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
                 },
                 "votedParticipantIds": {
                     "type": "array",
@@ -2904,6 +3030,10 @@ const docTemplate = `{
                 "result": {
                     "$ref": "#/definitions/dto.GameResultResponse"
                 },
+                "resultEndsAt": {
+                    "description": "ResultEndsAt is set (RFC3339) only while the game is RESOLVING with a\npending result display - see GameService.ResultEndsAt.",
+                    "type": "string"
+                },
                 "revealEndsAt": {
                     "description": "RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a\npending reveal - see NewGameStateResponse's deadlines param.",
                     "type": "string"
@@ -2915,6 +3045,10 @@ const docTemplate = `{
                     }
                 },
                 "state": {
+                    "type": "string"
+                },
+                "summaryEndsAt": {
+                    "description": "SummaryEndsAt is set (RFC3339) only while the game is SUMMARY with a\npending loadout-summary display - see GameService.SummaryEndsAt.",
                     "type": "string"
                 },
                 "teams": {
@@ -3083,6 +3217,23 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/dto.UserResponse"
+                }
+            }
+        },
+        "dto.ParticipantOutcomeResponse": {
+            "type": "object",
+            "properties": {
+                "bot": {
+                    "type": "boolean"
+                },
+                "displayName": {
+                    "type": "string"
+                },
+                "participantId": {
+                    "type": "string"
+                },
+                "teamId": {
+                    "type": "string"
                 }
             }
         },
@@ -3391,6 +3542,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.StreamTicketResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "ticket": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.TranslationRequest": {
             "type": "object",
             "properties": {
@@ -3440,12 +3602,18 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "revealSpeed": {
+                    "type": "string"
+                },
                 "stageMangas": {
                     "description": "StageMangas and PowerMangas are independent - see game.Config's doc\ncomment.",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "summaryDurationSeconds": {
+                    "type": "integer"
                 },
                 "teamSize": {
                     "type": "integer"

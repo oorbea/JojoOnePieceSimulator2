@@ -149,11 +149,11 @@ comment saying why the length matters.
 None of these were touched, and none should be "fixed" by a future pass that rediscovers them
 without reading the reasoning first.
 
-1. **JWT in the query string for SSE/WS.** `EventSource` cannot set custom headers, full stop.
-   `?token=` is scoped to a helper local to `events_endpoints.go` — the shared `RequireAuth`
-   middleware never gained query-param auth, so no other route is affected. The game WebSocket does
-   the same and tries `Authorization: Bearer` first. Reasoning in [[picture-events-sse]] and
-   [[game-realtime-transport]]. The ticket-minting follow-up is noted there, not built.
+1. ~~**JWT in the query string for SSE/WS.**~~ **Closed 2026-09-03**, see
+   [[stream-connection-tickets-2026-09-03]] — replaced by a short-lived (30s), single-use,
+   purpose+resource-scoped ticket minted through a normal authenticated POST, with `?token=` removed
+   entirely (an `Authorization: Bearer` header still works everywhere it did). Reasoning for why this
+   was accepted at all lives in [[picture-events-sse]] and [[game-realtime-transport]].
 2. **Session in `localStorage` on web.** `expo-secure-store` throws on web, so
    `src/shared/lib/secure-storage.ts` branches to `localStorage` — see [[frontend-stack]]. Also the
    reason the two-tab two-account testing trick works at all

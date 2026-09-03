@@ -26,6 +26,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 )
 
 // --- local fakes for GameService's own dependencies, mirroring
@@ -261,7 +262,8 @@ func newWSLobby(t *testing.T) *wsLobby {
 		}
 	}
 
-	e := NewGameEndpoints(svc, services.NewGameEventHub(), nil, nil, nil, nil, nil, context.Background(), GameWSConfig{})
+	e := NewGameEndpoints(svc, services.NewGameEventHub(), nil, nil, nil, nil, nil,
+		streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background(), GameWSConfig{})
 
 	return &wsLobby{
 		endpoints: e,
@@ -514,7 +516,7 @@ func TestDispatch_UnknownCommand(t *testing.T) {
 // that connection with StatusNormalClosure and return, instead of the usual
 // resend-STATE-and-keep-going path every other event takes.
 func TestForwardEvents_KickedParticipant_ClosesOwnSocket(t *testing.T) {
-	e := NewGameEndpoints(nil, nil, nil, nil, nil, nil, nil, context.Background(), GameWSConfig{})
+	e := NewGameEndpoints(nil, nil, nil, nil, nil, nil, nil, nil, context.Background(), GameWSConfig{})
 
 	var self game.ParticipantID
 	self[15] = 7

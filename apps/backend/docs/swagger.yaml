@@ -19,6 +19,8 @@ definitions:
         items:
           type: string
         type: array
+      revealSpeed:
+        type: string
       stageMangas:
         description: |-
           StageMangas and PowerMangas are independent - see game.Config's doc
@@ -26,6 +28,8 @@ definitions:
         items:
           type: string
         type: array
+      summaryDurationSeconds:
+        type: integer
       teamSize:
         type: integer
       visibility:
@@ -92,6 +96,8 @@ definitions:
         items:
           type: string
         type: array
+      revealSpeed:
+        type: string
       stageMangas:
         description: |-
           StageMangas and PowerMangas are independent - see game.Config's doc
@@ -99,6 +105,8 @@ definitions:
         items:
           type: string
         type: array
+      summaryDurationSeconds:
+        type: integer
       teamSize:
         type: integer
       visibility:
@@ -152,6 +160,16 @@ definitions:
         type: boolean
       mode:
         type: string
+      participants:
+        description: |-
+          Participants is every seat as it stood the moment the game ended, in
+          join order - what the final result screen renders per-player outcomes
+          from. game.GameResult has always carried it (both modes' Outcome()
+          populate it); it was simply never mapped onto the wire before the
+          result screen existed.
+        items:
+          $ref: '#/definitions/dto.ParticipantOutcomeResponse'
+        type: array
       roundsPlayed:
         type: integer
       winner:
@@ -171,6 +189,10 @@ definitions:
         $ref: '#/definitions/dto.GameStageResponse'
       tiebreakUsed:
         type: boolean
+      tiedVotes:
+        additionalProperties:
+          type: string
+        type: object
       votedParticipantIds:
         items:
           type: string
@@ -207,6 +229,11 @@ definitions:
         type: array
       result:
         $ref: '#/definitions/dto.GameResultResponse'
+      resultEndsAt:
+        description: |-
+          ResultEndsAt is set (RFC3339) only while the game is RESOLVING with a
+          pending result display - see GameService.ResultEndsAt.
+        type: string
       revealEndsAt:
         description: |-
           RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a
@@ -217,6 +244,11 @@ definitions:
           $ref: '#/definitions/dto.GameRoundResponse'
         type: array
       state:
+        type: string
+      summaryEndsAt:
+        description: |-
+          SummaryEndsAt is set (RFC3339) only while the game is SUMMARY with a
+          pending loadout-summary display - see GameService.SummaryEndsAt.
         type: string
       teams:
         items:
@@ -331,6 +363,17 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.ParticipantOutcomeResponse:
+    properties:
+      bot:
+        type: boolean
+      displayName:
+        type: string
+      participantId:
+        type: string
+      teamId:
+        type: string
     type: object
   dto.PoolFilterPayload:
     properties:
@@ -531,6 +574,13 @@ definitions:
       speed:
         type: string
     type: object
+  dto.StreamTicketResponse:
+    properties:
+      expiresAt:
+        type: string
+      ticket:
+        type: string
+    type: object
   dto.TranslationRequest:
     properties:
       description:
@@ -563,6 +613,8 @@ definitions:
         items:
           type: string
         type: array
+      revealSpeed:
+        type: string
       stageMangas:
         description: |-
           StageMangas and PowerMangas are independent - see game.Config's doc
@@ -570,6 +622,8 @@ definitions:
         items:
           type: string
         type: array
+      summaryDurationSeconds:
+        type: integer
       teamSize:
         type: integer
       visibility:
@@ -979,6 +1033,34 @@ paths:
       summary: Get every locale's translation for a devil fruit
       tags:
       - devil-fruits
+  /events/ticket:
+    post:
+      description: Issues a single-use ticket to present as `?ticket=...` to `GET
+        /events` (EventSource can't set headers). Admin-only, same as the stream itself.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StreamTicketResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mint an SSE connection ticket
+      tags:
+      - events
   /games:
     post:
       consumes:
@@ -1167,6 +1249,46 @@ paths:
       security:
       - BearerAuth: []
       summary: Join a public lobby by id
+      tags:
+      - games
+  /games/{id}/ws-ticket:
+    post:
+      description: Issues a single-use ticket, scoped to this game, to present as
+        `?ticket=...` to `GET /games/{id}/ws` (browsers can't set headers on a WebSocket
+        upgrade). Requires the same authorization the socket itself requires (a seated
+        participant).
+      parameters:
+      - description: Game ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StreamTicketResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mint a game WebSocket connection ticket
       tags:
       - games
   /games/by-code/{code}:
