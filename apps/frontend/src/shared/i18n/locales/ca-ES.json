@@ -703,6 +703,7 @@
     "INVALID_POOL_FILTER": "Aquesta restricció del repertori de poders no és vàlida.",
     "INVALID_LOBBY_VISIBILITY": "Aquesta configuració de privadesa no és vàlida.",
     "LOBBY_PRIVATE": "Aquesta sala és privada. Demana el codi de sala a l'amfitrió.",
+    "STREAM_TICKET_INVALID": "Aquesta connexió ha caducat. Reconnectant…",
     "INTERNAL": "Alguna cosa ha anat malament per la nostra part."
   }
 }
