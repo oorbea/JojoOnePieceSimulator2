@@ -21,13 +21,14 @@ type GameEvent struct {
 	// compute VOTING_OPENED/TIEBREAK_OPENED's closesAt instead of the
 	// service-wide default, since each lobby may now configure its own.
 	VotingWindow time.Duration
-	// RevealMs is revealDurationFor(g) at the moment this
-	// event was published - the transport attaches it to LOADOUTS_ASSIGNED
-	// so every client can pace its reveal overlay to the exact same
-	// duration the server used to delay OpenVoting (see GameService.
-	// scheduleRevealDelay). Same "compute once here, transport just reads
-	// it" pattern as VotingWindow.
-	RevealMs time.Duration
+	// RevealWindow is revealDurationFor(g) at the moment this event was
+	// published - the third member of the VotingWindow/SummaryWindow
+	// trio. It is never sent over the wire; it exists purely as the
+	// fallback window the transport synthesizes LOADOUTS_ASSIGNED's
+	// closesAt from if ClosesAt ever arrives zero (see
+	// endpoints.frameDeadline). The authoritative value clients actually
+	// pace against is ClosesAt below.
+	RevealWindow time.Duration
 	// SummaryWindow is the lobby's own configured summary-screen duration
 	// (Config.SummaryDurationSeconds) at the moment this event was
 	// published - the transport uses it to compute SUMMARY_OPENED's
@@ -35,14 +36,15 @@ type GameEvent struct {
 	SummaryWindow time.Duration
 	// ClosesAt is the authoritative wall-clock deadline of the timed phase
 	// this event opened, read straight out of GameService's own
-	// votingEnds/summaryEnds maps at publish time (see GameService.publish).
-	// Only VOTING_OPENED/TIEBREAK_OPENED/SUMMARY_OPENED ever carry one; for
-	// every other event - and for a timed event published from a path that
-	// somehow has no recorded deadline - the zero value means "not a timed
-	// frame", and the transport falls back to synthesizing one from the
-	// window duration. Stamping it here rather than in the transport is what
-	// keeps the client's countdown from drifting by however long hub
-	// delivery took.
+	// votingEnds/revealEnds/resultEnds/summaryEnds maps at publish time
+	// (see GameService.publish). All five timed frames carry one -
+	// VOTING_OPENED, TIEBREAK_OPENED, SUMMARY_OPENED, LOADOUTS_ASSIGNED,
+	// ROUND_RESOLVED; for every other event - and for a timed event
+	// published from a path that somehow has no recorded deadline - the
+	// zero value means "not a timed frame", and the transport falls back
+	// to synthesizing one from the window duration. Stamping it here
+	// rather than in the transport is what keeps the client's countdown
+	// from drifting by however long hub delivery took.
 	ClosesAt time.Time
 }
 

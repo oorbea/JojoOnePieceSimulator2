@@ -289,12 +289,12 @@ type RematchReadyPayload struct {
 	GameID string `json:"gameId"`
 }
 
-// VotingOpenedPayload/TiebreakOpenedPayload carry a transport-computed
-// closesAt: the domain event itself carries no deadline (the voting window
-// lives only in GameService's timer), so the transport approximates it as
-// time.Now() + the configured voting window at the moment it forwards the
-// event - a few ms of skew against the real timer, acceptable for a
-// countdown UI.
+// VotingOpenedPayload/TiebreakOpenedPayload carry closesAt - the
+// authoritative deadline GameService recorded when it armed the voting
+// phase's timer, stamped on the event at publish time (see
+// GameService.publish). The domain event itself carries no deadline, but
+// the transport no longer has to approximate one: it renders this value
+// verbatim. See endpoints.frameDeadline for the zero-value fallback.
 type VotingOpenedPayload struct {
 	RoundIndex int    `json:"roundIndex"`
 	ClosesAt   string `json:"closesAt" ts:"datetime"`
@@ -354,22 +354,28 @@ type HostReassignedPayload struct {
 	NewHostID string `json:"newHostId"`
 }
 
-// LoadoutsAssignedPayload carries revealMs - the transport-computed
-// duration (game.RevealDuration for the lobby's own mangas) every client
-// should spend on its reveal overlay before voting can open. See
-// GameService.scheduleRevealDelay: the server itself waits exactly this
-// long before calling OpenVoting, so a client that paces its animation to
-// anything else either finishes early (and just waits) or late (and misses
-// nothing, since voting genuinely hasn't opened yet).
+// LoadoutsAssignedPayload carries closesAt - the authoritative instant the
+// ASSIGNING phase closes (i.e. when GameService.scheduleRevealDelay will
+// call OpenVoting), stamped from GameService.revealEnds at publish time.
+// A client paces its own locally-computed reveal timeline (a deterministic
+// mirror of game.RevealDuration, see features/game/lib/loadout-reveal.ts)
+// to fit whatever time remains until this instant, rather than trusting a
+// transported duration - so hub-delivery latency degrades pacing, never
+// desyncs "reveal looks done" from "voting is actually open".
 type LoadoutsAssignedPayload struct {
-	RoundIndex int   `json:"roundIndex"`
-	RevealMs   int64 `json:"revealMs"`
+	RoundIndex int    `json:"roundIndex"`
+	ClosesAt   string `json:"closesAt" ts:"datetime"`
 }
 
+// RoundResolvedPayload's closesAt is the RESOLVING phase's display
+// deadline - game.ResultDuration after the round resolved, stamped from
+// GameService.resultEnds at publish time - so the result panel's countdown
+// no longer has to wait for the STATE frame that follows to learn it.
 type RoundResolvedPayload struct {
 	RoundIndex        int    `json:"roundIndex"`
 	Winner            string `json:"winner"`
 	DecidedByCoinFlip bool   `json:"decidedByCoinFlip"`
+	ClosesAt          string `json:"closesAt" ts:"datetime"`
 }
 
 type GameFinishedPayload struct {
