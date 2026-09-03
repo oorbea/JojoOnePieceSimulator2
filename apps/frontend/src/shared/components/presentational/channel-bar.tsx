@@ -108,8 +108,13 @@ const ChannelBarItemFrame = styled(YStack, {
   z: '$content',
 
   variants: {
+    // `active` no longer paints a bg here — the sliding
+    // ChannelBarIndicator owns that pill now, positioned from each item's
+    // own measured layout (see AppShell). Kept as a no-op variant so
+    // callers can keep passing `active` for typing/clarity without it
+    // doing anything visually by itself.
     active: {
-      true: { bg: '$channelActive' },
+      true: {},
     },
     iconOnly: {
       true: { aspectRatio: 1, px: 0 },
