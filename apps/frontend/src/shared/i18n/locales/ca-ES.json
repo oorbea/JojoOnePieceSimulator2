@@ -414,7 +414,8 @@
         "votesA11y": "{{count}} vot(s) per {{option}}",
         "skip": "Saltar",
         "skipA11y": "Saltar el resultat de la ronda",
-        "noVotes": "Ningú ha votat a temps"
+        "noVotes": "Ningú ha votat a temps",
+        "nextIn": "Següent ronda en {{seconds}}s"
       }
     },
     "vote": {

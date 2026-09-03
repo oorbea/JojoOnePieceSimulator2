@@ -143,6 +143,7 @@ export function MatchScreen({
               round={round}
               variant="tie"
               onSkip={onSkipResult}
+              resultEndsAt={null}
             />
           ) : null}
 
@@ -153,6 +154,7 @@ export function MatchScreen({
               round={round}
               variant="result"
               onSkip={onSkipResult}
+              resultEndsAt={live.resultEndsAt}
             />
           ) : votingOpen ? (
             <VoteBar
