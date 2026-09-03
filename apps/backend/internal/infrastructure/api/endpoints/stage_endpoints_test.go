@@ -14,6 +14,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 )
 
 // fakeStageRepository is an in-memory ports.IStageRepository, mirroring
@@ -168,9 +169,10 @@ func newStageTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fak
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
 	stageEndpoints := endpoints.NewStageEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
-	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
+	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
+	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	return endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints,
-		endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}),
+		endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}),
 		stageEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{})
 }
 

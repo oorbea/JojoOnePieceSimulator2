@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 )
 
 func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
@@ -16,8 +18,9 @@ func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
-	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
+	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{})
 	stageRepo := newFakeStageRepository()
 	stageSvc := services.NewStageService(stageRepo, &fakeStageIDGenerator{}, newFakePictureStorage(), &fakeImageProcessor{}, fullQueueEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
