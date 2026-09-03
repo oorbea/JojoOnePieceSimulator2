@@ -3,6 +3,9 @@
     "loading": "Cargando",
     "cancel": "Cancelar",
     "save": "Guardar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "closePreview": "Cerrar vista previa",
     "saving": "Guardando…",
     "delete": "Eliminar",
     "tryAgain": "Inténtalo de nuevo",
@@ -47,7 +50,7 @@
       "profile": "Perfil",
       "stands": "Stands",
       "devilFruits": "Frutas del Diablo",
-      "powers": "Poderes"
+      "stages": "Etapas"
     }
   },
   "admin": {
@@ -102,6 +105,7 @@
     "moreFilters": "Más filtros",
     "clearFilters": "Limpiar filtros",
     "previewA11y": "Ver imagen de {{name}} a pantalla completa",
+    "detailA11y": "Ver los detalles de {{name}}",
     "editA11y": "Editar {{name}}",
     "deleteA11y": "Eliminar {{name}}",
     "saveA11y": "Guardar Stand",
@@ -135,6 +139,7 @@
     "filterRarity": "Filtrar por rareza",
     "filterFruitType": "Filtrar por tipo de fruta",
     "previewA11y": "Ver imagen de {{name}} a pantalla completa",
+    "detailA11y": "Ver los detalles de {{name}}",
     "editA11y": "Editar {{name}}",
     "deleteA11y": "Eliminar {{name}}",
     "saveA11y": "Guardar Fruta del Diablo",
@@ -159,6 +164,7 @@
     "searchPlaceholder": "Busca por nombre o descripción…",
     "filterManga": "Filtrar por manga",
     "previewA11y": "Ver imagen de {{name}} a pantalla completa",
+    "detailA11y": "Ver los detalles de {{name}}",
     "editA11y": "Editar {{name}}",
     "deleteA11y": "Eliminar {{name}}",
     "saveA11y": "Guardar Etapa",

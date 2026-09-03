@@ -3,6 +3,9 @@
     "loading": "Carregant",
     "cancel": "Cancel·la",
     "save": "Desa",
+    "edit": "Edita",
+    "close": "Tanca",
+    "closePreview": "Tanca la vista prèvia",
     "saving": "Desant…",
     "delete": "Elimina",
     "tryAgain": "Torna a provar",
@@ -47,7 +50,7 @@
       "profile": "Perfil",
       "stands": "Stands",
       "devilFruits": "Fruites del Diable",
-      "powers": "Poders"
+      "stages": "Etapes"
     }
   },
   "admin": {
@@ -102,6 +105,7 @@
     "moreFilters": "Més filtres",
     "clearFilters": "Neteja els filtres",
     "previewA11y": "Veure la imatge de {{name}} a pantalla completa",
+    "detailA11y": "Veure els detalls de {{name}}",
     "editA11y": "Edita {{name}}",
     "deleteA11y": "Elimina {{name}}",
     "saveA11y": "Desa l'Stand",
@@ -135,6 +139,7 @@
     "filterRarity": "Filtra per raresa",
     "filterFruitType": "Filtra per tipus de fruita",
     "previewA11y": "Veure la imatge de {{name}} a pantalla completa",
+    "detailA11y": "Veure els detalls de {{name}}",
     "editA11y": "Edita {{name}}",
     "deleteA11y": "Elimina {{name}}",
     "saveA11y": "Desa la Fruita del Diable",
@@ -159,6 +164,7 @@
     "searchPlaceholder": "Cerca per nom o descripció…",
     "filterManga": "Filtra per manga",
     "previewA11y": "Veure la imatge de {{name}} a pantalla completa",
+    "detailA11y": "Veure els detalls de {{name}}",
     "editA11y": "Edita {{name}}",
     "deleteA11y": "Elimina {{name}}",
     "saveA11y": "Desa l'Etapa",
