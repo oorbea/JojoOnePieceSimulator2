@@ -64,13 +64,13 @@ at all. Every other entry below gets both a visual and its own war-cry.
 | Paisley Park | A GPS/map-like effect, spreading out across the lobby | War-cry (TBD asset) |
 | Wonder of U | Many Wonder of U figures start appearing across the screen, everything darkens with a calamity aura | War-cry (TBD asset) |
 
-## Devil Fruits — not decided yet
+## Devil Fruits — now catalogued too
 
-The owner has **not** given Devil Fruit effects yet; this is an explicit gap, not an oversight.
-When the owner provides that list, it belongs in a sibling note (e.g.
-`gameplay-power-fx-devil-fruit-catalog.md`) following the same table shape as this one, linked back
-into [[gameplay-power-fx]] the same way this note is. Until then, Devil Fruits keep falling back to
-[[gameplay-power-fx]]'s rarity/`FruitType` fallback tiers only — no curated entries exist for them.
+**Closed (2026-09-03, later same day)**: the owner's Devil Fruit list is in
+[[gameplay-power-fx-devil-fruit-catalog]] now, same table shape as this note, sound-effect decision
+included. Two of its entries are group-level ("every Ancient Zoan", "every other Mythical Zoan")
+rather than per-fruit — see that note's own section on why that doesn't fit the current
+`FRUIT_TYPE_FX_FALLBACK` sketch as-is.
 
 ## How this plugs into the registry sketch
 
@@ -83,5 +83,5 @@ decided here. Same for `extraHoldMs`: several of these (time-stop, time-skip, th
 strong candidates for adding to their slot's hold, capped at `RevealFxMaxMs`, but no numbers are
 picked yet.
 
-Related: [[gameplay-power-fx]], [[game-match-assignment-frontend]], [[gameplay-game-modes]],
-[[gameplay-domain-design]].
+Related: [[gameplay-power-fx]], [[gameplay-power-fx-devil-fruit-catalog]],
+[[game-match-assignment-frontend]], [[gameplay-game-modes]], [[gameplay-domain-design]].
