@@ -703,6 +703,7 @@
     "INVALID_POOL_FILTER": "That power pool restriction isn't valid.",
     "INVALID_LOBBY_VISIBILITY": "That privacy setting isn't valid.",
     "LOBBY_PRIVATE": "This lobby is private. Ask the host for the join code.",
+    "STREAM_TICKET_INVALID": "That connection expired. Reconnecting…",
     "INTERNAL": "Something went wrong on our end."
   }
 }

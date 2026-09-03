@@ -84,6 +84,7 @@ var Codes = []string{
 	InvalidPoolFilter,
 	InvalidLobbyVisibility,
 	LobbyPrivate,
+	StreamTicketInvalid,
 	Internal,
 }
 
@@ -157,6 +158,7 @@ const (
 	InvalidPoolFilter        = "INVALID_POOL_FILTER"
 	InvalidLobbyVisibility   = "INVALID_LOBBY_VISIBILITY"
 	LobbyPrivate             = "LOBBY_PRIVATE"
+	StreamTicketInvalid      = "STREAM_TICKET_INVALID"
 	// Internal is the fallback code for any error not otherwise mapped -
 	// endpoints.errorCode's default case.
 	Internal = "INTERNAL"

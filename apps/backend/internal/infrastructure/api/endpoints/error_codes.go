@@ -68,6 +68,8 @@ func errorCode(err error) string {
 		return apierr.ConstraintViolation
 	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken):
 		return apierr.Unauthenticated
+	case errors.Is(err, ports.ErrTicketInvalid):
+		return apierr.StreamTicketInvalid
 	case errors.Is(err, ports.ErrForbidden):
 		return apierr.Forbidden
 	case errors.Is(err, services.ErrPictureTooLarge):
