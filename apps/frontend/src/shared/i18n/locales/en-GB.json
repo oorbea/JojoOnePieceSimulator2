@@ -3,6 +3,9 @@
     "loading": "Loading",
     "cancel": "Cancel",
     "save": "Save",
+    "edit": "Edit",
+    "close": "Close",
+    "closePreview": "Close preview",
     "saving": "Saving…",
     "delete": "Delete",
     "tryAgain": "Try again",
@@ -47,7 +50,7 @@
       "profile": "Profile",
       "stands": "Stands",
       "devilFruits": "Devil Fruits",
-      "powers": "Powers"
+      "stages": "Stages"
     }
   },
   "admin": {
@@ -102,6 +105,7 @@
     "moreFilters": "More filters",
     "clearFilters": "Clear filters",
     "previewA11y": "View {{name}} picture full screen",
+    "detailA11y": "View {{name}} details",
     "editA11y": "Edit {{name}}",
     "deleteA11y": "Delete {{name}}",
     "saveA11y": "Save Stand",
@@ -135,6 +139,7 @@
     "filterRarity": "Filter by rarity",
     "filterFruitType": "Filter by fruit type",
     "previewA11y": "View {{name}} picture full screen",
+    "detailA11y": "View {{name}} details",
     "editA11y": "Edit {{name}}",
     "deleteA11y": "Delete {{name}}",
     "saveA11y": "Save Devil Fruit",
@@ -159,6 +164,7 @@
     "searchPlaceholder": "Search by name or description…",
     "filterManga": "Filter by manga",
     "previewA11y": "View {{name}} picture full screen",
+    "detailA11y": "View {{name}} details",
     "editA11y": "Edit {{name}}",
     "deleteA11y": "Delete {{name}}",
     "saveA11y": "Save Stage",
