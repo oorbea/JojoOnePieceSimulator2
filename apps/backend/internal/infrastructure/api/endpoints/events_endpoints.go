@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -23,47 +23,70 @@ const heartbeatInterval = 20 * time.Second
 // EventsEndpoints serves the admin-only SSE stream of picture pipeline
 // events (PENDING -> READY/FAILED), replacing client-side polling.
 type EventsEndpoints struct {
-	hub    *services.PictureEventHub
-	issuer ports.ITokenIssuer
+	hub     *services.PictureEventHub
+	issuer  ports.ITokenIssuer
+	tickets ports.IStreamTicketStore
 	// ctx is the application's root context (cancelled on SIGINT/SIGTERM),
 	// not a per-request one - watched so the stream loop exits promptly on
 	// shutdown instead of blocking main's graceful-shutdown window.
 	ctx context.Context
 }
 
-func NewEventsEndpoints(hub *services.PictureEventHub, issuer ports.ITokenIssuer, ctx context.Context) *EventsEndpoints {
-	return &EventsEndpoints{hub: hub, issuer: issuer, ctx: ctx}
+func NewEventsEndpoints(hub *services.PictureEventHub, issuer ports.ITokenIssuer, tickets ports.IStreamTicketStore, ctx context.Context) *EventsEndpoints {
+	return &EventsEndpoints{hub: hub, issuer: issuer, tickets: tickets, ctx: ctx}
 }
 
-// Routes mounts the stream. Deliberately not behind RequireAuth: EventSource
-// cannot set custom headers, so authentication here also accepts the token
-// as a query param (see authenticate) - kept local to this handler rather
-// than changing RequireAuth, so no other route gains query-param auth.
-func (e *EventsEndpoints) Routes() chi.Router {
+// Routes mounts the stream bare (EventSource cannot set custom headers, so
+// its own authentication - see authenticateStream - accepts a ?ticket=
+// query param instead) alongside a normal RequireAuth+RequireAdmin group for
+// minting one. Two handlers on one mount with different middleware mirrors
+// GameEndpoints.Routes's /{id}/ws vs the REST sub-group.
+func (e *EventsEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/", e.stream)
+
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.Timeout(60 * time.Second))
+		r.Use(RequireAuth(e.issuer))
+		r.Use(RequireAdmin)
+		r.With(ticketRateLimit(rateCfg)).Post("/ticket", Wrap(e.mintTicket))
+	})
 	return r
 }
 
-// authenticate validates the caller the same way RequireAuth does (same
-// ports.ITokenIssuer, same Bearer header support) but additionally accepts
-// ?token=<jwt> for browsers' EventSource, which cannot set request headers.
-// The token appearing in a URL (and therefore in access logs) is an
-// accepted tradeoff for this one endpoint - see the SSE design note.
-func (e *EventsEndpoints) authenticate(r *http.Request) (ports.Claims, error) {
-	if header := r.Header.Get("Authorization"); strings.HasPrefix(header, bearerPrefix) {
-		return e.issuer.Parse(strings.TrimSpace(header[len(bearerPrefix):]))
+// mintTicket godoc
+//
+//	@Summary		Mint an SSE connection ticket
+//	@Description	Issues a single-use ticket to present as `?ticket=...` to `GET /events` (EventSource can't set headers). Admin-only, same as the stream itself.
+//	@Tags			events
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.StreamTicketResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/events/ticket [post]
+func (e *EventsEndpoints) mintTicket(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := claimsFromContext(r.Context())
+	if !ok {
+		return ports.ErrUnauthenticated
 	}
-	if token := r.URL.Query().Get("token"); token != "" {
-		return e.issuer.Parse(token)
+	token, expiresAt, err := e.tickets.Issue(r.Context(), ports.StreamTicket{
+		UserID:  claims.UserID,
+		Role:    claims.Role,
+		Purpose: ports.TicketPurposeEvents,
+	})
+	if err != nil {
+		return err
 	}
-	return ports.Claims{}, ports.ErrUnauthenticated
+	writeJSON(w, http.StatusOK, dto.StreamTicketResponse{Ticket: token, ExpiresAt: expiresAt})
+	return nil
 }
 
 func (e *EventsEndpoints) stream(w http.ResponseWriter, r *http.Request) {
-	claims, err := e.authenticate(r)
+	claims, err := authenticateStream(r, e.issuer, e.tickets, ports.TicketPurposeEvents, "")
 	if err != nil {
-		handleError(w, ports.ErrUnauthenticated)
+		handleError(w, err)
 		return
 	}
 	if claims.Role != enums.Admin {

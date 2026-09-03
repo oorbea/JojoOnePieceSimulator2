@@ -56,6 +56,7 @@ type GameEndpoints struct {
 	devilFruits ports.IDevilFruitRepository
 	users       ports.IUserRepository
 	issuer      ports.ITokenIssuer
+	tickets     ports.IStreamTicketStore
 	// ctx is the application's root context (cancelled on SIGINT/SIGTERM),
 	// watched by every open WebSocket so it can exit promptly on shutdown -
 	// same reasoning as EventsEndpoints.ctx.
@@ -73,8 +74,8 @@ type GameEndpoints struct {
 // re-resolves the description at serialize time. stands/devilFruits back the
 // same re-resolution for a loadout's Stand/DevilFruit text (see
 // powerTextResolver).
-func NewGameEndpoints(svc *services.GameService, hub *services.GameEventHub, stages ports.IStageRepository, stands ports.IStandRepository, devilFruits ports.IDevilFruitRepository, users ports.IUserRepository, issuer ports.ITokenIssuer, ctx context.Context, cfg GameWSConfig) *GameEndpoints {
-	return &GameEndpoints{svc: svc, hub: hub, stages: stages, stands: stands, devilFruits: devilFruits, users: users, issuer: issuer, ctx: ctx, cfg: cfg, conns: newConnRegistry()}
+func NewGameEndpoints(svc *services.GameService, hub *services.GameEventHub, stages ports.IStageRepository, stands ports.IStandRepository, devilFruits ports.IDevilFruitRepository, users ports.IUserRepository, issuer ports.ITokenIssuer, tickets ports.IStreamTicketStore, ctx context.Context, cfg GameWSConfig) *GameEndpoints {
+	return &GameEndpoints{svc: svc, hub: hub, stages: stages, stands: stands, devilFruits: devilFruits, users: users, issuer: issuer, tickets: tickets, ctx: ctx, cfg: cfg, conns: newConnRegistry()}
 }
 
 // viewerLocale resolves self's preferred locale from their user record,
@@ -160,6 +161,7 @@ func (e *GameEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 		r.Use(RequireAuth(e.issuer))
 		write := writeRateLimit(rateCfg)
 		read := readRateLimit(rateCfg)
+		ticket := ticketRateLimit(rateCfg)
 		r.With(write).Post("/", Wrap(e.create))
 		r.With(write).Post("/join", Wrap(e.join))
 		r.With(read).Get("/public", Wrap(e.listPublic))
@@ -168,8 +170,52 @@ func (e *GameEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 		r.With(read).Get("/by-code/{code}", Wrap(e.getByCode))
 		r.With(write).Post("/{id}/join", Wrap(e.joinByID))
 		r.With(write).Patch("/{id}/config", Wrap(e.editConfig))
+		r.With(ticket).Post("/{id}/ws-ticket", Wrap(e.mintWSTicket))
 	})
 	return r
+}
+
+// mintWSTicket godoc
+//
+//	@Summary		Mint a game WebSocket connection ticket
+//	@Description	Issues a single-use ticket, scoped to this game, to present as `?ticket=...` to `GET /games/{id}/ws` (browsers can't set headers on a WebSocket upgrade). Requires the same authorization the socket itself requires (a seated participant).
+//	@Tags			games
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string	true	"Game ID"
+//	@Success		200	{object}	dto.StreamTicketResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/games/{id}/ws-ticket [post]
+func (e *GameEndpoints) mintWSTicket(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := claimsFromContext(r.Context())
+	if !ok {
+		return ports.ErrUnauthenticated
+	}
+	gameID, err := game.ParseGameID(chi.URLParam(r, "id"))
+	if err != nil {
+		return err
+	}
+	g, err := e.svc.GetGame(r.Context(), gameID)
+	if err != nil {
+		return err
+	}
+	if _, err := resolveParticipant(g, claims.UserID); err != nil {
+		return err
+	}
+	token, expiresAt, err := e.tickets.Issue(r.Context(), ports.StreamTicket{
+		UserID:   claims.UserID,
+		Role:     claims.Role,
+		Purpose:  ports.TicketPurposeGameWS,
+		Resource: gameID.String(),
+	})
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.StreamTicketResponse{Ticket: token, ExpiresAt: expiresAt})
+	return nil
 }
 
 const defaultPublicListLimit = 20

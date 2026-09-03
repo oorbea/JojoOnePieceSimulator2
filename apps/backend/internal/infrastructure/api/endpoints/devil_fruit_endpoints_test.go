@@ -15,6 +15,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 )
 
 // fakeDevilFruitRepository is an in-memory ports.IDevilFruitRepository, this
@@ -177,8 +178,8 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}}))
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(svc)
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
-	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
-	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background())
+	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background(), endpoints.GameWSConfig{})
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
 	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, fakeTokenIssuer{},
