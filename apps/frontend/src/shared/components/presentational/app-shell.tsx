@@ -14,10 +14,18 @@ import type { ThemeMode } from '@/shared/stores/theme.store'
 
 import { AquaBackground } from './aqua-background'
 import { ChannelBar, ChannelBarItem } from './channel-bar'
+import { ChannelBarIndicator, type ChannelBarIndicatorLayout } from './channel-bar-indicator'
 import type { IconComponent } from './channel-tile'
 import { GlowText } from './glow-text'
 import { ThemeToggle } from './theme-toggle'
 import { WiiCard } from './wii-card'
+
+// Per-item measured layout, keyed by href - re-measured on every onLayout
+// (the bar can wrap onto two rows, or resize), never cached across
+// renders. Top bar and bottom dock keep separate maps since only one of
+// them is ever mounted at a time (see showTopLinks below) but they'd
+// otherwise clash on the same hrefs.
+type LayoutMap = Record<string, ChannelBarIndicatorLayout>
 
 export type AppShellNavItem = {
   href: string
@@ -63,6 +71,13 @@ export function AppShell({
   const onTopBarLayout = (e: LayoutChangeEvent) => setTopBarHeight(e.nativeEvent.layout.height)
   const onDockLayout = (e: LayoutChangeEvent) => setDockHeight(e.nativeEvent.layout.height)
 
+  const [topItemLayouts, setTopItemLayouts] = useState<LayoutMap>({})
+  const [dockItemLayouts, setDockItemLayouts] = useState<LayoutMap>({})
+
+  const activeItem = items.find((item) => item.active)
+  const topIndicatorLayout = activeItem ? (topItemLayouts[activeItem.href] ?? null) : null
+  const dockIndicatorLayout = activeItem ? (dockItemLayouts[activeItem.href] ?? null) : null
+
   const navInsets = {
     top: navTopInset(insets, topBarHeight ?? NAV_BAR_HEIGHT),
     bottom: navBottomInset(insets, showTopLinks ? null : dockHeight ?? DOCK_BAR_HEIGHT),
@@ -94,20 +109,32 @@ export function AppShell({
         <XStack flex={1} />
 
         {showTopLinks ? (
-          <XStack gap="$2">
+          // position="relative" so ChannelBarIndicator (absolutely
+          // positioned) and each item's onLayout share the same coordinate
+          // space - measuring against ChannelBarFrame instead would be
+          // wrong, since this XStack itself is offset within the bar by
+          // the logo/title/spacer before it.
+          <XStack gap="$2" position="relative">
+            <ChannelBarIndicator layout={topIndicatorLayout} />
             {items.map((item) => (
-              <ChannelBarItem
+              <YStack
                 key={item.href}
-                active={item.active}
-                tooltip={item.label}
-                onPress={() => onNavigate(item.href)}
-                {...a11yProps(item.label, 'button')}
+                onLayout={(e: LayoutChangeEvent) =>
+                  setTopItemLayouts((prev) => ({ ...prev, [item.href]: e.nativeEvent.layout }))
+                }
               >
-                <item.icon size={20} color={item.active ? 'white' : '$panelText'} strokeWidth={2.5} />
-                <GlowText level="label" tone={item.active ? 'onColor' : 'ink'} fontSize="$2">
-                  {item.label}
-                </GlowText>
-              </ChannelBarItem>
+                <ChannelBarItem
+                  active={item.active}
+                  tooltip={item.label}
+                  onPress={() => onNavigate(item.href)}
+                  {...a11yProps(item.label, 'button')}
+                >
+                  <item.icon size={20} color={item.active ? 'white' : '$panelText'} strokeWidth={2.5} />
+                  <GlowText level="label" tone={item.active ? 'onColor' : 'ink'} fontSize="$2">
+                    {item.label}
+                  </GlowText>
+                </ChannelBarItem>
+              </YStack>
             ))}
           </XStack>
         ) : null}
@@ -138,8 +165,16 @@ export function AppShell({
           enterStyle={{ y: 24, opacity: 0 }}
           onLayout={onDockLayout}
         >
+          <ChannelBarIndicator layout={dockIndicatorLayout} />
           {items.map((item) => (
-            <YStack key={item.href} flex={1} items="center">
+            <YStack
+              key={item.href}
+              flex={1}
+              items="center"
+              onLayout={(e: LayoutChangeEvent) =>
+                setDockItemLayouts((prev) => ({ ...prev, [item.href]: e.nativeEvent.layout }))
+              }
+            >
               <ChannelBarItem
                 active={item.active}
                 iconOnly
