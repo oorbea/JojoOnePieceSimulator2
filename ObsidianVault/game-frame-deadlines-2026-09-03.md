@@ -62,6 +62,14 @@ deadline, not after) and matches how `votingEndsAt`/`summaryEndsAt`/`resultEndsA
 `live.resultEndsAt` in the frontend socket store has no UI consumer yet - the `ROUND_RESOLVED` half
 of this fix is a contract/state-correctness change with no visible behavior delta today.
 
+**Closed (2026-09-03, later same day)**: `RoundResultPanel` now renders a `game.match.result.nextIn`
+countdown ("Next round in Xs") off `resultEndsAt`, mirroring `VotingStatusBar`'s existing
+`revealEndsAt` → `votingIn` pattern - same `useNow`/`secondsUntil` machinery, purely informational
+like the rest of this feature's countdowns (server alone decides when RESOLVING ends; "skip" still
+only hides the panel locally). Only wired for `variant: 'result'` - `variant: 'tie'` has no result
+timer and always passes `resultEndsAt={null}`. New key added to all three locales. `tsc --noEmit`
+and the touched jest suites (`match-rules`, `match-screen`) green.
+
 ## Verification
 
 Backend: new `TestPublish_LoadoutsAssigned_CarriesRevealDeadline`/

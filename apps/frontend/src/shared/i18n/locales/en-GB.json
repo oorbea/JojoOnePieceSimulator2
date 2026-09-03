@@ -414,7 +414,8 @@
         "votesA11y": "{{count}} vote(s) for {{option}}",
         "skip": "Skip",
         "skipA11y": "Skip the round result",
-        "noVotes": "Nobody voted in time"
+        "noVotes": "Nobody voted in time",
+        "nextIn": "Next round in {{seconds}}s"
       }
     },
     "vote": {
