@@ -48,8 +48,9 @@ tests, including 9 new socket-store tests run against a real Redis-free in-memor
   `'games'` cache segment outright, so a live lobby/game snapshot never gets written to
   AsyncStorage and rehydrated stale on next app launch.
 - 5 screens under `app/(app)/play/`: hub, create, join (code input + preview), browse (public
-  lobby list), room (`[id].tsx`). Home's channel grid gained an unlocked "Play" tile (was all-locked
-  placeholders before); nav bar gained a `/play` item.
+  lobby list), room (`[id].tsx`). Home's channel grid gained an unlocked "Play" tile (~~was
+  all-locked placeholders before~~ **Corrected 2026-09-03**: by 2026-09-03 every channel is
+  unlocked - see [[catalogo-publico-stands-devil-fruits-stages]]); nav bar gained a `/play` item.
 - Lobby room: join-code card (copy/share via RN core `Share` + web `navigator.clipboard`) - **no new
   dependency added**, `expo-clipboard` was in the original plan but turned out unnecessary), Versus
   team columns with tap-to-switch (host or self only, mirrors `game.SwitchTeam`'s own rule), Gauntlet
