@@ -57,18 +57,35 @@ const FRUIT_TYPE_FX_FALLBACK: Partial<Record<FruitType, PowerFx>> = {
   ZOAN: { cardEffect: 'fur-flicker' },
   PARAMECIA: { cardEffect: 'soft-glow' },
 }
+// Resolved BEFORE FRUIT_TYPE_FX_FALLBACK when fruitType === ZOAN — see
+// gameplay-power-fx-devil-fruit-catalog.md's "every Ancient/Mythical Zoan"
+// group entries. Decided 2026-09-03 (option 1 of 2 discussed with the owner).
+const ZOAN_SUBTYPE_FX_FALLBACK: Partial<Record<ZoanSubtype, PowerFx>> = {
+  ANCIENT: { cardEffect: 'jurassic-roar' },
+  MYTHICAL: { cardEffect: 'mythic-aura' },
+}
 ```
 
-## Seed catalog (examples the owner named, not exhaustive)
+Resolution order for any Zoan fruit: `POWER_FX[id]` (curated) → `ZOAN_SUBTYPE_FX_FALLBACK[subtype]`
+(Ancient/Mythical, if it has one) → `FRUIT_TYPE_FX_FALLBACK.ZOAN` (regular Zoan / no subtype match).
+Non-Zoan fruits skip straight from `POWER_FX` to `FRUIT_TYPE_FX_FALLBACK` as before.
 
-- **Gomu Gomu no Mi** — the participant's avatar (and the card's own portrait) visibly bounces
-  elastically, matching the fruit's own rubber theme.
-- **Holy's Stand** — desaturated to greyscale, thorny brambles growing around the frame.
-- **The World** — the whole reveal stage "freezes" (a stopped-clock visual, everything else pauses)
-  for a couple of seconds before the sequence continues.
+## Seed catalog
 
-The owner will extend this list over time — this note's registry table is the place to grow it,
-not a one-off decision.
+**Superseded by [[gameplay-power-fx-stand-catalog]] and [[gameplay-power-fx-devil-fruit-catalog]]
+(2026-09-03)** — the owner's full curated lists (25 Stand effects: Star Platinum, The World,
+Holy's Stand, Crazy Diamond, Killer Queen, Gold Experience (Requiem), King Crimson, Chariot
+Requiem, Stone Free, Weather Report (Heavy Weather), Whitesnake, C-MOON, Made in Heaven, all four
+Tusk Acts, Ball Breaker, Dirty Deeds Done Dirt Cheap, D4C Love Train, Soft & Wet (Go Beyond),
+Paisley Park, Wonder of U; plus ~27 Devil Fruit effects covering Gomu Gomu/Nika, most of the
+classic Logias, Zoans and Paramecias, and two group-level entries for Ancient/other Mythical
+Zoans) live in those two notes now, not in this one. The owner will keep extending both catalogs
+over time; grow the sibling notes, not this one.
+
+**Sound (2026-09-03, not yet reflected in the shape sketch below)**: every curated Stand entry also
+gets its own war-cry sound effect (Tusk Act 1 is sound-*only*, no visual) — audio assets TBD, the
+owner provides them when this is actually built. `PowerFx` needs an optional `soundEffect` field
+alongside `cardEffect`/`avatarEffect` once that happens.
 
 ## Constraints this must respect when eventually built
 
@@ -98,5 +115,6 @@ not a one-off decision.
 - Building the registry itself, the effect components, or wiring `extraHoldMs` into the backend —
   this note is the spec to build from next, not a partial implementation.
 
-Related: [[game-match-assignment-frontend]], [[gameplay-game-modes]],
-[[frontend-responsive-frutiger-aero]], [[norma-diseno-ui-ux]].
+Related: [[gameplay-power-fx-stand-catalog]], [[gameplay-power-fx-devil-fruit-catalog]],
+[[game-match-assignment-frontend]], [[gameplay-game-modes]], [[frontend-responsive-frutiger-aero]],
+[[norma-diseno-ui-ux]].
