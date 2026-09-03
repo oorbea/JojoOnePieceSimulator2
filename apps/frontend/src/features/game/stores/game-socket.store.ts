@@ -31,14 +31,13 @@ export type LiveMatchState = {
   assignmentSeq: number
   revealedAssignmentSeq: number
   assignedRoundIndex: number | null
-  /** The sorteo's own duration for this assignment, straight off
-   * LOADOUTS_ASSIGNED's revealMs - authoritative pacing input for
-   * useLoadoutReveal (see its doc). null until that frame arrives. */
-  revealMs: number | null
-  /** Epoch ms deadline for the in-flight sorteo - derived locally
-   * (Date.now() + revealMs) on LOADOUTS_ASSIGNED, or adopted from a STATE
-   * frame's game.revealEndsAt for a client that missed that frame (a
-   * reconnect mid-reveal). null once voting has actually opened. */
+  /** Epoch ms deadline for the in-flight sorteo - the frame's own
+   * authoritative closesAt (LOADOUTS_ASSIGNED, stamped server-side from
+   * GameService.revealEnds), or adopted from a STATE frame's
+   * game.revealEndsAt for a client that missed that frame (a reconnect
+   * mid-reveal). Also useLoadoutReveal's pacing input: the reveal's own
+   * locally-computed timeline is scaled to fit whatever time remains until
+   * this instant. null once voting has actually opened. */
   revealEndsAt: number | null
   /** Absolute values off the latest REVEAL_READY_CHANGED - how many of how
    * many connected humans have marked the current sorteo ready to skip
@@ -69,11 +68,11 @@ export type LiveMatchState = {
    * fallback that covers that gap, e.g. right after a reconnect). */
   votesCast: number | null
   voters: number | null
-  /** Epoch ms deadline for the in-flight round-result display - adopted
-   * from a STATE frame's game.resultEndsAt (ROUND_RESOLVED itself carries
-   * no closesAt, so this always comes from the STATE that follows it, same
-   * as a reconnect mid-result). null once the display has ended (or hasn't
-   * started). */
+  /** Epoch ms deadline for the in-flight round-result display - the
+   * frame's own authoritative closesAt (ROUND_RESOLVED, stamped
+   * server-side from GameService.resultEnds), or adopted from a STATE
+   * frame's game.resultEndsAt for a reconnect mid-result. null once the
+   * display has ended (or hasn't started). */
   resultEndsAt: number | null
   /** True once the local viewer has clicked "skip" on the current round's
    * result panel - reset on every VOTING_OPENED/TIEBREAK_OPENED/
@@ -87,7 +86,6 @@ const INITIAL_LIVE: LiveMatchState = {
   assignmentSeq: 0,
   revealedAssignmentSeq: 0,
   assignedRoundIndex: null,
-  revealMs: null,
   revealEndsAt: null,
   revealReadyCount: null,
   revealReadyTotal: null,
@@ -310,7 +308,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
             if (live.revealEndsAt === null && payload.game.revealEndsAt) {
               const revealEndsAt = Date.parse(payload.game.revealEndsAt) || null
               if (revealEndsAt !== null) {
-                live = { ...live, revealEndsAt, revealMs: Math.max(0, revealEndsAt - Date.now()) }
+                live = { ...live, revealEndsAt }
               }
             }
             // Same shape and reasoning as revealEndsAt above: only adopt a
@@ -323,10 +321,10 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
                 live = { ...live, votingClosesAt }
               }
             }
-            // Same shape and reasoning again: ROUND_RESOLVED carries no
-            // closesAt of its own, so resultEndsAt always arrives via the
-            // STATE that follows it (or, for a reconnect mid-RESOLVING, the
-            // STATE that follows RESYNC).
+            // Same shape and reasoning again: ROUND_RESOLVED now carries its
+            // own closesAt (set on the live path below), so this guard only
+            // ever fires for a reconnect mid-RESOLVING - the STATE that
+            // follows RESYNC when no ROUND_RESOLVED frame was seen.
             if (live.resultEndsAt === null && payload.game.resultEndsAt) {
               const resultEndsAt = Date.parse(payload.game.resultEndsAt) || null
               if (resultEndsAt !== null) {
@@ -454,14 +452,12 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           // case. hasAllLoadouts/currentRound (match-rules.ts) gate the
           // actual reveal on the snapshot catching up.
           const payload = frame.payload
-          const revealMs = payload.revealMs
           set((state) => ({
             live: {
               ...state.live,
               assignmentSeq: state.live.assignmentSeq + 1,
               assignedRoundIndex: payload.roundIndex,
-              revealMs,
-              revealEndsAt: Date.now() + revealMs,
+              revealEndsAt: Date.parse(payload.closesAt) || null,
               // Fresh ASSIGNING window, fresh ready set - mirrors
               // Game.AssignLoadouts resetting revealReady server-side.
               revealReadyCount: null,
@@ -478,7 +474,6 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               votingRoundIndex: payload.roundIndex,
               votingClosesAt: Date.parse(payload.closesAt) || null,
               tiebreak: false,
-              revealMs: null,
               revealEndsAt: null,
               revealReadyCount: null,
               revealReadyTotal: null,
@@ -505,7 +500,6 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               votingRoundIndex: payload.roundIndex,
               votingClosesAt: Date.parse(payload.closesAt) || null,
               tiebreak: true,
-              revealMs: null,
               revealEndsAt: null,
               summaryEndsAt: null,
               summaryReadyCount: null,
@@ -518,7 +512,8 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           }))
           break
         }
-        case SERVER_FRAME.ROUND_RESOLVED:
+        case SERVER_FRAME.ROUND_RESOLVED: {
+          const payload = frame.payload
           set((state) => ({
             live: {
               ...state.live,
@@ -526,15 +521,17 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               votingClosesAt: null,
               votesCast: null,
               voters: null,
-              // resultEndsAt isn't in this payload (see LiveMatchState's
-              // doc) - reset to null so the STATE frame that follows adopts
-              // it fresh, same guard as revealEndsAt/votingClosesAt.
-              resultEndsAt: null,
+              // Authoritative now - stamped server-side from
+              // GameService.resultEnds - so the STATE-adoption guard above
+              // correctly declines to overwrite it; it only ever fills in
+              // for a reconnect that missed this frame entirely.
+              resultEndsAt: Date.parse(payload.closesAt) || null,
               resultDismissed: false,
             },
           }))
           pushFeed(frame.type)
           break
+        }
         default:
           pushFeed(frame.type)
       }

@@ -144,7 +144,7 @@ export function LobbyRoomContainer() {
     active: revealActive,
     markRevealed: socket.markAssignmentRevealed,
     sendRevealReady: commands.revealReady,
-    serverRevealMs: socket.live.revealMs,
+    revealEndsAt: socket.live.revealEndsAt,
   })
 
   // Computed unconditionally for the same reason as revealMangas/revealActive
