@@ -30,7 +30,13 @@ const defaultCORSMaxAge = 300
 // defaultRateLimit* are used when their respective env vars are unset.
 const defaultRateLimitEnabled = true
 const defaultRateLimitWindow = time.Minute
-const defaultRateLimitGlobalPerIP = 120
+
+// defaultRateLimitGlobalPerIP was 120 until stream tickets doubled the
+// request cost of every SSE/WS (re)connect (a mint POST plus the stream
+// itself). Raised to keep headroom now that, behind the prod reverse proxy,
+// every caller resolves to the same client IP (see ratelimit.go's
+// keyByClientIP doc) and therefore shares one bucket.
+const defaultRateLimitGlobalPerIP = 240
 const defaultRateLimitLoginPerIP = 10
 const defaultRateLimitReadPerUser = 100
 const defaultRateLimitWritePerUser = 30
@@ -115,6 +121,23 @@ const defaultGameLobbyReapInterval = 10 * time.Minute
 // out transient latency rather than fail a vote.
 const defaultGameStoreOpTimeout = 2 * time.Second
 
+// defaultStreamTicketTTL bounds how long a minted SSE/WebSocket connection
+// ticket stays redeemable. Long enough to survive a slow mobile client's
+// mint round-trip plus the upgrade itself; short enough that a ticket
+// leaked via an access log (the same tradeoff the JWT it replaces had, just
+// far smaller) is already dead by the time anyone could reuse it.
+const defaultStreamTicketTTL = 30 * time.Second
+
+// defaultStreamTicketReapInterval only matters for the in-memory ticket
+// store - Redis expires its own keys via PX. 0 would disable it.
+const defaultStreamTicketReapInterval = time.Minute
+
+// defaultRateLimitTicketPerUser bounds how many stream-ticket mints one user
+// may make per RateLimitWindow. Sized for a reconnect storm, not steady
+// state: every SSE/WS (re)connect now costs one mint, and the frontend's own
+// backoff (2s -> 30s) already keeps one tab's reconnect rate well under 1/s.
+const defaultRateLimitTicketPerUser = 60
+
 type Config struct {
 	DatabaseURL    string
 	Port           string
@@ -177,7 +200,9 @@ type Config struct {
 	RateLimitLoginPerIP   int
 	RateLimitReadPerUser  int
 	RateLimitWritePerUser int
-	R2PresignTTL          time.Duration
+	// RateLimitTicketPerUser bounds POST .../ticket and .../ws-ticket calls.
+	RateLimitTicketPerUser int
+	R2PresignTTL           time.Duration
 	// PictureMaxBytes/PictureAllowedTypes bound what PATCH
 	// /stands/{id}/picture accepts.
 	PictureMaxBytes int64
@@ -223,6 +248,11 @@ type Config struct {
 	// RedisOpTimeout. Only used when RedisURL is set - the in-memory
 	// fallback ignores it.
 	GameStoreOpTimeout time.Duration
+	// StreamTicketTTL bounds how long a minted SSE/WS connection ticket
+	// stays redeemable. StreamTicketReapInterval only applies to the
+	// in-memory ticket store (0 disables it); Redis expires its own keys.
+	StreamTicketTTL          time.Duration
+	StreamTicketReapInterval time.Duration
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -398,6 +428,11 @@ func Load() (*Config, error) {
 	}
 
 	rateLimitWritePerUser, err := parsePositiveIntEnv("RATE_LIMIT_WRITE_PER_USER", defaultRateLimitWritePerUser)
+	if err != nil {
+		return nil, err
+	}
+
+	rateLimitTicketPerUser, err := parsePositiveIntEnv("RATE_LIMIT_TICKET_PER_USER", defaultRateLimitTicketPerUser)
 	if err != nil {
 		return nil, err
 	}
@@ -728,6 +763,30 @@ func Load() (*Config, error) {
 		gameStoreOpTimeout = parsed
 	}
 
+	streamTicketTTL := defaultStreamTicketTTL
+	if raw := os.Getenv("STREAM_TICKET_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing STREAM_TICKET_TTL: %w", err)
+		}
+		if parsed <= 0 {
+			return nil, fmt.Errorf("STREAM_TICKET_TTL must be positive")
+		}
+		streamTicketTTL = parsed
+	}
+
+	streamTicketReapInterval := defaultStreamTicketReapInterval
+	if raw := os.Getenv("STREAM_TICKET_REAP_INTERVAL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing STREAM_TICKET_REAP_INTERVAL: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("STREAM_TICKET_REAP_INTERVAL must not be negative")
+		}
+		streamTicketReapInterval = parsed
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -746,8 +805,9 @@ func Load() (*Config, error) {
 		RateLimitWindow:       rateLimitWindow,
 		RateLimitGlobalPerIP:  rateLimitGlobalPerIP,
 		RateLimitLoginPerIP:   rateLimitLoginPerIP,
-		RateLimitReadPerUser:  rateLimitReadPerUser,
-		RateLimitWritePerUser: rateLimitWritePerUser,
+		RateLimitReadPerUser:   rateLimitReadPerUser,
+		RateLimitWritePerUser:  rateLimitWritePerUser,
+		RateLimitTicketPerUser: rateLimitTicketPerUser,
 
 		R2AccountID:       r2AccountID,
 		R2AccessKeyID:     r2AccessKeyID,
@@ -800,5 +860,8 @@ func Load() (*Config, error) {
 		GameLobbyTTL:          gameLobbyTTL,
 		GameLobbyReapInterval: gameLobbyReapInterval,
 		GameStoreOpTimeout:    gameStoreOpTimeout,
+
+		StreamTicketTTL:          streamTicketTTL,
+		StreamTicketReapInterval: streamTicketReapInterval,
 	}, nil
 }

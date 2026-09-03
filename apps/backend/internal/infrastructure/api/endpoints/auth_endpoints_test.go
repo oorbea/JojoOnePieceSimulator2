@@ -16,6 +16,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 )
 
 // POST /api/v1/auth/google is the only public write route in the API - it is
@@ -71,8 +72,8 @@ func newAuthTestServer(repo *fakeUserRepo, verifier ports.IGoogleTokenVerifier, 
 		endpoints.NewStandEndpoints(nil),
 		endpoints.NewDevilFruitEndpoints(nil),
 		endpoints.NewUserEndpoints(nil),
-		endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background()),
-		endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{}),
+		endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background()),
+		endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background(), endpoints.GameWSConfig{}),
 		endpoints.NewStageEndpoints(nil),
 		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 }

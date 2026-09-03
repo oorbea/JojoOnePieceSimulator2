@@ -31,6 +31,8 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/s3store"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
+	redisstreamticket "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket/redis"
 )
 
 // @title JojoOnePieceSimulator2 API
@@ -215,6 +217,36 @@ func main() {
 	gameReaper := gamestore.NewReaper(gameStore, cfg.GameLobbyTTL, cfg.GameLobbyReapInterval)
 	go gameReaper.Start(ctx)
 
+	// Stream connection tickets: short-lived, single-use credentials that
+	// replace a full access token in the SSE/WS query string (see
+	// ObsidianVault/stream-connection-tickets-2026-09-02.md). Same
+	// Redis-or-memory branch as the game store, for the same reason - a
+	// second backend instance must be able to redeem a ticket minted by the
+	// first.
+	var streamTickets ports.IStreamTicketStore
+	if cfg.RedisURL != "" {
+		redisTickets, err := redisstreamticket.New(ctx, redisstreamticket.Config{
+			URL:         cfg.RedisURL,
+			DialTimeout: cfg.RedisDialTimeout,
+			OpTimeout:   cfg.GameStoreOpTimeout,
+			TTL:         cfg.StreamTicketTTL,
+		})
+		if err != nil {
+			log.Fatalf("connecting to redis stream-ticket store: %v", err)
+		}
+		defer func() {
+			if err := redisTickets.Close(); err != nil {
+				log.Printf("closing redis stream-ticket store connection: %v", err)
+			}
+		}()
+		streamTickets = redisTickets
+	} else {
+		memTickets := streamticket.NewMemoryStore(streamticket.Config{TTL: cfg.StreamTicketTTL})
+		go streamticket.NewReaper(memTickets, cfg.StreamTicketReapInterval).Start(ctx)
+		streamTickets = memTickets
+		log.Printf("stream tickets: REDIS_URL unset, using in-memory store (tickets are lost on restart, which only forces a reconnect)")
+	}
+
 	stageService := services.NewStageService(stageRepo, idgen.UUIDGenerator[game.StageID]{},
 		pictures, imageProcessor, pictureWorker, picturePolicy)
 	stageEndpoints := endpoints.NewStageEndpoints(stageService)
@@ -239,7 +271,7 @@ func main() {
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: cfg.GameVotingWindow},
 	)
-	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepo, standRepo, devilFruitRepo, userRepo, tokenIssuer, ctx, endpoints.GameWSConfig{
+	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepo, standRepo, devilFruitRepo, userRepo, tokenIssuer, streamTickets, ctx, endpoints.GameWSConfig{
 		VotingWindow:             cfg.GameVotingWindow,
 		AllowedOrigins:           cfg.CORSAllowedOrigins,
 		ResolveStandPicture:      standService.PictureURL,
@@ -250,7 +282,7 @@ func main() {
 
 	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit
 	// promptly on shutdown instead of blocking srv.Shutdown's grace window.
-	eventsEndpoints := endpoints.NewEventsEndpoints(pictureHub, tokenIssuer, ctx)
+	eventsEndpoints := endpoints.NewEventsEndpoints(pictureHub, tokenIssuer, streamTickets, ctx)
 
 	corsCfg := endpoints.CORSConfig{
 		AllowedOrigins:   cfg.CORSAllowedOrigins,
@@ -261,12 +293,13 @@ func main() {
 	}
 
 	rateCfg := endpoints.RateLimitConfig{
-		Enabled:      cfg.RateLimitEnabled,
-		Window:       cfg.RateLimitWindow,
-		GlobalPerIP:  cfg.RateLimitGlobalPerIP,
-		LoginPerIP:   cfg.RateLimitLoginPerIP,
-		ReadPerUser:  cfg.RateLimitReadPerUser,
-		WritePerUser: cfg.RateLimitWritePerUser,
+		Enabled:       cfg.RateLimitEnabled,
+		Window:        cfg.RateLimitWindow,
+		GlobalPerIP:   cfg.RateLimitGlobalPerIP,
+		LoginPerIP:    cfg.RateLimitLoginPerIP,
+		ReadPerUser:   cfg.RateLimitReadPerUser,
+		WritePerUser:  cfg.RateLimitWritePerUser,
+		TicketPerUser: cfg.RateLimitTicketPerUser,
 	}
 
 	// The ETag/Cache-Control layer is independent of Redis - it stays on

@@ -57,6 +57,7 @@ var restTypes = []any{
 	// UpdateConfigPayload is itself the PATCH /games/{id}/config body).
 	dto.PoolFilterPayload{},
 	dto.UpdateConfigPayload{},
+	dto.StreamTicketResponse{},
 }
 
 // wsOnlyTypes are payload structs that only ever appear as a WebSocket

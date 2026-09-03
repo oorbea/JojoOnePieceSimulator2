@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/coder/websocket"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
@@ -18,6 +21,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 )
 
 // --- local fakes mirroring game_service_test.go's (services_test package)
@@ -424,8 +428,9 @@ func mustEndpointDevilFruit(t *testing.T, name string) *powers.DevilFruit {
 // actions - like SET_LOCK - that have no REST route of their own, so a test
 // can still exercise what an HTTP call *does* see afterward).
 type gameEndpointsTestDeps struct {
-	users *fakeGameUserRepository
-	svc   *services.GameService
+	users   *fakeGameUserRepository
+	svc     *services.GameService
+	tickets *streamticket.MemoryStore
 }
 
 // newGameTestServer builds a full router with a real GameService (real
@@ -468,14 +473,15 @@ func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 		services.VotingPolicy{Window: 30_000_000_000},
 	)
 
+	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	gameEndpoints := endpoints.NewGameEndpoints(svc, services.NewGameEventHub(), fakeGameStageRepository{},
 		fakeGameStandRepository{}, fakeGameDevilFruitRepository{},
-		users, fakeTokenIssuer{}, context.Background(), endpoints.GameWSConfig{})
+		users, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{})
 	authEndpoints := endpoints.NewAuthEndpoints(nil)
-	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, context.Background())
+	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
 
-	return h, &gameEndpointsTestDeps{users: users, svc: svc}
+	return h, &gameEndpointsTestDeps{users: users, svc: svc, tickets: tickets}
 }
 
 // mustGameUser creates and saves a user whose UserID matches one of
@@ -770,4 +776,232 @@ func TestEditConfig_NonParticipant_Forbidden(t *testing.T) {
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusForbidden, rec.Body.String())
 	}
+}
+
+// --- POST /games/{id}/ws-ticket ---
+
+func mintWSTicket(t *testing.T, h http.Handler, id, token string) (ticket string, status int) {
+	t.Helper()
+	rec := doTokenRequest(t, h, http.MethodPost, "/api/v1/games/"+id+"/ws-ticket", token, nil)
+	if rec.Code != http.StatusOK {
+		return "", rec.Code
+	}
+	var body struct {
+		Ticket    string    `json:"ticket"`
+		ExpiresAt time.Time `json:"expiresAt"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding ws-ticket response: %v, body = %s", err, rec.Body.String())
+	}
+	if body.Ticket == "" {
+		t.Fatalf("ws-ticket response has an empty ticket: %s", rec.Body.String())
+	}
+	return body.Ticket, rec.Code
+}
+
+func TestMintWSTicket_Unauthenticated(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	_, status := mintWSTicket(t, h, id, "")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", status)
+	}
+}
+
+func TestMintWSTicket_NonParticipant_Forbidden(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	mustGameUser(t, deps, "user2-token", "stranger")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	_, status := mintWSTicket(t, h, id, "user2-token")
+	if status != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", status)
+	}
+}
+
+func TestMintWSTicket_UnknownGame_NotFound(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+
+	_, status := mintWSTicket(t, h, "00000000-0000-0000-0000-000000000000", "user-token")
+	if status != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", status)
+	}
+}
+
+func TestMintWSTicket_MalformedID_BadRequest(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+
+	_, status := mintWSTicket(t, h, "not-a-uuid", "user-token")
+	if status != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", status)
+	}
+}
+
+func TestMintWSTicket_SeatedParticipant_ReturnsTicket(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	ticket, status := mintWSTicket(t, h, id, "user-token")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want 200", status)
+	}
+	if ticket == "" {
+		t.Fatal("expected a non-empty ticket")
+	}
+}
+
+// --- GET /games/{id}/ws, dialed for real over an httptest.Server ---
+
+// dialGameWS dials the game socket at wsURL, expecting either a successful
+// upgrade (wantErr false, in which case the caller is handed the live conn
+// and must close it) or a failure (wantErr true).
+func dialGameWS(t *testing.T, wsURL string, wantErr bool) *websocket.Conn {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	if wantErr {
+		if err == nil {
+			conn.CloseNow()
+			t.Fatal("Dial succeeded, want an error")
+		}
+		return nil
+	}
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	return conn
+}
+
+func TestServeWS_ValidTicket_UpgradesAndSendsState(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+	ticket, status := mintWSTicket(t, h, id, "user-token")
+	if status != http.StatusOK {
+		t.Fatalf("mint status = %d, want 200", status)
+	}
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/games/" + id + "/ws?ticket=" + ticket
+
+	conn := dialGameWS(t, wsURL, false)
+	defer conn.CloseNow()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, data, err := conn.Read(ctx)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	var frame struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &frame); err != nil {
+		t.Fatalf("unmarshal frame: %v, data = %s", err, data)
+	}
+	if frame.Type != "STATE" {
+		t.Fatalf("first frame type = %q, want STATE", frame.Type)
+	}
+}
+
+func TestServeWS_ReusedTicket_Fails(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+	ticket, _ := mintWSTicket(t, h, id, "user-token")
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/games/" + id + "/ws?ticket=" + ticket
+
+	conn := dialGameWS(t, wsURL, false)
+	conn.CloseNow()
+
+	dialGameWS(t, wsURL, true)
+}
+
+func TestServeWS_TicketForAnotherGame_Fails(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	idA, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	ticketForA, status := mintWSTicket(t, h, idA, "user-token")
+	if status != http.StatusOK {
+		t.Fatalf("mint status = %d, want 200", status)
+	}
+
+	// idB doesn't need to exist as a real game: authenticateStream's
+	// resource check (ticketForA's Resource is idA) happens before serveWS
+	// ever calls GetGame, so a well-formed but different UUID is enough to
+	// prove the ticket is scoped to the game it was minted for. A second
+	// real CreateGame here would also collide with fakeGameRandom's
+	// always-0 draw, which makes every join code in this file identical.
+	idB := "00000000-0000-0000-0000-000000000001"
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/games/" + idB + "/ws?ticket=" + ticketForA
+
+	dialGameWS(t, wsURL, true)
+}
+
+func TestServeWS_EventsTicket_Fails(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	// Minted directly against the shared store so it carries the events
+	// purpose instead of game-ws.
+	token, _, err := deps.tickets.Issue(context.Background(), ports.StreamTicket{Purpose: ports.TicketPurposeEvents})
+	if err != nil {
+		t.Fatalf("Issue: %v", err)
+	}
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/games/" + id + "/ws?ticket=" + token
+
+	dialGameWS(t, wsURL, true)
+}
+
+// TestServeWS_OldTokenQueryParam_Fails is the regression guard for the
+// removed ?token=<jwt> fallback on the game socket, mirroring
+// TestStream_OldTokenQueryParam_Fails for /events.
+func TestServeWS_OldTokenQueryParam_Fails(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/games/" + id + "/ws?token=user-token"
+
+	dialGameWS(t, wsURL, true)
+}
+
+func TestServeWS_BearerHeader_StillUpgrades(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/api/v1/games/" + id + "/ws"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(ctx, wsURL, &websocket.DialOptions{
+		HTTPHeader: http.Header{"Authorization": []string{"Bearer user-token"}},
+	})
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	conn.CloseNow()
 }

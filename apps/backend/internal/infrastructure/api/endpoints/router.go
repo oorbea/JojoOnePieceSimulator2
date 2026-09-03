@@ -88,7 +88,7 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 			})
 		})
 
-		r.Mount("/events", eventsEndpoints.Routes())
+		r.Mount("/events", eventsEndpoints.Routes(rateCfg))
 		// Outside the Timeout group on purpose - see this function's doc.
 		r.Mount("/games", gameEndpoints.Routes(rateCfg))
 	})

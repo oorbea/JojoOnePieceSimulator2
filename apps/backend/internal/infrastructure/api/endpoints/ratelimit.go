@@ -20,6 +20,7 @@ type RateLimitConfig struct {
 	LoginPerIP   int
 	ReadPerUser  int
 	WritePerUser int
+	TicketPerUser int
 }
 
 // keyByClientIP keys the limiter on chi's resolved client IP (populated by
@@ -93,4 +94,17 @@ func writeRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler { return next }
 	}
 	return limit(cfg.WritePerUser, cfg.Window, keyByUserID)
+}
+
+// ticketRateLimit applies to the two stream-ticket mint routes (POST
+// /events/ticket, POST /games/{id}/ws-ticket), keyed by user id since both
+// sit behind RequireAuth. Sized for a reconnect storm rather than steady
+// state: every SSE/WS (re)connect now costs one mint, and the frontend's own
+// backoff (2s -> 30s) bounds one tab's reconnect rate well under one per
+// second even at its worst.
+func ticketRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
+	if !cfg.Enabled {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return limit(cfg.TicketPerUser, cfg.Window, keyByUserID)
 }

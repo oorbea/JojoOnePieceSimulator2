@@ -315,6 +315,12 @@ export const gameStateResponseSchema = z.object({
 })
 export type GameStateResponse = z.infer<typeof gameStateResponseSchema>
 
+export const streamTicketResponseSchema = z.object({
+  ticket: z.string(),
+  expiresAt: z.iso.datetime({ offset: true }),
+})
+export type StreamTicketResponse = z.infer<typeof streamTicketResponseSchema>
+
 export const translationRequestSchema = z.object({
   description: z.string(),
   skills: z.array(z.string()),

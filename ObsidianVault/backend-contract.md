@@ -77,7 +77,7 @@ Deny-all unless `CORS_ALLOWED_ORIGINS` set explicitly (`config.go:230`). Fronten
 
 ## Websockets
 
-**2026-08-11**: live. `GET /api/v1/games/{id}/ws?token=<jwt>` (native `coder/websocket`, JSON
+**2026-08-11**: live. `GET /api/v1/games/{id}/ws?ticket=<opaque>` (native `coder/websocket`, JSON
 envelopes) drives every Gauntlet/Versus mutation except creation/join/resume, which stay plain
 HTTP (`POST /games`, `POST /games/join`, `GET /games/{id}`, `GET /games/by-code/{code}`). Backed by
 a Redis-persisted lobby store (`REDIS_URL` set) or an in-memory one otherwise. Full protocol,
@@ -85,6 +85,13 @@ privacy rules (votes hidden until a round resolves, loadouts always public), and
 lifecycle in [[game-realtime-transport]]; the store/persistence side in
 [[game-lobby-persistence]]. `/games/{id}/ws` sits outside the router's `Timeout(60s)` group, same
 as `/events`.
+
+**2026-09-03**: `?token=<jwt>` is gone, see [[stream-connection-tickets-2026-09-03]]. Both
+`/events` and `/games/{id}/ws` now authenticate via a short-lived (30s), single-use ticket minted
+through a normal authenticated `POST /events/ticket` / `POST /games/{id}/ws-ticket`, or an
+`Authorization: Bearer` header (unchanged). New error code `STREAM_TICKET_INVALID` (401) — invisible
+to the browser on the streams themselves (`EventSource`/WS handshake failures expose no body), only
+observable on the mint responses' ordinary error codes.
 
 ## Domain entities seen in backend history
 
