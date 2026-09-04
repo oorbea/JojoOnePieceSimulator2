@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
+import { DetailModal } from '@/shared/components/presentational/detail-modal'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import {
@@ -17,6 +18,7 @@ import type { Locale } from '@/shared/contracts/enums'
 import type { StageFormValues, StageResponse } from '@/features/stages/types/stages.types'
 
 import { StageCard } from './stage-card'
+import { StageDetail } from './stage-detail'
 import { StageFormModal } from './stage-form-modal'
 
 type ConfirmState = {
@@ -43,62 +45,76 @@ type FormState = {
   erroredLocales: Locale[]
 }
 
-type Props = {
+type BaseProps = {
   stages: StageResponse[]
   isLoading: boolean
   isError: boolean
   onRetry: () => void
-  onCreateNew: () => void
-  onEdit: (stage: StageResponse) => void
-  onDelete: (stage: StageResponse) => void
-  openingEditId: string | null
   search: string
   onSearchChange: (search: string) => void
   mangaFilter: string | null
   mangaFilterOptions: GlassSelectOption[]
   onMangaFilterChange: (manga: string | null) => void
   hasActiveFilters: boolean
+  detailStage: StageResponse | null
+  onOpenDetail: (stage: StageResponse) => void
+  onCloseDetail: () => void
+}
+
+type WritableProps = {
+  readOnly?: false
+  onCreateNew: () => void
+  onEdit: (stage: StageResponse) => void
+  onDelete: (stage: StageResponse) => void
+  openingEditId: string | null
   form: FormState
   deleteConfirm: ConfirmState
 }
 
+type ReadOnlyProps = {
+  readOnly: true
+}
+
+type Props = BaseProps & (WritableProps | ReadOnlyProps)
+
 // Pure UI - a card grid of Stages (filtered by search/manga) plus the
-// create/edit modal and the delete confirmation. All data fetching, form
-// state, and mutation wiring live in StagesContainer. Same shape as
-// StandsScreen, with a search bar + manga filter added on top since the
-// catalogue mixes two mangas' worth of content.
-export function StagesScreen({
-  stages,
-  isLoading,
-  isError,
-  onRetry,
-  onCreateNew,
-  onEdit,
-  onDelete,
-  openingEditId,
-  search,
-  onSearchChange,
-  mangaFilter,
-  mangaFilterOptions,
-  onMangaFilterChange,
-  hasActiveFilters,
-  form,
-  deleteConfirm,
-}: Props) {
+// create/edit modal, the delete confirmation, and the read-only detail
+// modal. All data fetching, form state, and mutation wiring live in
+// StagesContainer. Same shape as StandsScreen, with a search bar + manga
+// filter added on top since the catalogue mixes two mangas' worth of
+// content.
+export function StagesScreen(props: Props) {
+  const {
+    stages,
+    isLoading,
+    isError,
+    onRetry,
+    search,
+    onSearchChange,
+    mangaFilter,
+    mangaFilterOptions,
+    onMangaFilterChange,
+    hasActiveFilters,
+    detailStage,
+    onOpenDetail,
+    onCloseDetail,
+  } = props
   const { t } = useTranslation()
   return (
     <YStack flex={1} position="relative">
       <PageShell align="top" scroll maxWidth={960}>
         <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$3">
           <GlowText level="title">{t('stages.title')}</GlowText>
-          <GlossButton
-            tone="green"
-            btnSize="md"
-            onPress={onCreateNew}
-            accessibilityLabel={t('stages.newStage')}
-          >
-            <Plus size={18} color="white" /> {t('stages.newStage')}
-          </GlossButton>
+          {props.readOnly ? null : (
+            <GlossButton
+              tone="green"
+              btnSize="md"
+              onPress={props.onCreateNew}
+              accessibilityLabel={t('stages.newStage')}
+            >
+              <Plus size={18} color="white" /> {t('stages.newStage')}
+            </GlossButton>
+          )}
         </XStack>
 
         <XStack width="100%" flexWrap="wrap" gap="$3">
@@ -148,11 +164,11 @@ export function StagesScreen({
             <GlowText level="label" align="center">
               {t(hasActiveFilters ? 'stages.emptyFilteredTitle' : 'stages.emptyTitle')}
             </GlowText>
-            {hasActiveFilters ? null : (
+            {hasActiveFilters || props.readOnly ? null : (
               <GlossButton
                 tone="green"
                 btnSize="sm"
-                onPress={onCreateNew}
+                onPress={props.onCreateNew}
                 accessibilityLabel={t('stages.newStage')}
               >
                 {t('stages.newStage')}
@@ -161,44 +177,77 @@ export function StagesScreen({
           </GlassPanel>
         ) : (
           <XStack flexWrap="wrap" gap="$4" justify="center">
-            {stages.map((stage) => (
-              <StageCard
-                key={stage.id}
-                stage={stage}
-                onEdit={() => onEdit(stage)}
-                onDelete={() => onDelete(stage)}
-                isEditBusy={openingEditId === stage.id}
-              />
-            ))}
+            {stages.map((stage) =>
+              props.readOnly ? (
+                <StageCard key={stage.id} stage={stage} onOpenDetail={() => onOpenDetail(stage)} readOnly />
+              ) : (
+                <StageCard
+                  key={stage.id}
+                  stage={stage}
+                  onOpenDetail={() => onOpenDetail(stage)}
+                  onEdit={() => props.onEdit(stage)}
+                  onDelete={() => props.onDelete(stage)}
+                  isEditBusy={props.openingEditId === stage.id}
+                />
+              )
+            )}
           </XStack>
         )}
       </PageShell>
 
-      <StageFormModal
-        visible={form.visible}
-        mode={form.mode}
-        control={form.control}
-        errors={form.errors}
-        onSubmit={form.onSubmit}
-        onCancel={form.onCancel}
-        isSaving={form.isSaving}
-        pictureUri={form.pictureUri}
-        onPickPicture={form.onPickPicture}
-        isPictureBusy={form.isPictureBusy}
-        activeLocale={form.activeLocale}
-        onLocaleChange={form.onLocaleChange}
-        erroredLocales={form.erroredLocales}
-      />
+      <DetailModal
+        visible={detailStage !== null}
+        title={detailStage?.name ?? ''}
+        onClose={onCloseDetail}
+        closeA11y={t('common.close')}
+        footer={
+          detailStage && !props.readOnly ? (
+            <GlossButton
+              tone="blue"
+              btnSize="md"
+              onPress={() => {
+                onCloseDetail()
+                props.onEdit(detailStage)
+              }}
+              accessibilityLabel={t('stages.editA11y', { name: detailStage.name })}
+            >
+              {t('common.edit')}
+            </GlossButton>
+          ) : undefined
+        }
+      >
+        {detailStage ? <StageDetail stage={detailStage} /> : null}
+      </DetailModal>
 
-      <ConfirmSheet
-        visible={deleteConfirm.visible}
-        title={t('stages.deleteConfirmTitle')}
-        message={t('stages.deleteConfirmMessage', { name: deleteConfirm.stageName ?? '' })}
-        confirmLabel={t('stages.deleteConfirmButton')}
-        isConfirming={deleteConfirm.isConfirming}
-        onConfirm={deleteConfirm.onConfirm}
-        onCancel={deleteConfirm.onCancel}
-      />
+      {props.readOnly ? null : (
+        <>
+          <StageFormModal
+            visible={props.form.visible}
+            mode={props.form.mode}
+            control={props.form.control}
+            errors={props.form.errors}
+            onSubmit={props.form.onSubmit}
+            onCancel={props.form.onCancel}
+            isSaving={props.form.isSaving}
+            pictureUri={props.form.pictureUri}
+            onPickPicture={props.form.onPickPicture}
+            isPictureBusy={props.form.isPictureBusy}
+            activeLocale={props.form.activeLocale}
+            onLocaleChange={props.form.onLocaleChange}
+            erroredLocales={props.form.erroredLocales}
+          />
+
+          <ConfirmSheet
+            visible={props.deleteConfirm.visible}
+            title={t('stages.deleteConfirmTitle')}
+            message={t('stages.deleteConfirmMessage', { name: props.deleteConfirm.stageName ?? '' })}
+            confirmLabel={t('stages.deleteConfirmButton')}
+            isConfirming={props.deleteConfirm.isConfirming}
+            onConfirm={props.deleteConfirm.onConfirm}
+            onCancel={props.deleteConfirm.onCancel}
+          />
+        </>
+      )}
     </YStack>
   )
 }

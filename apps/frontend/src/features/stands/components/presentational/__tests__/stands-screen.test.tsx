@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
 import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
@@ -32,9 +33,20 @@ function baseStand(overrides: Partial<StandResponse> = {}): StandResponse {
   }
 }
 
-function Harness(
-  props: Partial<React.ComponentProps<typeof StandsScreen>> & { stands?: StandResponse[] }
-) {
+type HarnessProps = {
+  readOnly?: boolean
+  stands?: StandResponse[]
+  search?: string
+  onSearchChange?: (search: string) => void
+  filtersExpanded?: boolean
+  hasActiveFilters?: boolean
+}
+
+// Real (not mocked) detail-modal state, so pressing a card's "View details"
+// affordance exercises the same open/close flow a real container would -
+// see stands-screen's own detailStand/onOpenDetail/onCloseDetail props,
+// which are identical in shape for both the readOnly and writable variants.
+function Harness({ readOnly, stands, search, onSearchChange, filtersExpanded, hasActiveFilters }: HarnessProps) {
   const {
     control,
     formState: { errors },
@@ -53,40 +65,50 @@ function Harness(
       evolvesFromId: null,
     },
   })
+  const [detailStand, setDetailStand] = useState<StandResponse | null>(null)
+
+  const base = {
+    stands: stands ?? [baseStand()],
+    isLoading: false,
+    isError: false,
+    onRetry: jest.fn(),
+    search: search ?? '',
+    onSearchChange: onSearchChange ?? jest.fn(),
+    rarityFilter: null,
+    rarityFilterOptions: [{ value: 'LEGENDARY', label: 'Legendary' }],
+    onRarityFilterChange: jest.fn(),
+    statFilters: {
+      attackPower: null,
+      speed: null,
+      attackRange: null,
+      endurance: null,
+      precision: null,
+      potential: null,
+    },
+    statFilterOptions: [{ value: 'A', label: 'A' }],
+    onStatFilterChange: jest.fn(),
+    evolvesFromFilter: null,
+    evolvesFromFilterOptions: [],
+    onEvolvesFromFilterChange: jest.fn(),
+    filtersExpanded: filtersExpanded ?? false,
+    onToggleFilters: jest.fn(),
+    moreFiltersCount: 0,
+    onClearFilters: jest.fn(),
+    hasActiveFilters: hasActiveFilters ?? false,
+    detailStand,
+    onOpenDetail: setDetailStand,
+    onCloseDetail: () => setDetailStand(null),
+  }
+
+  if (readOnly) return <StandsScreen {...base} readOnly />
 
   return (
     <StandsScreen
-      stands={[baseStand()]}
-      isLoading={false}
-      isError={false}
-      onRetry={jest.fn()}
+      {...base}
       onCreateNew={jest.fn()}
       onEdit={jest.fn()}
       onDelete={jest.fn()}
       openingEditId={null}
-      search=""
-      onSearchChange={jest.fn()}
-      rarityFilter={null}
-      rarityFilterOptions={[{ value: 'LEGENDARY', label: 'Legendary' }]}
-      onRarityFilterChange={jest.fn()}
-      statFilters={{
-        attackPower: null,
-        speed: null,
-        attackRange: null,
-        endurance: null,
-        precision: null,
-        potential: null,
-      }}
-      statFilterOptions={[{ value: 'A', label: 'A' }]}
-      onStatFilterChange={jest.fn()}
-      evolvesFromFilter={null}
-      evolvesFromFilterOptions={[]}
-      onEvolvesFromFilterChange={jest.fn()}
-      filtersExpanded={false}
-      onToggleFilters={jest.fn()}
-      moreFiltersCount={0}
-      onClearFilters={jest.fn()}
-      hasActiveFilters={false}
       form={{
         visible: false,
         mode: 'create',
@@ -109,7 +131,6 @@ function Harness(
         onConfirm: jest.fn(),
         onCancel: jest.fn(),
       }}
-      {...props}
     />
   )
 }
@@ -153,5 +174,39 @@ describe('StandsScreen', () => {
     await renderWithProviders(<Harness stands={[]} hasActiveFilters />)
 
     expect(screen.getByText('No Stands match. Try a different search or filter.')).toBeTruthy()
+  })
+
+  it('opens the detail modal with the stand\'s description on card press', async () => {
+    await renderWithProviders(<Harness />)
+
+    expect(screen.queryByText('A close-range powerhouse')).toBeNull()
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('View Star Platinum details'))
+    })
+
+    expect(screen.getByText('A close-range powerhouse')).toBeTruthy()
+  })
+
+  describe('readOnly', () => {
+    it('hides "New Stand" and every card\'s edit/delete buttons', async () => {
+      await renderWithProviders(<Harness readOnly />)
+
+      expect(screen.queryByLabelText('New Stand')).toBeNull()
+      expect(screen.queryByLabelText('Edit Star Platinum')).toBeNull()
+      expect(screen.queryByLabelText('Delete Star Platinum')).toBeNull()
+    })
+
+    it('still opens the detail modal on card press', async () => {
+      await renderWithProviders(<Harness readOnly />)
+
+      await act(async () => {
+        fireEvent.press(screen.getByLabelText('View Star Platinum details'))
+      })
+
+      expect(screen.getByText('A close-range powerhouse')).toBeTruthy()
+      // Read-only detail modal has no Edit footer button.
+      expect(screen.queryByLabelText('Edit Star Platinum')).toBeNull()
+    })
   })
 })

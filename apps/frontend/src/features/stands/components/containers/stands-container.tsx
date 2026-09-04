@@ -161,6 +161,7 @@ export function StandsContainer() {
   const [pendingPicture, setPendingPicture] = useState<PickedPicture | null>(null)
   const [standToDelete, setStandToDelete] = useState<StandResponse | null>(null)
   const [openingEditId, setOpeningEditId] = useState<string | null>(null)
+  const [detailStand, setDetailStand] = useState<StandResponse | null>(null)
 
   const {
     control,
@@ -350,6 +351,9 @@ export function StandsContainer() {
       moreFiltersCount={moreFiltersCount}
       onClearFilters={onClearFilters}
       hasActiveFilters={hasActiveFilters}
+      detailStand={detailStand}
+      onOpenDetail={setDetailStand}
+      onCloseDetail={() => setDetailStand(null)}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,

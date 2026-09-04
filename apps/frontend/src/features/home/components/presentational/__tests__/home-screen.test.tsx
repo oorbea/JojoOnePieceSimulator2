@@ -16,14 +16,14 @@ const USER: SessionUser = {
 
 describe('HomeScreen', () => {
   it("shows the user's username in place of the old greeting sentence", async () => {
-    await renderWithProviders(<HomeScreen user={USER} onOpenProfile={jest.fn()} onOpenPlay={jest.fn()} />)
+    await renderWithProviders(<HomeScreen user={USER} onNavigate={jest.fn()} />)
 
     expect(screen.getByText('OriolO')).toBeTruthy()
     expect(screen.queryByText(/ready when you are/i)).toBeNull()
   })
 
   it('shows the email and role pills', async () => {
-    await renderWithProviders(<HomeScreen user={USER} onOpenProfile={jest.fn()} onOpenPlay={jest.fn()} />)
+    await renderWithProviders(<HomeScreen user={USER} onNavigate={jest.fn()} />)
 
     expect(screen.getByText(USER.email)).toBeTruthy()
     expect(screen.getByText(enGB.enums.role[USER.role])).toBeTruthy()
@@ -32,28 +32,26 @@ describe('HomeScreen', () => {
   // AppShell's top bar already has a logout button on every authenticated
   // route — a second one here would just duplicate it.
   it('has no logout control of its own', async () => {
-    await renderWithProviders(<HomeScreen user={USER} onOpenProfile={jest.fn()} onOpenPlay={jest.fn()} />)
+    await renderWithProviders(<HomeScreen user={USER} onNavigate={jest.fn()} />)
 
     expect(screen.queryByLabelText(/log out/i)).toBeNull()
   })
 
-  it('opens the profile channel on press, and renders the rest locked', async () => {
-    const onOpenProfile = jest.fn()
-    await renderWithProviders(<HomeScreen user={USER} onOpenProfile={onOpenProfile} onOpenPlay={jest.fn()} />)
-
-    fireEvent.press(screen.getByLabelText('Profile'))
-    expect(onOpenProfile).toHaveBeenCalledTimes(1)
-
-    expect(screen.getByLabelText('Stands, coming soon')).toBeTruthy()
-    expect(screen.getByLabelText('Devil Fruits, coming soon')).toBeTruthy()
-    expect(screen.getByLabelText('Powers, coming soon')).toBeTruthy()
-  })
-
-  it('opens the play channel on press', async () => {
-    const onOpenPlay = jest.fn()
-    await renderWithProviders(<HomeScreen user={USER} onOpenProfile={jest.fn()} onOpenPlay={onOpenPlay} />)
+  it('navigates to the right route for every channel - none are locked anymore', async () => {
+    const onNavigate = jest.fn()
+    await renderWithProviders(<HomeScreen user={USER} onNavigate={onNavigate} />)
 
     fireEvent.press(screen.getByLabelText('Play'))
-    expect(onOpenPlay).toHaveBeenCalledTimes(1)
+    fireEvent.press(screen.getByLabelText('Profile'))
+    fireEvent.press(screen.getByLabelText('Stands'))
+    fireEvent.press(screen.getByLabelText('Devil Fruits'))
+    fireEvent.press(screen.getByLabelText('Stages'))
+
+    expect(onNavigate).toHaveBeenNthCalledWith(1, '/play')
+    expect(onNavigate).toHaveBeenNthCalledWith(2, '/profile')
+    expect(onNavigate).toHaveBeenNthCalledWith(3, '/catalog/stands')
+    expect(onNavigate).toHaveBeenNthCalledWith(4, '/catalog/devil-fruits')
+    expect(onNavigate).toHaveBeenNthCalledWith(5, '/catalog/stages')
+    expect(screen.queryByText(/coming soon/i)).toBeNull()
   })
 })
