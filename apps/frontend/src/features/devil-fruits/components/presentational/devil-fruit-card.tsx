@@ -14,12 +14,14 @@ import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fru
 
 type Props = {
   devilFruit: DevilFruitResponse
-  onEdit: () => void
-  onDelete: () => void
+  onOpenDetail: () => void
+  readOnly?: boolean
+  onEdit?: () => void
+  onDelete?: () => void
   isEditBusy?: boolean
 }
 
-export function DevilFruitCard({ devilFruit, onEdit, onDelete, isEditBusy }: Props) {
+export function DevilFruitCard({ devilFruit, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   return (
@@ -42,41 +44,48 @@ export function DevilFruitCard({ devilFruit, onEdit, onDelete, isEditBusy }: Pro
       </Pressable>
       <ImageLightbox visible={isPreviewOpen} uri={devilFruit.picture} onClose={() => setIsPreviewOpen(false)} />
 
-      <YStack gap="$1">
-        <GlowText level="heading" numberOfLines={1}>
-          {devilFruit.name}
-        </GlowText>
-        <XStack gap="$2" flexWrap="wrap">
-          <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-            <GlowText level="label">{t(`enums.rarity.${devilFruit.rarity}`)}</GlowText>
-          </GlassPanel>
-          <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-            <GlowText level="label">{t(`enums.fruitType.${devilFruit.fruitType}`)}</GlowText>
-          </GlassPanel>
-        </XStack>
-      </YStack>
+      <Pressable
+        onPress={onOpenDetail}
+        {...a11yProps(t('devilFruits.detailA11y', { name: devilFruit.name }), 'button')}
+      >
+        <YStack gap="$1">
+          <GlowText level="heading" numberOfLines={1}>
+            {devilFruit.name}
+          </GlowText>
+          <XStack gap="$2" flexWrap="wrap">
+            <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
+              <GlowText level="label">{t(`enums.rarity.${devilFruit.rarity}`)}</GlowText>
+            </GlassPanel>
+            <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
+              <GlowText level="label">{t(`enums.fruitType.${devilFruit.fruitType}`)}</GlowText>
+            </GlassPanel>
+          </XStack>
+        </YStack>
+      </Pressable>
 
-      <XStack gap="$2" justify="flex-end">
-        <GlossButton
-          tone="blue"
-          btnSize="sm"
-          shape="circle"
-          onPress={onEdit}
-          disabled={isEditBusy}
-          accessibilityLabel={t('devilFruits.editA11y', { name: devilFruit.name })}
-        >
-          {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
-        </GlossButton>
-        <GlossButton
-          tone="red"
-          btnSize="sm"
-          shape="circle"
-          onPress={onDelete}
-          accessibilityLabel={t('devilFruits.deleteA11y', { name: devilFruit.name })}
-        >
-          <Trash2 size={16} color="white" />
-        </GlossButton>
-      </XStack>
+      {readOnly ? null : (
+        <XStack gap="$2" justify="flex-end">
+          <GlossButton
+            tone="blue"
+            btnSize="sm"
+            shape="circle"
+            onPress={onEdit}
+            disabled={isEditBusy}
+            accessibilityLabel={t('devilFruits.editA11y', { name: devilFruit.name })}
+          >
+            {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
+          </GlossButton>
+          <GlossButton
+            tone="red"
+            btnSize="sm"
+            shape="circle"
+            onPress={onDelete}
+            accessibilityLabel={t('devilFruits.deleteA11y', { name: devilFruit.name })}
+          >
+            <Trash2 size={16} color="white" />
+          </GlossButton>
+        </XStack>
+      )}
     </WiiCard>
   )
 }

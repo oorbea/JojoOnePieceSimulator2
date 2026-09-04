@@ -89,6 +89,7 @@ export function StagesContainer() {
   const [pendingPicture, setPendingPicture] = useState<PickedPicture | null>(null)
   const [stageToDelete, setStageToDelete] = useState<StageResponse | null>(null)
   const [openingEditId, setOpeningEditId] = useState<string | null>(null)
+  const [detailStage, setDetailStage] = useState<StageResponse | null>(null)
 
   const {
     control,
@@ -233,6 +234,9 @@ export function StagesContainer() {
       mangaFilterOptions={mangaFilterOptions}
       onMangaFilterChange={setMangaFilter}
       hasActiveFilters={hasStageFilters}
+      detailStage={detailStage}
+      onOpenDetail={setDetailStage}
+      onCloseDetail={() => setDetailStage(null)}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,

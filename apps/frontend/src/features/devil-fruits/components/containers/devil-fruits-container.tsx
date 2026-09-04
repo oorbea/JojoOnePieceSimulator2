@@ -97,6 +97,7 @@ export function DevilFruitsContainer() {
   const [pendingPicture, setPendingPicture] = useState<PickedPicture | null>(null)
   const [fruitToDelete, setFruitToDelete] = useState<DevilFruitResponse | null>(null)
   const [openingEditId, setOpeningEditId] = useState<string | null>(null)
+  const [detailFruit, setDetailFruit] = useState<DevilFruitResponse | null>(null)
 
   const {
     control,
@@ -225,6 +226,9 @@ export function DevilFruitsContainer() {
       fruitTypeFilterOptions={fruitTypeFilterOptions}
       onFruitTypeFilterChange={setFruitTypeFilter}
       hasActiveFilters={hasActiveFilters}
+      detailFruit={detailFruit}
+      onOpenDetail={setDetailFruit}
+      onCloseDetail={() => setDetailFruit(null)}
       form={{
         visible: modalState.visible,
         mode: modalState.mode,

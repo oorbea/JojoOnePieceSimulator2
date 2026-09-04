@@ -14,15 +14,17 @@ import type { StageResponse } from '@/features/stages/types/stages.types'
 
 type Props = {
   stage: StageResponse
-  onEdit: () => void
-  onDelete: () => void
+  onOpenDetail: () => void
+  readOnly?: boolean
+  onEdit?: () => void
+  onDelete?: () => void
   isEditBusy?: boolean
 }
 
 // Same grid-card recipe as StandCard - thumb well, name + badges, actions -
 // swapping the stat grid (Stands have none here) for the stage's
 // description, since that's the field an admin actually wants to preview.
-export function StageCard({ stage, onEdit, onDelete, isEditBusy }: Props) {
+export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   return (
@@ -55,45 +57,51 @@ export function StageCard({ stage, onEdit, onDelete, isEditBusy }: Props) {
       </Pressable>
       <ImageLightbox visible={isPreviewOpen} uri={stage.picture || null} onClose={() => setIsPreviewOpen(false)} />
 
-      <YStack gap="$1">
-        <GlowText level="heading" numberOfLines={1}>
-          {stage.name}
-        </GlowText>
-        <XStack gap="$2" flexWrap="wrap">
-          <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-            <GlowText level="label">{t(`enums.manga.${stage.manga}`)}</GlowText>
-          </GlassPanel>
-          <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-            <GlowText level="label">{t('stages.orderBadge', { order: stage.order })}</GlowText>
-          </GlassPanel>
+      <Pressable onPress={onOpenDetail} {...a11yProps(t('stages.detailA11y', { name: stage.name }), 'button')}>
+        <YStack gap="$3">
+          <YStack gap="$1">
+            <GlowText level="heading" numberOfLines={1}>
+              {stage.name}
+            </GlowText>
+            <XStack gap="$2" flexWrap="wrap">
+              <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
+                <GlowText level="label">{t(`enums.manga.${stage.manga}`)}</GlowText>
+              </GlassPanel>
+              <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
+                <GlowText level="label">{t('stages.orderBadge', { order: stage.order })}</GlowText>
+              </GlassPanel>
+            </XStack>
+          </YStack>
+
+          <GlowText level="label" tone="soft" numberOfLines={2}>
+            {stage.description}
+          </GlowText>
+        </YStack>
+      </Pressable>
+
+      {readOnly ? null : (
+        <XStack gap="$2" justify="flex-end">
+          <GlossButton
+            tone="blue"
+            btnSize="sm"
+            shape="circle"
+            onPress={onEdit}
+            disabled={isEditBusy}
+            accessibilityLabel={t('stages.editA11y', { name: stage.name })}
+          >
+            {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
+          </GlossButton>
+          <GlossButton
+            tone="red"
+            btnSize="sm"
+            shape="circle"
+            onPress={onDelete}
+            accessibilityLabel={t('stages.deleteA11y', { name: stage.name })}
+          >
+            <Trash2 size={16} color="white" />
+          </GlossButton>
         </XStack>
-      </YStack>
-
-      <GlowText level="label" tone="soft" numberOfLines={2}>
-        {stage.description}
-      </GlowText>
-
-      <XStack gap="$2" justify="flex-end">
-        <GlossButton
-          tone="blue"
-          btnSize="sm"
-          shape="circle"
-          onPress={onEdit}
-          disabled={isEditBusy}
-          accessibilityLabel={t('stages.editA11y', { name: stage.name })}
-        >
-          {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
-        </GlossButton>
-        <GlossButton
-          tone="red"
-          btnSize="sm"
-          shape="circle"
-          onPress={onDelete}
-          accessibilityLabel={t('stages.deleteA11y', { name: stage.name })}
-        >
-          <Trash2 size={16} color="white" />
-        </GlossButton>
-      </XStack>
+      )}
     </WiiCard>
   )
 }
