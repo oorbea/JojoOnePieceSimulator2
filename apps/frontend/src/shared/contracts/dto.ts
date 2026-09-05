@@ -404,6 +404,7 @@ export const loginResponseSchema = z.object({
   tokenType: z.string(),
   expiresAt: z.iso.datetime({ offset: true }),
   user: userResponseSchema,
+  refreshToken: z.string().optional(),
 })
 export type LoginResponse = z.infer<typeof loginResponseSchema>
 
