@@ -70,6 +70,10 @@ func errorCode(err error) string {
 		return apierr.Unauthenticated
 	case errors.Is(err, ports.ErrTicketInvalid):
 		return apierr.StreamTicketInvalid
+	case errors.Is(err, ports.ErrRefreshReuse):
+		return apierr.RefreshReuse
+	case errors.Is(err, ports.ErrRefreshInvalid):
+		return apierr.RefreshInvalid
 	case errors.Is(err, ports.ErrForbidden):
 		return apierr.Forbidden
 	case errors.Is(err, services.ErrPictureTooLarge):

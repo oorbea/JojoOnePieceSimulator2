@@ -82,4 +82,19 @@ var (
 	// the unique (manga, name) constraint against a different,
 	// already-existing Stage.
 	ErrStageAlreadyExists = errors.New("stage already exists")
+
+	// ErrRefreshInvalid is returned when a refresh token is unknown,
+	// expired, or belongs to a revoked family. Kept distinct from
+	// ErrUnauthenticated so logs and tests can tell "no credential
+	// presented" from "a refresh token was presented but rejected", even
+	// though both map to 401.
+	ErrRefreshInvalid = errors.New("invalid refresh token")
+
+	// ErrRefreshReuse is returned when a refresh token is redeemed a second
+	// time - proof the token leaked, since single-use redemption means a
+	// legitimate client never presents the same token twice. The caller
+	// uses this (as opposed to ErrRefreshInvalid) to know the whole token
+	// family must be treated as compromised; the HTTP response must not
+	// leak the distinction, only server-side logs should.
+	ErrRefreshReuse = errors.New("refresh token reuse detected")
 )
