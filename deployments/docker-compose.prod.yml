@@ -18,3 +18,11 @@ services:
       # same host) but the CORS middleware still runs since origins are set
       # above, so AllowCredentials must be explicit for the refresh cookie.
       CORS_ALLOW_CREDENTIALS: "true"
+
+  frontend:
+    environment:
+      # Overrides the base file's dev localhost value. Prod REST calls are
+      # same-origin (CSP connect-src 'self' already covers them) but the game
+      # socket is wss:// on the same host - name it explicitly rather than
+      # relying on 'self' covering a scheme-different same-origin upgrade.
+      CSP_CONNECT_EXTRA: "wss://jojo-one-piece-simulator.duckdns.org"
