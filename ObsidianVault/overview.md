@@ -28,6 +28,7 @@ See:
 - [[catalogo-publico-stands-devil-fruits-stages]] — public read-only catalogue (2026-09-03): any logged-in user can browse Stands/Devil Fruits/Stages at `/catalog/*`, `readOnly` discriminated union reusing the admin screens, shared `DetailModal`.
 - [[nav-indicador-deslizante]] — sliding top-nav indicator (2026-09-03): `ChannelBarIndicator` (Reanimated) replaces the flat active-tab background in `AppShell`.
 - [[session-token-storage-2026-09-05]] — session token moved out of `localStorage` (2026-09-05): memory-only access token (15m) + rotating HttpOnly refresh cookie (web) / hardened `expo-secure-store` (native), real server-side logout via family revocation, closes accepted risks #2/#3 from [[auth-hardening-2026-09-02]].
+- [[csp-y-rate-limit-por-ip-2026-09-05]] — CSP header + real per-IP rate limiting (2026-09-05): nginx now sends Content-Security-Policy/X-Content-Type-Options/Referrer-Policy/Permissions-Policy, and the backend keys rate limits on the real client IP behind NPM via `ClientIPFromXFF`, closing gaps flagged in [[session-token-storage-2026-09-05]] and [[stream-connection-tickets-2026-09-03]].
 
 ## Status (2026-07-28)
 
