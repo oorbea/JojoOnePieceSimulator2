@@ -234,9 +234,18 @@ the persisted query cache would have been incomplete.
 >   access token stops *exfiltration* (nothing durable to steal), not *in-page abuse* — a same-origin
 >   XSS can still act as the logged-in user for as long as the page stays open. Flagged as a separate,
 >   future tanda — needs real testing against Expo's web bundle (`'wasm-unsafe-eval'`, inline styles).
-> - **NPM's proxy config is not in this repo** (GUI-managed on the server). Confirm the `/api`
->   location passes `Set-Cookie`/`Cookie` through before trusting this in prod — it's the one hop
->   nothing here can verify from source.
+
+~~**NPM's proxy config is not in this repo** (GUI-managed on the server). Confirm the `/api`
+location passes `Set-Cookie`/`Cookie` through before trusting this in prod.~~ **Checked 2026-09-05,
+confirmed correct — no further action needed.** Owner manually inspected the live `/api` Proxy
+Host's Advanced tab: it carries only `proxy_buffering off;` and `proxy_read_timeout 1h;` — neither
+`proxy_hide_header`, `proxy_ignore_headers`, nor any `proxy_cookie_domain`/`proxy_cookie_path`
+rewrite is present, so `Set-Cookie`/`Cookie` pass through untouched via NPM's default `proxy_pass`
+behavior. While checking this, also confirmed (and fixed a related but separate, pre-existing bit
+of vault misinformation) that this same Advanced tab must **not** carry `proxy_http_version 1.1;` /
+`proxy_set_header Connection '';` — see [[picture-events-sse]]'s "Manual step in production"
+section for the full story (duplicating what the "Websockets Support" toggle already provides
+caused a real outage).
 
 ## Why the full design, not just "24h JWT in a cookie"
 
