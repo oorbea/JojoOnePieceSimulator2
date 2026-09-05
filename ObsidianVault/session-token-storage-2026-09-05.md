@@ -230,10 +230,11 @@ the persisted query cache would have been incomplete.
 > - **No revocation of the access token itself.** `jwt_issuer.go`'s `Parse` is still fully stateless
 >   (no `jti`, no denylist) — a stolen access token is valid until its own 15-minute `exp` regardless
 >   of logout. Bounded to 15 minutes now instead of 24 hours, which is the whole point, but not zero.
-> - **No CSP header** (`deployments/docker/nginx.frontend.conf` sets only COOP today). A memory-only
->   access token stops *exfiltration* (nothing durable to steal), not *in-page abuse* — a same-origin
->   XSS can still act as the logged-in user for as long as the page stays open. Flagged as a separate,
->   future tanda — needs real testing against Expo's web bundle (`'wasm-unsafe-eval'`, inline styles).
+> - ~~**No CSP header** (`deployments/docker/nginx.frontend.conf` sets only COOP today).~~
+>   **Closed 2026-09-05**, see [[csp-y-rate-limit-por-ip-2026-09-05]] — nginx now sends a real
+>   Content-Security-Policy plus X-Content-Type-Options/Referrer-Policy/Permissions-Policy. Still
+>   true and unchanged: a memory-only access token stops *exfiltration*, not *in-page abuse* — a
+>   same-origin XSS can still act as the logged-in user for as long as the page stays open.
 
 ~~**NPM's proxy config is not in this repo** (GUI-managed on the server). Confirm the `/api`
 location passes `Set-Cookie`/`Cookie` through before trusting this in prod.~~ **Checked 2026-09-05,
