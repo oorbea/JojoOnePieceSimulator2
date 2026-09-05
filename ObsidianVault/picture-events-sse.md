@@ -69,22 +69,32 @@ successful connection, fires a full `invalidateQueries` across all three query k
 safety-net resync, since the event stream has no durable replay log and could have missed events
 while disconnected.
 
-## Manual step still needed in production
+## Manual step in production — verified 2026-09-05, do not add more than this
 
 Nginx Proxy Manager is GUI-managed on the host, no config file in this repo (per
-[[cicd-deployment]]). Its `/api` location's *Advanced* tab needs, by hand, before this is trusted
-in prod:
+[[cicd-deployment]]). Its `/api` location's *Advanced* tab carries, by hand:
 
 ```
 proxy_buffering off;
 proxy_read_timeout 1h;
-proxy_http_version 1.1;
-proxy_set_header Connection '';
 ```
 
 Without `proxy_buffering off`, NPM buffers the whole response and the browser never sees events
 until the buffer fills or the connection closes. Local dev is unaffected - no reverse proxy in
 `docker-compose.dev.yml`.
+
+> [!danger] Do NOT add `proxy_http_version 1.1;` / `proxy_set_header Connection '';` here
+> This note used to also recommend those two lines in the Advanced tab. **They caused a real
+> outage**: this Proxy Host already has NPM's own **"Websockets Support" toggle turned ON**
+> (needed for the game WS, see [[game-realtime-transport]]), which already emits
+> `proxy_http_version 1.1` and its own `Connection` upgrade header internally. Adding the same
+> two lines again in the Advanced tab **duplicated** them and broke the site outright. The fix
+> was to delete those two lines and rely on the toggle alone — the Advanced tab above
+> (`proxy_buffering off` + `proxy_read_timeout 1h` only) is the confirmed-working, final state.
+> Re-verified correct on 2026-09-05 during [[session-token-storage-2026-09-05]]'s NPM
+> cookie-passthrough check (owner manually inspected the live Advanced tab). **If SSE/WS ever
+> misbehaves again, check whether "Websockets Support" is still ON before touching this tab at
+> all** — it is almost certainly the toggle, not a missing directive here.
 
 ## Where things live
 
