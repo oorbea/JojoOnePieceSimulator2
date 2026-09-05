@@ -7,7 +7,6 @@ import { useLanguageStore } from '@/shared/stores/language.store'
 
 const SESSION = {
   accessToken: 'token-123',
-  expiresAt: new Date(0).toISOString(),
   user: {
     id: 'user-1',
     email: 'jotaro@example.com',
@@ -18,6 +17,19 @@ const SESSION = {
     language: 'en-GB' as const,
   },
 }
+
+const REFRESHED_USER = { ...SESSION.user, username: 'RefreshedOriolO' }
+
+const mockRefreshSession = jest.fn()
+const mockPostLogout = jest.fn()
+
+jest.mock('@/shared/api/refresh', () => ({
+  refreshSession: () => mockRefreshSession(),
+}))
+
+jest.mock('@/features/auth/api/auth.api', () => ({
+  postLogout: () => mockPostLogout(),
+}))
 
 // axios doesn't expose a public way to invoke a registered interceptor in
 // isolation — reaching into the manager's internal `handlers` array is the
@@ -33,13 +45,15 @@ function responseHandler(client: ReturnType<typeof axios.create>): InterceptorHa
 }
 
 describe('registerInterceptors', () => {
-  beforeEach(async () => {
-    await useSessionStore.getState().clearSession()
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockPostLogout.mockResolvedValue(undefined)
+    useSessionStore.setState({ session: null, isHydrated: false })
     clearEtags()
   })
 
   it("attaches the session token as a Bearer header when there's a session", async () => {
-    await useSessionStore.getState().setSession(SESSION)
+    useSessionStore.getState().setSession(SESSION)
     const client = axios.create()
     registerInterceptors(client)
 
@@ -167,24 +181,89 @@ describe('registerInterceptors', () => {
     expect(getCachedResponse(key)).toBeUndefined()
   })
 
-  // The backend issues a plain bearer JWT with no refresh token (see
-  // session.store.ts's own comment) — a 401 means the token is dead for
-  // good, and the only recovery is a fresh sign-in, so the interceptor's
-  // whole job on a 401 is to drop the stale session.
-  it('clears the session on a 401 response', async () => {
-    await useSessionStore.getState().setSession(SESSION)
+  it('on a 401, refreshes once and retries the original request on success', async () => {
+    useSessionStore.getState().setSession(SESSION)
+    mockRefreshSession.mockResolvedValue({ accessToken: 'token-456', user: REFRESHED_USER })
+    const client = axios.create()
+    const mockRetry = jest.fn().mockResolvedValue({ status: 200, data: 'ok' })
+    const clientWithSpy = Object.assign(
+      (config: unknown) => mockRetry(config),
+      client
+    ) as unknown as typeof client
+    registerInterceptors(clientWithSpy)
+
+    const config = { url: '/games/123', headers: {} }
+    const result = await responseHandler(clientWithSpy).rejected!({
+      response: { status: 401 },
+      config,
+      message: 'Unauthorized',
+    })
+
+    expect(mockRefreshSession).toHaveBeenCalledTimes(1)
+    expect(mockRetry).toHaveBeenCalledTimes(1)
+    expect(mockRetry).toHaveBeenCalledWith(expect.objectContaining({ url: '/games/123', __retried: true }))
+    expect(result).toEqual({ status: 200, data: 'ok' })
+    // Session was updated in place with the refreshed token, not cleared.
+    expect(useSessionStore.getState().session?.accessToken).toBe('token-456')
+    expect(mockPostLogout).not.toHaveBeenCalled()
+  })
+
+  it('a 401 on /auth/refresh itself does not trigger another refresh', async () => {
+    useSessionStore.getState().setSession(SESSION)
     const client = axios.create()
     registerInterceptors(client)
 
     await expect(
-      responseHandler(client).rejected!({ response: { status: 401 }, message: 'Unauthorized' })
+      responseHandler(client).rejected!({
+        response: { status: 401 },
+        config: { url: '/auth/refresh', headers: {} },
+        message: 'Unauthorized',
+      })
     ).rejects.toBeTruthy()
 
+    expect(mockRefreshSession).not.toHaveBeenCalled()
+    expect(useSessionStore.getState().session).toBeNull()
+  })
+
+  it('a second 401 on the retried request does not loop again', async () => {
+    useSessionStore.getState().setSession(SESSION)
+    mockRefreshSession.mockResolvedValue({ accessToken: 'token-456', user: REFRESHED_USER })
+    const client = axios.create()
+    registerInterceptors(client)
+
+    const config = { url: '/games/123', headers: {}, __retried: true }
+    await expect(
+      responseHandler(client).rejected!({
+        response: { status: 401 },
+        config,
+        message: 'Unauthorized',
+      })
+    ).rejects.toBeTruthy()
+
+    expect(mockRefreshSession).not.toHaveBeenCalled()
+    expect(useSessionStore.getState().session).toBeNull()
+  })
+
+  it('clears the session on a 401 when refreshSession resolves to null', async () => {
+    useSessionStore.getState().setSession(SESSION)
+    mockRefreshSession.mockResolvedValue(null)
+    const client = axios.create()
+    registerInterceptors(client)
+
+    await expect(
+      responseHandler(client).rejected!({
+        response: { status: 401 },
+        config: { url: '/games/123', headers: {} },
+        message: 'Unauthorized',
+      })
+    ).rejects.toBeTruthy()
+
+    expect(mockRefreshSession).toHaveBeenCalledTimes(1)
     expect(useSessionStore.getState().session).toBeNull()
   })
 
   it('leaves the session alone on a non-401 error', async () => {
-    await useSessionStore.getState().setSession(SESSION)
+    useSessionStore.getState().setSession(SESSION)
     const client = axios.create()
     registerInterceptors(client)
 

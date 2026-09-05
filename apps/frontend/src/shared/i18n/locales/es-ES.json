@@ -711,6 +711,8 @@
     "INVALID_LOBBY_VISIBILITY": "Esa configuración de privacidad no es válida.",
     "LOBBY_PRIVATE": "Esta sala es privada. Pide el código de sala al anfitrión.",
     "STREAM_TICKET_INVALID": "Esa conexión ha caducado. Reconectando…",
+    "REFRESH_INVALID": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+    "REFRESH_REUSE": "Tu sesión se ha cerrado por motivos de seguridad. Vuelve a iniciar sesión.",
     "INTERNAL": "Algo ha ido mal por nuestra parte."
   }
 }

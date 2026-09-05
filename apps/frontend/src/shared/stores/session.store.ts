@@ -1,23 +1,23 @@
 import { create } from 'zustand'
+import { Platform } from 'react-native'
 
 import { secureStorage } from '@/shared/lib/secure-storage'
-import type { Locale, Role } from '@/shared/contracts/enums'
+import { refreshSession } from '@/shared/api/refresh'
+import { postLogout } from '@/features/auth/api/auth.api'
+import { REFRESH_TOKEN_KEY } from '@/shared/api/refresh-token-key'
+import { fromUserResponse, type SessionUser } from '@/shared/stores/session-user'
+import { clearPersistedQueryCache } from '@/shared/stores/query-cache-purge'
 
-const SESSION_STORAGE_KEY = 'jops.session'
+const LEGACY_SESSION_STORAGE_KEY = 'jops.session'
 
-export type SessionUser = {
-  id: string
-  email: string
-  username: string
-  completeName: string
-  picture: string | null
-  role: Role
-  language: Locale
-}
+// Re-exported so existing importers of `SessionUser`/`fromUserResponse` from
+// this module keep working unchanged - the type/helper itself now lives in
+// session-user.ts to break a circular import with shared/api/refresh.ts.
+export type { SessionUser }
+export { fromUserResponse }
 
 type Session = {
   accessToken: string
-  expiresAt: string
   user: SessionUser
 }
 
@@ -25,31 +25,65 @@ type SessionState = {
   session: Session | null
   isHydrated: boolean
   hydrate: () => Promise<void>
-  setSession: (session: Session) => Promise<void>
+  setSession: (session: Session) => void
   clearSession: () => Promise<void>
 }
 
-// The backend issues a plain bearer JWT with no refresh token (see
-// apps/backend .../auth_endpoints.go), so "session" here is just the last
-// issued token + its owner; expiry is handled by the 401 interceptor forcing
-// a fresh Google sign-in, not by silent refresh.
+// The backend now issues a short-lived (15min) access JWT plus a rotating
+// opaque refresh token: an HttpOnly/Secure cookie on web, SecureStore on
+// native (see shared/api/refresh.ts). This store only ever holds the
+// in-memory access token + user - it never itself persists anything; on
+// boot it asks refresh.ts to trade whatever refresh token exists for a fresh
+// access token, and a 401 on any request triggers the same silent refresh
+// (shared/api/interceptors.ts) before falling back to a full sign-out.
 export const useSessionStore = create<SessionState>((set) => ({
   session: null,
   isHydrated: false,
 
   hydrate: async () => {
-    const raw = await secureStorage.getItem(SESSION_STORAGE_KEY)
-    set({ session: raw ? (JSON.parse(raw) as Session) : null, isHydrated: true })
+    // One-shot legacy-key purge: this key held the whole {accessToken,
+    // expiresAt, user} blob before the refresh-token rework. Harmless once
+    // gone - cheap insurance against a stale value ever being read again.
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(LEGACY_SESSION_STORAGE_KEY)
+    }
+
+    try {
+      const result = await refreshSession()
+      if (result) {
+        set({ session: { accessToken: result.accessToken, user: result.user }, isHydrated: true })
+      } else {
+        set({ session: null, isHydrated: true })
+      }
+    } catch {
+      // A stuck spinner is worse than a false "logged out" - always land on
+      // isHydrated: true even if refreshSession throws unexpectedly.
+      set({ session: null, isHydrated: true })
+    }
   },
 
-  setSession: async (session) => {
-    await secureStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+  setSession: (session) => {
     set({ session })
   },
 
   clearSession: async () => {
-    await secureStorage.removeItem(SESSION_STORAGE_KEY)
-    set({ session: null })
+    try {
+      await postLogout()
+    } catch {
+      // Logout is best-effort server-side (it always responds 204 anyway) -
+      // local cleanup below must happen regardless of a network failure.
+    } finally {
+      if (Platform.OS !== 'web') {
+        await secureStorage.removeItem(REFRESH_TOKEN_KEY).catch(() => undefined)
+      }
+      // Another user's profile/lobby data must not linger in the TanStack
+      // Query cache (in-memory or its AsyncStorage/localStorage-persisted
+      // snapshot, see providers/query-client.ts) past logout - moving the
+      // auth token out of storage while leaving that behind would be an
+      // incomplete sign-out.
+      await clearPersistedQueryCache().catch(() => undefined)
+      set({ session: null })
+    }
   },
 }))
 

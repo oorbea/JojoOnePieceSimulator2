@@ -12,17 +12,28 @@ const USER = {
 
 const SESSION = {
   accessToken: 'token-123',
-  expiresAt: new Date(0).toISOString(),
   user: USER,
 }
+
+const mockRefreshSession = jest.fn()
+const mockPostLogout = jest.fn()
+
+jest.mock('@/shared/api/refresh', () => ({
+  refreshSession: () => mockRefreshSession(),
+}))
+
+jest.mock('@/features/auth/api/auth.api', () => ({
+  postLogout: () => mockPostLogout(),
+}))
 
 // expo-secure-store is mocked in jest.setup.ts to resolve null/undefined for
 // every call, which is enough here — this suite is about the store's own
 // state transitions, not the storage backend itself.
 describe('useSessionStore', () => {
-  beforeEach(async () => {
-    await useSessionStore.getState().clearSession()
-    useSessionStore.setState({ isHydrated: false })
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockPostLogout.mockResolvedValue(undefined)
+    useSessionStore.setState({ session: null, isHydrated: false })
   })
 
   it('starts unhydrated with no session', () => {
@@ -30,25 +41,56 @@ describe('useSessionStore', () => {
     expect(useSessionStore.getState().session).toBeNull()
   })
 
-  it('hydrate() with nothing stored settles to no session, but hydrated', async () => {
+  it('hydrate() with a successful refresh sets session and isHydrated', async () => {
+    mockRefreshSession.mockResolvedValue({ accessToken: 'token-123', user: USER })
+
+    await useSessionStore.getState().hydrate()
+
+    expect(useSessionStore.getState().isHydrated).toBe(true)
+    expect(useSessionStore.getState().session).toEqual(SESSION)
+  })
+
+  it('hydrate() with no valid refresh token settles to no session, but hydrated', async () => {
+    mockRefreshSession.mockResolvedValue(null)
+
     await useSessionStore.getState().hydrate()
 
     expect(useSessionStore.getState().isHydrated).toBe(true)
     expect(useSessionStore.getState().session).toBeNull()
   })
 
-  it('setSession() stores the session and getSessionToken() reflects it', async () => {
-    await useSessionStore.getState().setSession(SESSION)
+  it('hydrate() never throws even if refreshSession rejects unexpectedly, and still settles isHydrated', async () => {
+    mockRefreshSession.mockRejectedValue(new Error('network exploded'))
+
+    await expect(useSessionStore.getState().hydrate()).resolves.toBeUndefined()
+
+    expect(useSessionStore.getState().isHydrated).toBe(true)
+    expect(useSessionStore.getState().session).toBeNull()
+  })
+
+  it('setSession() stores the session synchronously and getSessionToken() reflects it', () => {
+    useSessionStore.getState().setSession(SESSION)
 
     expect(useSessionStore.getState().session).toEqual(SESSION)
     expect(getSessionToken()).toBe('token-123')
   })
 
-  it('clearSession() removes the session and getSessionToken() returns null', async () => {
-    await useSessionStore.getState().setSession(SESSION)
+  it('clearSession() calls postLogout and clears the session', async () => {
+    useSessionStore.getState().setSession(SESSION)
+
     await useSessionStore.getState().clearSession()
 
+    expect(mockPostLogout).toHaveBeenCalledTimes(1)
     expect(useSessionStore.getState().session).toBeNull()
     expect(getSessionToken()).toBeNull()
+  })
+
+  it('clearSession() clears local state even if postLogout rejects', async () => {
+    useSessionStore.getState().setSession(SESSION)
+    mockPostLogout.mockRejectedValue(new Error('network exploded'))
+
+    await expect(useSessionStore.getState().clearSession()).resolves.toBeUndefined()
+
+    expect(useSessionStore.getState().session).toBeNull()
   })
 })
