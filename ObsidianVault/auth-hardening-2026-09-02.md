@@ -154,13 +154,17 @@ without reading the reasoning first.
    purpose+resource-scoped ticket minted through a normal authenticated POST, with `?token=` removed
    entirely (an `Authorization: Bearer` header still works everywhere it did). Reasoning for why this
    was accepted at all lives in [[picture-events-sse]] and [[game-realtime-transport]].
-2. **Session in `localStorage` on web.** `expo-secure-store` throws on web, so
-   `src/shared/lib/secure-storage.ts` branches to `localStorage` — see [[frontend-stack]]. Also the
-   reason the two-tab two-account testing trick works at all
-   ([[game-round-result-live-walkthrough-2026-09-02]]).
-3. **No refresh tokens.** 24h JWT, no cookies; a 401 anywhere forces a re-login with no silent
-   refresh. Stated in [[backend-contract]]. Rotating `JWT_SECRET` therefore logs everyone out —
-   now also called out in `deployments/README.md`.
+2. ~~**Session in `localStorage` on web.**~~ **Closed 2026-09-05**, see
+   [[session-token-storage-2026-09-05]] — access token moved to JS-memory-only (never persisted on
+   web), replaced by a rotating, single-use, HttpOnly refresh cookie. The two-tab
+   `localStorage`-swap testing trick this used to enable
+   ([[game-round-result-live-walkthrough-2026-09-02]]) is dead; replaced by two browser profiles.
+3. ~~**No refresh tokens.** 24h JWT, no cookies; a 401 anywhere forces a re-login with no silent
+   refresh.~~ **Closed 2026-09-05**, see [[session-token-storage-2026-09-05]] — `JWT_TTL` dropped to
+   15m, a rotating refresh token (with reuse-detection and family revocation) now backs a silent
+   refresh-and-retry on 401, and logout is a real server-side revocation for the first time. Rotating
+   `JWT_SECRET` still logs everyone out (unchanged, unrelated to this fix) — still called out in
+   `deployments/README.md`.
 
 ## Verification
 
