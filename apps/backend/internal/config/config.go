@@ -13,8 +13,11 @@ import (
 // defaultJWTIssuer is used when JWT_ISSUER is unset.
 const defaultJWTIssuer = "jojo-one-piece-simulator"
 
-// defaultJWTTTL is used when JWT_TTL is unset.
-const defaultJWTTTL = 24 * time.Hour
+// defaultJWTTTL is used when JWT_TTL is unset. Deliberately short (the
+// access token now lives only in memory on the frontend, never persisted)
+// - session continuity across that window comes from the refresh token
+// below, not from a long-lived access token.
+const defaultJWTTTL = 15 * time.Minute
 
 // minJWTSecretLen guards against a signing key short enough to brute-force.
 const minJWTSecretLen = 32
@@ -23,7 +26,7 @@ const minJWTSecretLen = 32
 // env vars are unset, but only take effect once CORS_ALLOWED_ORIGINS is
 // non-empty - see Load.
 var defaultCORSAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization"}
+var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization", "X-JOPS-Refresh"}
 
 const defaultCORSMaxAge = 300
 
@@ -137,6 +140,33 @@ const defaultStreamTicketReapInterval = time.Minute
 // state: every SSE/WS (re)connect now costs one mint, and the frontend's own
 // backoff (2s -> 30s) already keeps one tab's reconnect rate well under 1/s.
 const defaultRateLimitTicketPerUser = 60
+
+// defaultRefreshTokenTTL bounds how long a minted refresh token stays
+// redeemable - 30 days, long enough that a returning player isn't forced to
+// re-authenticate with Google constantly, short enough to bound the damage
+// of a leaked token.
+const defaultRefreshTokenTTL = 720 * time.Hour
+
+// defaultRefreshTokenReapInterval only matters for the in-memory refresh
+// token store - Redis expires its own keys via PX. 0 would disable it.
+const defaultRefreshTokenReapInterval = time.Hour
+
+// defaultAuthCookieName/Path/Secure/SameSite configure the HttpOnly cookie
+// carrying the refresh token for web clients. Secure=true and
+// SameSite=Strict by default - see config.Load's validation tying them
+// together.
+const defaultAuthCookieName = "jops_rt"
+const defaultAuthCookiePath = "/api/v1/auth"
+const defaultAuthCookieSecure = true
+const defaultAuthCookieSameSite = "strict"
+
+// defaultRateLimitRefreshPerIP bounds how many refresh/logout calls one
+// client IP may make per RateLimitWindow. IP-keyed (like loginRateLimit),
+// since /auth/refresh and /auth/logout sit outside RequireAuth - the
+// caller's identity comes from the refresh token/cookie itself, not a
+// bearer claim, so there is no user id to key on before the token is
+// redeemed.
+const defaultRateLimitRefreshPerIP = 30
 
 type Config struct {
 	DatabaseURL    string
@@ -253,6 +283,20 @@ type Config struct {
 	// in-memory ticket store (0 disables it); Redis expires its own keys.
 	StreamTicketTTL          time.Duration
 	StreamTicketReapInterval time.Duration
+	// RefreshTokenTTL bounds how long a minted refresh token stays
+	// redeemable. RefreshTokenReapInterval only applies to the in-memory
+	// store (0 disables it); Redis expires its own keys.
+	RefreshTokenTTL          time.Duration
+	RefreshTokenReapInterval time.Duration
+	// AuthCookieName/Path/Secure/SameSite configure the HttpOnly cookie
+	// carrying the refresh token for web clients (see endpoints/cookies.go).
+	AuthCookieName     string
+	AuthCookiePath     string
+	AuthCookieSecure   bool
+	AuthCookieSameSite string
+	// RateLimitRefreshPerIP bounds POST /auth/refresh and /auth/logout,
+	// keyed by client IP (see ratelimit.go's refreshRateLimit).
+	RateLimitRefreshPerIP int
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -787,6 +831,71 @@ func Load() (*Config, error) {
 		streamTicketReapInterval = parsed
 	}
 
+	refreshTokenTTL := defaultRefreshTokenTTL
+	if raw := os.Getenv("REFRESH_TOKEN_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing REFRESH_TOKEN_TTL: %w", err)
+		}
+		if parsed <= 0 {
+			return nil, fmt.Errorf("REFRESH_TOKEN_TTL must be positive")
+		}
+		refreshTokenTTL = parsed
+	}
+
+	refreshTokenReapInterval := defaultRefreshTokenReapInterval
+	if raw := os.Getenv("REFRESH_TOKEN_REAP_INTERVAL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing REFRESH_TOKEN_REAP_INTERVAL: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("REFRESH_TOKEN_REAP_INTERVAL must not be negative")
+		}
+		refreshTokenReapInterval = parsed
+	}
+
+	authCookieName := os.Getenv("AUTH_COOKIE_NAME")
+	if authCookieName == "" {
+		authCookieName = defaultAuthCookieName
+	}
+
+	authCookiePath := os.Getenv("AUTH_COOKIE_PATH")
+	if authCookiePath == "" {
+		authCookiePath = defaultAuthCookiePath
+	}
+
+	authCookieSecure := defaultAuthCookieSecure
+	if raw := os.Getenv("AUTH_COOKIE_SECURE"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing AUTH_COOKIE_SECURE: %w", err)
+		}
+		authCookieSecure = parsed
+	}
+
+	authCookieSameSite := defaultAuthCookieSameSite
+	if raw := os.Getenv("AUTH_COOKIE_SAMESITE"); raw != "" {
+		authCookieSameSite = strings.ToLower(strings.TrimSpace(raw))
+	}
+	switch authCookieSameSite {
+	case "strict", "lax", "none":
+		// valid
+	default:
+		return nil, fmt.Errorf("AUTH_COOKIE_SAMESITE must be one of strict, lax, none")
+	}
+	if authCookieSameSite == "none" && !authCookieSecure {
+		// A non-Secure SameSite=None cookie is rejected by browsers anyway -
+		// refuse to boot in this misconfigured state rather than silently
+		// degrade to a cookie that never actually gets set.
+		return nil, fmt.Errorf("AUTH_COOKIE_SAMESITE=none requires AUTH_COOKIE_SECURE=true")
+	}
+
+	rateLimitRefreshPerIP, err := parsePositiveIntEnv("RATE_LIMIT_REFRESH_PER_IP", defaultRateLimitRefreshPerIP)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -863,5 +972,13 @@ func Load() (*Config, error) {
 
 		StreamTicketTTL:          streamTicketTTL,
 		StreamTicketReapInterval: streamTicketReapInterval,
+
+		RefreshTokenTTL:          refreshTokenTTL,
+		RefreshTokenReapInterval: refreshTokenReapInterval,
+		AuthCookieName:           authCookieName,
+		AuthCookiePath:           authCookiePath,
+		AuthCookieSecure:         authCookieSecure,
+		AuthCookieSameSite:       authCookieSameSite,
+		RateLimitRefreshPerIP:    rateLimitRefreshPerIP,
 	}, nil
 }

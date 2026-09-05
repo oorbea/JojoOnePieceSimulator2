@@ -11,7 +11,16 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/refreshtoken"
 )
+
+// newRefreshStore builds a real (cheap, in-memory) refresh token store for
+// tests, rather than a hand-rolled fake - it's the same store production
+// uses when REDIS_URL is unset, so tests exercise real reuse/family
+// semantics instead of a stub that might drift from them.
+func newRefreshStore() *refreshtoken.MemoryStore {
+	return refreshtoken.NewMemoryStore(refreshtoken.Config{TTL: time.Hour})
+}
 
 // fakeUserRepository is an in-memory ports.IUserRepository.
 type fakeUserRepository struct {
@@ -225,7 +234,7 @@ func (fakeTokenIssuer) Parse(string) (ports.Claims, error) {
 func newAuthService(t *testing.T, verifier fakeGoogleVerifier, adminEmails []string) (*services.AuthService, *fakeUserRepository) {
 	t.Helper()
 	repo := newFakeUserRepository()
-	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, adminEmails, nil)
+	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, newRefreshStore(), adminEmails, nil)
 	return svc, repo
 }
 
@@ -279,14 +288,14 @@ func TestLoginWithGoogle_RepeatedLoginIsNotRegistration(t *testing.T) {
 func TestLoginWithGoogle_UsernameCollisionGetsSuffixed(t *testing.T) {
 	verifier1 := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
 	repo := newFakeUserRepository()
-	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier1, fakeTokenIssuer{}, nil, nil)
+	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier1, fakeTokenIssuer{}, newRefreshStore(), nil, nil)
 
 	if _, err := svc.LoginWithGoogle(context.Background(), "raw-token"); err != nil {
 		t.Fatalf("first registration: %v", err)
 	}
 
 	verifier2 := fakeGoogleVerifier{identity: verifiedIdentity("sub-2", "jotaro@other.com", "Jotaro Impostor")}
-	svc2 := services.NewAuthService(repo, &fakeIDGenerator{}, verifier2, fakeTokenIssuer{}, nil, nil)
+	svc2 := services.NewAuthService(repo, &fakeIDGenerator{}, verifier2, fakeTokenIssuer{}, newRefreshStore(), nil, nil)
 
 	result, err := svc2.LoginWithGoogle(context.Background(), "raw-token")
 	if err != nil {
@@ -325,12 +334,12 @@ func TestLoginWithGoogle_RemovingFromAdminEmailsDemotesOnNextLogin(t *testing.T)
 	verifier := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
 	repo := newFakeUserRepository()
 
-	adminSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, []string{"jotaro@example.com"}, nil)
+	adminSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, newRefreshStore(), []string{"jotaro@example.com"}, nil)
 	if _, err := adminSvc.LoginWithGoogle(context.Background(), "raw-token"); err != nil {
 		t.Fatalf("admin login: %v", err)
 	}
 
-	regularSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, nil, nil)
+	regularSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, newRefreshStore(), nil, nil)
 	result, err := regularSvc.LoginWithGoogle(context.Background(), "raw-token")
 	if err != nil {
 		t.Fatalf("second login: %v", err)
@@ -352,7 +361,7 @@ func TestLoginWithGoogle_LinksExistingAccountByEmail(t *testing.T) {
 	}
 
 	verifier := fakeGoogleVerifier{identity: verifiedIdentity("real-google-sub", "jotaro@example.com", "Jotaro Kujo")}
-	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, nil, nil)
+	svc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, newRefreshStore(), nil, nil)
 
 	result, err := svc.LoginWithGoogle(context.Background(), "raw-token")
 	if err != nil {
@@ -378,5 +387,125 @@ func TestLoginWithGoogle_InvalidGoogleToken(t *testing.T) {
 	_, err := svc.LoginWithGoogle(context.Background(), "raw-token")
 	if !errors.Is(err, ports.ErrInvalidGoogleToken) {
 		t.Fatalf("err = %v, want ports.ErrInvalidGoogleToken", err)
+	}
+}
+
+func TestRefresh_HappyPath_RotatesTokenAndRereadsUser(t *testing.T) {
+	verifier := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
+	svc, _ := newAuthService(t, verifier, nil)
+
+	login, err := svc.LoginWithGoogle(context.Background(), "raw-token")
+	if err != nil {
+		t.Fatalf("LoginWithGoogle: %v", err)
+	}
+	if login.RefreshToken == "" {
+		t.Fatal("LoginWithGoogle did not mint a refresh token")
+	}
+
+	result, err := svc.Refresh(context.Background(), login.RefreshToken)
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if result.User.ID() != login.User.ID() {
+		t.Error("Refresh returned a different user")
+	}
+	if result.AccessToken == "" {
+		t.Error("Refresh did not mint a new access token")
+	}
+	if result.RefreshToken == "" || result.RefreshToken == login.RefreshToken {
+		t.Error("Refresh did not rotate the refresh token")
+	}
+
+	// The original (now burned) token must no longer work.
+	if _, err := svc.Refresh(context.Background(), login.RefreshToken); err == nil {
+		t.Error("replaying the original refresh token after rotation should fail")
+	}
+}
+
+func TestRefresh_DemotedAdminLosesRoleOnNextRefresh(t *testing.T) {
+	verifier := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
+	repo := newFakeUserRepository()
+	store := newRefreshStore()
+
+	adminSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, store, []string{"jotaro@example.com"}, nil)
+	login, err := adminSvc.LoginWithGoogle(context.Background(), "raw-token")
+	if err != nil {
+		t.Fatalf("admin login: %v", err)
+	}
+	if login.User.Role() != enums.Admin {
+		t.Fatalf("role = %v, want Admin", login.User.Role())
+	}
+
+	// Same repo/store, but this instance no longer lists the user as admin -
+	// mirrors ADMIN_EMAILS being edited between refreshes.
+	regularSvc := services.NewAuthService(repo, &fakeIDGenerator{}, verifier, fakeTokenIssuer{}, store, nil, nil)
+	result, err := regularSvc.Refresh(context.Background(), login.RefreshToken)
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if result.User.Role() != enums.Regular {
+		t.Errorf("role = %v, want Regular after being removed from ADMIN_EMAILS", result.User.Role())
+	}
+}
+
+func TestRefresh_ReplayedToken_ReturnsErrorAndKillsFamily(t *testing.T) {
+	verifier := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
+	svc, _ := newAuthService(t, verifier, nil)
+
+	login, err := svc.LoginWithGoogle(context.Background(), "raw-token")
+	if err != nil {
+		t.Fatalf("LoginWithGoogle: %v", err)
+	}
+
+	rotated, err := svc.Refresh(context.Background(), login.RefreshToken)
+	if err != nil {
+		t.Fatalf("first refresh: %v", err)
+	}
+
+	// Replaying the already-burned original token must fail and kill the
+	// whole family.
+	if _, err := svc.Refresh(context.Background(), login.RefreshToken); err == nil {
+		t.Error("replayed refresh token should fail")
+	}
+
+	// The legitimately rotated token from the same family must now also
+	// fail, since the family was just revoked.
+	if _, err := svc.Refresh(context.Background(), rotated.RefreshToken); err == nil {
+		t.Error("a legit token from a revoked family should now fail too")
+	}
+}
+
+func TestLogout_RevokesFamily(t *testing.T) {
+	verifier := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
+	svc, _ := newAuthService(t, verifier, nil)
+
+	login, err := svc.LoginWithGoogle(context.Background(), "raw-token")
+	if err != nil {
+		t.Fatalf("LoginWithGoogle: %v", err)
+	}
+
+	if err := svc.Logout(context.Background(), login.RefreshToken); err != nil {
+		t.Fatalf("Logout: %v", err)
+	}
+
+	if _, err := svc.Refresh(context.Background(), login.RefreshToken); err == nil {
+		t.Error("refreshing with a logged-out token should fail")
+	}
+}
+
+func TestLogout_SecondCallWithStaleTokenDoesNotError(t *testing.T) {
+	verifier := fakeGoogleVerifier{identity: verifiedIdentity("sub-1", "jotaro@example.com", "Jotaro Kujo")}
+	svc, _ := newAuthService(t, verifier, nil)
+
+	login, err := svc.LoginWithGoogle(context.Background(), "raw-token")
+	if err != nil {
+		t.Fatalf("LoginWithGoogle: %v", err)
+	}
+
+	if err := svc.Logout(context.Background(), login.RefreshToken); err != nil {
+		t.Fatalf("first Logout: %v", err)
+	}
+	if err := svc.Logout(context.Background(), login.RefreshToken); err != nil {
+		t.Fatalf("second Logout with the same stale token must not error, got: %v", err)
 	}
 }
