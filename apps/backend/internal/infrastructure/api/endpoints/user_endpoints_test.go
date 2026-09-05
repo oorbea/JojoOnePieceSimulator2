@@ -225,7 +225,7 @@ func newUserTestServer(repo *fakeUserRepo) http.Handler {
 	standEndpoints := endpoints.NewStandEndpoints(services.NewStandService(
 		newFakeStandRepository(), &fakeIDGenerator{}, newFakePictureStorage(), &fakeImageProcessor{}, syncEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}}))
-	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 

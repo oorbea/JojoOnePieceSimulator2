@@ -14,13 +14,17 @@ import (
 // limiting off entirely (useful for tests and local development); a zero or
 // negative limit on an individual tier disables just that tier.
 type RateLimitConfig struct {
-	Enabled      bool
-	Window       time.Duration
-	GlobalPerIP  int
-	LoginPerIP   int
-	ReadPerUser  int
-	WritePerUser int
+	Enabled       bool
+	Window        time.Duration
+	GlobalPerIP   int
+	LoginPerIP    int
+	ReadPerUser   int
+	WritePerUser  int
 	TicketPerUser int
+	// RefreshPerIP bounds POST /auth/refresh and /auth/logout, keyed by
+	// client IP - both sit outside RequireAuth, so there is no user id to
+	// key on before the token is redeemed.
+	RefreshPerIP int
 }
 
 // keyByClientIP keys the limiter on chi's resolved client IP (populated by
@@ -107,4 +111,15 @@ func ticketRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler { return next }
 	}
 	return limit(cfg.TicketPerUser, cfg.Window, keyByUserID)
+}
+
+// refreshRateLimit applies to POST /auth/refresh and /auth/logout, keyed by
+// client IP since both sit outside RequireAuth (the caller's identity comes
+// from the refresh token/cookie itself, redeemed inside the handler, not
+// from a bearer claim available beforehand).
+func refreshRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
+	if !cfg.Enabled {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return limit(cfg.RefreshPerIP, cfg.Window, keyByClientIP)
 }

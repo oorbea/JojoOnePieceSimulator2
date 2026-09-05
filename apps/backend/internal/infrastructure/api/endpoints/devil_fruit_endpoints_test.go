@@ -177,7 +177,7 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 		newFakeStandRepository(), &fakeIDGenerator{}, newFakePictureStorage(), &fakeImageProcessor{}, syncEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}}))
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(svc)
-	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background())
 	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background(), endpoints.GameWSConfig{})
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
