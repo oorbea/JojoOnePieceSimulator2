@@ -67,6 +67,16 @@ services:
       # apps/backend/internal/config/config.go) — the frontend service below
       # is the origin that needs allowing.
       CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-3000}
+      # The refresh-token cookie needs the browser to actually send/accept it
+      # cross-origin in dev (frontend :3000, backend :8080 — different origin,
+      # but same *site* since only the scheme+registrable domain count, so
+      # SameSite=Strict still works; only AllowCredentials/Secure differ from
+      # prod). See ObsidianVault's auth-hardening/session-token notes.
+      CORS_ALLOW_CREDENTIALS: "true"
+      # Dev is plain HTTP; a Secure cookie over http://localhost is accepted
+      # by Chrome/Firefox but the behaviour has varied historically, so this
+      # stays an explicit switch rather than relying on that.
+      AUTH_COOKIE_SECURE: "false"
     # No `ports:` here on purpose - see docker-compose.dev.yml/.prod.yml.
     # Compose merges (not replaces) port lists across override files, so a
     # port published here could never be removed by an override; publishing

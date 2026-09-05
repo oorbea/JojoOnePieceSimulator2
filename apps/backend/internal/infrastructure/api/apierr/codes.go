@@ -85,6 +85,8 @@ var Codes = []string{
 	InvalidLobbyVisibility,
 	LobbyPrivate,
 	StreamTicketInvalid,
+	RefreshInvalid,
+	RefreshReuse,
 	Internal,
 }
 
@@ -159,6 +161,8 @@ const (
 	InvalidLobbyVisibility   = "INVALID_LOBBY_VISIBILITY"
 	LobbyPrivate             = "LOBBY_PRIVATE"
 	StreamTicketInvalid      = "STREAM_TICKET_INVALID"
+	RefreshInvalid           = "REFRESH_INVALID"
+	RefreshReuse             = "REFRESH_REUSE"
 	// Internal is the fallback code for any error not otherwise mapped -
 	// endpoints.errorCode's default case.
 	Internal = "INTERNAL"

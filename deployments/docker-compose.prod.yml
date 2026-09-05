@@ -14,3 +14,7 @@ services:
       # backend through the public domain here, not through the dev
       # frontend's port.
       CORS_ALLOWED_ORIGINS: https://jojo-one-piece-simulator.duckdns.org
+      # Prod is same-origin (NPM routes / -> frontend, /api -> backend on the
+      # same host) but the CORS middleware still runs since origins are set
+      # above, so AllowCredentials must be explicit for the refresh cookie.
+      CORS_ALLOW_CREDENTIALS: "true"

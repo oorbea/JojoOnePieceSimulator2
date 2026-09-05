@@ -15,7 +15,12 @@ Go/chi backend, `apps/backend`. Base path `/api/v1`, port 8080 (`apps/backend/in
 - `POST /api/v1/auth/google` `{idToken}` → `{accessToken, tokenType:"Bearer", expiresAt, user{id,email,username,completeName,avatar,avatarThumb,avatarStatus,role,language}}`
   (2026-08-04: `picture` was replaced by `avatar`/`avatarThumb`/`avatarStatus` — see [[user-profile-feature]]. 2026-08-06: `language` added — see [[i18n-multi-language]])
 - 201 first login, 200 returning.
-- **No refresh token, no cookies.** 24h JWT. 401 anywhere → force re-login, no silent refresh.
+- ~~**No refresh token, no cookies.** 24h JWT. 401 anywhere → force re-login, no silent refresh.~~
+  **Changed 2026-09-05** — see [[session-token-storage-2026-09-05]]: `JWT_TTL` is now 15m, and a
+  rotating refresh token (HttpOnly cookie on web, `expo-secure-store` header on native) backs a
+  silent refresh-and-retry on 401. `POST /auth/refresh` and `POST /auth/logout` are new, both
+  outside `RequireAuth` (they authenticate via the refresh token itself). Every other route is
+  still Bearer-only, unchanged — no cookie fallback was added to `RequireAuth`.
 - All other routes: `Authorization: Bearer <token>` required.
 - Writes additionally require `role === "ADMIN"`.
 - **Frontend gotcha (bit us once, 2026-08-01)**: axios `baseURL` (`EXPO_PUBLIC_API_URL`) already includes `/api/v1` — feature API calls must use bare paths (`/auth/google`, not `/api/v1/auth/google`) or you get a silent double-prefixed 404. See [[frontend-stack]] for the full incident.

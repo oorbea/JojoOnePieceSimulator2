@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/google": {
             "post": {
-                "description": "Verifies a Google ID token and returns an access token, creating the User the first time this Google account is seen.",
+                "description": "Verifies a Google ID token and returns an access token, creating the User the first time this Google account is seen. Also mints a refresh token, set as an HttpOnly cookie (or, with X-Refresh-Token-Transport: header, returned in the body instead).",
                 "consumes": [
                     "application/json"
                 ],
@@ -37,6 +37,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.GoogleLoginRequest"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Set to \\",
+                        "name": "X-Refresh-Token-Transport",
+                        "in": "header"
                     }
                 ],
                 "responses": {
@@ -44,6 +50,12 @@ const docTemplate = `{
                         "description": "existing user logged in",
                         "schema": {
                             "$ref": "#/definitions/dto.LoginResponse"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "jops_rt=\u003crefresh token\u003e; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Strict"
+                            }
                         }
                     },
                     "201": {
@@ -60,6 +72,102 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "Revokes the caller's whole refresh-token family and clears the refresh cookie. Always succeeds, even if the token was already invalid.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log out",
+                "responses": {
+                    "204": {
+                        "description": "logged out",
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "jops_rt=; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Strict; Max-Age=-1"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "missing X-JOPS-Refresh CSRF header, or a form-encoded body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Redeems the caller's refresh token (from X-Refresh-Token or the refresh cookie), returning a new access token and a rotated refresh token. A replayed (already-used) refresh token is rejected and revokes its whole token family server-side.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Rotate a refresh token for a new access token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Refresh token (native clients); omit to use the refresh cookie instead",
+                        "name": "X-Refresh-Token",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Set to \\",
+                        "name": "X-Refresh-Token-Transport",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginResponse"
+                        },
+                        "headers": {
+                            "Set-Cookie": {
+                                "type": "string",
+                                "description": "jops_rt=\u003crotated refresh token\u003e; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Strict"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "missing X-JOPS-Refresh CSRF header, or a form-encoded body",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -3210,6 +3318,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "expiresAt": {
+                    "type": "string"
+                },
+                "refreshToken": {
+                    "description": "RefreshToken is only set when the caller opted into header transport\nvia X-Refresh-Token-Transport: header.",
                     "type": "string"
                 },
                 "tokenType": {

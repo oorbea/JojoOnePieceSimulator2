@@ -59,6 +59,26 @@ jest.mock('@/features/auth/api/auth.api', () => ({
 jest.mock('@/shared/stores/session.store', () => ({
   useSessionStore: (selector: (state: { setSession: unknown }) => unknown) =>
     selector({ setSession: mockSetSession }),
+  // Real implementation, not a mock - it's a pure mapping function with no
+  // dependency on store state, and the hook imports it from this same
+  // (mocked) module.
+  fromUserResponse: (user: {
+    id: string
+    email: string
+    username: string
+    completeName: string
+    avatar: string
+    role: string
+    language: string
+  }) => ({
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    completeName: user.completeName,
+    picture: user.avatar || null,
+    role: user.role,
+    language: user.language,
+  }),
 }))
 
 type Api = ReturnType<typeof useGoogleAuth>
@@ -236,15 +256,26 @@ describe('useGoogleAuth - returning from the Google redirect', () => {
     await returnFromGoogle(`#id_token=${idToken}&state=state-uuid-0000`, matching)
 
     expect(mockPostGoogleAuth).toHaveBeenCalledWith(idToken)
-    expect(mockSetSession).toHaveBeenCalledWith(
-      expect.objectContaining({
-        accessToken: 'backend-access-token',
-        user: expect.objectContaining({ id: 'user-1', picture: 'https://r2.test/avatar.webp' }),
-      })
-    )
+    // setSession is now synchronous (no more expiresAt in the persisted
+    // shape - the store only ever holds the access token + user in memory).
+    expect(mockSetSession).toHaveBeenCalledWith({
+      accessToken: 'backend-access-token',
+      user: expect.objectContaining({ id: 'user-1', picture: 'https://r2.test/avatar.webp' }),
+    })
     expect(api().error).toBeNull()
     // The id_token must not be left sitting in the address bar / history.
     expect(replaceState).toHaveBeenCalledWith(null, '', '/login')
+  })
+
+  it('does not persist any refresh token on web - the cookie is the only transport', async () => {
+    mockPostGoogleAuth.mockResolvedValue(loginResponse())
+    const idToken = idTokenWithNonce('nonce-uuid-1111')
+
+    await returnFromGoogle(`#id_token=${idToken}&state=state-uuid-0000`, matching)
+
+    // secureStorage is native-only (throws on web) - if the hook accidentally
+    // tried to call it here for the web path, this suite would blow up.
+    expect(mockSetSession).toHaveBeenCalled()
   })
 
   it('burns the stored state and nonce so a replayed URL cannot reuse them', async () => {

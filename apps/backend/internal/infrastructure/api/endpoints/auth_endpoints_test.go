@@ -16,8 +16,18 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/refreshtoken"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 )
+
+// testCookieCfg mirrors the config.Config defaults so cookie assertions
+// below pin real production attributes, not zero values.
+var testCookieCfg = endpoints.CookieConfig{
+	Name:     "jops_rt",
+	Path:     "/api/v1/auth",
+	Secure:   true,
+	SameSite: http.SameSiteStrictMode,
+}
 
 // POST /api/v1/auth/google is the only public write route in the API - it is
 // how a caller gets a token in the first place - so the two things worth
@@ -62,13 +72,15 @@ func (loginTokenIssuer) Parse(token string) (ports.Claims, error) {
 var _ ports.ITokenIssuer = loginTokenIssuer{}
 
 func newAuthTestServer(repo *fakeUserRepo, verifier ports.IGoogleTokenVerifier, adminEmails []string) http.Handler {
-	svc := services.NewAuthService(repo, idgen.UUIDGenerator[user.UserID]{}, verifier, loginTokenIssuer{}, adminEmails, newFakePictureStorage())
+	refreshStore := refreshtoken.NewMemoryStore(refreshtoken.Config{TTL: time.Hour})
+	svc := services.NewAuthService(repo, idgen.UUIDGenerator[user.UserID]{}, verifier, loginTokenIssuer{}, refreshStore, adminEmails, newFakePictureStorage())
 
 	// Everything but /auth is wired bare: these tests only exercise the
-	// public login route, but going through NewRouter keeps the assertion
-	// that /auth/google really is reachable without a bearer token honest.
+	// public login/refresh/logout routes, but going through NewRouter keeps
+	// the assertion that /auth/google really is reachable without a bearer
+	// token honest.
 	return endpoints.NewRouter(
-		endpoints.NewAuthEndpoints(svc),
+		endpoints.NewAuthEndpoints(svc, testCookieCfg),
 		endpoints.NewStandEndpoints(nil),
 		endpoints.NewDevilFruitEndpoints(nil),
 		endpoints.NewUserEndpoints(nil),
@@ -258,5 +270,272 @@ func TestPostAuthGoogle_NeedsNoBearerToken(t *testing.T) {
 
 	if rec.Code == http.StatusUnauthorized {
 		t.Fatalf("POST /auth/google answered 401 without a bearer token, body = %s", rec.Body.String())
+	}
+}
+
+// findCookie returns the cookie named name from rec's Set-Cookie headers,
+// or nil if not present.
+func findCookie(rec *httptest.ResponseRecorder, name string) *http.Cookie {
+	for _, c := range (&http.Response{Header: rec.Header()}).Cookies() {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+// doAuthPost sends a POST to path with the CSRF header set (and, if cookie
+// is non-nil, that cookie attached) plus a JSON content type - the shape
+// every /auth/refresh and /auth/logout test needs.
+func doAuthPost(h http.Handler, path string, cookie *http.Cookie, extraHeaders map[string]string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, path, nil)
+	req.Header.Set("X-JOPS-Refresh", "1")
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+	for k, v := range extraHeaders {
+		req.Header.Set(k, v)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestPostAuthGoogle_DefaultTransport_SetsCookieAndOmitsBodyToken(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	rec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	cookie := findCookie(rec, testCookieCfg.Name)
+	if cookie == nil {
+		t.Fatal("no refresh cookie set")
+	}
+	if cookie.Path != testCookieCfg.Path {
+		t.Errorf("cookie Path = %q, want %q", cookie.Path, testCookieCfg.Path)
+	}
+	if !cookie.HttpOnly {
+		t.Error("cookie must be HttpOnly")
+	}
+	if !cookie.Secure {
+		t.Error("cookie must be Secure")
+	}
+	if cookie.SameSite != http.SameSiteStrictMode {
+		t.Errorf("cookie SameSite = %v, want Strict", cookie.SameSite)
+	}
+	if cookie.Value == "" {
+		t.Error("cookie value must not be empty")
+	}
+
+	var got map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, present := got["refreshToken"]; present {
+		t.Errorf("body must not carry refreshToken by default, got %v", got["refreshToken"])
+	}
+}
+
+func TestPostAuthGoogle_HeaderTransport_IncludesRefreshTokenInBody(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/google", bytes.NewBufferString(`{"idToken":"a-google-id-token"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Refresh-Token-Transport", "header")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var got map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	refreshToken, _ := got["refreshToken"].(string)
+	if refreshToken == "" {
+		t.Error("body must carry refreshToken with X-Refresh-Token-Transport: header")
+	}
+}
+
+func TestPostAuthRefresh_ViaCookie_Rotates(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginRec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	cookie := findCookie(loginRec, testCookieCfg.Name)
+	if cookie == nil {
+		t.Fatal("no refresh cookie set on login")
+	}
+
+	rec := doAuthPost(h, "/api/v1/auth/refresh", cookie, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("refresh status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	rotated := findCookie(rec, testCookieCfg.Name)
+	if rotated == nil {
+		t.Fatal("refresh did not set a rotated cookie")
+	}
+	if rotated.Value == cookie.Value {
+		t.Error("refresh must rotate the token, not reuse it")
+	}
+}
+
+func TestPostAuthRefresh_ViaHeader_Works(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginReq := httptest.NewRequest(http.MethodPost, "/api/v1/auth/google", bytes.NewBufferString(`{"idToken":"a-google-id-token"}`))
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginReq.Header.Set("X-Refresh-Token-Transport", "header")
+	loginRec := httptest.NewRecorder()
+	h.ServeHTTP(loginRec, loginReq)
+
+	var loginBody map[string]any
+	if err := json.Unmarshal(loginRec.Body.Bytes(), &loginBody); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	rawToken, _ := loginBody["refreshToken"].(string)
+	if rawToken == "" {
+		t.Fatal("no refreshToken in login body")
+	}
+
+	rec := doAuthPost(h, "/api/v1/auth/refresh", nil, map[string]string{"X-Refresh-Token": rawToken})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("refresh via header status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPostAuthRefresh_ReplayedToken_Returns401AndKillsFamily(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginRec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	cookie := findCookie(loginRec, testCookieCfg.Name)
+
+	first := doAuthPost(h, "/api/v1/auth/refresh", cookie, nil)
+	if first.Code != http.StatusOK {
+		t.Fatalf("first refresh status = %d, body = %s", first.Code, first.Body.String())
+	}
+	rotated := findCookie(first, testCookieCfg.Name)
+
+	// Replaying the already-burned original token must fail...
+	replay := doAuthPost(h, "/api/v1/auth/refresh", cookie, nil)
+	if replay.Code != http.StatusUnauthorized {
+		t.Fatalf("replayed refresh status = %d, want 401, body = %s", replay.Code, replay.Body.String())
+	}
+
+	// ...and kill the whole family, so even the legitimately rotated token
+	// from the same family now fails too.
+	legit := doAuthPost(h, "/api/v1/auth/refresh", rotated, nil)
+	if legit.Code != http.StatusUnauthorized {
+		t.Fatalf("legit refresh after replay status = %d, want 401, body = %s", legit.Code, legit.Body.String())
+	}
+}
+
+func TestPostAuthLogout_ClearsCookieAndRevokesToken(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginRec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	cookie := findCookie(loginRec, testCookieCfg.Name)
+
+	rec := doAuthPost(h, "/api/v1/auth/logout", cookie, nil)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("logout status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	cleared := findCookie(rec, testCookieCfg.Name)
+	if cleared == nil {
+		t.Fatal("logout did not clear the cookie")
+	}
+	if cleared.Path != testCookieCfg.Path || cleared.HttpOnly != true || cleared.Secure != true || cleared.SameSite != http.SameSiteStrictMode {
+		t.Errorf("cleared cookie attributes mismatch setter: %+v", cleared)
+	}
+	if cleared.MaxAge >= 0 {
+		t.Errorf("cleared cookie MaxAge = %d, want negative", cleared.MaxAge)
+	}
+
+	// A replay of the now-logged-out token must fail.
+	replay := doAuthPost(h, "/api/v1/auth/refresh", cookie, nil)
+	if replay.Code != http.StatusUnauthorized {
+		t.Fatalf("refresh after logout status = %d, want 401, body = %s", replay.Code, replay.Body.String())
+	}
+}
+
+func TestPostAuthRefresh_MissingCSRFHeader_Returns403(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginRec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	cookie := findCookie(loginRec, testCookieCfg.Name)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPostAuthLogout_MissingCSRFHeader_Returns403(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginRec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	cookie := findCookie(loginRec, testCookieCfg.Name)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPostAuthRefresh_FormEncodedBody_Returns403EvenWithCSRFHeader(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginRec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	cookie := findCookie(loginRec, testCookieCfg.Name)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", bytes.NewBufferString("a=b"))
+	req.Header.Set("X-JOPS-Refresh", "1")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPostAuthLogout_FormEncodedBody_Returns403EvenWithCSRFHeader(t *testing.T) {
+	repo := newFakeUserRepo()
+	h := newAuthTestServer(repo, &fakeGoogleVerifier{identity: verifiedIdentity()}, nil)
+
+	loginRec := postRaw(t, h, "/api/v1/auth/google", `{"idToken":"a-google-id-token"}`)
+	cookie := findCookie(loginRec, testCookieCfg.Name)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", bytes.NewBufferString("a=b"))
+	req.Header.Set("X-JOPS-Refresh", "1")
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=x")
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403, body = %s", rec.Code, rec.Body.String())
 	}
 }

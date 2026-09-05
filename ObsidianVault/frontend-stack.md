@@ -51,7 +51,7 @@ All deps installed via CLI only, never hand-edited into `package.json` (user har
 - **Metro + Tamagui CSS extraction**: `@tamagui/metro-plugin`'s `outputCSS: './tamagui-web.css'` file must exist as a placeholder BEFORE build/typecheck/export — Metro's resolver looks for it before the plugin writes it. Needs `touch tamagui-web.css` (or equivalent) pre-build, including inside Docker, since it's gitignored/dockerignored as generated output.
 - **`@tamagui/core` and `@tamagui/web`** must be explicit direct deps — they're transitive-only otherwise and `expo export` fails to resolve them under pnpm's hoisted linking (`.npmrc`: `node-linker=hoisted`, required for RN/Metro module resolution generally).
 - Env vars: `EXPO_PUBLIC_*` are inlined into the client bundle at BUILD time, not runtime — Docker needs them as `ARG`+`ENV`, not just `env_file`. Validated via Zod in `src/shared/config/env.ts`, fails loudly at boot on misconfig.
-- `expo-secure-store` throws on web — `src/shared/lib/secure-storage.ts` branches on `Platform.OS === 'web'` to `localStorage`.
+- ~~`expo-secure-store` throws on web — `src/shared/lib/secure-storage.ts` branches on `Platform.OS === 'web'` to `localStorage`.~~ **Changed 2026-09-05** — see [[session-token-storage-2026-09-05]]: `secure-storage.ts` is native-only now (the web branch throws instead of falling back to `localStorage`); the access token lives in memory only on web, backed by an HttpOnly rotating refresh cookie instead of any persisted client-side credential.
 
 ## Login-broken incident (2026-08-01) — root causes and fixes
 

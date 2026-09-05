@@ -232,8 +232,11 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
 
       const appErr = toAppError(err)
       if (appErr.status === 401) {
-        // The response interceptor already cleared the session on a 401 -
-        // nothing left to retry here; the session-gated screens handle it.
+        // The response interceptor already tried one silent refresh-and-
+        // retry (shared/api/interceptors.ts) before this error reached here
+        // - a 401 surfacing at this layer means that refresh attempt itself
+        // failed, so the interceptor has already cleared the session.
+        // Nothing left to retry here; the session-gated screens handle it.
         set({ status: 'closed' })
         return
       }

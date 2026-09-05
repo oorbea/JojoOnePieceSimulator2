@@ -73,7 +73,6 @@ function httpError(status: number) {
 function adminSession() {
   return {
     accessToken: 'tok',
-    expiresAt: '2100-01-01',
     user: {
       id: 'u1',
       email: 'a@b.com',

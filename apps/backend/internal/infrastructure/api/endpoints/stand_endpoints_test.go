@@ -328,7 +328,7 @@ func newTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fakePict
 	svc := services.NewStandService(repo, idGen, pictures, &fakeImageProcessor{}, syncEnqueuer{worker},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
-	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{})
@@ -554,7 +554,7 @@ func TestPatchStandPicture_Undecodable(t *testing.T) {
 	svc := services.NewStandService(repo, idGen, pictures, processor, syncEnqueuer{worker},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
-	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
@@ -586,7 +586,7 @@ func TestPatchStandPicture_QueueFull(t *testing.T) {
 	svc := services.NewStandService(repo, idGen, pictures, &fakeImageProcessor{}, fullQueueEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
-	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
@@ -649,7 +649,7 @@ func TestPatchStandPicture_TooLarge(t *testing.T) {
 	svc := services.NewStandService(repo, idGen, pictures, &fakeImageProcessor{}, syncEnqueuer{worker},
 		services.PicturePolicy{MaxBytes: 1, AllowedTypes: []string{"image/png"}})
 	standEndpoints := endpoints.NewStandEndpoints(svc)
-	authEndpoints := endpoints.NewAuthEndpoints(nil)
+	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})

@@ -59,7 +59,7 @@ export function useProfile() {
     if (!query.data || !session) return
     const picture = query.data.avatar || null
     if (session.user.username === query.data.username && session.user.picture === picture) return
-    void setSession({
+    setSession({
       ...session,
       user: { ...session.user, username: query.data.username, picture },
     })
