@@ -359,6 +359,11 @@ definitions:
         type: string
       expiresAt:
         type: string
+      refreshToken:
+        description: |-
+          RefreshToken is only set when the caller opted into header transport
+          via X-Refresh-Token-Transport: header.
+        type: string
       tokenType:
         type: string
       user:
@@ -675,8 +680,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Verifies a Google ID token and returns an access token, creating
-        the User the first time this Google account is seen.
+      description: 'Verifies a Google ID token and returns an access token, creating
+        the User the first time this Google account is seen. Also mints a refresh
+        token, set as an HttpOnly cookie (or, with X-Refresh-Token-Transport: header,
+        returned in the body instead).'
       parameters:
       - description: Google ID token
         in: body
@@ -684,11 +691,20 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/dto.GoogleLoginRequest'
+      - description: Set to \
+        in: header
+        name: X-Refresh-Token-Transport
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: existing user logged in
+          headers:
+            Set-Cookie:
+              description: jops_rt=<refresh token>; Path=/api/v1/auth; HttpOnly; Secure;
+                SameSite=Strict
+              type: string
           schema:
             $ref: '#/definitions/dto.LoginResponse'
         "201":
@@ -708,6 +724,76 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Log in or register via Google
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Revokes the caller's whole refresh-token family and clears the
+        refresh cookie. Always succeeds, even if the token was already invalid.
+      responses:
+        "204":
+          description: logged out
+          headers:
+            Set-Cookie:
+              description: jops_rt=; Path=/api/v1/auth; HttpOnly; Secure; SameSite=Strict;
+                Max-Age=-1
+              type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: missing X-JOPS-Refresh CSRF header, or a form-encoded body
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Log out
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      description: Redeems the caller's refresh token (from X-Refresh-Token or the
+        refresh cookie), returning a new access token and a rotated refresh token.
+        A replayed (already-used) refresh token is rejected and revokes its whole
+        token family server-side.
+      parameters:
+      - description: Refresh token (native clients); omit to use the refresh cookie
+          instead
+        in: header
+        name: X-Refresh-Token
+        type: string
+      - description: Set to \
+        in: header
+        name: X-Refresh-Token-Transport
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          headers:
+            Set-Cookie:
+              description: jops_rt=<rotated refresh token>; Path=/api/v1/auth; HttpOnly;
+                Secure; SameSite=Strict
+              type: string
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: missing X-JOPS-Refresh CSRF header, or a form-encoded body
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Rotate a refresh token for a new access token
       tags:
       - auth
   /devil-fruits:
