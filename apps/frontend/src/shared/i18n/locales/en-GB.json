@@ -711,6 +711,8 @@
     "INVALID_LOBBY_VISIBILITY": "That privacy setting isn't valid.",
     "LOBBY_PRIVATE": "This lobby is private. Ask the host for the join code.",
     "STREAM_TICKET_INVALID": "That connection expired. Reconnecting…",
+    "REFRESH_INVALID": "Your session expired. Please sign in again.",
+    "REFRESH_REUSE": "Your session was signed out for security reasons. Please sign in again.",
     "INTERNAL": "Something went wrong on our end."
   }
 }

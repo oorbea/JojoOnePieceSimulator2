@@ -7,7 +7,9 @@ import { Platform } from 'react-native'
 import { postGoogleAuth } from '@/features/auth/api/auth.api'
 import { toAppError, type AppError } from '@/shared/api/errors'
 import { env } from '@/shared/config/env'
-import { useSessionStore } from '@/shared/stores/session.store'
+import { secureStorage } from '@/shared/lib/secure-storage'
+import { REFRESH_TOKEN_KEY } from '@/shared/api/refresh-token-key'
+import { fromUserResponse, useSessionStore } from '@/shared/stores/session.store'
 
 // Required so the auth popup/tab closes itself after Google redirects back
 // (no-op on native, matters on web for platforms other than Google itself —
@@ -64,19 +66,14 @@ export function useGoogleAuth() {
     setError(null)
     try {
       const data = await postGoogleAuth(idToken)
-      await setSession({
-        accessToken: data.accessToken,
-        expiresAt: data.expiresAt,
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-          username: data.user.username,
-          completeName: data.user.completeName,
-          picture: data.user.avatar || null,
-          role: data.user.role,
-          language: data.user.language,
-        },
-      })
+      // Native: durably store the rotating refresh token BEFORE the app
+      // considers the user logged in. Web has nothing to do here - the
+      // cookie was already set by the browser from Set-Cookie on the
+      // response above (postGoogleAuth sent it with withCredentials: true).
+      if (Platform.OS !== 'web' && data.refreshToken) {
+        await secureStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+      }
+      setSession({ accessToken: data.accessToken, user: fromUserResponse(data.user) })
     } catch (err) {
       setError(toAppError(err))
     } finally {

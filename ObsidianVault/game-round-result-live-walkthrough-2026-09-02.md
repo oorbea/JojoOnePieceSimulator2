@@ -21,11 +21,21 @@ bypass exists - see "Auth blocker" below), not the bot/single-account workaround
 
 `local-up` stack (postgres/redis/backend/frontend in Docker), two Chrome tabs each with an isolated
 live session (host `trollotron`, guest `meck_porky`), Versus 1v1 lobby, no bots, default voting
-window. Two tabs in the same Chrome profile share `localStorage` (auth token lives there, see
+window.
+
+~~Two tabs in the same Chrome profile share `localStorage` (auth token lives there, see
 `secure-storage.ts`) - the trick that keeps both sessions genuinely live at once is: log in tab A,
 let it finish loading (token now in memory, WS open), *then* log in tab B (overwrites the shared
 `localStorage` token, but tab A never re-reads storage unless it reloads/navigates again). Confirmed
-working: both tabs stayed independently authenticated and connected for the whole session.
+working: both tabs stayed independently authenticated and connected for the whole session.~~
+
+**Dead as of 2026-09-05** — see [[session-token-storage-2026-09-05]]: the session cookie is now per
+browser profile (one cookie jar), so logging in on tab B would overwrite tab A's live session
+outright, with no stale in-memory copy left to exploit. Replacement, **two separate browser
+profiles / an incognito window** (isolated cookie jars, isolated JS heaps) — the Google OAuth
+full-page-redirect flow works identically in incognito, since it needs no `window.opener`. Costs one
+extra Google sign-in per test session; strictly more honest than the old trick, since tab A used to
+run on a token the app no longer considered current, a state no real user could reach.
 
 ## Auth blocker (read before attempting this again)
 

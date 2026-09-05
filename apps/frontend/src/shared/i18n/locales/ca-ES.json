@@ -711,6 +711,8 @@
     "INVALID_LOBBY_VISIBILITY": "Aquesta configuració de privadesa no és vàlida.",
     "LOBBY_PRIVATE": "Aquesta sala és privada. Demana el codi de sala a l'amfitrió.",
     "STREAM_TICKET_INVALID": "Aquesta connexió ha caducat. Reconnectant…",
+    "REFRESH_INVALID": "La teva sessió ha caducat. Torna a iniciar sessió.",
+    "REFRESH_REUSE": "La teva sessió s'ha tancat per motius de seguretat. Torna a iniciar sessió.",
     "INTERNAL": "Alguna cosa ha anat malament per la nostra part."
   }
 }

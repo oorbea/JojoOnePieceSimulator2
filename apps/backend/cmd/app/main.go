@@ -28,6 +28,8 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/random"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/refreshtoken"
+	redisrefreshtoken "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/refreshtoken/redis"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/s3store"
@@ -176,15 +178,61 @@ func main() {
 
 	googleVerifier := auth.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenIssuer := auth.NewJWTIssuer([]byte(cfg.JWTSecret), cfg.JWTIssuer, cfg.JWTTTL)
+
+	// Refresh tokens: long-lived, single-use, rotating credentials that back
+	// the short-lived (JWT_TTL, now 15m by default) access token. Same
+	// Redis-or-memory branch as the stream-ticket store below, for the same
+	// reason - a second backend instance must be able to redeem a token
+	// minted by the first. Unlike a stream ticket, losing this table on
+	// restart is not harmless: every logged-in user is forced to
+	// re-authenticate with Google, hence the blunt warning.
+	var refreshTokens ports.IRefreshTokenStore
+	if cfg.RedisURL != "" {
+		redisRefreshTokens, err := redisrefreshtoken.New(ctx, redisrefreshtoken.Config{
+			URL:         cfg.RedisURL,
+			DialTimeout: cfg.RedisDialTimeout,
+			OpTimeout:   cfg.GameStoreOpTimeout,
+			TTL:         cfg.RefreshTokenTTL,
+		})
+		if err != nil {
+			log.Fatalf("connecting to redis refresh-token store: %v", err)
+		}
+		defer func() {
+			if err := redisRefreshTokens.Close(); err != nil {
+				log.Printf("closing redis refresh-token store connection: %v", err)
+			}
+		}()
+		refreshTokens = redisRefreshTokens
+	} else {
+		memRefreshTokens := refreshtoken.NewMemoryStore(refreshtoken.Config{TTL: cfg.RefreshTokenTTL})
+		go refreshtoken.NewReaper(memRefreshTokens, cfg.RefreshTokenReapInterval).Start(ctx)
+		refreshTokens = memRefreshTokens
+		log.Printf("WARNING: no REDIS_URL set - refresh tokens are held in memory only; a backend restart will log out every user")
+	}
+
 	authService := services.NewAuthService(
 		userRepo,
 		idgen.UUIDGenerator[user.UserID]{},
 		googleVerifier,
 		tokenIssuer,
+		refreshTokens,
 		cfg.AdminEmails,
 		pictures,
 	)
-	authEndpoints := endpoints.NewAuthEndpoints(authService)
+
+	authCookieSameSite := http.SameSiteStrictMode
+	switch cfg.AuthCookieSameSite {
+	case "lax":
+		authCookieSameSite = http.SameSiteLaxMode
+	case "none":
+		authCookieSameSite = http.SameSiteNoneMode
+	}
+	authEndpoints := endpoints.NewAuthEndpoints(authService, endpoints.CookieConfig{
+		Name:     cfg.AuthCookieName,
+		Path:     cfg.AuthCookiePath,
+		Secure:   cfg.AuthCookieSecure,
+		SameSite: authCookieSameSite,
+	})
 
 	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
 	userEndpoints := endpoints.NewUserEndpoints(userService)
@@ -300,6 +348,7 @@ func main() {
 		ReadPerUser:   cfg.RateLimitReadPerUser,
 		WritePerUser:  cfg.RateLimitWritePerUser,
 		TicketPerUser: cfg.RateLimitTicketPerUser,
+		RefreshPerIP:  cfg.RateLimitRefreshPerIP,
 	}
 
 	// The ETag/Cache-Control layer is independent of Redis - it stays on
