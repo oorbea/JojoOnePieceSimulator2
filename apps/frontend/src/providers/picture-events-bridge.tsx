@@ -124,8 +124,12 @@ export function PictureEventsBridge() {
       } catch (err) {
         if (cancelledRef.current) return
         const status = toAppError(err).status
-        // 401: the response interceptor already cleared the session: the
-        // effect re-runs with accessToken null and disconnects on its own.
+        // 401: the response interceptor already tried one silent
+        // refresh-and-retry (shared/api/interceptors.ts) before this error
+        // ever reached here - a 401 surfacing at this layer means that
+        // refresh attempt itself failed, so the interceptor has already
+        // cleared the session: the effect re-runs with accessToken null and
+        // disconnects on its own.
         // 403: this session isn't (or is no longer) an admin - the stream
         // has nothing for it, so stop instead of re-minting forever, unlike
         // the old ?token= loop against a 403 stream.
