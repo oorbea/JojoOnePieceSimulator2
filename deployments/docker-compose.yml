@@ -111,6 +111,14 @@ services:
         EXPO_PUBLIC_SOCKET_URL: ${EXPO_PUBLIC_SOCKET_URL:-}
         EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID:-}
         EXPO_PUBLIC_BUILD_ID: ${EXPO_PUBLIC_BUILD_ID:-dev}
+    environment:
+      # Extra Content-Security-Policy connect-src origins the nginx template
+      # (nginx.frontend.conf.template) envsubsts in at container start - 'self'
+      # alone doesn't cover the dev frontend/backend origin split
+      # (localhost:3000 -> localhost:8080). docker-compose.prod.yml overrides
+      # this to the prod wss:// socket origin instead (prod's REST calls are
+      # same-origin already).
+      CSP_CONNECT_EXTRA: "http://localhost:${PORT:-8080} ws://localhost:${PORT:-8080}"
     # No `ports:` here either - see the backend service comment above.
     networks:
       - public-net

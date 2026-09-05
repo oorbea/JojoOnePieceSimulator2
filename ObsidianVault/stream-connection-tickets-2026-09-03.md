@@ -87,9 +87,9 @@ tests). A stale deployed frontend still sending `?token=<jwt>` falls through to 
 - Config: `STREAM_TICKET_TTL` (default 30s), `STREAM_TICKET_REAP_INTERVAL` (default 1m, memory-store
   only), `RATE_LIMIT_TICKET_PER_USER` (default 60/window, keyed by user id like the other tiers).
   `RATE_LIMIT_GLOBAL_PER_IP` raised 120→240: every connect now costs two requests (mint + stream)
-  instead of one, and in prod every caller collapses to NPM's IP under `ClientIPFromRemoteAddr` — see
-  `ratelimit.go`'s own doc comment, which already anticipated switching to `ClientIPFromXFF` for a
-  real per-user key; that switch is its own future tanda, not folded into this one.
+  instead of one. ~~In prod every caller collapses to NPM's IP under `ClientIPFromRemoteAddr`~~ —
+  **closed 2026-09-05**, see [[csp-y-rate-limit-por-ip-2026-09-05]]: `router.go` now chains
+  `ClientIPFromXFF()` after it, so rate limits key on the real per-client IP behind NPM.
 - Frontend: `src/shared/api/stream-tickets.ts` (`mintEventsTicket`/`mintGameSocketTicket`),
   `features/game/lib/socket-url.ts` (query param renamed `token`→`ticket`),
   `features/game/stores/game-socket.store.ts`, `providers/picture-events-bridge.tsx`.

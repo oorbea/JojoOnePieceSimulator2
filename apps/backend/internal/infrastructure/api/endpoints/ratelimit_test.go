@@ -146,6 +146,117 @@ func TestRateLimit_HealthAndSwaggerAreLimited(t *testing.T) {
 	}
 }
 
+func TestRateLimit_KeysOnRightmostXFFEntry_NotRemoteAddr(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 1,
+	})
+
+	// Same RemoteAddr (httptest's default), different rightmost XFF entries:
+	// each must get its own bucket, or the fix didn't take.
+	rec := xffRequest(t, h, "203.0.113.10")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("client A first request: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	rec = xffRequest(t, h, "203.0.113.20")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("client B first request: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	// Each is now at its own budget of 1/1 - a second request from either
+	// must 429, proving the two really are independent buckets rather than
+	// both having silently fallen back to the shared RemoteAddr bucket.
+	rec = xffRequest(t, h, "203.0.113.10")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("client A second request: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+	rec = xffRequest(t, h, "203.0.113.20")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("client B second request: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+}
+
+func TestRateLimit_XFF_RightmostEntryWinsOverSpoofedLeftEntry(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 1,
+	})
+
+	// "spoofed" is attacker-supplied and sits to the left of the real,
+	// proxy-appended entry - it must be ignored. Both requests carry the
+	// same rightmost entry, so the second must 429.
+	rec := xffRequest(t, h, "198.51.100.1, 203.0.113.30")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("first request: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	rec = xffRequest(t, h, "198.51.100.99, 203.0.113.30")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request (different spoofed prefix, same real IP): status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+}
+
+func TestRateLimit_NoXFFHeader_FallsBackToRemoteAddr(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 2,
+	})
+
+	// No X-Forwarded-For at all (plain dev/direct traffic) - unchanged
+	// behavior, keyed on httptest's default RemoteAddr.
+	for i := 0; i < 2; i++ {
+		rec := noAuthRequest(t, h, http.MethodGet, "/health")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("request %d: status = %d, want %d", i, rec.Code, http.StatusOK)
+		}
+	}
+	rec := noAuthRequest(t, h, http.MethodGet, "/health")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("third request: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+}
+
+func TestRateLimit_XFF_SameRightmostEntryFromDifferentRemoteAddrsSharesBucket(t *testing.T) {
+	h := newTestServerWithRateLimit(endpoints.RateLimitConfig{
+		Enabled:     true,
+		Window:      time.Minute,
+		GlobalPerIP: 1,
+	})
+
+	rec := xffRequestFrom(t, h, "203.0.113.40", "10.0.0.5:1111")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("first request: status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	// Different RemoteAddr (a different NPM upstream connection), same
+	// resolved client IP via XFF - must share the exhausted bucket.
+	rec = xffRequestFrom(t, h, "203.0.113.40", "10.0.0.6:2222")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request from different RemoteAddr: status = %d, want %d, body = %s", rec.Code, http.StatusTooManyRequests, rec.Body.String())
+	}
+}
+
+// xffRequest issues a GET /health carrying the given X-Forwarded-For value.
+func xffRequest(t *testing.T, h http.Handler, xff string) *httptest.ResponseRecorder {
+	t.Helper()
+	return xffRequestFrom(t, h, xff, "")
+}
+
+// xffRequestFrom is like xffRequest but also lets the test set RemoteAddr,
+// for asserting XFF wins over it regardless of which TCP peer connected.
+func xffRequestFrom(t *testing.T, h http.Handler, xff, remoteAddr string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Header.Set("X-Forwarded-For", xff)
+	if remoteAddr != "" {
+		req.RemoteAddr = remoteAddr
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
 // doRawJSONRequest posts a raw JSON body without an Authorization header, for
 // exercising the public /auth/google route.
 func doRawJSONRequest(t *testing.T, h http.Handler, method, path, body string) *httptest.ResponseRecorder {
