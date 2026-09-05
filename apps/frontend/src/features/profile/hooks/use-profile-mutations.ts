@@ -25,7 +25,7 @@ function useSyncSessionOnSuccess() {
 
   return (user: ProfileUser) => {
     if (!session) return
-    void setSession({
+    setSession({
       ...session,
       user: {
         ...session.user,
