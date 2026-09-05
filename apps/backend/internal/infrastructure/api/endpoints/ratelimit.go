@@ -27,14 +27,23 @@ type RateLimitConfig struct {
 	RefreshPerIP int
 }
 
-// keyByClientIP keys the limiter on chi's resolved client IP (populated by
-// middleware.ClientIPFromRemoteAddr, installed in NewRouter), not
-// httprate.KeyByRealIP: that trusts X-Forwarded-For/X-Real-IP, which an
-// attacker can forge to win a fresh bucket per request when the service
-// isn't behind a trusted proxy. If this app is ever put behind a reverse
-// proxy, switch NewRouter to middleware.ClientIPFromXFF/ClientIPFromHeader -
-// this key func picks up the change automatically since it just reads
-// whatever middleware.GetClientIP resolved.
+// keyByClientIP keys the limiter on chi's resolved client IP, populated by
+// two middlewares chained in NewRouter: ClientIPFromRemoteAddr first (the
+// TCP peer), then ClientIPFromXFF() with no trusted-prefix arguments, which
+// overwrites it with the rightmost X-Forwarded-For entry when one is
+// present. That "no arguments" form trusts exactly one hop in front of this
+// server - correct here because prod's backend container publishes no port
+// and is reachable only through Nginx Proxy Manager on the shared
+// public-net network (docker-compose.prod.yml), which appends the real
+// connecting IP to XFF on every request. A client-forged XFF value lands to
+// the left of NPM's own append and is ignored. Not httprate.KeyByRealIP,
+// which trusts X-Real-IP unconditionally with no such single-hop guarantee.
+//
+// This key func doesn't care which of the two middlewares won - it just
+// reads whatever middleware.GetClientIP resolved. If the backend is ever
+// exposed to more than one untrusted hop (a CDN in front of NPM, say),
+// switch to middleware.ClientIPFromXFF(trustedPrefixes...) with NPM's actual
+// address/CIDR instead of the argument-less form.
 func keyByClientIP(r *http.Request) (string, error) {
 	return httprate.CanonicalizeIP(middleware.GetClientIP(r.Context())), nil
 }

@@ -58,6 +58,12 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.ClientIPFromRemoteAddr)
+	// Prod sits behind Nginx Proxy Manager (docker-compose.prod.yml publishes
+	// no backend port - only NPM and sibling containers reach it), which is
+	// the one trusted hop this middleware assumes. See ratelimit.go's
+	// keyByClientIP doc for why the no-argument, rightmost-entry form is safe
+	// here and what it would take to spoof it.
+	r.Use(middleware.ClientIPFromXFF())
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(globalRateLimit(rateCfg))

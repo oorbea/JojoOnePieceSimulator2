@@ -36,9 +36,10 @@ const defaultRateLimitWindow = time.Minute
 
 // defaultRateLimitGlobalPerIP was 120 until stream tickets doubled the
 // request cost of every SSE/WS (re)connect (a mint POST plus the stream
-// itself). Raised to keep headroom now that, behind the prod reverse proxy,
-// every caller resolves to the same client IP (see ratelimit.go's
-// keyByClientIP doc) and therefore shares one bucket.
+// itself). Raised to keep headroom for that, per real client - router.go
+// now resolves the client IP from X-Forwarded-For behind the prod reverse
+// proxy (see ratelimit.go's keyByClientIP doc), so callers no longer
+// collapse onto one shared bucket the way they did before that fix.
 const defaultRateLimitGlobalPerIP = 240
 const defaultRateLimitLoginPerIP = 10
 const defaultRateLimitReadPerUser = 100
