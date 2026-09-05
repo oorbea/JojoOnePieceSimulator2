@@ -33,9 +33,16 @@ RUN pnpm expo export -p web
 
 FROM nginx:alpine
 RUN adduser -D -u 10001 app
-COPY deployments/docker/nginx.frontend.conf /etc/nginx/conf.d/default.conf
+# .template + /etc/nginx/templates/: nginx:alpine's stock entrypoint
+# (20-envsubst-on-templates.sh) envsubsts every file there into
+# /etc/nginx/conf.d (same name, .template stripped) at container start -
+# that's how ${CSP_CONNECT_EXTRA} picks up docker-compose's dev/prod value
+# without a custom entrypoint. Only env vars that are actually set get
+# substituted, so nginx's own request variables ($uri, $document_root, ...)
+# are untouched.
+COPY deployments/docker/nginx.frontend.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=builder /src/dist /usr/share/nginx/html
-RUN chown -R app:app /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
+RUN chown -R app:app /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d /etc/nginx/templates \
     && touch /var/run/nginx.pid \
     && chown app:app /var/run/nginx.pid
 USER app
