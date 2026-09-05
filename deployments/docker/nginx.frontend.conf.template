@@ -1,0 +1,96 @@
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Without this, Chrome's default COOP blocks window.closed/window.close
+    # calls between this page (the OAuth popup opener) and the Google login
+    # popup, since accounts.google.com sends its own strict COOP header -
+    # expo-auth-session's web popup flow never detects completion otherwise.
+    # (The web flow is a full-page redirect today, not a popup - see
+    # use-google-auth.ts - so this is currently a no-op, kept in case the
+    # popup flow returns.)
+    add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+
+    # style-src needs 'unsafe-inline': public/index.html ships a literal
+    # inline <style id="expo-reset">, and both @tamagui/core
+    # (inject-styles.cjs) and react-native-web (createCSSStyleSheet.js)
+    # create/populate <style> elements at runtime with no nonce hook - there
+    # is no way to drop this without owner-ruled-out nonce plumbing.
+    #
+    # 'wasm-unsafe-eval' permits WASM compilation only, not eval/new Function
+    # - kept speculatively for Metro's web output; if a build proves it
+    # unneeded, drop it and re-run the walkthrough in
+    # ObsidianVault/csp-y-rate-limit-por-ip-2026-09-05.md.
+    #
+    # connect-src 'self' covers same-origin REST/SSE everywhere; the dev/prod
+    # split (frontend/backend on different ports vs. one wss:// origin) is
+    # injected via ${CSP_CONNECT_EXTRA} (envsubst, see Dockerfile.frontend).
+    #
+    # img-src allows https: broadly rather than enumerating the storage
+    # fallback chain's three provider hosts (R2/B2/Supabase, host varies per
+    # presigned URL) plus Google's raw avatar URLs - images aren't an XSS
+    # vector under this policy. blob:/data: back the picker previews.
+    #
+    # No Google origin in script-src/style-src: the web login is a full-page
+    # redirect (use-google-auth.ts), nothing from accounts.google.com is
+    # loaded into this document. form-action names it anyway, defensively,
+    # in case that ever changes.
+    #
+    # frame-ancestors 'none' supersedes X-Frame-Options - don't add both.
+    #
+    # IMPORTANT: add_header in a location block REPLACES every add_header
+    # inherited from this server block, it does not merge with it - nginx
+    # docs, "if there are add_header directives defined on the current
+    # level". Every location below that sets its own add_header must repeat
+    # this whole block verbatim, or it silently loses every header here (the
+    # bug this file already had for Cross-Origin-Opener-Policy before this
+    # comment was written).
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ${CSP_CONNECT_EXTRA}; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self' https://accounts.google.com" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+
+    # Hashed static assets (JS/CSS bundles) are safe to cache forever.
+    location /_expo/static/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        # Repeated verbatim from the server block above - see the
+        # IMPORTANT note there.
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ${CSP_CONNECT_EXTRA}; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self' https://accounts.google.com" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+    }
+
+    # The service worker and manifest must always be revalidated, or a stale
+    # sw.js can pin users to an old app shell indefinitely.
+    location = /sw.js {
+        add_header Cache-Control "no-cache";
+        # Repeated verbatim from the server block above - see the
+        # IMPORTANT note there.
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ${CSP_CONNECT_EXTRA}; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self' https://accounts.google.com" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+    }
+
+    location = /manifest.json {
+        add_header Cache-Control "no-cache";
+        # Repeated verbatim from the server block above - see the
+        # IMPORTANT note there.
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' ${CSP_CONNECT_EXTRA}; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self' https://accounts.google.com" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+    }
+
+    # SPA fallback so client-side routes (Expo Router) resolve on refresh.
+    location / {
+        try_files $uri $uri.html /index.html;
+    }
+}
