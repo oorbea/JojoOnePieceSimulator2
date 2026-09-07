@@ -166,6 +166,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 		log.Printf("loading %s %s before publishing picture: %v", job.Kind, job.SubjectID, err)
 		w.deleteQuietly(ctx, mainKey)
 		w.deleteQuietly(ctx, thumbKey)
+		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 
@@ -173,6 +174,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 		log.Printf("publishing picture for %s %s: %v", job.Kind, job.SubjectID, err)
 		w.deleteQuietly(ctx, mainKey)
 		w.deleteQuietly(ctx, thumbKey)
+		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 	w.publish(job.Kind, job.SubjectID, enums.PictureReady)
@@ -185,12 +187,24 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 	}
 }
 
+// markFailed and deleteQuietly run cleanup/failure writes that must still
+// succeed even when the job's own context has just expired or been
+// cancelled - e.g. Transcode failing because JobTimeout elapsed. They derive
+// a short-lived context from ctx's values (via WithoutCancel) rather than
+// reusing ctx directly, so a dead job context can never leave a Power stuck
+// at PENDING or leak a storage object past the ledger's quota accounting.
 func (w *PictureWorker) markFailed(ctx context.Context, target PictureTarget, kind enums.PictureSubjectKind, id string) {
-	if err := target.Publisher.UpdatePicture(ctx, id, nil, nil, enums.PictureFailed); err != nil {
+	cctx, cancel := w.cleanupContext(ctx)
+	defer cancel()
+	if err := target.Publisher.UpdatePicture(cctx, id, nil, nil, enums.PictureFailed); err != nil {
 		log.Printf("marking picture failed for %s: %v", id, err)
 		return
 	}
 	w.publish(kind, id, enums.PictureFailed)
+}
+
+func (w *PictureWorker) cleanupContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 }
 
 // publish notifies hub subscribers (the SSE endpoint) of a terminal
@@ -204,7 +218,9 @@ func (w *PictureWorker) publish(kind enums.PictureSubjectKind, subjectID string,
 }
 
 func (w *PictureWorker) deleteQuietly(ctx context.Context, key string) {
-	if err := w.pictures.Delete(ctx, key); err != nil {
+	cctx, cancel := w.cleanupContext(ctx)
+	defer cancel()
+	if err := w.pictures.Delete(cctx, key); err != nil {
 		log.Printf("deleting picture %q: %v", key, err)
 	}
 }
