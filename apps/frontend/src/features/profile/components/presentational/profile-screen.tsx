@@ -70,7 +70,7 @@ export function ProfileScreen({
   isSavingLanguage,
 }: Props) {
   const { t } = useTranslation()
-  const avatarUri = profile.avatar || null
+  const avatarUri = profile.avatarThumb || profile.avatar || null
   const hasCustomAvatar = profile.avatarStatus !== 'NONE'
 
   return (

@@ -7,6 +7,7 @@ export type SessionUser = {
   username: string
   completeName: string
   picture: string | null
+  pictureThumb: string | null
   role: Role
   language: Locale
 }
@@ -23,6 +24,7 @@ export function fromUserResponse(user: UserResponse): SessionUser {
     username: user.username,
     completeName: user.completeName,
     picture: user.avatar || null,
+    pictureThumb: user.avatarThumb || null,
     role: user.role,
     language: user.language,
   }

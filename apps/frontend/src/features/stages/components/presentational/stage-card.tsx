@@ -10,6 +10,7 @@ import { GlowText } from '@/shared/components/presentational/glow-text'
 import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
 import { InsetRing, WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
+import { fullSource, thumbSource } from '@/shared/lib/picture-source'
 import type { StageResponse } from '@/features/stages/types/stages.types'
 
 type Props = {
@@ -43,11 +44,8 @@ export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isE
           bg="$plasticEdge"
         >
           <InsetRing rounded="$card" />
-          {/* Read `picture` (not `pictureThumb`) with a `|| null` fallback -
-              see admin-panel-crud-ux-fixes.md: pictureThumb is empty until the
-              worker finishes, and `??` wouldn't catch an empty string. */}
-          {stage.picture || null ? (
-            <Image source={{ uri: stage.picture }} style={{ width: '100%', height: '100%' }} />
+          {thumbSource(stage) ? (
+            <Image source={{ uri: thumbSource(stage) ?? undefined }} style={{ width: '100%', height: '100%' }} />
           ) : (
             <YStack flex={1} items="center" justify="center">
               <Map size={32} color="$wiiBlue" />
@@ -55,7 +53,7 @@ export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isE
           )}
         </YStack>
       </Pressable>
-      <ImageLightbox visible={isPreviewOpen} uri={stage.picture || null} onClose={() => setIsPreviewOpen(false)} />
+      <ImageLightbox visible={isPreviewOpen} uri={fullSource(stage)} onClose={() => setIsPreviewOpen(false)} />
 
       <Pressable onPress={onOpenDetail} {...a11yProps(t('stages.detailA11y', { name: stage.name }), 'button')}>
         <YStack gap="$3">

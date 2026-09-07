@@ -11,7 +11,13 @@ import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 
 export type PowerBlockProps = {
-  picture?: string
+  /** Small rendition shown in the art well - callers should pass
+   * thumbSource(power), not the full-size picture. */
+  picture?: string | null
+  /** Full-size rendition opened by tapping the well; falls back to
+   * `picture` when the caller doesn't have one (e.g. already passed the
+   * full picture in). */
+  fullPicture?: string | null
   name?: string
   rarityLabel?: string
   description?: string
@@ -33,6 +39,7 @@ export type PowerBlockProps = {
 // recipe as the admin Stand/DevilFruit cards (owner request, 2026-08-30).
 export function PowerBlock({
   picture,
+  fullPicture,
   name,
   rarityLabel,
   description,
@@ -76,7 +83,11 @@ export function PowerBlock({
           )}
         </YStack>
       </Pressable>
-      <ImageLightbox visible={previewOpen} uri={picture ?? null} onClose={() => setPreviewOpen(false)} />
+      <ImageLightbox
+        visible={previewOpen}
+        uri={fullPicture ?? picture ?? null}
+        onClose={() => setPreviewOpen(false)}
+      />
 
       {name ? (
         <>
