@@ -61,8 +61,11 @@ export function HomeScreen({ user, onNavigate }: Props) {
         <YStack width={96} height={96} rounded="$circle" overflow="hidden" position="relative">
           <InsetRing rounded="$circle" />
           <GlossOverlay coverage="third" shape="circle" />
-          {user.picture ? (
-            <Image source={{ uri: user.picture }} style={{ width: '100%', height: '100%' }} />
+          {user.pictureThumb || user.picture ? (
+            <Image
+              source={{ uri: user.pictureThumb || user.picture || undefined }}
+              style={{ width: '100%', height: '100%' }}
+            />
           ) : (
             <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
               <Paragraph color="white" fontSize="$8" fontWeight="800">

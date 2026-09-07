@@ -6,6 +6,7 @@ const USER = {
   username: 'OriolO',
   completeName: 'Jotaro Kujo',
   picture: null as string | null,
+  pictureThumb: null as string | null,
   role: 'REGULAR' as const,
   language: 'en-GB' as const,
 }
