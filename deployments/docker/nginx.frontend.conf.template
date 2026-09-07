@@ -13,6 +13,20 @@ server {
     # popup flow returns.)
     add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
 
+    # gzip*, unlike add_header, has normal nginx inheritance - a location
+    # block below does NOT need to repeat these, only add_header does (see
+    # the IMPORTANT comment further down). Do not "fix" that by moving these
+    # into a location. ~70% off the Expo web bundle; brotli would do better
+    # but nginx:alpine has no ngx_brotli - left for later as a build-time
+    # precompress (gzip_static/brotli_static) instead of an at-request one.
+    gzip on;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/javascript application/javascript
+        application/json application/manifest+json image/svg+xml;
+
     # style-src needs 'unsafe-inline': public/index.html ships a literal
     # inline <style id="expo-reset">, and both @tamagui/core
     # (inject-styles.cjs) and react-native-web (createCSSStyleSheet.js)
