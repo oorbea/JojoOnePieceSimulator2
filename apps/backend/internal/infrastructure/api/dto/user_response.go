@@ -24,10 +24,12 @@ type UserResponse struct {
 // (presigned through resolve, an R2 object key) if one exists, else the
 // Google-synced picture (already a full external URL - never passed through
 // resolve, which only knows how to presign this app's own object-storage
-// keys).
+// keys). The Google picture is used for both main and thumb: it is already a
+// small, externally-hosted image, and leaving thumb empty made every card
+// bound to avatarThumb render nothing for a user who never uploaded one.
 func resolveAvatar(ctx context.Context, u *user.User, resolve PictureURLResolver) (main, thumb string, err error) {
 	if u.AvatarKey() == "" {
-		return u.GooglePicture(), "", nil
+		return u.GooglePicture(), u.GooglePicture(), nil
 	}
 	main, err = resolve(ctx, u.AvatarKey())
 	if err != nil {
