@@ -15,7 +15,9 @@ type UserResponse struct {
 	CompleteName string `json:"completeName"`
 	Avatar       string `json:"avatar"`
 	AvatarThumb  string `json:"avatarThumb"`
+	AvatarCard   string `json:"avatarCard"`
 	AvatarStatus string `json:"avatarStatus" ts:"PictureStatus"`
+	AvatarLqip   string `json:"avatarLqip"`
 	Role         string `json:"role" ts:"UserRole"`
 	Language     string `json:"language" ts:"Locale"`
 }
@@ -24,31 +26,39 @@ type UserResponse struct {
 // (presigned through resolve, an R2 object key) if one exists, else the
 // Google-synced picture (already a full external URL - never passed through
 // resolve, which only knows how to presign this app's own object-storage
-// keys). The Google picture is used for both main and thumb: it is already a
-// small, externally-hosted image, and leaving thumb empty made every card
-// bound to avatarThumb render nothing for a user who never uploaded one.
-func resolveAvatar(ctx context.Context, u *user.User, resolve PictureURLResolver) (main, thumb string, err error) {
+// keys). The Google picture is used for main/thumb/card alike: it is already
+// a small, externally-hosted image, and leaving a rendition empty made every
+// card bound to it render nothing for a user who never uploaded one. lqip is
+// always empty for the Google fallback - there is no local pipeline output
+// to embed for an external URL.
+func resolveAvatar(ctx context.Context, u *user.User, resolve PictureURLResolver) (main, thumb, card, lqip string, err error) {
 	if u.AvatarKey() == "" {
-		return u.GooglePicture(), u.GooglePicture(), nil
+		return u.GooglePicture(), u.GooglePicture(), u.GooglePicture(), "", nil
 	}
 	main, err = resolve(ctx, u.AvatarKey())
 	if err != nil {
-		return "", "", err
+		return "", "", "", "", err
 	}
 	if u.AvatarThumbKey() != "" {
 		thumb, err = resolve(ctx, u.AvatarThumbKey())
 		if err != nil {
-			return "", "", err
+			return "", "", "", "", err
 		}
 	}
-	return main, thumb, nil
+	if u.AvatarCardKey() != "" {
+		card, err = resolve(ctx, u.AvatarCardKey())
+		if err != nil {
+			return "", "", "", "", err
+		}
+	}
+	return main, thumb, card, u.AvatarLqip(), nil
 }
 
 // NewUserResponse builds a UserResponse from a domain User, resolving its
 // avatar (own upload, or the Google-synced picture as a fallback) through
 // resolve.
 func NewUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver) (UserResponse, error) {
-	avatar, avatarThumb, err := resolveAvatar(ctx, u, resolve)
+	avatar, avatarThumb, avatarCard, avatarLqip, err := resolveAvatar(ctx, u, resolve)
 	if err != nil {
 		return UserResponse{}, err
 	}
@@ -59,7 +69,9 @@ func NewUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolv
 		CompleteName: u.CompleteName(),
 		Avatar:       avatar,
 		AvatarThumb:  avatarThumb,
+		AvatarCard:   avatarCard,
 		AvatarStatus: u.AvatarStatus().String(),
+		AvatarLqip:   avatarLqip,
 		Role:         u.Role().String(),
 		Language:     u.Language().String(),
 	}, nil

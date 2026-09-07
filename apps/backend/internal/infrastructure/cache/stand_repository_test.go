@@ -86,6 +86,16 @@ func (r *countingStandRepository) Filter(_ context.Context, filters ports.StandF
 	return results, nil
 }
 
+func (r *countingStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	options := make([]ports.StandOption, 0, len(r.stands))
+	for _, s := range r.stands {
+		options = append(options, ports.StandOption{ID: s.ID(), Name: s.Name()})
+	}
+	return options, nil
+}
+
 func (r *countingStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -103,7 +113,7 @@ func (r *countingStandRepository) Delete(_ context.Context, id powers.PowerID) e
 	return nil
 }
 
-func (r *countingStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (r *countingStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.updatePicCalls++
@@ -111,14 +121,20 @@ func (r *countingStandRepository) UpdatePicture(_ context.Context, id powers.Pow
 	if !ok {
 		return ports.ErrStandNotFound
 	}
-	newMain, newThumb := s.Picture(), s.PictureThumb()
+	newMain, newThumb, newCard, newLqip := s.Picture(), s.PictureThumb(), s.PictureCard(), s.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	s.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -226,7 +242,7 @@ func TestStandRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	}
 
 	main := "new-key"
-	if err := repo.UpdatePicture(ctx, stand.ID(), &main, nil, enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(ctx, stand.ID(), &main, nil, nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

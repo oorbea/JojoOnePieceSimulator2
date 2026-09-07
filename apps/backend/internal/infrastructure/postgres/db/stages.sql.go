@@ -41,7 +41,8 @@ func (q *Queries) DeleteStageTranslations(ctx context.Context, arg DeleteStageTr
 }
 
 const filterStageRows = `-- name: FilterStageRows :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -71,7 +72,9 @@ type FilterStageRowsRow struct {
 	Name          string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	Description   string
 }
 
@@ -94,7 +97,9 @@ func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams
 			&i.Name,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -108,7 +113,8 @@ func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams
 }
 
 const getStageByID = `-- name: GetStageByID :one
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -133,7 +139,9 @@ type GetStageByIDRow struct {
 	Name          string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	Description   string
 }
 
@@ -147,7 +155,9 @@ func (q *Queries) GetStageByID(ctx context.Context, arg GetStageByIDParams) (Get
 		&i.Name,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
 		&i.Description,
 	)
 	return i, err
@@ -182,7 +192,8 @@ func (q *Queries) GetStageTranslations(ctx context.Context, stageID pgtype.UUID)
 }
 
 const listStages = `-- name: ListStages :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -202,7 +213,9 @@ type ListStagesRow struct {
 	Name          string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	Description   string
 }
 
@@ -224,7 +237,9 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 			&i.Name,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -241,15 +256,19 @@ const updateStagePicture = `-- name: UpdateStagePicture :exec
 UPDATE stages
 SET picture        = COALESCE($1::text, picture),
     picture_thumb  = COALESCE($2::text, picture_thumb),
-    picture_status = $3::picture_status,
+    picture_card   = COALESCE($3::text, picture_card),
+    picture_status = $4::picture_status,
+    picture_lqip   = COALESCE($5::text, picture_lqip),
     updated_at     = now()
-WHERE id = $4
+WHERE id = $6
 `
 
 type UpdateStagePictureParams struct {
 	Picture       *string
 	PictureThumb  *string
+	PictureCard   *string
 	PictureStatus string
+	PictureLqip   *string
 	ID            pgtype.UUID
 }
 
@@ -260,24 +279,28 @@ func (q *Queries) UpdateStagePicture(ctx context.Context, arg UpdateStagePicture
 	_, err := q.db.Exec(ctx, updateStagePicture,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
 		arg.ID,
 	)
 	return err
 }
 
 const upsertStage = `-- name: UpsertStage :one
-INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_status)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (id) DO UPDATE
     SET manga          = EXCLUDED.manga,
         position       = EXCLUDED.position,
         name           = EXCLUDED.name,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
-RETURNING id, manga, position, name, picture, picture_thumb, picture_status
+RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip
 `
 
 type UpsertStageParams struct {
@@ -287,7 +310,9 @@ type UpsertStageParams struct {
 	Name          string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 type UpsertStageRow struct {
@@ -297,7 +322,9 @@ type UpsertStageRow struct {
 	Name          string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (UpsertStageRow, error) {
@@ -308,7 +335,9 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		arg.Name,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
 	)
 	var i UpsertStageRow
 	err := row.Scan(
@@ -318,7 +347,9 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		&i.Name,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
 	)
 	return i, err
 }

@@ -15,7 +15,9 @@ type DevilFruitResponse struct {
 	Skills        []string `json:"skills"`
 	Picture       string   `json:"picture"`
 	PictureThumb  string   `json:"pictureThumb"`
+	PictureCard   string   `json:"pictureCard"`
 	PictureStatus string   `json:"pictureStatus" ts:"PictureStatus"`
+	PictureLqip   string   `json:"pictureLqip"`
 	FruitType     string   `json:"fruitType" ts:"FruitType"`
 }
 
@@ -35,6 +37,10 @@ func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolv
 	if err != nil {
 		return DevilFruitResponse{}, err
 	}
+	pictureCardURL, err := resolve(ctx, fruit.PictureCard())
+	if err != nil {
+		return DevilFruitResponse{}, err
+	}
 
 	return DevilFruitResponse{
 		ID:            fruit.ID().String(),
@@ -44,6 +50,8 @@ func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolv
 		Skills:        skills,
 		Picture:       pictureURL,
 		PictureThumb:  pictureThumbURL,
+		PictureCard:   pictureCardURL,
+		PictureLqip:   fruit.PictureLqip(),
 		PictureStatus: fruit.PictureStatus().String(),
 		FruitType:     fruit.FruitType().String(),
 	}, nil

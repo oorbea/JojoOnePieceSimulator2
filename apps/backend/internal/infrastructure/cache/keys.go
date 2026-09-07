@@ -49,6 +49,13 @@ func allKey(locale enums.Locale) string {
 	return "all:" + locale.String()
 }
 
+// optionsKey backs StandRepository.Options - locale-free (powers.name is not
+// translatable), so unlike every other key here it carries no locale
+// component.
+func optionsKey() string {
+	return "options"
+}
+
 // standFilterKey renders filters in a fixed field order (rarity,
 // attackPower, speed, attackRange, endurance, precision, potential,
 // evolvesFrom, search) so two requests differing only in query-param order

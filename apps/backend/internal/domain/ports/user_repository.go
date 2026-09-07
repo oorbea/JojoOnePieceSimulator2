@@ -18,12 +18,12 @@ type IUserRepository interface {
 	// UpdateLanguage changes only id's preferred locale.
 	UpdateLanguage(ctx context.Context, id user.UserID, language enums.Locale) error
 	// UpdateAvatar updates only id's avatar renditions and pipeline status. A
-	// nil main or thumb leaves that column untouched, mirroring
+	// nil main/thumb/card/lqip leaves that column untouched, mirroring
 	// IStandRepository.UpdatePicture.
-	UpdateAvatar(ctx context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error
-	// AvatarKeys returns the main and thumbnail object-storage keys currently
-	// stored for id's avatar.
-	AvatarKeys(ctx context.Context, id user.UserID) (main, thumb string, err error)
+	UpdateAvatar(ctx context.Context, id user.UserID, main, thumb, card, lqip *string, status enums.PictureStatus) error
+	// AvatarKeys returns the main, thumbnail and card object-storage keys
+	// currently stored for id's avatar.
+	AvatarKeys(ctx context.Context, id user.UserID) (main, thumb, card string, err error)
 	// UpdateRole changes only id's role.
 	UpdateRole(ctx context.Context, id user.UserID, role enums.UserRole) error
 	// Delete removes the user with the given id.

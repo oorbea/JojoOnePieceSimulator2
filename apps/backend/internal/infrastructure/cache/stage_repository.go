@@ -173,8 +173,8 @@ func (r *StageRepository) Translations(ctx context.Context, id game.StageID) (po
 // PENDING) and by the background picture worker (publishing READY/FAILED),
 // so a background transcode completing is reflected for readers without
 // waiting out stageTTL.
-func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
-	if err := r.next.UpdatePicture(ctx, id, main, thumb, status); err != nil {
+func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
+	if err := r.next.UpdatePicture(ctx, id, main, thumb, card, lqip, status); err != nil {
 		return err
 	}
 	r.invalidate(ctx)

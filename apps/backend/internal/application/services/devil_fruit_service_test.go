@@ -98,21 +98,27 @@ func (f *fakeDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) 
 	return nil
 }
 
-func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	fruit, ok := f.fruits[id]
 	if !ok {
 		return ports.ErrDevilFruitNotFound
 	}
-	newMain, newThumb := fruit.Picture(), fruit.PictureThumb()
+	newMain, newThumb, newCard, newLqip := fruit.Picture(), fruit.PictureThumb(), fruit.PictureCard(), fruit.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	fruit.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	fruit.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -213,7 +219,7 @@ func TestUpdateDevilFruit_PreservesExistingPicture(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	fruit := newTestDevilFruit(t, repo, idGen, "Mera Mera no Mi")
-	if err := repo.UpdatePicture(context.Background(), fruit.ID(), strPtr("devil-fruits/x/main.webp"), strPtr("devil-fruits/x/main_thumb.webp"), enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(context.Background(), fruit.ID(), strPtr("devil-fruits/x/main.webp"), strPtr("devil-fruits/x/main_thumb.webp"), nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

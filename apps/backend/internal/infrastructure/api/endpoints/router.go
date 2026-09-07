@@ -43,7 +43,7 @@ type CORSConfig struct {
 // its own REST sub-group internally (chi can't mount two handlers on the
 // same pattern with different middleware), so /games is mounted here
 // alongside /events, outside this file's own Timeout group.
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, gameEndpoints *GameEndpoints, stageEndpoints *StageEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, gameEndpoints *GameEndpoints, stageEndpoints *StageEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig, compressLevel int) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -82,6 +82,15 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Timeout(60 * time.Second))
+			// Compress sits outside/before cacheHeaders (applied inside each
+			// Routes(...) group below) so the ETag hashes the uncompressed
+			// body cacheHeaders itself caches, and so Compress can rewrite
+			// the Content-Length cacheHeaders sets. Never applied to /events
+			// or /games/{id}/ws (mounted outside this group) - Compress
+			// buffers the body, which would break both streams.
+			if compressLevel > 0 {
+				r.Use(middleware.Compress(compressLevel, "application/json", "text/html", "text/plain", "application/javascript"))
+			}
 
 			r.Mount("/auth", authEndpoints.Routes(rateCfg))
 

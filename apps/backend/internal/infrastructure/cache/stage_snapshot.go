@@ -22,7 +22,9 @@ type stageSnapshot struct {
 	Description   string   `json:"description"`
 	Picture       string   `json:"picture"`
 	PictureThumb  string   `json:"pictureThumb"`
+	PictureCard   string   `json:"pictureCard"`
 	PictureStatus string   `json:"pictureStatus"`
+	PictureLqip   string   `json:"pictureLqip"`
 }
 
 func ofStage(st game.Stage) stageSnapshot {
@@ -34,7 +36,9 @@ func ofStage(st game.Stage) stageSnapshot {
 		Description:   st.Description(),
 		Picture:       st.Picture(),
 		PictureThumb:  st.PictureThumb(),
+		PictureCard:   st.PictureCard(),
 		PictureStatus: st.PictureStatus().String(),
+		PictureLqip:   st.PictureLqip(),
 	}
 }
 
@@ -56,7 +60,7 @@ func (s stageSnapshot) hydrate() (game.Stage, error) {
 	if err != nil {
 		return game.Stage{}, fmt.Errorf("stage %q: picture_status: %w", s.Name, err)
 	}
-	st.SetPictureRenditions(s.Picture, s.PictureThumb, status)
+	st.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, status)
 	return st, nil
 }
 

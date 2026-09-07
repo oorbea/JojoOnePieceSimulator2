@@ -26,7 +26,9 @@ type StandSnapshot struct {
 	Skills        []string       `json:"skills"`
 	Picture       string         `json:"picture"`
 	PictureThumb  string         `json:"pictureThumb"`
+	PictureCard   string         `json:"pictureCard"`
 	PictureStatus string         `json:"pictureStatus"`
+	PictureLqip   string         `json:"pictureLqip"`
 	AttackPower   string         `json:"attackPower"`
 	Speed         string         `json:"speed"`
 	AttackRange   string         `json:"attackRange"`
@@ -52,7 +54,9 @@ func OfStand(stand *powers.Stand) StandSnapshot {
 		Skills:        stand.Skills(),
 		Picture:       stand.Picture(),
 		PictureThumb:  stand.PictureThumb(),
+		PictureCard:   stand.PictureCard(),
 		PictureStatus: stand.PictureStatus().String(),
+		PictureLqip:   stand.PictureLqip(),
 		AttackPower:   stand.AttackPower().String(),
 		Speed:         stand.Speed().String(),
 		AttackRange:   stand.AttackRange().String(),
@@ -89,7 +93,7 @@ func (s StandSnapshot) Hydrate() (*powers.Stand, error) {
 	if err != nil {
 		return nil, fmt.Errorf("stand %q: picture_status: %w", s.Name, err)
 	}
-	power.SetPictureRenditions(s.Picture, s.PictureThumb, pictureStatus)
+	power.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
 
 	attackPower, err := enums.ParseStandStat(s.AttackPower)
 	if err != nil {

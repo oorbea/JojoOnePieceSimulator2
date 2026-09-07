@@ -438,6 +438,8 @@ type Power struct {
 	UpdatedAt     pgtype.Timestamptz
 	PictureThumb  string
 	PictureStatus string
+	PictureCard   string
+	PictureLqip   string
 }
 
 type PowerTranslation struct {
@@ -457,6 +459,8 @@ type Stage struct {
 	Picture       string
 	PictureThumb  string
 	PictureStatus string
+	PictureCard   string
+	PictureLqip   string
 }
 
 type StageTranslation struct {
@@ -498,4 +502,6 @@ type User struct {
 	AvatarThumbKey string
 	AvatarStatus   string
 	Language       string
+	AvatarCardKey  string
+	AvatarLqip     string
 }

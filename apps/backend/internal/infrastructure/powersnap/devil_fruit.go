@@ -19,7 +19,9 @@ type DevilFruitSnapshot struct {
 	Skills        []string `json:"skills"`
 	Picture       string   `json:"picture"`
 	PictureThumb  string   `json:"pictureThumb"`
+	PictureCard   string   `json:"pictureCard"`
 	PictureStatus string   `json:"pictureStatus"`
+	PictureLqip   string   `json:"pictureLqip"`
 	FruitType     string   `json:"fruitType"`
 }
 
@@ -32,7 +34,9 @@ func OfDevilFruit(fruit *powers.DevilFruit) DevilFruitSnapshot {
 		Skills:        fruit.Skills(),
 		Picture:       fruit.Picture(),
 		PictureThumb:  fruit.PictureThumb(),
+		PictureCard:   fruit.PictureCard(),
 		PictureStatus: fruit.PictureStatus().String(),
+		PictureLqip:   fruit.PictureLqip(),
 		FruitType:     fruit.FruitType().String(),
 	}
 }
@@ -51,7 +55,7 @@ func (s DevilFruitSnapshot) Hydrate() (*powers.DevilFruit, error) {
 	if err != nil {
 		return nil, fmt.Errorf("devil fruit %q: picture_status: %w", s.Name, err)
 	}
-	power.SetPictureRenditions(s.Picture, s.PictureThumb, pictureStatus)
+	power.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
 
 	fruitType, err := enums.ParseFruitType(s.FruitType)
 	if err != nil {

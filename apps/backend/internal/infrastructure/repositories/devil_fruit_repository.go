@@ -52,7 +52,9 @@ func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFrui
 		Rarity:        fruit.Rarity().String(),
 		Picture:       fruit.Picture(),
 		PictureThumb:  fruit.PictureThumb(),
+		PictureCard:   fruit.PictureCard(),
 		PictureStatus: fruit.PictureStatus().String(),
+		PictureLqip:   fruit.PictureLqip(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting power %q: %w", fruit.Name(), wrapPgError(err, ports.ErrDevilFruitAlreadyExists))
@@ -133,14 +135,16 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 }
 
 // UpdatePicture updates only a devil fruit's picture renditions and pipeline
-// status, leaving every other column untouched. A nil main or thumb leaves
-// that column as-is.
-func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+// status, leaving every other column untouched. A nil main/thumb/card/lqip
+// leaves that column as-is.
+func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	err := r.queries.UpdatePowerPicture(ctx, db.UpdatePowerPictureParams{
 		ID:            pgtype.UUID{Bytes: id, Valid: true},
 		Picture:       main,
 		PictureThumb:  thumb,
+		PictureCard:   card,
 		PictureStatus: status.String(),
+		PictureLqip:   lqip,
 	})
 	if err != nil {
 		return fmt.Errorf("updating picture for devil fruit %s: %w", id, err)

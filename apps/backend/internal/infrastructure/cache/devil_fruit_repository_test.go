@@ -102,7 +102,7 @@ func (r *countingDevilFruitRepository) Delete(_ context.Context, id powers.Power
 	return nil
 }
 
-func (r *countingDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (r *countingDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.updatePicCalls++
@@ -110,14 +110,20 @@ func (r *countingDevilFruitRepository) UpdatePicture(_ context.Context, id power
 	if !ok {
 		return ports.ErrDevilFruitNotFound
 	}
-	newMain, newThumb := f.Picture(), f.PictureThumb()
+	newMain, newThumb, newCard, newLqip := f.Picture(), f.PictureThumb(), f.PictureCard(), f.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	f.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	f.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -225,7 +231,7 @@ func TestDevilFruitRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	}
 
 	main := "new-key"
-	if err := repo.UpdatePicture(ctx, fruit.ID(), &main, nil, enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(ctx, fruit.ID(), &main, nil, nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

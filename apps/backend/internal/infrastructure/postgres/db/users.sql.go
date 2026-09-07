@@ -35,7 +35,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id pgtype.UUID) error {
 }
 
 const getUserAvatarKeys = `-- name: GetUserAvatarKeys :one
-SELECT avatar_key, avatar_thumb_key
+SELECT avatar_key, avatar_thumb_key, avatar_card_key
 FROM users
 WHERE id = $1
 `
@@ -43,18 +43,19 @@ WHERE id = $1
 type GetUserAvatarKeysRow struct {
 	AvatarKey      string
 	AvatarThumbKey string
+	AvatarCardKey  string
 }
 
 func (q *Queries) GetUserAvatarKeys(ctx context.Context, id pgtype.UUID) (GetUserAvatarKeysRow, error) {
 	row := q.db.QueryRow(ctx, getUserAvatarKeys, id)
 	var i GetUserAvatarKeysRow
-	err := row.Scan(&i.AvatarKey, &i.AvatarThumbKey)
+	err := row.Scan(&i.AvatarKey, &i.AvatarThumbKey, &i.AvatarCardKey)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE email = $1
 `
@@ -70,7 +71,9 @@ type GetUserByEmailRow struct {
 	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
+	AvatarCardKey  string
 	AvatarStatus   string
+	AvatarLqip     string
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -87,14 +90,16 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
+		&i.AvatarCardKey,
 		&i.AvatarStatus,
+		&i.AvatarLqip,
 	)
 	return i, err
 }
 
 const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE google_sub = $1
 `
@@ -110,7 +115,9 @@ type GetUserByGoogleSubRow struct {
 	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
+	AvatarCardKey  string
 	AvatarStatus   string
+	AvatarLqip     string
 }
 
 func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (GetUserByGoogleSubRow, error) {
@@ -127,14 +134,16 @@ func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (Get
 		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
+		&i.AvatarCardKey,
 		&i.AvatarStatus,
+		&i.AvatarLqip,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE id = $1
 `
@@ -150,7 +159,9 @@ type GetUserByIDRow struct {
 	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
+	AvatarCardKey  string
 	AvatarStatus   string
+	AvatarLqip     string
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
@@ -167,14 +178,16 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
+		&i.AvatarCardKey,
 		&i.AvatarStatus,
+		&i.AvatarLqip,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE username = $1
 `
@@ -190,7 +203,9 @@ type GetUserByUsernameRow struct {
 	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
+	AvatarCardKey  string
 	AvatarStatus   string
+	AvatarLqip     string
 }
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
@@ -207,14 +222,16 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.Language,
 		&i.AvatarKey,
 		&i.AvatarThumbKey,
+		&i.AvatarCardKey,
 		&i.AvatarStatus,
+		&i.AvatarLqip,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 ORDER BY created_at, id
 LIMIT $1 OFFSET $2
@@ -236,7 +253,9 @@ type ListUsersRow struct {
 	Language       string
 	AvatarKey      string
 	AvatarThumbKey string
+	AvatarCardKey  string
 	AvatarStatus   string
+	AvatarLqip     string
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
@@ -259,7 +278,9 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 			&i.Language,
 			&i.AvatarKey,
 			&i.AvatarThumbKey,
+			&i.AvatarCardKey,
 			&i.AvatarStatus,
+			&i.AvatarLqip,
 		); err != nil {
 			return nil, err
 		}
@@ -275,28 +296,35 @@ const updateUserAvatar = `-- name: UpdateUserAvatar :exec
 UPDATE users
 SET avatar_key       = COALESCE($1::text, avatar_key),
     avatar_thumb_key = COALESCE($2::text, avatar_thumb_key),
-    avatar_status    = $3::picture_status,
+    avatar_card_key  = COALESCE($3::text, avatar_card_key),
+    avatar_status    = $4::picture_status,
+    avatar_lqip      = COALESCE($5::text, avatar_lqip),
     updated_at       = now()
-WHERE id = $4
+WHERE id = $6
 `
 
 type UpdateUserAvatarParams struct {
 	AvatarKey      *string
 	AvatarThumbKey *string
+	AvatarCardKey  *string
 	AvatarStatus   string
+	AvatarLqip     *string
 	ID             pgtype.UUID
 }
 
 // Updates only a User's avatar renditions and pipeline status, without
 // touching username/email/role - used by PATCH /users/me/picture (status ->
 // PENDING), by the background compression worker (status -> READY/FAILED),
-// and by DELETE /users/me/picture (key/thumb -> "", status -> NONE).
-// avatar_key/avatar_thumb_key are left untouched when NULL is passed.
+// and by DELETE /users/me/picture (key/thumb/card -> "", status -> NONE).
+// avatar_key/avatar_thumb_key/avatar_card_key are left untouched when NULL
+// is passed.
 func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error {
 	_, err := q.db.Exec(ctx, updateUserAvatar,
 		arg.AvatarKey,
 		arg.AvatarThumbKey,
+		arg.AvatarCardKey,
 		arg.AvatarStatus,
+		arg.AvatarLqip,
 		arg.ID,
 	)
 	return err

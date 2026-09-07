@@ -12,25 +12,25 @@ RETURNING id;
 
 -- name: GetUserByID :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE id = $1;
 
 -- name: GetUserByGoogleSub :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE google_sub = $1;
 
 -- name: GetUserByEmail :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE email = $1;
 
 -- name: GetUserByUsername :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 WHERE username = $1;
 
@@ -49,18 +49,21 @@ WHERE id = $2;
 -- Updates only a User's avatar renditions and pipeline status, without
 -- touching username/email/role - used by PATCH /users/me/picture (status ->
 -- PENDING), by the background compression worker (status -> READY/FAILED),
--- and by DELETE /users/me/picture (key/thumb -> "", status -> NONE).
--- avatar_key/avatar_thumb_key are left untouched when NULL is passed.
+-- and by DELETE /users/me/picture (key/thumb/card -> "", status -> NONE).
+-- avatar_key/avatar_thumb_key/avatar_card_key are left untouched when NULL
+-- is passed.
 -- name: UpdateUserAvatar :exec
 UPDATE users
 SET avatar_key       = COALESCE(sqlc.narg('avatar_key')::text, avatar_key),
     avatar_thumb_key = COALESCE(sqlc.narg('avatar_thumb_key')::text, avatar_thumb_key),
+    avatar_card_key  = COALESCE(sqlc.narg('avatar_card_key')::text, avatar_card_key),
     avatar_status    = sqlc.arg('avatar_status')::picture_status,
+    avatar_lqip      = COALESCE(sqlc.narg('avatar_lqip')::text, avatar_lqip),
     updated_at       = now()
 WHERE id = sqlc.arg('id');
 
 -- name: GetUserAvatarKeys :one
-SELECT avatar_key, avatar_thumb_key
+SELECT avatar_key, avatar_thumb_key, avatar_card_key
 FROM users
 WHERE id = $1;
 
@@ -81,7 +84,7 @@ WHERE role = 'ADMIN';
 
 -- name: ListUsers :many
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_status
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
 FROM users
 ORDER BY created_at, id
 LIMIT $1 OFFSET $2;

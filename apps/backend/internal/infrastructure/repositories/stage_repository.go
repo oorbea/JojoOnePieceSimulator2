@@ -138,7 +138,9 @@ func (r *StageRepository) Save(ctx context.Context, s game.Stage, translations p
 		Name:          s.Name(),
 		Picture:       s.Picture(),
 		PictureThumb:  s.PictureThumb(),
+		PictureCard:   s.PictureCard(),
 		PictureStatus: s.PictureStatus().String(),
+		PictureLqip:   s.PictureLqip(),
 	}); err != nil {
 		return fmt.Errorf("saving stage %s: %w", s.ID(), wrapPgError(err, ports.ErrStageAlreadyExists))
 	}
@@ -183,12 +185,14 @@ func (r *StageRepository) Translations(ctx context.Context, id game.StageID) (po
 }
 
 // UpdatePicture implements ports.IStageRepository.
-func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	err := r.queries.UpdateStagePicture(ctx, db.UpdateStagePictureParams{
 		ID:            pgtype.UUID{Bytes: id, Valid: true},
 		Picture:       main,
 		PictureThumb:  thumb,
+		PictureCard:   card,
 		PictureStatus: status.String(),
+		PictureLqip:   lqip,
 	})
 	if err != nil {
 		return fmt.Errorf("updating picture for stage %s: %w", id, err)

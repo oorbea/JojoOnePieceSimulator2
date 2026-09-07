@@ -77,6 +77,16 @@ func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters, lo
 	return f.GetAll(context.Background(), locale)
 }
 
+func (f *fakeStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	options := make([]ports.StandOption, 0, len(f.stands))
+	for _, stand := range f.stands {
+		options = append(options, ports.StandOption{ID: stand.ID(), Name: stand.Name()})
+	}
+	return options, nil
+}
+
 func (f *fakeStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -97,21 +107,27 @@ func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error
 	return nil
 }
 
-func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	stand, ok := f.stands[id]
 	if !ok {
 		return ports.ErrStandNotFound
 	}
-	newMain, newThumb := stand.Picture(), stand.PictureThumb()
+	newMain, newThumb, newCard, newLqip := stand.Picture(), stand.PictureThumb(), stand.PictureCard(), stand.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	stand.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	stand.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -200,11 +216,11 @@ func (f *fakeImageProcessor) Probe(_ []byte) (ports.ImageMeta, error) {
 	return f.probeMeta, f.probeErr
 }
 
-func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (ports.EncodedImage, ports.EncodedImage, error) {
+func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (map[string]ports.EncodedImage, error) {
 	if f.transcodeErr != nil {
-		return ports.EncodedImage{}, ports.EncodedImage{}, f.transcodeErr
+		return nil, f.transcodeErr
 	}
-	return f.main, f.thumb, nil
+	return map[string]ports.EncodedImage{"card": f.main, "thumb": f.thumb, "main": f.main, "lqip": f.thumb}, nil
 }
 
 var _ ports.IImageProcessor = (*fakeImageProcessor)(nil)
@@ -412,7 +428,7 @@ func TestUpdateStand_PreservesExistingPicture(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	stand := newTestStand(t, repo, idGen, "Gold Experience")
-	if err := repo.UpdatePicture(context.Background(), stand.ID(), strPtr("stands/x/main.webp"), strPtr("stands/x/main_thumb.webp"), enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(context.Background(), stand.ID(), strPtr("stands/x/main.webp"), strPtr("stands/x/main_thumb.webp"), nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

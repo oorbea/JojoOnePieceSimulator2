@@ -15,7 +15,9 @@ type StageResponse struct {
 	Description   string `json:"description"`
 	Picture       string `json:"picture"`
 	PictureThumb  string `json:"pictureThumb"`
+	PictureCard   string `json:"pictureCard"`
 	PictureStatus string `json:"pictureStatus" ts:"PictureStatus"`
+	PictureLqip   string `json:"pictureLqip"`
 }
 
 // NewStageResponse builds a StageResponse from a domain Stage, resolving its
@@ -29,6 +31,10 @@ func NewStageResponse(ctx context.Context, s game.Stage, resolve PictureURLResol
 	if err != nil {
 		return StageResponse{}, err
 	}
+	pictureCardURL, err := resolve(ctx, s.PictureCard())
+	if err != nil {
+		return StageResponse{}, err
+	}
 
 	return StageResponse{
 		ID:            s.ID().String(),
@@ -38,6 +44,8 @@ func NewStageResponse(ctx context.Context, s game.Stage, resolve PictureURLResol
 		Description:   s.Description(),
 		Picture:       pictureURL,
 		PictureThumb:  pictureThumbURL,
+		PictureCard:   pictureCardURL,
+		PictureLqip:   s.PictureLqip(),
 		PictureStatus: s.PictureStatus().String(),
 	}, nil
 }

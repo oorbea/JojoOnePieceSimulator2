@@ -1,12 +1,14 @@
 -- name: UpsertPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'STAND', $2, $3, $4, $5, $6)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, 'STAND', $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
 RETURNING id;
 
@@ -56,14 +58,16 @@ DELETE FROM powers WHERE id = $1 AND kind = 'STAND';
 -- Updates only a Power's picture renditions and pipeline status, without
 -- touching name/description/skills/stats - used by the PATCH .../picture
 -- handler (status -> PENDING) and by the background compression worker
--- (status -> READY/FAILED). picture/picture_thumb are left untouched when
--- NULL is passed, so the handler can move a row to PENDING without
--- clobbering the renditions currently being served.
+-- (status -> READY/FAILED). picture/picture_thumb/picture_card/picture_lqip
+-- are left untouched when NULL is passed, so the handler can move a row to
+-- PENDING without clobbering the renditions currently being served.
 -- name: UpdatePowerPicture :exec
 UPDATE powers
 SET picture        = COALESCE(sqlc.narg('picture')::text, picture),
     picture_thumb  = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
+    picture_card   = COALESCE(sqlc.narg('picture_card')::text, picture_card),
     picture_status = sqlc.arg('picture_status')::picture_status,
+    picture_lqip   = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
     updated_at     = now()
 WHERE id = sqlc.arg('id');
 
@@ -80,7 +84,9 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
+                                 p.picture_card,
                                  p.picture_status,
+                                 p.picture_lqip,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -98,7 +104,9 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
+                                 p2.picture_card,
                                  p2.picture_status,
+                                 p2.picture_lqip,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -115,7 +123,9 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
                       attack_power,
                       speed,
                       attack_range,
@@ -125,15 +135,17 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -160,7 +172,9 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
+                                 p.picture_card,
                                  p.picture_status,
+                                 p.picture_lqip,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -178,7 +192,9 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
+                                 p2.picture_card,
                                  p2.picture_status,
+                                 p2.picture_lqip,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -195,7 +211,9 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
                       attack_power,
                       speed,
                       attack_range,
@@ -205,15 +223,17 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -243,7 +263,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        s.attack_power,
        s.speed,
        s.attack_range,
@@ -274,7 +296,9 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 p.rarity,
                                 p.picture,
                                 p.picture_thumb,
+                                p.picture_card,
                                 p.picture_status,
+                                p.picture_lqip,
                                 s.attack_power,
                                 s.speed,
                                 s.attack_range,
@@ -319,7 +343,9 @@ WITH RECURSIVE base AS (SELECT p.id,
                       p2.rarity,
                       p2.picture,
                       p2.picture_thumb,
+                      p2.picture_card,
                       p2.picture_status,
+                      p2.picture_lqip,
                       s2.attack_power,
                       s2.speed,
                       s2.attack_range,
@@ -336,7 +362,9 @@ WITH RECURSIVE base AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
                       attack_power,
                       speed,
                       attack_range,
@@ -346,15 +374,17 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -373,3 +403,14 @@ FROM dedup d
     LIMIT 1
     ) tr ON true
 ORDER BY d.name;
+
+-- Every stand's id/name only, unfiltered and translation-free - powers.name
+-- is deliberately non-translatable (see 00008_stages.sql), so this is
+-- locale-free and stays cheap even with thousands of rows. Backs the
+-- evolvesFrom picker, which needs the full id->name set regardless of the
+-- catalogue's own pagination/filters.
+-- name: ListStandOptions :many
+SELECT p.id, p.name
+FROM stands s
+         JOIN powers p ON p.id = s.id
+ORDER BY p.name;

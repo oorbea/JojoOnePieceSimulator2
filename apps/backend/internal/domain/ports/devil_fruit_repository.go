@@ -31,8 +31,8 @@ type IDevilFruitRepository interface {
 	Filter(ctx context.Context, filters DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error)
 	Delete(ctx context.Context, id powers.PowerID) error
 	// UpdatePicture updates only a devil fruit's picture renditions and
-	// pipeline status. A nil main or thumb leaves that column untouched.
-	UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error
+	// pipeline status. A nil main/thumb/card/lqip leaves that column untouched.
+	UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error
 	// Translations returns every locale's content for id, for admin edit
 	// forms that need all locales at once instead of one resolved locale.
 	Translations(ctx context.Context, id powers.PowerID) (PowerTranslations, error)

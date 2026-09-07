@@ -112,32 +112,38 @@ func (f *fakeGameUserRepository) UpdateLanguage(_ context.Context, id user.UserI
 	return u.ChangeLanguage(language)
 }
 
-func (f *fakeGameUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeGameUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
 		return ports.ErrUserNotFound
 	}
-	newMain, newThumb := u.AvatarKey(), u.AvatarThumbKey()
+	newMain, newThumb, newCard, newLqip := u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), u.AvatarLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	u.SetAvatarRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	u.SetAvatarRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
-func (f *fakeGameUserRepository) AvatarKeys(_ context.Context, id user.UserID) (string, string, error) {
+func (f *fakeGameUserRepository) AvatarKeys(_ context.Context, id user.UserID) (string, string, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
-		return "", "", ports.ErrUserNotFound
+		return "", "", "", ports.ErrUserNotFound
 	}
-	return u.AvatarKey(), u.AvatarThumbKey(), nil
+	return u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), nil
 }
 
 func (f *fakeGameUserRepository) UpdateRole(_ context.Context, id user.UserID, role enums.UserRole) error {
@@ -220,7 +226,7 @@ func (fakeGameStageRepository) Translations(context.Context, game.StageID) (port
 	return ports.StageTranslations{}, nil
 }
 
-func (fakeGameStageRepository) UpdatePicture(context.Context, game.StageID, *string, *string, enums.PictureStatus) error {
+func (fakeGameStageRepository) UpdatePicture(context.Context, game.StageID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
 
@@ -253,13 +259,17 @@ func (fakeGameStandRepository) Filter(context.Context, ports.StandFilters, enums
 	return nil, nil
 }
 
+func (fakeGameStandRepository) Options(context.Context) ([]ports.StandOption, error) {
+	return nil, nil
+}
+
 func (fakeGameStandRepository) Save(context.Context, *powers.Stand, ports.PowerTranslations) error {
 	return nil
 }
 
 func (fakeGameStandRepository) Delete(context.Context, powers.PowerID) error { return nil }
 
-func (fakeGameStandRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, enums.PictureStatus) error {
+func (fakeGameStandRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
 
@@ -295,7 +305,7 @@ func (fakeGameDevilFruitRepository) Save(context.Context, *powers.DevilFruit, po
 
 func (fakeGameDevilFruitRepository) Delete(context.Context, powers.PowerID) error { return nil }
 
-func (fakeGameDevilFruitRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, enums.PictureStatus) error {
+func (fakeGameDevilFruitRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
 
@@ -479,7 +489,7 @@ func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 		users, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{})
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 
 	return h, &gameEndpointsTestDeps{users: users, svc: svc, tickets: tickets}
 }

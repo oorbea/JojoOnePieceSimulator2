@@ -100,21 +100,27 @@ func (f *fakeStageRepository) Translations(_ context.Context, id game.StageID) (
 	return t, nil
 }
 
-func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	s, ok := f.stages[id]
 	if !ok {
 		return ports.ErrStageNotFound
 	}
-	newMain, newThumb := s.Picture(), s.PictureThumb()
+	newMain, newThumb, newCard, newLqip := s.Picture(), s.PictureThumb(), s.PictureCard(), s.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	s.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -318,7 +324,7 @@ func TestUpdateStage_PreservesExistingPicture(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	stage := newTestStage(t, repo, idGen, "Jojolion")
-	if err := repo.UpdatePicture(context.Background(), stage.ID(), strPtr("stages/x/main.webp"), strPtr("stages/x/main_thumb.webp"), enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(context.Background(), stage.ID(), strPtr("stages/x/main.webp"), strPtr("stages/x/main_thumb.webp"), nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 
