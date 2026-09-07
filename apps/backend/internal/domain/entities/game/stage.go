@@ -20,6 +20,8 @@ type Stage struct {
 	description   string
 	picture       string
 	pictureThumb  string
+	pictureCard   string
+	pictureLqip   string
 	order         int
 	id            StageID
 	manga         enums.Manga
@@ -55,17 +57,22 @@ func (s Stage) Name() string         { return s.name }
 func (s Stage) Description() string  { return s.description }
 func (s Stage) Picture() string      { return s.picture }
 func (s Stage) PictureThumb() string { return s.pictureThumb }
+func (s Stage) PictureCard() string  { return s.pictureCard }
+func (s Stage) PictureLqip() string  { return s.pictureLqip }
 
 // PictureStatus reports where this Stage's picture is in the async
 // compression pipeline.
 func (s Stage) PictureStatus() enums.PictureStatus { return s.pictureStatus }
 
-// SetPictureRenditions replaces the stored main and thumbnail picture keys
-// together with the pipeline status that produced them, so the three
-// always change as one unit - same pattern as powers.Power.SetPictureRenditions.
-func (s *Stage) SetPictureRenditions(main, thumb string, status enums.PictureStatus) {
+// SetPictureRenditions replaces the stored main/thumbnail/card picture keys
+// and the LQIP placeholder together with the pipeline status that produced
+// them, so they always change as one unit - same pattern as
+// powers.Power.SetPictureRenditions.
+func (s *Stage) SetPictureRenditions(main, thumb, card, lqip string, status enums.PictureStatus) {
 	s.picture = main
 	s.pictureThumb = thumb
+	s.pictureCard = card
+	s.pictureLqip = lqip
 	s.pictureStatus = status
 }
 

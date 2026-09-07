@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
 // StandResponse is the JSON representation of a Stand, recursively nesting
@@ -17,7 +18,9 @@ type StandResponse struct {
 	Skills        []string       `json:"skills"`
 	Picture       string         `json:"picture"`
 	PictureThumb  string         `json:"pictureThumb"`
+	PictureCard   string         `json:"pictureCard"`
 	PictureStatus string         `json:"pictureStatus" ts:"PictureStatus"`
+	PictureLqip   string         `json:"pictureLqip"`
 	AttackPower   string         `json:"attackPower" ts:"StandStat"`
 	Speed         string         `json:"speed" ts:"StandStat"`
 	AttackRange   string         `json:"attackRange" ts:"StandStat"`
@@ -56,6 +59,10 @@ func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureU
 	if err != nil {
 		return StandResponse{}, err
 	}
+	pictureCardURL, err := resolve(ctx, stand.PictureCard())
+	if err != nil {
+		return StandResponse{}, err
+	}
 
 	return StandResponse{
 		ID:            stand.ID().String(),
@@ -65,6 +72,8 @@ func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureU
 		Skills:        skills,
 		Picture:       pictureURL,
 		PictureThumb:  pictureThumbURL,
+		PictureCard:   pictureCardURL,
+		PictureLqip:   stand.PictureLqip(),
 		PictureStatus: stand.PictureStatus().String(),
 		AttackPower:   stand.AttackPower().String(),
 		Speed:         stand.Speed().String(),
@@ -88,4 +97,21 @@ func NewStandResponses(ctx context.Context, stands []*powers.Stand, resolve Pict
 		responses = append(responses, resp)
 	}
 	return responses, nil
+}
+
+// StandOptionResponse is the id/name pair the evolvesFrom picker needs - no
+// picture, no stats, no translations.
+type StandOptionResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// NewStandOptionResponses builds a StandOptionResponse slice, never nil,
+// from a list of domain StandOptions.
+func NewStandOptionResponses(options []ports.StandOption) []StandOptionResponse {
+	responses := make([]StandOptionResponse, 0, len(options))
+	for _, o := range options {
+		responses = append(responses, StandOptionResponse{ID: o.ID.String(), Name: o.Name})
+	}
+	return responses
 }

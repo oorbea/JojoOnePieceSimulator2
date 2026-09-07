@@ -30,7 +30,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -64,7 +66,9 @@ type FilterDevilFruitRowsRow struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	FruitType     string
 	Skills        []string
 }
@@ -91,7 +95,9 @@ func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruit
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -112,7 +118,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -139,7 +147,9 @@ type GetDevilFruitRowByIDRow struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	FruitType     string
 	Skills        []string
 }
@@ -158,7 +168,9 @@ func (q *Queries) GetDevilFruitRowByID(ctx context.Context, arg GetDevilFruitRow
 		&i.Rarity,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -172,7 +184,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -199,7 +213,9 @@ type GetDevilFruitRowByNameRow struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	FruitType     string
 	Skills        []string
 }
@@ -215,7 +231,9 @@ func (q *Queries) GetDevilFruitRowByName(ctx context.Context, arg GetDevilFruitR
 		&i.Rarity,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -229,7 +247,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -251,7 +271,9 @@ type ListDevilFruitRowsRow struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	FruitType     string
 	Skills        []string
 }
@@ -273,7 +295,9 @@ func (q *Queries) ListDevilFruitRows(ctx context.Context, locales []string) ([]L
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -305,14 +329,16 @@ func (q *Queries) UpsertDevilFruit(ctx context.Context, arg UpsertDevilFruitPara
 }
 
 const upsertDevilFruitPower = `-- name: UpsertDevilFruitPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
 RETURNING id
 `
@@ -323,7 +349,9 @@ type UpsertDevilFruitPowerParams struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 func (q *Queries) UpsertDevilFruitPower(ctx context.Context, arg UpsertDevilFruitPowerParams) (pgtype.UUID, error) {
@@ -333,7 +361,9 @@ func (q *Queries) UpsertDevilFruitPower(ctx context.Context, arg UpsertDevilFrui
 		arg.Rarity,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)

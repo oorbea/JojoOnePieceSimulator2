@@ -27,7 +27,7 @@ func newEventsTestServer(t *testing.T, ttl time.Duration) (http.Handler, *stream
 	h := endpoints.NewRouter(
 		endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{}), endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil),
 		endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil),
-		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{},
+		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0,
 	)
 	return h, tickets
 }

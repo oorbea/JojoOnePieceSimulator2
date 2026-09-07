@@ -82,6 +82,7 @@ func (e *StandEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConfig) c
 	read := readRateLimit(rateCfg)
 	cache := cacheHeaders(cacheCfg)
 	r.With(read, cache).Get("/", Wrap(e.list))
+	r.With(read, cache).Get("/options", Wrap(e.options))
 	r.With(read, cache).Get("/{id}", Wrap(e.get))
 
 	r.Group(func(r chi.Router) {
@@ -141,6 +142,28 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	writeJSON(w, http.StatusOK, resp)
+	return nil
+}
+
+// options godoc
+//
+//	@Summary		List every stand's id/name
+//	@Description	Backs the evolvesFrom picker - locale-free (powers.name is not
+//	@Description	translatable) and unfiltered, so it stays cheap regardless of the
+//	@Description	catalogue's own pagination/filters.
+//	@Tags			stands
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{array}		dto.StandOptionResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/stands/options [get]
+func (e *StandEndpoints) options(w http.ResponseWriter, r *http.Request) error {
+	options, err := e.svc.StandOptions(r.Context())
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.NewStandOptionResponses(options))
 	return nil
 }
 

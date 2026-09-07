@@ -14,6 +14,8 @@ type User struct {
 	googlePicture  string
 	avatarKey      string
 	avatarThumbKey string
+	avatarCardKey  string
+	avatarLqip     string
 	id             UserID
 	role           enums.UserRole
 	avatarStatus   enums.PictureStatus
@@ -96,6 +98,14 @@ func (u *User) AvatarThumbKey() string {
 	return u.avatarThumbKey
 }
 
+func (u *User) AvatarCardKey() string {
+	return u.avatarCardKey
+}
+
+func (u *User) AvatarLqip() string {
+	return u.avatarLqip
+}
+
 func (u *User) AvatarStatus() enums.PictureStatus {
 	return u.avatarStatus
 }
@@ -148,12 +158,15 @@ func (u *User) ChangeUsername(username string) error {
 }
 
 // SetAvatarRenditions replaces the user-owned avatar's object-storage keys
-// together with the pipeline status that produced them, so the three always
-// change as one unit - mirrors powers.Power.SetPictureRenditions. Passing
-// ("", "", enums.PictureNone) clears the avatar entirely (DELETE
+// and LQIP placeholder together with the pipeline status that produced
+// them, so they always change as one unit - mirrors
+// powers.Power.SetPictureRenditions. Passing ("", "", "", "",
+// enums.PictureNone) clears the avatar entirely (DELETE
 // /users/me/picture), reverting display to GooglePicture.
-func (u *User) SetAvatarRenditions(key, thumbKey string, status enums.PictureStatus) {
+func (u *User) SetAvatarRenditions(key, thumbKey, cardKey, lqip string, status enums.PictureStatus) {
 	u.avatarKey = key
 	u.avatarThumbKey = thumbKey
+	u.avatarCardKey = cardKey
+	u.avatarLqip = lqip
 	u.avatarStatus = status
 }

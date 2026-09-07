@@ -1,12 +1,14 @@
 -- name: UpsertDevilFruitPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
 RETURNING id;
 
@@ -30,7 +32,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -52,7 +56,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -74,7 +80,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -96,7 +104,9 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d

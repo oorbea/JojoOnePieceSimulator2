@@ -156,8 +156,8 @@ func (r *DevilFruitRepository) Delete(ctx context.Context, id powers.PowerID) er
 // on success. Called both by the PATCH .../picture handler (moving a
 // DevilFruit to PENDING) and by the background picture worker (publishing
 // READY/FAILED).
-func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
-	if err := r.next.UpdatePicture(ctx, id, main, thumb, status); err != nil {
+func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
+	if err := r.next.UpdatePicture(ctx, id, main, thumb, card, lqip, status); err != nil {
 		return err
 	}
 	r.invalidate(ctx)

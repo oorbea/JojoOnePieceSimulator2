@@ -58,7 +58,9 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand, transla
 		Rarity:        stand.Rarity().String(),
 		Picture:       stand.Picture(),
 		PictureThumb:  stand.PictureThumb(),
+		PictureCard:   stand.PictureCard(),
 		PictureStatus: stand.PictureStatus().String(),
+		PictureLqip:   stand.PictureLqip(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting power %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
@@ -117,16 +119,18 @@ func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID, local
 
 // UpdatePicture updates only a stand's picture renditions and pipeline
 // status, leaving every other column (name, skills, stats, ...) untouched.
-// A nil main or thumb leaves that column as-is - used by the PATCH
+// A nil main/thumb/card/lqip leaves that column as-is - used by the PATCH
 // .../picture handler to move a stand to PENDING without touching the
 // renditions still being served, and by the background compression worker
 // to publish new renditions once ready.
-func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	err := r.queries.UpdatePowerPicture(ctx, db.UpdatePowerPictureParams{
 		ID:            pgtype.UUID{Bytes: id, Valid: true},
 		Picture:       main,
 		PictureThumb:  thumb,
+		PictureCard:   card,
 		PictureStatus: status.String(),
+		PictureLqip:   lqip,
 	})
 	if err != nil {
 		return fmt.Errorf("updating picture for stand %s: %w", id, err)
@@ -184,6 +188,20 @@ func (r *StandRepository) GetAll(ctx context.Context, locale enums.Locale) ([]*p
 		return nil, fmt.Errorf("listing stands: %w", err)
 	}
 	return buildStandsLenient(standRowsFromList(rows)), nil
+}
+
+// Options loads every stand's id/name only, unfiltered and locale-free -
+// backs the evolvesFrom picker without the cost of a full catalogue fetch.
+func (r *StandRepository) Options(ctx context.Context) ([]ports.StandOption, error) {
+	rows, err := r.queries.ListStandOptions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing stand options: %w", err)
+	}
+	options := make([]ports.StandOption, len(rows))
+	for i, row := range rows {
+		options[i] = ports.StandOption{ID: powers.PowerID(row.ID.Bytes), Name: row.Name}
+	}
+	return options, nil
 }
 
 // Filter loads every stand matching the given (all-optional) filters,

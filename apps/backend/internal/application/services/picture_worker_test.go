@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"strings"
 	"sync"
@@ -80,6 +81,16 @@ func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters, lo
 	return f.GetAll(context.Background(), locale)
 }
 
+func (f *fakeStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	options := make([]ports.StandOption, 0, len(f.stands))
+	for _, stand := range f.stands {
+		options = append(options, ports.StandOption{ID: stand.ID(), Name: stand.Name()})
+	}
+	return options, nil
+}
+
 func (f *fakeStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -100,21 +111,27 @@ func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error
 	return nil
 }
 
-func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	stand, ok := f.stands[id]
 	if !ok {
 		return ports.ErrStandNotFound
 	}
-	newMain, newThumb := stand.Picture(), stand.PictureThumb()
+	newMain, newThumb, newCard, newLqip := stand.Picture(), stand.PictureThumb(), stand.PictureCard(), stand.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	stand.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	stand.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -178,15 +195,19 @@ type fakeImageProcessor struct {
 	probeMeta    ports.ImageMeta
 	probeErr     error
 	transcodeErr error
+	card         ports.EncodedImage
 	main         ports.EncodedImage
 	thumb        ports.EncodedImage
+	lqip         ports.EncodedImage
 }
 
 func newFakeImageProcessor() *fakeImageProcessor {
 	return &fakeImageProcessor{
 		probeMeta: ports.ImageMeta{Width: 1, Height: 1, Pages: 1},
+		card:      ports.EncodedImage{Bytes: []byte("card-webp"), ContentType: "image/webp"},
 		main:      ports.EncodedImage{Bytes: []byte("main-webp"), ContentType: "image/webp"},
 		thumb:     ports.EncodedImage{Bytes: []byte("thumb-webp"), ContentType: "image/webp"},
+		lqip:      ports.EncodedImage{Bytes: []byte("lqip-webp"), ContentType: "image/webp"},
 	}
 }
 
@@ -194,11 +215,13 @@ func (f *fakeImageProcessor) Probe(_ []byte) (ports.ImageMeta, error) {
 	return f.probeMeta, f.probeErr
 }
 
-func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (ports.EncodedImage, ports.EncodedImage, error) {
+func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (map[string]ports.EncodedImage, error) {
 	if f.transcodeErr != nil {
-		return ports.EncodedImage{}, ports.EncodedImage{}, f.transcodeErr
+		return nil, f.transcodeErr
 	}
-	return f.main, f.thumb, nil
+	return map[string]ports.EncodedImage{
+		"card": f.card, "thumb": f.thumb, "main": f.main, "lqip": f.lqip,
+	}, nil
 }
 
 var _ ports.IImageProcessor = (*fakeImageProcessor)(nil)
@@ -209,7 +232,7 @@ func newWorkerTestStand(t *testing.T, repo *fakeStandRepository, idGen *fakeStan
 	if err != nil {
 		t.Fatalf("building power: %v", err)
 	}
-	power.SetPictureRenditions(main, thumb, status)
+	power.SetPictureRenditions(main, thumb, "", "", status)
 	stand, err := powers.NewStand(*power, enums.A, enums.B, enums.C, enums.D, enums.E, enums.Infinite, nil)
 	if err != nil {
 		t.Fatalf("building stand: %v", err)
@@ -271,6 +294,15 @@ func TestProcess_Success_PublishesKeysAndDeletesOld(t *testing.T) {
 	if _, ok := pictures.objects[updated.PictureThumb()]; !ok {
 		t.Error("new thumb key missing from storage")
 	}
+	if updated.PictureCard() == "" {
+		t.Error("picture card key not published")
+	}
+	if _, ok := pictures.objects[updated.PictureCard()]; !ok {
+		t.Error("new card key missing from storage")
+	}
+	if updated.PictureLqip() != "data:image/webp;base64,"+base64.StdEncoding.EncodeToString([]byte("lqip-webp")) {
+		t.Errorf("picture lqip = %q, want the encoded data URI", updated.PictureLqip())
+	}
 
 	deletedOld := false
 	deletedOldThumb := false
@@ -284,6 +316,37 @@ func TestProcess_Success_PublishesKeysAndDeletesOld(t *testing.T) {
 	}
 	if !deletedOld || !deletedOldThumb {
 		t.Errorf("deleted = %v, want it to contain both old keys", pictures.deleted)
+	}
+}
+
+// TestProcess_LqipOverLimit_DroppedButJobStillSucceeds guards against a
+// misconfigured LqipDimension/LqipQuality being able to inflate every
+// catalogue list response: a placeholder over LqipMaxBytes is stored as ""
+// rather than failing the whole job.
+func TestProcess_LqipOverLimit_DroppedButJobStillSucceeds(t *testing.T) {
+	repo := newFakeStandRepository()
+	idGen := &fakeStandIDGenerator{}
+	pictures := newFakePictureStorage()
+	processor := newFakeImageProcessor()
+	processor.lqip = ports.EncodedImage{Bytes: []byte("this placeholder is way too big for the configured limit"), ContentType: "image/webp"}
+
+	worker := NewPictureWorker(processor, pictures, newTestTargets(repo), idGen, WorkerConfig{
+		Workers: 1, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
+		LqipMaxBytes: 16,
+	}, nil)
+
+	stand := newWorkerTestStand(t, repo, idGen, "", "", enums.PictureNone)
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
+
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if updated.PictureStatus() != enums.PictureReady {
+		t.Fatalf("status = %v, want READY (an oversized LQIP must not fail the job)", updated.PictureStatus())
+	}
+	if updated.PictureLqip() != "" {
+		t.Errorf("PictureLqip() = %q, want empty (oversized placeholder must be dropped)", updated.PictureLqip())
 	}
 }
 
@@ -469,19 +532,19 @@ type flakyPublisher struct {
 	updateCalls        int
 }
 
-func (f *flakyPublisher) PictureKeys(ctx context.Context, id string) (string, string, error) {
+func (f *flakyPublisher) PictureKeys(ctx context.Context, id string) (string, string, string, error) {
 	if f.failPictureKeysErr != nil {
-		return "", "", f.failPictureKeysErr
+		return "", "", "", f.failPictureKeysErr
 	}
 	return f.inner.PictureKeys(ctx, id)
 }
 
-func (f *flakyPublisher) UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error {
+func (f *flakyPublisher) UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.updateCalls++
 	if f.failUpdateOnce != nil && f.updateCalls == 1 {
 		return f.failUpdateOnce
 	}
-	return f.inner.UpdatePicture(ctx, id, main, thumb, status)
+	return f.inner.UpdatePicture(ctx, id, main, thumb, card, lqip, status)
 }
 
 var _ PicturePublisher = (*flakyPublisher)(nil)
@@ -650,21 +713,27 @@ func (f *fakeDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) 
 	return nil
 }
 
-func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	fruit, ok := f.fruits[id]
 	if !ok {
 		return ports.ErrDevilFruitNotFound
 	}
-	newMain, newThumb := fruit.Picture(), fruit.PictureThumb()
+	newMain, newThumb, newCard, newLqip := fruit.Picture(), fruit.PictureThumb(), fruit.PictureCard(), fruit.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	fruit.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	fruit.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -676,7 +745,7 @@ func newWorkerTestDevilFruit(t *testing.T, repo *fakeDevilFruitRepository, idGen
 	if err != nil {
 		t.Fatalf("building power: %v", err)
 	}
-	power.SetPictureRenditions(main, thumb, status)
+	power.SetPictureRenditions(main, thumb, "", "", status)
 	fruit, err := powers.NewDevilFruit(*power, enums.Zoan)
 	if err != nil {
 		t.Fatalf("building devil fruit: %v", err)
@@ -830,21 +899,27 @@ func (f *fakeStageRepository) Translations(_ context.Context, id game.StageID) (
 	return t, nil
 }
 
-func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	s, ok := f.stages[id]
 	if !ok {
 		return ports.ErrStageNotFound
 	}
-	newMain, newThumb := s.Picture(), s.PictureThumb()
+	newMain, newThumb, newCard, newLqip := s.Picture(), s.PictureThumb(), s.PictureCard(), s.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	s.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
@@ -873,7 +948,7 @@ func newWorkerTestStage(t *testing.T, repo *fakeStageRepository, idGen *fakeStag
 	if err != nil {
 		t.Fatalf("building stage: %v", err)
 	}
-	st.SetPictureRenditions(main, thumb, status)
+	st.SetPictureRenditions(main, thumb, "", "", status)
 	translations := ports.StageTranslations{enums.EnGB: "description", enums.EsES: "descripcion", enums.CaES: "descripcio"}
 	if err := repo.Save(context.Background(), st, translations); err != nil {
 		t.Fatalf("saving stage: %v", err)

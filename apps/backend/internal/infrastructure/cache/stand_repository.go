@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"time"
@@ -144,6 +145,29 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 	return stands, nil
 }
 
+// Options is read-through, cached as a single (locale-free) entry - read on
+// every catalogue mount for the evolvesFrom picker, and invalidated by the
+// same whole-namespace flush every write already triggers.
+func (r *StandRepository) Options(ctx context.Context) ([]ports.StandOption, error) {
+	key := optionsKey()
+	if data, ok := r.cache.Get(ctx, standsNamespace, key); ok {
+		var options []ports.StandOption
+		if err := json.Unmarshal(data, &options); err == nil {
+			return options, nil
+		}
+	}
+
+	options, err := r.next.Options(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if data, err := json.Marshal(options); err == nil {
+		r.cache.Set(ctx, standsNamespace, key, data, r.standTTL)
+	}
+	return options, nil
+}
+
 // Translations bypasses the cache: admin edit forms need a fresh read of
 // every locale's content, and this path is not part of the hot,
 // high-traffic read surface the cache exists for.
@@ -165,8 +189,8 @@ func (r *StandRepository) Delete(ctx context.Context, id powers.PowerID) error {
 // PENDING) and by the background picture worker (publishing READY/FAILED),
 // so a background transcode completing is reflected for readers without
 // waiting out standTTL.
-func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
-	if err := r.next.UpdatePicture(ctx, id, main, thumb, status); err != nil {
+func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
+	if err := r.next.UpdatePicture(ctx, id, main, thumb, card, lqip, status); err != nil {
 		return err
 	}
 	r.invalidate(ctx)

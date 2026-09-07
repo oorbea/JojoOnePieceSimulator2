@@ -113,7 +113,7 @@ func (r *countingStageRepository) Translations(_ context.Context, id game.StageI
 	return ports.StageTranslations{enums.EnGB: s.Description()}, nil
 }
 
-func (r *countingStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+func (r *countingStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.updatePicCalls++
@@ -121,14 +121,20 @@ func (r *countingStageRepository) UpdatePicture(_ context.Context, id game.Stage
 	if !ok {
 		return ports.ErrStageNotFound
 	}
-	newMain, newThumb := s.Picture(), s.PictureThumb()
+	newMain, newThumb, newCard, newLqip := s.Picture(), s.PictureThumb(), s.PictureCard(), s.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	s.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	r.stages[id] = s
 	return nil
 }
@@ -277,7 +283,7 @@ func TestStageRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	// The background picture worker's path: publishing READY once a
 	// transcode finishes must be visible to readers immediately.
 	main, thumb := "stages/main.webp", "stages/thumb.webp"
-	if err := repo.UpdatePicture(ctx, stage.ID(), &main, &thumb, enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(ctx, stage.ID(), &main, &thumb, nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

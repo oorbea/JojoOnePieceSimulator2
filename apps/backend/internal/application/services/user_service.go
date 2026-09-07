@@ -104,20 +104,20 @@ func (s *UserService) SetAvatar(ctx context.Context, id user.UserID, pic ports.P
 	// Captured before touching the repo or the worker, same reasoning as
 	// StandService.SetStandPicture: once Enqueue returns, the worker may
 	// already have run and mutated the persisted renditions.
-	previousMain, previousThumb, previousStatus := u.AvatarKey(), u.AvatarThumbKey(), u.AvatarStatus()
+	previousMain, previousThumb, previousCard, previousLqip, previousStatus := u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), u.AvatarLqip(), u.AvatarStatus()
 
-	if err := s.users.UpdateAvatar(ctx, id, nil, nil, enums.PicturePending); err != nil {
+	if err := s.users.UpdateAvatar(ctx, id, nil, nil, nil, nil, enums.PicturePending); err != nil {
 		return nil, err
 	}
 
 	if err := s.enqueuer.Enqueue(ports.PictureJob{SubjectID: id.String(), Kind: enums.UserSubject, Content: buf, ContentType: pic.ContentType}); err != nil {
-		if revertErr := s.users.UpdateAvatar(ctx, id, nil, nil, previousStatus); revertErr != nil {
+		if revertErr := s.users.UpdateAvatar(ctx, id, nil, nil, nil, nil, previousStatus); revertErr != nil {
 			log.Printf("reverting avatar status for user %s after enqueue failure: %v", id, revertErr)
 		}
 		return nil, err
 	}
 
-	u.SetAvatarRenditions(previousMain, previousThumb, enums.PicturePending)
+	u.SetAvatarRenditions(previousMain, previousThumb, previousCard, previousLqip, enums.PicturePending)
 	return u, nil
 }
 
@@ -130,9 +130,9 @@ func (s *UserService) DeleteAvatar(ctx context.Context, id user.UserID) (*user.U
 		return nil, err
 	}
 
-	mainKey, thumbKey := u.AvatarKey(), u.AvatarThumbKey()
+	mainKey, thumbKey, cardKey := u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey()
 	empty := ""
-	if err := s.users.UpdateAvatar(ctx, id, &empty, &empty, enums.PictureNone); err != nil {
+	if err := s.users.UpdateAvatar(ctx, id, &empty, &empty, &empty, &empty, enums.PictureNone); err != nil {
 		return nil, err
 	}
 
@@ -146,8 +146,13 @@ func (s *UserService) DeleteAvatar(ctx context.Context, id user.UserID) (*user.U
 			log.Printf("deleting avatar thumbnail %q for user %s: %v", thumbKey, id, err)
 		}
 	}
+	if cardKey != "" {
+		if err := s.pictures.Delete(ctx, cardKey); err != nil {
+			log.Printf("deleting avatar card %q for user %s: %v", cardKey, id, err)
+		}
+	}
 
-	u.SetAvatarRenditions("", "", enums.PictureNone)
+	u.SetAvatarRenditions("", "", "", "", enums.PictureNone)
 	return u, nil
 }
 

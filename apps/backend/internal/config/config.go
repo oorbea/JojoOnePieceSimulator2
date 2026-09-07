@@ -29,6 +29,7 @@ var defaultCORSAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE"
 var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization", "X-JOPS-Refresh"}
 
 const defaultCORSMaxAge = 300
+const defaultHTTPCompressLevel = 5
 
 // defaultRateLimit* are used when their respective env vars are unset.
 const defaultRateLimitEnabled = true
@@ -83,7 +84,11 @@ var defaultPictureAllowedTypes = []string{"image/webp", "image/avif", "image/jpe
 // alongside it.
 const defaultPictureMaxDimension = 1024
 const defaultPictureThumbDimension = 256
+const defaultPictureCardDimension = 128
 const defaultPictureWebPQuality = 80
+const defaultPictureLqipDimension = 16
+const defaultPictureLqipQuality = 30
+const defaultMediaLqipMaxBytes = 512
 const defaultPictureMaxPixels = int64(50_000_000)
 const defaultPictureWorkers = 2
 const defaultPictureQueueSize = 32
@@ -226,6 +231,9 @@ type Config struct {
 	PictureAllowedTypes   []string
 	JWTTTL                time.Duration
 	CORSMaxAge            int
+	// HTTPCompressLevel is the gzip level middleware.Compress applies to
+	// /api/v1 JSON responses (0 disables compression entirely).
+	HTTPCompressLevel int
 	RateLimitWindow       time.Duration
 	RateLimitGlobalPerIP  int
 	RateLimitLoginPerIP   int
@@ -242,7 +250,11 @@ type Config struct {
 	// worker pool that runs it.
 	PictureMaxDimension   int
 	PictureThumbDimension int
+	PictureCardDimension  int
 	PictureWebPQuality    int
+	PictureLqipDimension  int
+	PictureLqipQuality    int
+	MediaLqipMaxBytes     int
 	PictureMaxPixels      int64
 	PictureWorkers        int
 	PictureQueueSize      int
@@ -439,6 +451,11 @@ func Load() (*Config, error) {
 		corsMaxAge = parsed
 	}
 
+	httpCompressLevel, err := parsePositiveIntEnv("HTTP_COMPRESS_LEVEL", defaultHTTPCompressLevel)
+	if err != nil {
+		return nil, err
+	}
+
 	rateLimitEnabled := defaultRateLimitEnabled
 	if raw := os.Getenv("RATE_LIMIT_ENABLED"); raw != "" {
 		parsed, err := strconv.ParseBool(raw)
@@ -625,6 +642,26 @@ func Load() (*Config, error) {
 	}
 
 	pictureThumbDimension, err := parsePositiveIntEnv("PICTURE_THUMB_DIMENSION", defaultPictureThumbDimension)
+	if err != nil {
+		return nil, err
+	}
+
+	pictureCardDimension, err := parsePositiveIntEnv("PICTURE_CARD_DIMENSION", defaultPictureCardDimension)
+	if err != nil {
+		return nil, err
+	}
+
+	pictureLqipDimension, err := parsePositiveIntEnv("PICTURE_LQIP_DIMENSION", defaultPictureLqipDimension)
+	if err != nil {
+		return nil, err
+	}
+
+	pictureLqipQuality, err := parsePositiveIntEnv("PICTURE_LQIP_QUALITY", defaultPictureLqipQuality)
+	if err != nil {
+		return nil, err
+	}
+
+	mediaLqipMaxBytes, err := parsePositiveIntEnv("MEDIA_LQIP_MAX_BYTES", defaultMediaLqipMaxBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -910,6 +947,7 @@ func Load() (*Config, error) {
 		CORSAllowedHeaders:   corsAllowedHeaders,
 		CORSAllowCredentials: corsAllowCredentials,
 		CORSMaxAge:           corsMaxAge,
+		HTTPCompressLevel:    httpCompressLevel,
 
 		RateLimitEnabled:      rateLimitEnabled,
 		RateLimitWindow:       rateLimitWindow,
@@ -949,7 +987,11 @@ func Load() (*Config, error) {
 
 		PictureMaxDimension:   pictureMaxDimension,
 		PictureThumbDimension: pictureThumbDimension,
+		PictureCardDimension:  pictureCardDimension,
 		PictureWebPQuality:    pictureWebPQuality,
+		PictureLqipDimension:  pictureLqipDimension,
+		PictureLqipQuality:    pictureLqipQuality,
+		MediaLqipMaxBytes:     mediaLqipMaxBytes,
 		PictureMaxPixels:      pictureMaxPixels,
 		PictureWorkers:        pictureWorkers,
 		PictureQueueSize:      pictureQueueSize,

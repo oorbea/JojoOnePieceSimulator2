@@ -221,7 +221,7 @@ func (s *AuthService) findOrRegister(ctx context.Context, identity ports.GoogleI
 		if buildErr != nil {
 			return nil, false, buildErr
 		}
-		linked.SetAvatarRenditions(u.AvatarKey(), u.AvatarThumbKey(), u.AvatarStatus())
+		linked.SetAvatarRenditions(u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), u.AvatarLqip(), u.AvatarStatus())
 		if saveErr := s.users.Save(ctx, linked); saveErr != nil {
 			return nil, false, saveErr
 		}
@@ -246,7 +246,7 @@ func (s *AuthService) syncExisting(ctx context.Context, u *user.User, identity p
 	// columns anyway, but the returned User must still report the caller's
 	// existing self-uploaded avatar (if any) rather than silently dropping
 	// it from the response.
-	synced.SetAvatarRenditions(u.AvatarKey(), u.AvatarThumbKey(), u.AvatarStatus())
+	synced.SetAvatarRenditions(u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), u.AvatarLqip(), u.AvatarStatus())
 	if err := s.users.Save(ctx, synced); err != nil {
 		return nil, false, err
 	}

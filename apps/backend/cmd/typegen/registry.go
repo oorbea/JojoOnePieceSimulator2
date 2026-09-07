@@ -21,6 +21,7 @@ var restTypes = []any{
 	dto.UpdateRoleRequest{},
 	dto.StandRequest{},
 	dto.StandResponse{},
+	dto.StandOptionResponse{},
 	dto.DevilFruitRequest{},
 	dto.DevilFruitResponse{},
 	dto.StageRequest{},

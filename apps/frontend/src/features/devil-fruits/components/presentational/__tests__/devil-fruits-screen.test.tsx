@@ -21,7 +21,9 @@ function baseFruit(overrides: Partial<DevilFruitResponse> = {}): DevilFruitRespo
     skills: ['Gum-Gum Pistol'],
     picture: '',
     pictureThumb: '',
+    pictureCard: '',
     pictureStatus: 'NONE',
+    pictureLqip: '',
     fruitType: 'MYTHICAL_ZOAN',
     ...overrides,
   }

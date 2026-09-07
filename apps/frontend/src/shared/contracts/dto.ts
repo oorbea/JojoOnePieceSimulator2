@@ -20,7 +20,9 @@ export const devilFruitResponseSchema = z.object({
   skills: z.array(z.string()),
   picture: z.string(),
   pictureThumb: z.string(),
+  pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
+  pictureLqip: z.string(),
   fruitType: fruitTypeSchema,
 })
 export type DevilFruitResponse = z.infer<typeof devilFruitResponseSchema>
@@ -192,6 +194,8 @@ export const publicUserResponseSchema = z.object({
   completeName: z.string(),
   avatar: z.string(),
   avatarThumb: z.string(),
+  avatarCard: z.string(),
+  avatarLqip: z.string(),
 })
 export type PublicUserResponse = z.infer<typeof publicUserResponseSchema>
 
@@ -203,7 +207,9 @@ export const stageResponseSchema = z.object({
   description: z.string(),
   picture: z.string(),
   pictureThumb: z.string(),
+  pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
+  pictureLqip: z.string(),
 })
 export type StageResponse = z.infer<typeof stageResponseSchema>
 
@@ -230,6 +236,12 @@ export const stageTranslationsResponseSchema = z.object({
 })
 export type StageTranslationsResponse = z.infer<typeof stageTranslationsResponseSchema>
 
+export const standOptionResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+})
+export type StandOptionResponse = z.infer<typeof standOptionResponseSchema>
+
 export type StandResponse = {
   id: string
   name: string
@@ -238,7 +250,9 @@ export type StandResponse = {
   skills: string[]
   picture: string
   pictureThumb: string
+  pictureCard: string
   pictureStatus: PictureStatus
+  pictureLqip: string
   attackPower: StandStat
   speed: StandStat
   attackRange: StandStat
@@ -255,7 +269,9 @@ export const standResponseSchema: z.ZodType<StandResponse> = z.object({
   skills: z.array(z.string()),
   picture: z.string(),
   pictureThumb: z.string(),
+  pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
+  pictureLqip: z.string(),
   attackPower: standStatSchema,
   speed: standStatSchema,
   attackRange: standStatSchema,
@@ -393,7 +409,9 @@ export const userResponseSchema = z.object({
   completeName: z.string(),
   avatar: z.string(),
   avatarThumb: z.string(),
+  avatarCard: z.string(),
   avatarStatus: pictureStatusSchema,
+  avatarLqip: z.string(),
   role: userRoleSchema,
   language: localeSchema,
 })

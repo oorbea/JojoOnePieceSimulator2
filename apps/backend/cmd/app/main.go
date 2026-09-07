@@ -151,7 +151,11 @@ func main() {
 			JobTimeout:     cfg.PictureJobTimeout,
 			MaxDimension:   cfg.PictureMaxDimension,
 			ThumbDimension: cfg.PictureThumbDimension,
+			CardDimension:  cfg.PictureCardDimension,
 			Quality:        cfg.PictureWebPQuality,
+			LqipDimension:  cfg.PictureLqipDimension,
+			LqipQuality:    cfg.PictureLqipQuality,
+			LqipMaxBytes:   cfg.MediaLqipMaxBytes,
 		}, pictureHub)
 	pictureWorker.Start()
 
@@ -359,7 +363,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg, cfg.HTTPCompressLevel),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -64,20 +64,16 @@ func (p *Processor) Probe(buf []byte) (ports.ImageMeta, error) {
 	}, nil
 }
 
-func (p *Processor) Transcode(_ context.Context, buf []byte, opts ports.TranscodeOptions) (ports.EncodedImage, ports.EncodedImage, error) {
-	main, err := p.render(buf, opts.MaxDimension, opts.Quality, true)
-	if err != nil {
-		return ports.EncodedImage{}, ports.EncodedImage{}, err
-	}
-
-	var thumb ports.EncodedImage
-	if opts.ThumbDimension > 0 {
-		thumb, err = p.render(buf, opts.ThumbDimension, opts.Quality, false)
+func (p *Processor) Transcode(_ context.Context, buf []byte, opts ports.TranscodeOptions) (map[string]ports.EncodedImage, error) {
+	out := make(map[string]ports.EncodedImage, len(opts.Variants))
+	for _, v := range opts.Variants {
+		img, err := p.render(buf, v.MaxDimension, v.Quality, v.Animated)
 		if err != nil {
-			return ports.EncodedImage{}, ports.EncodedImage{}, err
+			return nil, err
 		}
+		out[v.Name] = img
 	}
-	return main, thumb, nil
+	return out, nil
 }
 
 // render loads buf fresh (never chaining off an already-shrunk image, which

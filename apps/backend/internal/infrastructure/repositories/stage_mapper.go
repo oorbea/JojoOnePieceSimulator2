@@ -20,7 +20,9 @@ type stageRow struct {
 	Description   string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	Position      int32
 	ID            pgtype.UUID
 }
@@ -38,27 +40,30 @@ func toStage(r stageRow) (game.Stage, error) {
 	if err != nil {
 		return game.Stage{}, err
 	}
-	st.SetPictureRenditions(r.Picture, r.PictureThumb, status)
+	st.SetPictureRenditions(r.Picture, r.PictureThumb, r.PictureCard, r.PictureLqip, status)
 	return st, nil
 }
 
 func fromListStagesRow(r db.ListStagesRow) stageRow {
 	return stageRow{
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
-		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
 	}
 }
 
 func fromFilterStageRow(r db.FilterStageRowsRow) stageRow {
 	return stageRow{
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
-		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
 	}
 }
 
 func fromGetStageByIDRow(r db.GetStageByIDRow) stageRow {
 	return stageRow{
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
-		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
 	}
 }

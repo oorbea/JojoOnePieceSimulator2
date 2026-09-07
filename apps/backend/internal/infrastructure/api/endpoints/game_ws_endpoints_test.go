@@ -79,12 +79,12 @@ func (f *wsFakeUserRepository) UpdateLanguage(context.Context, user.UserID, enum
 	return nil
 }
 
-func (f *wsFakeUserRepository) UpdateAvatar(context.Context, user.UserID, *string, *string, enums.PictureStatus) error {
+func (f *wsFakeUserRepository) UpdateAvatar(context.Context, user.UserID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
 
-func (f *wsFakeUserRepository) AvatarKeys(context.Context, user.UserID) (string, string, error) {
-	return "", "", nil
+func (f *wsFakeUserRepository) AvatarKeys(context.Context, user.UserID) (string, string, string, error) {
+	return "", "", "", nil
 }
 
 func (f *wsFakeUserRepository) UpdateRole(context.Context, user.UserID, enums.UserRole) error {

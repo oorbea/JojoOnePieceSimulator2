@@ -19,4 +19,8 @@ export const standKeys = {
   // allLocales (not all()) and must not be branched by the active UI
   // locale. Mutations already invalidate allLocales, which drops this too.
   translations: (id: string) => [...standKeys.allLocales, 'translations', id] as const,
+  // The evolvesFrom picker's id/name set is locale-free (powers.name is not
+  // translatable - see stands.api.ts's getStandOptions), so this hangs off
+  // allLocales too, same reasoning as `translations` above.
+  options: () => [...standKeys.allLocales, 'options'] as const,
 }

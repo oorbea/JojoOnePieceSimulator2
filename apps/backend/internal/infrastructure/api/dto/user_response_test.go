@@ -46,7 +46,7 @@ func TestNewUserResponse_NoOwnAvatar_UsesGooglePictureForBothMainAndThumb(t *tes
 
 func TestNewUserResponse_OwnAvatar_ResolvesBothRenditionsThroughStorage(t *testing.T) {
 	u := newTestUser(t, "https://google.test/photo.jpg")
-	u.SetAvatarRenditions("users/x/main.webp", "users/x/thumb.webp", enums.PictureReady)
+	u.SetAvatarRenditions("users/x/main.webp", "users/x/thumb.webp", "users/x/card.webp", "", enums.PictureReady)
 
 	resp, err := NewUserResponse(context.Background(), u, noopResolve)
 	if err != nil {

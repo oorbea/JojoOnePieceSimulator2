@@ -59,6 +59,7 @@ export type {
   StageRequest,
   StageTranslationResponse,
   StageTranslationsResponse,
+  StandOptionResponse,
   StandResponse,
   GameLoadoutResponse,
   GameParticipantResponse,

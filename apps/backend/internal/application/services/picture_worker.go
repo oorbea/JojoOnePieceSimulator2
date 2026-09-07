@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"sync"
@@ -13,6 +14,17 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
+// variantCard/variantThumb/variantMain/variantLqip name the entries of the
+// map ports.IImageProcessor.Transcode returns - card/thumb/main are uploaded
+// to object storage, lqip is embedded directly in API responses as a data:
+// URI and never uploaded.
+const (
+	variantCard  = "card"
+	variantThumb = "thumb"
+	variantMain  = "main"
+	variantLqip  = "lqip"
+)
+
 // WorkerConfig bounds the background compression worker's pool, queue, and
 // transcode settings.
 type WorkerConfig struct {
@@ -21,7 +33,28 @@ type WorkerConfig struct {
 	JobTimeout     time.Duration
 	MaxDimension   int
 	ThumbDimension int
+	CardDimension  int
 	Quality        int
+	// LqipDimension/LqipQuality size the tiny placeholder rendition embedded
+	// as a data: URI. LqipMaxBytes bounds the resulting data: URI's length
+	// (post-base64) - a placeholder over the limit is dropped (stored as
+	// "") rather than failing the job, so a misconfigured dimension/quality
+	// can never inflate every catalogue list response.
+	LqipDimension int
+	LqipQuality   int
+	LqipMaxBytes  int
+}
+
+// variantLadder builds the ports.VariantSpec list Transcode is asked to
+// produce for every job, from cfg. main is the only rendition that keeps
+// animation - card/thumb/lqip are always static, first-frame renditions.
+func (cfg WorkerConfig) variantLadder() []ports.VariantSpec {
+	return []ports.VariantSpec{
+		{Name: variantCard, MaxDimension: cfg.CardDimension, Quality: cfg.Quality},
+		{Name: variantThumb, MaxDimension: cfg.ThumbDimension, Quality: cfg.Quality},
+		{Name: variantMain, MaxDimension: cfg.MaxDimension, Quality: cfg.Quality, Animated: true},
+		{Name: variantLqip, MaxDimension: cfg.LqipDimension, Quality: cfg.LqipQuality},
+	}
 }
 
 // PictureWorker transcodes uploaded pictures to WebP renditions in the
@@ -125,66 +158,91 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 		return
 	}
 
-	main, thumb, err := w.processor.Transcode(ctx, job.Content, ports.TranscodeOptions{
-		MaxDimension:   w.cfg.MaxDimension,
-		ThumbDimension: w.cfg.ThumbDimension,
-		Quality:        w.cfg.Quality,
-	})
+	renditions, err := w.processor.Transcode(ctx, job.Content, ports.TranscodeOptions{Variants: w.cfg.variantLadder()})
 	if err != nil {
 		log.Printf("transcoding picture for %s %s: %v", job.Kind, job.SubjectID, err)
 		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 
+	lqip := w.encodeLqip(renditions[variantLqip], job.Kind, job.SubjectID)
+
 	uuid := w.idGen.NewID()
-	mainKey := fmt.Sprintf("%s/%s/%s.webp", target.KeyPrefix, job.SubjectID, uuid)
-	thumbKey := fmt.Sprintf("%s/%s/%s_thumb.webp", target.KeyPrefix, job.SubjectID, uuid)
-
-	mainStored, err := w.pictures.Upload(ctx, mainKey, ports.Picture{
-		Content: bytes.NewReader(main.Bytes), ContentType: main.ContentType, Size: int64(len(main.Bytes)),
-	})
-	if err != nil {
-		log.Printf("uploading picture for %s %s: %v", job.Kind, job.SubjectID, err)
-		w.markFailed(ctx, target, job.Kind, job.SubjectID)
-		return
+	uploaded := make(map[string]string, 3) // variant name -> object-storage key, for cleanup on any later failure
+	var preferProvider string
+	for _, name := range []string{variantMain, variantThumb, variantCard} {
+		img, ok := renditions[name]
+		if !ok {
+			continue
+		}
+		key := fmt.Sprintf("%s/%s/%s_%s.webp", target.KeyPrefix, job.SubjectID, uuid, name)
+		if name == variantMain {
+			key = fmt.Sprintf("%s/%s/%s.webp", target.KeyPrefix, job.SubjectID, uuid)
+		}
+		// thumb/card are pinned to whichever provider the main rendition
+		// landed on, so a Stand/DevilFruit/avatar's renditions never end up
+		// split across two different storage providers.
+		stored, err := w.pictures.Upload(ctx, key, ports.Picture{
+			Content: bytes.NewReader(img.Bytes), ContentType: img.ContentType, Size: int64(len(img.Bytes)),
+			PreferProvider: preferProvider,
+		})
+		if err != nil {
+			log.Printf("uploading %s picture for %s %s: %v", name, job.Kind, job.SubjectID, err)
+			for _, k := range uploaded {
+				w.deleteQuietly(ctx, k)
+			}
+			w.markFailed(ctx, target, job.Kind, job.SubjectID)
+			return
+		}
+		uploaded[name] = key
+		if name == variantMain {
+			preferProvider = stored.Provider
+		}
 	}
-	// The thumbnail is pinned to whichever provider the main rendition
-	// landed on, so a Stand/DevilFruit/avatar's two renditions never end up
-	// split across two different storage providers.
-	if _, err := w.pictures.Upload(ctx, thumbKey, ports.Picture{
-		Content: bytes.NewReader(thumb.Bytes), ContentType: thumb.ContentType, Size: int64(len(thumb.Bytes)),
-		PreferProvider: mainStored.Provider,
-	}); err != nil {
-		log.Printf("uploading picture thumbnail for %s %s: %v", job.Kind, job.SubjectID, err)
-		w.deleteQuietly(ctx, mainKey)
-		w.markFailed(ctx, target, job.Kind, job.SubjectID)
-		return
-	}
 
-	oldKey, oldThumbKey, err := target.Publisher.PictureKeys(ctx, job.SubjectID)
+	oldMain, oldThumb, oldCard, err := target.Publisher.PictureKeys(ctx, job.SubjectID)
 	if err != nil {
 		log.Printf("loading %s %s before publishing picture: %v", job.Kind, job.SubjectID, err)
-		w.deleteQuietly(ctx, mainKey)
-		w.deleteQuietly(ctx, thumbKey)
+		for _, k := range uploaded {
+			w.deleteQuietly(ctx, k)
+		}
 		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 
-	if err := target.Publisher.UpdatePicture(ctx, job.SubjectID, &mainKey, &thumbKey, enums.PictureReady); err != nil {
+	mainKey, thumbKey, cardKey := uploaded[variantMain], uploaded[variantThumb], uploaded[variantCard]
+	if err := target.Publisher.UpdatePicture(ctx, job.SubjectID, &mainKey, &thumbKey, &cardKey, &lqip, enums.PictureReady); err != nil {
 		log.Printf("publishing picture for %s %s: %v", job.Kind, job.SubjectID, err)
-		w.deleteQuietly(ctx, mainKey)
-		w.deleteQuietly(ctx, thumbKey)
+		for _, k := range uploaded {
+			w.deleteQuietly(ctx, k)
+		}
 		w.markFailed(ctx, target, job.Kind, job.SubjectID)
 		return
 	}
 	w.publish(job.Kind, job.SubjectID, enums.PictureReady)
 
-	if oldKey != "" {
-		w.deleteQuietly(ctx, oldKey)
+	for _, old := range []string{oldMain, oldThumb, oldCard} {
+		if old != "" {
+			w.deleteQuietly(ctx, old)
+		}
 	}
-	if oldThumbKey != "" {
-		w.deleteQuietly(ctx, oldThumbKey)
+}
+
+// encodeLqip turns img into a complete "data:image/webp;base64,..." URI,
+// rejecting (and logging) any placeholder whose encoded length exceeds
+// LqipMaxBytes rather than failing the job - a misconfigured
+// LqipDimension/LqipQuality must never be able to inflate every catalogue
+// list response.
+func (w *PictureWorker) encodeLqip(img ports.EncodedImage, kind enums.PictureSubjectKind, subjectID string) string {
+	if len(img.Bytes) == 0 {
+		return ""
 	}
+	uri := "data:" + img.ContentType + ";base64," + base64.StdEncoding.EncodeToString(img.Bytes)
+	if w.cfg.LqipMaxBytes > 0 && len(uri) > w.cfg.LqipMaxBytes {
+		log.Printf("lqip for %s %s exceeds %d bytes (%d), dropping placeholder", kind, subjectID, w.cfg.LqipMaxBytes, len(uri))
+		return ""
+	}
+	return uri
 }
 
 // markFailed and deleteQuietly run cleanup/failure writes that must still
@@ -196,7 +254,7 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 func (w *PictureWorker) markFailed(ctx context.Context, target PictureTarget, kind enums.PictureSubjectKind, id string) {
 	cctx, cancel := w.cleanupContext(ctx)
 	defer cancel()
-	if err := target.Publisher.UpdatePicture(cctx, id, nil, nil, enums.PictureFailed); err != nil {
+	if err := target.Publisher.UpdatePicture(cctx, id, nil, nil, nil, nil, enums.PictureFailed); err != nil {
 		log.Printf("marking picture failed for %s: %v", id, err)
 		return
 	}

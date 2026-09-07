@@ -1934,6 +1934,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/stands/options": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Backs the evolvesFrom picker - locale-free (powers.name is not\ntranslatable) and unfiltered, so it stays cheap regardless of the\ncatalogue's own pagination/filters.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stands"
+                ],
+                "summary": "List every stand's id/name",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.StandOptionResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/stands/{id}": {
             "get": {
                 "security": [
@@ -2895,6 +2935,12 @@ const docTemplate = `{
                 "picture": {
                     "type": "string"
                 },
+                "pictureCard": {
+                    "type": "string"
+                },
+                "pictureLqip": {
+                    "type": "string"
+                },
                 "pictureStatus": {
                     "type": "string"
                 },
@@ -3473,6 +3519,12 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
+                "avatarCard": {
+                    "type": "string"
+                },
+                "avatarLqip": {
+                    "type": "string"
+                },
                 "avatarThumb": {
                     "type": "string"
                 },
@@ -3528,6 +3580,12 @@ const docTemplate = `{
                 "picture": {
                     "type": "string"
                 },
+                "pictureCard": {
+                    "type": "string"
+                },
+                "pictureLqip": {
+                    "type": "string"
+                },
                 "pictureStatus": {
                     "type": "string"
                 },
@@ -3560,6 +3618,17 @@ const docTemplate = `{
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.StageTranslationResponse"
                     }
+                }
+            }
+        },
+        "dto.StandOptionResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -3626,6 +3695,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "picture": {
+                    "type": "string"
+                },
+                "pictureCard": {
+                    "type": "string"
+                },
+                "pictureLqip": {
                     "type": "string"
                 },
                 "pictureStatus": {
@@ -3761,6 +3836,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "avatar": {
+                    "type": "string"
+                },
+                "avatarCard": {
+                    "type": "string"
+                },
+                "avatarLqip": {
                     "type": "string"
                 },
                 "avatarStatus": {

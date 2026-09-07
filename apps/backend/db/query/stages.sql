@@ -1,7 +1,8 @@
 -- Returns every stage, description resolved for locale via the same
 -- fallback-chain LATERAL join power_translations reads use (see stands.sql).
 -- name: ListStages :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -17,7 +18,8 @@ ORDER BY s.manga, s.position, s.name;
 -- resolved for locale - same sqlc.narg(...) IS NULL OR ... pattern as
 -- FilterStandRows/FilterDevilFruitRows (stands.sql/devil_fruits.sql).
 -- name: FilterStageRows :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -34,7 +36,8 @@ WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
 ORDER BY s.manga, s.position, s.name;
 
 -- name: GetStageByID :one
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -47,17 +50,19 @@ FROM stages s
 WHERE s.id = sqlc.arg('id');
 
 -- name: UpsertStage :one
-INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_status)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (id) DO UPDATE
     SET manga          = EXCLUDED.manga,
         position       = EXCLUDED.position,
         name           = EXCLUDED.name,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
-RETURNING id, manga, position, name, picture, picture_thumb, picture_status;
+RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip;
 
 -- Updates only a Stage's picture renditions and pipeline status, without
 -- touching manga/position/name/translations - same shape as
@@ -66,7 +71,9 @@ RETURNING id, manga, position, name, picture, picture_thumb, picture_status;
 UPDATE stages
 SET picture        = COALESCE(sqlc.narg('picture')::text, picture),
     picture_thumb  = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
+    picture_card   = COALESCE(sqlc.narg('picture_card')::text, picture_card),
     picture_status = sqlc.arg('picture_status')::picture_status,
+    picture_lqip   = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
     updated_at     = now()
 WHERE id = sqlc.arg('id');
 

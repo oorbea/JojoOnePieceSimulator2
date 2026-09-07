@@ -49,5 +49,5 @@ type IStageRepository interface {
 	Translations(ctx context.Context, id game.StageID) (StageTranslations, error)
 	// UpdatePicture updates only a Stage's picture renditions and pipeline
 	// status - same contract as IStandRepository.UpdatePicture.
-	UpdatePicture(ctx context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error
+	UpdatePicture(ctx context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error
 }

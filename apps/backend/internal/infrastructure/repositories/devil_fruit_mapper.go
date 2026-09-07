@@ -21,7 +21,9 @@ type devilFruitRow struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 	FruitType     string
 	Skills        []string
 }
@@ -29,14 +31,16 @@ type devilFruitRow struct {
 func devilFruitRowFromGetByID(r db.GetDevilFruitRowByIDRow) devilFruitRow {
 	return devilFruitRow{
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-		PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus, FruitType: r.FruitType, Skills: r.Skills,
+		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+		FruitType: r.FruitType, Skills: r.Skills,
 	}
 }
 
 func devilFruitRowFromGetByName(r db.GetDevilFruitRowByNameRow) devilFruitRow {
 	return devilFruitRow{
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-		PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus, FruitType: r.FruitType, Skills: r.Skills,
+		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+		FruitType: r.FruitType, Skills: r.Skills,
 	}
 }
 
@@ -45,7 +49,8 @@ func devilFruitRowsFromList(rs []db.ListDevilFruitRowsRow) []devilFruitRow {
 	for i, r := range rs {
 		rows[i] = devilFruitRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-			PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus, FruitType: r.FruitType, Skills: r.Skills,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+			FruitType: r.FruitType, Skills: r.Skills,
 		}
 	}
 	return rows
@@ -56,7 +61,8 @@ func devilFruitRowsFromFilter(rs []db.FilterDevilFruitRowsRow) []devilFruitRow {
 	for i, r := range rs {
 		rows[i] = devilFruitRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-			PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus, FruitType: r.FruitType, Skills: r.Skills,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+			FruitType: r.FruitType, Skills: r.Skills,
 		}
 	}
 	return rows
@@ -81,7 +87,7 @@ func buildDevilFruit(row devilFruitRow) (*powers.DevilFruit, error) {
 	if err != nil {
 		return nil, fmt.Errorf("devil fruit %q: picture_status: %w", row.Name, err)
 	}
-	power.SetPictureRenditions(row.Picture, row.PictureThumb, pictureStatus)
+	power.SetPictureRenditions(row.Picture, row.PictureThumb, row.PictureCard, row.PictureLqip, pictureStatus)
 
 	fruitType, err := enums.ParseFruitType(row.FruitType)
 	if err != nil {
