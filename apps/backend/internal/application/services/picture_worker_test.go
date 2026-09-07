@@ -458,6 +458,118 @@ func TestEnqueue_FullQueueReturnsErrPictureQueueFull(t *testing.T) {
 	}
 }
 
+// flakyPublisher wraps a real PicturePublisher so a single call can be forced
+// to fail - used to exercise the two process() error paths that must still
+// call markFailed + publish a terminal SSE event rather than leaving the
+// subject stuck at PENDING forever.
+type flakyPublisher struct {
+	inner              PicturePublisher
+	failPictureKeysErr error
+	failUpdateOnce     error
+	updateCalls        int
+}
+
+func (f *flakyPublisher) PictureKeys(ctx context.Context, id string) (string, string, error) {
+	if f.failPictureKeysErr != nil {
+		return "", "", f.failPictureKeysErr
+	}
+	return f.inner.PictureKeys(ctx, id)
+}
+
+func (f *flakyPublisher) UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error {
+	f.updateCalls++
+	if f.failUpdateOnce != nil && f.updateCalls == 1 {
+		return f.failUpdateOnce
+	}
+	return f.inner.UpdatePicture(ctx, id, main, thumb, status)
+}
+
+var _ PicturePublisher = (*flakyPublisher)(nil)
+
+func TestProcess_PictureKeysFailure_MarksFailedAndPublishes(t *testing.T) {
+	repo := newFakeStandRepository()
+	idGen := &fakeStandIDGenerator{}
+	pictures := newFakePictureStorage()
+	processor := newFakeImageProcessor()
+	hub := NewPictureEventHub()
+	events, unsubscribe := hub.Subscribe()
+	defer unsubscribe()
+
+	publisher := &flakyPublisher{inner: NewStandPicturePublisher(repo), failPictureKeysErr: errors.New("boom")}
+	targets := map[enums.PictureSubjectKind]PictureTarget{
+		enums.StandSubject: {Publisher: publisher, KeyPrefix: "stands"},
+	}
+	worker := NewPictureWorker(processor, pictures, targets, idGen, WorkerConfig{
+		Workers: 1, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
+	}, hub)
+
+	stand := newWorkerTestStand(t, repo, idGen, "stands/x/old.webp", "stands/x/old_thumb.webp", enums.PicturePending)
+
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
+
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if updated.PictureStatus() != enums.PictureFailed {
+		t.Fatalf("status = %v, want FAILED (a PictureKeys error must not leave the subject stuck at PENDING)", updated.PictureStatus())
+	}
+	if len(pictures.objects) != 0 {
+		t.Errorf("the freshly-uploaded main/thumb should have been deleted, got %d objects left", len(pictures.objects))
+	}
+
+	select {
+	case evt := <-events:
+		if evt.Status != enums.PictureFailed {
+			t.Fatalf("event = %+v, want status PictureFailed", evt)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for FAILED event")
+	}
+}
+
+func TestProcess_UpdatePictureFailure_MarksFailedAndPublishes(t *testing.T) {
+	repo := newFakeStandRepository()
+	idGen := &fakeStandIDGenerator{}
+	pictures := newFakePictureStorage()
+	processor := newFakeImageProcessor()
+	hub := NewPictureEventHub()
+	events, unsubscribe := hub.Subscribe()
+	defer unsubscribe()
+
+	publisher := &flakyPublisher{inner: NewStandPicturePublisher(repo), failUpdateOnce: errors.New("boom")}
+	targets := map[enums.PictureSubjectKind]PictureTarget{
+		enums.StandSubject: {Publisher: publisher, KeyPrefix: "stands"},
+	}
+	worker := NewPictureWorker(processor, pictures, targets, idGen, WorkerConfig{
+		Workers: 1, QueueSize: 1, JobTimeout: time.Second, MaxDimension: 1024, ThumbDimension: 256, Quality: 80,
+	}, hub)
+
+	stand := newWorkerTestStand(t, repo, idGen, "stands/x/old.webp", "stands/x/old_thumb.webp", enums.PicturePending)
+
+	worker.process(ports.PictureJob{SubjectID: stand.ID().String(), Kind: enums.StandSubject, Content: []byte("data"), ContentType: "image/png"})
+
+	updated, err := repo.FindByID(context.Background(), stand.ID(), enums.EnGB)
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if updated.PictureStatus() != enums.PictureFailed {
+		t.Fatalf("status = %v, want FAILED (a failed publish must not leave the subject stuck at PENDING)", updated.PictureStatus())
+	}
+	if len(pictures.objects) != 0 {
+		t.Errorf("the freshly-uploaded main/thumb should have been deleted, got %d objects left", len(pictures.objects))
+	}
+
+	select {
+	case evt := <-events:
+		if evt.Status != enums.PictureFailed {
+			t.Fatalf("event = %+v, want status PictureFailed", evt)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for FAILED event")
+	}
+}
+
 // fakeDevilFruitRepository is a minimal in-memory ports.IDevilFruitRepository
 // - a local copy following this file's own duplication convention - used to
 // exercise the worker's per-Kind routing.
