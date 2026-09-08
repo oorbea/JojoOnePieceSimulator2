@@ -109,10 +109,15 @@ even before a fresh native/EAS build exists — it degrades cleanly to web via
 RNW in the meantime; native testing needs that build later.
 
 **Not done yet** (the bulk of the original T3 scope):
-- Adoption of `LazyImage` in `devil-fruit-card.tsx`/`stage-card.tsx` and the
-  ~8 other call sites (`power-block.tsx`, `stage-banner.tsx`,
-  `loadout-card.tsx`, `home-screen.tsx`, `profile-screen.tsx`,
-  `participant-avatar.tsx`, the three `*-detail.tsx`, `image-lightbox.tsx`).
+- ~~Adoption of `LazyImage` in `devil-fruit-card.tsx`/`stage-card.tsx` and
+  the ~8 other call sites~~ **Closed 2026-09-08** - every picture well in
+  the app now goes through `LazyImage`: both remaining catalogue cards, the
+  three `*-detail.tsx` modals (`contentFit="contain"`), the in-game
+  `PowerBlock`/`StageBanner`/`LoadoutCard`/`ParticipantAvatar` art wells, the
+  home/profile screen avatars, and `ImageLightbox` itself (gained an
+  optional `lqip` prop + `lane: 'high'`). `LazyImage`'s `height` prop is now
+  optional when `aspectRatio` is given instead, for `StageBanner`'s
+  full-width 16:9 hero with no fixed pixel height.
 - ~~Backend keyset pagination for DevilFruit/Stage~~ **Closed 2026-09-08** —
   see [[catalogue-pagination]] for Stand's `LIMIT`-inside-the-CTE `base` term
   trap and DevilFruit/Stage's own `::manga` cast trap, both verified.
