@@ -10,8 +10,9 @@ tags:
 
 # Catalogue pagination (2026-09-08)
 
-Part of T3 in [[entrega-imagenes-red-lenta-2026-09-07]]. Shipped for **Stand
-only** so far - DevilFruit/Stage still return the full unpaginated list.
+Part of T3 in [[entrega-imagenes-red-lenta-2026-09-07]]. Shipped for
+**Stand, DevilFruit and Stage** - all three now support the same opt-in
+`?limit=`/`?cursor=` contract described below.
 
 ## Cursor keyset, not offset
 
@@ -106,13 +107,53 @@ and every env var is a three-place manual step for the owner
 [[entrega-imagenes-red-lenta-2026-09-07]]'s standing constraint. Revisit if
 a real need to tune page size per environment ever comes up.
 
+## DevilFruit and Stage (shipped 2026-09-08)
+
+`PageDevilFruitRows`/`CountDevilFruitRows` are a plain LIMIT/cursor over the
+same filtered WHERE clause `FilterDevilFruitRows` uses - no recursive CTE,
+no ancestor-truncation risk (DevilFruit has no `evolves_from`), so the
+T3.6 bug class simply doesn't apply here.
+
+`PageStageRows`/`CountStageRows` sort by the triple
+`(manga, position, name)` - `UNIQUE (manga, name)` plus a fixed manga makes
+the triple unique overall, since `position` alone can tie within a manga
+(no `UNIQUE(manga, position)`, by design - admins can reorder). The cursor
+predicate is a row-value comparison:
+
+```sql
+AND (
+  sqlc.narg('after_manga')::manga IS NULL
+  OR (s.manga, s.position, s.name) > (sqlc.narg('after_manga')::manga, sqlc.narg('after_position')::int, sqlc.narg('after_name')::text)
+)
+```
+
+**The `::manga` cast trap, avoided by *not* casting anything.** `manga` is
+left as `::manga` (its native enum type) on both sides of the row
+comparison, never cast to `::text`. Postgres then compares it using its own
+default btree opclass, which sorts by enum declaration order
+(`CREATE TYPE manga AS ENUM ('JOJO', 'ONE_PIECE')` → JOJO before ONE_PIECE)
+- identical to what a bare `ORDER BY s.manga, s.position, s.name` does. A
+`::text` cast anywhere in the cursor predicate would silently switch to
+alphabetical order and desync the cursor from the actual `ORDER BY`,
+corrupting page boundaries with no error anywhere. Locked with
+`TestListStages_Page_WalkingCursorToExhaustion_EqualsUnpaginatedList`, which
+seeds stages sharing a manga with different `order` values (including a tie
+broken by name) and asserts the paged walk lands in the exact declaration
+order.
+
+`ports.StagePageCursor{Manga, Position, Name}` carries all three fields
+together (never partially) through the service/repository layers; the wire
+cursor's decoded `k` is `dto.StageCursor{manga, position, name}` (JSON, not
+the Go enum type - decoded back via `enums.ParseManga` before it reaches the
+repository).
+
+`DevilFruitPageResponse`/`StagePageResponse` follow `StandPageResponse`'s
+shape exactly (`PageInfo` embedded, `items` array) - both registered in
+`cmd/typegen/registry.go`'s `restTypes`, same as Stand.
+
 ## Still open
 
-- DevilFruit/Stage pagination (same shape, `PageDevilFruitRows`/
-  `PageStageRows` - Stage needs the `::manga` cast trap the original plan
-  called out, since `ORDER BY s.manga` sorts by enum declaration order but
-  `s.manga::text` sorts alphabetically, and the cursor comparison must match
-  whichever `ORDER BY` actually uses).
 - Frontend: no `use-paginated-catalogue.ts` hook, no "Cargar más" UI yet -
-  `GET /stands` is paginatable but nothing calls it that way.
+  all three of `GET /stands`/`GET /devil-fruits`/`GET /stages` are
+  paginatable server-side but nothing calls them that way.
 - The `Canonical()` anti-drift refactor mentioned above.
