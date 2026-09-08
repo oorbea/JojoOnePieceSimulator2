@@ -113,9 +113,9 @@ RNW in the meantime; native testing needs that build later.
   ~8 other call sites (`power-block.tsx`, `stage-banner.tsx`,
   `loadout-card.tsx`, `home-screen.tsx`, `profile-screen.tsx`,
   `participant-avatar.tsx`, the three `*-detail.tsx`, `image-lightbox.tsx`).
-- Backend keyset pagination for DevilFruit/Stage — Stand's is done, see
-  [[catalogue-pagination]] for the `LIMIT`-inside-the-CTE `base` term trap it
-  prevents (verified against real Postgres and locked with an endpoint test).
+- ~~Backend keyset pagination for DevilFruit/Stage~~ **Closed 2026-09-08** —
+  see [[catalogue-pagination]] for Stand's `LIMIT`-inside-the-CTE `base` term
+  trap and DevilFruit/Stage's own `::manga` cast trap, both verified.
 - Frontend consumption of the new `?limit=`/`?cursor=` pagination: no
   `use-paginated-catalogue.ts` hook, no "Cargar más" UI - `GET /stands` is
   paginatable server-side but nothing calls it that way yet.
