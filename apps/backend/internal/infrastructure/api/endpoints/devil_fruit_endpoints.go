@@ -19,11 +19,17 @@ import (
 // constants and the sniffContentType/parsePowerID/decode helpers declared in
 // stand_endpoints.go - both catalogues share the same JSON/multipart rules.
 type DevilFruitEndpoints struct {
-	svc *services.DevilFruitService
+	svc   *services.DevilFruitService
+	media dto.MediaURLBuilder
 }
 
 func NewDevilFruitEndpoints(svc *services.DevilFruitService) *DevilFruitEndpoints {
 	return &DevilFruitEndpoints{svc: svc}
+}
+
+// SetMediaURLBuilder - see StandEndpoints.SetMediaURLBuilder's doc.
+func (e *DevilFruitEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /devil-fruits sub-router: GET/POST on the collection,
@@ -82,7 +88,7 @@ func (e *DevilFruitEndpoints) list(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewDevilFruitResponses(r.Context(), fruits, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponses(r.Context(), fruits, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -122,7 +128,7 @@ func (e *DevilFruitEndpoints) create(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -158,7 +164,7 @@ func (e *DevilFruitEndpoints) get(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -204,7 +210,7 @@ func (e *DevilFruitEndpoints) update(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -281,7 +287,7 @@ func (e *DevilFruitEndpoints) patchPicture(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}

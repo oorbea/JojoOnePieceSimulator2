@@ -7,16 +7,17 @@ import (
 )
 
 type Power struct {
-	name          string
-	description   string
-	picture       string
-	pictureThumb  string
-	pictureCard   string
-	pictureLqip   string
-	skills        []string
-	id            PowerID
-	rarity        enums.PowerRarity
-	pictureStatus enums.PictureStatus
+	name           string
+	description    string
+	picture        string
+	pictureThumb   string
+	pictureCard    string
+	pictureLqip    string
+	pictureMediaID string
+	skills         []string
+	id             PowerID
+	rarity         enums.PowerRarity
+	pictureStatus  enums.PictureStatus
 }
 
 func NewPower(
@@ -92,6 +93,23 @@ func (p Power) PictureCard() string {
 // data: URI, or "" if none has been produced yet.
 func (p Power) PictureLqip() string {
 	return p.pictureLqip
+}
+
+// PictureMediaID returns the content-addressed group id media_objects rows
+// for this Power's renditions are keyed by, or "" if it hasn't been
+// backfilled/transcoded under the media proxy yet - callers must fall back
+// to the presign path in that case.
+func (p Power) PictureMediaID() string {
+	return p.pictureMediaID
+}
+
+// SetMediaID records the content-addressed group id computed for this
+// Power's current renditions. Separate from SetPictureRenditions because
+// the group id is only known after the worker has both transcoded the
+// image AND persisted the resulting media_objects rows - a step that
+// happens after (and independently of) the rendition keys themselves.
+func (p *Power) SetMediaID(mediaID string) {
+	p.pictureMediaID = mediaID
 }
 
 // PictureStatus reports where this Power's picture is in the async

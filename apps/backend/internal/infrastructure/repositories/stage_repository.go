@@ -200,6 +200,17 @@ func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, ma
 	return nil
 }
 
+// SetMediaID implements ports.IStageRepository.
+func (r *StageRepository) SetMediaID(ctx context.Context, id game.StageID, mediaID string) error {
+	if err := r.queries.UpdateStageMediaID(ctx, db.UpdateStageMediaIDParams{
+		ID:             pgtype.UUID{Bytes: id, Valid: true},
+		PictureMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting media id for stage %s: %w", id, err)
+	}
+	return nil
+}
+
 // stageTranslationQueries is the subset of *db.Queries needed by
 // saveStageTranslations, satisfied by both a plain *db.Queries and a
 // transaction-scoped one (q.WithTx(tx)).

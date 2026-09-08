@@ -58,17 +58,19 @@ DELETE FROM powers WHERE id = $1 AND kind = 'STAND';
 -- Updates only a Power's picture renditions and pipeline status, without
 -- touching name/description/skills/stats - used by the PATCH .../picture
 -- handler (status -> PENDING) and by the background compression worker
--- (status -> READY/FAILED). picture/picture_thumb/picture_card/picture_lqip
--- are left untouched when NULL is passed, so the handler can move a row to
--- PENDING without clobbering the renditions currently being served.
+-- (status -> READY/FAILED). picture/picture_thumb/picture_card/picture_lqip/
+-- picture_media_id are left untouched when NULL is passed, so the handler
+-- can move a row to PENDING without clobbering the renditions currently
+-- being served.
 -- name: UpdatePowerPicture :exec
 UPDATE powers
-SET picture        = COALESCE(sqlc.narg('picture')::text, picture),
-    picture_thumb  = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
-    picture_card   = COALESCE(sqlc.narg('picture_card')::text, picture_card),
-    picture_status = sqlc.arg('picture_status')::picture_status,
-    picture_lqip   = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
-    updated_at     = now()
+SET picture          = COALESCE(sqlc.narg('picture')::text, picture),
+    picture_thumb    = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
+    picture_card     = COALESCE(sqlc.narg('picture_card')::text, picture_card),
+    picture_status   = sqlc.arg('picture_status')::picture_status,
+    picture_lqip     = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
+    picture_media_id = COALESCE(sqlc.narg('picture_media_id')::text, picture_media_id),
+    updated_at       = now()
 WHERE id = sqlc.arg('id');
 
 -- Returns the stand matching `name` (matched = true) plus its full ancestor
@@ -87,6 +89,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.picture_card,
                                  p.picture_status,
                                  p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -107,6 +110,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.picture_card,
                                  p2.picture_status,
                                  p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -126,6 +130,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       picture_card,
                       picture_status,
                       picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -135,7 +140,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
                         attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
@@ -146,6 +151,7 @@ SELECT d.id,
        d.picture_card,
        d.picture_status,
        d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -175,6 +181,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.picture_card,
                                  p.picture_status,
                                  p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -195,6 +202,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.picture_card,
                                  p2.picture_status,
                                  p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -214,6 +222,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       picture_card,
                       picture_status,
                       picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -223,7 +232,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
                         attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
@@ -234,6 +243,7 @@ SELECT d.id,
        d.picture_card,
        d.picture_status,
        d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -266,6 +276,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        s.attack_power,
        s.speed,
        s.attack_range,
@@ -299,6 +310,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 p.picture_card,
                                 p.picture_status,
                                 p.picture_lqip,
+                                p.picture_media_id,
                                 s.attack_power,
                                 s.speed,
                                 s.attack_range,
@@ -346,6 +358,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                       p2.picture_card,
                       p2.picture_status,
                       p2.picture_lqip,
+                      p2.picture_media_id,
                       s2.attack_power,
                       s2.speed,
                       s2.attack_range,
@@ -365,6 +378,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                       picture_card,
                       picture_status,
                       picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -374,7 +388,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
                         attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
@@ -385,6 +399,7 @@ SELECT d.id,
        d.picture_card,
        d.picture_status,
        d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -414,3 +429,10 @@ SELECT p.id, p.name
 FROM stands s
          JOIN powers p ON p.id = s.id
 ORDER BY p.name;
+
+-- Sets only a Power's content-addressed media group id, once the worker has
+-- both transcoded the image and persisted its media_objects rows - see
+-- powers.Power.SetMediaID's doc for why this is separate from
+-- UpdatePowerPicture.
+-- name: UpdatePowerMediaID :exec
+UPDATE powers SET picture_media_id = $1 WHERE id = $2;

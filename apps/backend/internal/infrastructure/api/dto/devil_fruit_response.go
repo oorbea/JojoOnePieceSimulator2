@@ -23,21 +23,15 @@ type DevilFruitResponse struct {
 
 // NewDevilFruitResponse builds a DevilFruitResponse from a domain DevilFruit,
 // resolving its picture key through resolve.
-func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolve PictureURLResolver) (DevilFruitResponse, error) {
+func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolve PictureURLResolver, media MediaURLBuilder) (DevilFruitResponse, error) {
 	skills := fruit.Skills()
 	if skills == nil {
 		skills = []string{}
 	}
 
-	pictureURL, err := resolve(ctx, fruit.Picture())
-	if err != nil {
-		return DevilFruitResponse{}, err
-	}
-	pictureThumbURL, err := resolve(ctx, fruit.PictureThumb())
-	if err != nil {
-		return DevilFruitResponse{}, err
-	}
-	pictureCardURL, err := resolve(ctx, fruit.PictureCard())
+	pictureURL, pictureThumbURL, pictureCardURL, err := resolveCatalogPictures(
+		ctx, fruit.Picture(), fruit.PictureThumb(), fruit.PictureCard(), fruit.PictureMediaID(), resolve, media,
+	)
 	if err != nil {
 		return DevilFruitResponse{}, err
 	}
@@ -59,10 +53,10 @@ func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolv
 
 // NewDevilFruitResponses builds a DevilFruitResponse slice, never nil, from a
 // list of domain DevilFruits.
-func NewDevilFruitResponses(ctx context.Context, fruits []*powers.DevilFruit, resolve PictureURLResolver) ([]DevilFruitResponse, error) {
+func NewDevilFruitResponses(ctx context.Context, fruits []*powers.DevilFruit, resolve PictureURLResolver, media MediaURLBuilder) ([]DevilFruitResponse, error) {
 	responses := make([]DevilFruitResponse, 0, len(fruits))
 	for _, fruit := range fruits {
-		resp, err := NewDevilFruitResponse(ctx, fruit, resolve)
+		resp, err := NewDevilFruitResponse(ctx, fruit, resolve, media)
 		if err != nil {
 			return nil, err
 		}

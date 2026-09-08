@@ -293,6 +293,7 @@ func NewGameStateResponse(
 	code string,
 	self game.ParticipantID,
 	resolveStand, resolveFruit, resolveStagePicture, resolveAvatarPicture PictureURLResolver,
+	media MediaURLBuilder,
 	resolveStageDescription StageTextResolver,
 	resolveStandText, resolveFruitText PowerTextResolver,
 	deadlines GameStateDeadlines,
@@ -328,7 +329,7 @@ func NewGameStateResponse(
 		}
 		pr.AvatarThumb = avatarThumb
 		if l := p.Loadout(); l != nil {
-			lr, err := newGameLoadoutResponse(ctx, l, resolveStand, resolveFruit, resolveStandText, resolveFruitText)
+			lr, err := newGameLoadoutResponse(ctx, l, resolveStand, resolveFruit, media, resolveStandText, resolveFruitText)
 			if err != nil {
 				return GameStateResponse{}, err
 			}
@@ -494,6 +495,7 @@ func newGameLoadoutResponse(
 	ctx context.Context,
 	l *game.Loadout,
 	resolveStand, resolveFruit PictureURLResolver,
+	media MediaURLBuilder,
 	resolveStandText, resolveFruitText PowerTextResolver,
 ) (GameLoadoutResponse, error) {
 	lr := GameLoadoutResponse{
@@ -506,7 +508,7 @@ func newGameLoadoutResponse(
 		PhysicalForm:    l.PhysicalForm().String(),
 	}
 	if s := l.Stand(); s != nil {
-		sr, err := NewStandResponse(ctx, s, resolveStand)
+		sr, err := NewStandResponse(ctx, s, resolveStand, media)
 		if err != nil {
 			return GameLoadoutResponse{}, err
 		}
@@ -519,7 +521,7 @@ func newGameLoadoutResponse(
 		lr.Stand = &sr
 	}
 	if f := l.DevilFruit(); f != nil {
-		fr, err := NewDevilFruitResponse(ctx, f, resolveFruit)
+		fr, err := NewDevilFruitResponse(ctx, f, resolveFruit, media)
 		if err != nil {
 			return GameLoadoutResponse{}, err
 		}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"sync"
 	"testing"
 
@@ -131,6 +132,17 @@ func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID
 	return nil
 }
 
+func (f *fakeStandRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	stand, ok := f.stands[id]
+	if !ok {
+		return ports.ErrStandNotFound
+	}
+	stand.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IStandRepository = (*fakeStandRepository)(nil)
 
 // fakeStandIDGenerator returns deterministic, incrementing ids.
@@ -189,6 +201,16 @@ func (f *fakePictureStorage) Delete(_ context.Context, key string) error {
 	f.deleted = append(f.deleted, key)
 	delete(f.objects, key)
 	return f.deleteErr
+}
+
+func (f *fakePictureStorage) Download(_ context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	data, ok := f.objects[key]
+	if !ok {
+		return nil, ports.ObjectInfo{}, ports.ErrObjectNotFound
+	}
+	return io.NopCloser(bytes.NewReader(data)), ports.ObjectInfo{ContentType: "image/webp", Size: int64(len(data))}, nil
 }
 
 var _ ports.IPictureStorage = (*fakePictureStorage)(nil)

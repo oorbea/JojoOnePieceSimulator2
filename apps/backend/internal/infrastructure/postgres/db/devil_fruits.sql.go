@@ -33,6 +33,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -60,17 +61,18 @@ type FilterDevilFruitRowsParams struct {
 }
 
 type FilterDevilFruitRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Returns every devil fruit matching the (all-optional) filters.
@@ -98,6 +100,7 @@ func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruit
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -121,6 +124,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -141,17 +145,18 @@ type GetDevilFruitRowByIDParams struct {
 }
 
 type GetDevilFruitRowByIDRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Returns the devil fruit matching `id`, along with its resolved
@@ -171,6 +176,7 @@ func (q *Queries) GetDevilFruitRowByID(ctx context.Context, arg GetDevilFruitRow
 		&i.PictureCard,
 		&i.PictureStatus,
 		&i.PictureLqip,
+		&i.PictureMediaID,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -187,6 +193,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -207,17 +214,18 @@ type GetDevilFruitRowByNameParams struct {
 }
 
 type GetDevilFruitRowByNameRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Same shape as GetDevilFruitRowByID, keyed by name instead of id.
@@ -234,6 +242,7 @@ func (q *Queries) GetDevilFruitRowByName(ctx context.Context, arg GetDevilFruitR
 		&i.PictureCard,
 		&i.PictureStatus,
 		&i.PictureLqip,
+		&i.PictureMediaID,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -250,6 +259,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -265,17 +275,18 @@ ORDER BY p.name
 `
 
 type ListDevilFruitRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Returns every devil fruit in the system.
@@ -298,6 +309,7 @@ func (q *Queries) ListDevilFruitRows(ctx context.Context, locales []string) ([]L
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {

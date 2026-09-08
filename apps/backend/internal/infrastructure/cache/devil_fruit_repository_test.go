@@ -127,6 +127,17 @@ func (r *countingDevilFruitRepository) UpdatePicture(_ context.Context, id power
 	return nil
 }
 
+func (r *countingDevilFruitRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	f, ok := r.fruits[id]
+	if !ok {
+		return ports.ErrDevilFruitNotFound
+	}
+	f.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IDevilFruitRepository = (*countingDevilFruitRepository)(nil)
 
 func newTestDevilFruit(t *testing.T, name string) *powers.DevilFruit {
@@ -261,8 +272,8 @@ func TestDevilFruitRepository_Save_ErrorDoesNotInvalidate(t *testing.T) {
 	if err := repo.Save(ctx, fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}}); err == nil {
 		t.Fatal("Save over a failing repository: err = nil, want an error")
 	}
-	if c.gen["devil_fruits"] != 0 {
-		t.Errorf("devil_fruits generation = %d, want 0 (a failed Save must not invalidate)", c.gen["devil_fruits"])
+	if c.gen["devil_fruits:v2"] != 0 {
+		t.Errorf("devil_fruits generation = %d, want 0 (a failed Save must not invalidate)", c.gen["devil_fruits:v2"])
 	}
 }
 

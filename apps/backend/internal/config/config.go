@@ -22,6 +22,21 @@ const defaultJWTTTL = 15 * time.Minute
 // minJWTSecretLen guards against a signing key short enough to brute-force.
 const minJWTSecretLen = 32
 
+// minMediaURLSecretLen/minMediaIDSaltLen mirror minJWTSecretLen's reasoning
+// for the two media-proxy secrets (see dto.MediaURLBuilder).
+const minMediaURLSecretLen = 32
+const minMediaIDSaltLen = 16
+
+// defaultMediaBaseURL/defaultMediaPrivateURLTTL/defaultMediaMode/
+// defaultMediaCacheDir/defaultMediaCacheMaxBytes/defaultRateLimitMediaPerIP
+// are used when their respective env vars are unset.
+const defaultMediaBaseURL = "/api/v1/media"
+const defaultMediaPrivateURLTTL = 24 * time.Hour
+const defaultMediaMode = "proxy"
+const defaultMediaCacheDir = "/tmp/media"
+const defaultMediaCacheMaxBytes = 256 * 1024 * 1024
+const defaultRateLimitMediaPerIP = 1200
+
 // defaultCORSAllowedMethods/Headers/MaxAge are used when their respective
 // env vars are unset, but only take effect once CORS_ALLOWED_ORIGINS is
 // non-empty - see Load.
@@ -225,15 +240,15 @@ type Config struct {
 	// CORSAllowedOrigins is deny-all (no CORS headers added at all) when
 	// empty, which is the safe default: the browser blocks cross-origin
 	// calls exactly as if the server didn't know about CORS.
-	CORSAllowedOrigins    []string
-	CORSAllowedMethods    []string
-	CORSAllowedHeaders    []string
-	PictureAllowedTypes   []string
-	JWTTTL                time.Duration
-	CORSMaxAge            int
+	CORSAllowedOrigins  []string
+	CORSAllowedMethods  []string
+	CORSAllowedHeaders  []string
+	PictureAllowedTypes []string
+	JWTTTL              time.Duration
+	CORSMaxAge          int
 	// HTTPCompressLevel is the gzip level middleware.Compress applies to
 	// /api/v1 JSON responses (0 disables compression entirely).
-	HTTPCompressLevel int
+	HTTPCompressLevel     int
 	RateLimitWindow       time.Duration
 	RateLimitGlobalPerIP  int
 	RateLimitLoginPerIP   int
@@ -241,7 +256,34 @@ type Config struct {
 	RateLimitWritePerUser int
 	// RateLimitTicketPerUser bounds POST .../ticket and .../ws-ticket calls.
 	RateLimitTicketPerUser int
-	R2PresignTTL           time.Duration
+	// RateLimitMediaPerIP bounds GET /api/v1/media/** - a catalogue's cold
+	// load is ~100 image requests, so this tier is deliberately far above
+	// RateLimitGlobalPerIP, which was sized for JSON-only traffic.
+	RateLimitMediaPerIP int
+	R2PresignTTL        time.Duration
+	// MediaBaseURL is the origin+prefix media URLs are built under (see
+	// dto.MediaURLBuilder) - relative in prod (same-origin behind NPM),
+	// absolute in local dev (frontend :3000, backend :8080 are different
+	// origins).
+	MediaBaseURL string
+	// MediaURLSecret signs private (avatar) media URLs; MediaIDSalt is
+	// mixed into the content-hash group id so it isn't reproducible from a
+	// source file alone by someone who doesn't know the salt. Both are
+	// secrets - see internal/config/README or deployments/.env.example.
+	MediaURLSecret string
+	MediaIDSalt    string
+	// MediaPrivateURLTTL bounds how long a signed private media URL stays
+	// valid; the actual quantization window is half of this (see
+	// dto.MediaURLBuilder.Private's doc).
+	MediaPrivateURLTTL time.Duration
+	// MediaMode is "proxy" (serve bytes through this backend, the default)
+	// or "redirect" (302 to a presigned URL) - an escape hatch, see
+	// endpoints/media_endpoints.go.
+	MediaMode string
+	// MediaCacheDir/MediaCacheMaxBytes configure the on-disk LRU cache the
+	// media proxy keeps in front of R2/B2/Supabase reads.
+	MediaCacheDir      string
+	MediaCacheMaxBytes int64
 	// PictureMaxBytes/PictureAllowedTypes bound what PATCH
 	// /stands/{id}/picture accepts.
 	PictureMaxBytes int64
@@ -392,6 +434,22 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("JWT_SECRET must be at least %d characters", minJWTSecretLen)
 	}
 
+	mediaURLSecret := os.Getenv("MEDIA_URL_SECRET")
+	if mediaURLSecret == "" {
+		return nil, fmt.Errorf("MEDIA_URL_SECRET is required")
+	}
+	if len(mediaURLSecret) < minMediaURLSecretLen {
+		return nil, fmt.Errorf("MEDIA_URL_SECRET must be at least %d characters", minMediaURLSecretLen)
+	}
+
+	mediaIDSalt := os.Getenv("MEDIA_ID_SALT")
+	if mediaIDSalt == "" {
+		return nil, fmt.Errorf("MEDIA_ID_SALT is required")
+	}
+	if len(mediaIDSalt) < minMediaIDSaltLen {
+		return nil, fmt.Errorf("MEDIA_ID_SALT must be at least %d characters", minMediaIDSaltLen)
+	}
+
 	jwtIssuer := os.Getenv("JWT_ISSUER")
 	if jwtIssuer == "" {
 		jwtIssuer = defaultJWTIssuer
@@ -529,6 +587,43 @@ func Load() (*Config, error) {
 	}
 
 	r2QuotaBytes, err := parseQuotaBytesEnv("R2_QUOTA_BYTES", defaultR2QuotaBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	rateLimitMediaPerIP, err := parsePositiveIntEnv("RATE_LIMIT_MEDIA_PER_IP", defaultRateLimitMediaPerIP)
+	if err != nil {
+		return nil, err
+	}
+
+	mediaBaseURL := defaultMediaBaseURL
+	if raw := os.Getenv("MEDIA_BASE_URL"); raw != "" {
+		mediaBaseURL = raw
+	}
+
+	mediaPrivateURLTTL := defaultMediaPrivateURLTTL
+	if raw := os.Getenv("MEDIA_PRIVATE_URL_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing MEDIA_PRIVATE_URL_TTL: %w", err)
+		}
+		mediaPrivateURLTTL = parsed
+	}
+
+	mediaMode := defaultMediaMode
+	if raw := os.Getenv("MEDIA_MODE"); raw != "" {
+		if raw != "proxy" && raw != "redirect" {
+			return nil, fmt.Errorf("MEDIA_MODE must be \"proxy\" or \"redirect\", got %q", raw)
+		}
+		mediaMode = raw
+	}
+
+	mediaCacheDir := defaultMediaCacheDir
+	if raw := os.Getenv("MEDIA_CACHE_DIR"); raw != "" {
+		mediaCacheDir = raw
+	}
+
+	mediaCacheMaxBytes, err := parseQuotaBytesEnv("MEDIA_CACHE_MAX_BYTES", defaultMediaCacheMaxBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -949,13 +1044,14 @@ func Load() (*Config, error) {
 		CORSMaxAge:           corsMaxAge,
 		HTTPCompressLevel:    httpCompressLevel,
 
-		RateLimitEnabled:      rateLimitEnabled,
-		RateLimitWindow:       rateLimitWindow,
-		RateLimitGlobalPerIP:  rateLimitGlobalPerIP,
-		RateLimitLoginPerIP:   rateLimitLoginPerIP,
+		RateLimitEnabled:       rateLimitEnabled,
+		RateLimitWindow:        rateLimitWindow,
+		RateLimitGlobalPerIP:   rateLimitGlobalPerIP,
+		RateLimitLoginPerIP:    rateLimitLoginPerIP,
 		RateLimitReadPerUser:   rateLimitReadPerUser,
 		RateLimitWritePerUser:  rateLimitWritePerUser,
 		RateLimitTicketPerUser: rateLimitTicketPerUser,
+		RateLimitMediaPerIP:    rateLimitMediaPerIP,
 
 		R2AccountID:       r2AccountID,
 		R2AccessKeyID:     r2AccessKeyID,
@@ -963,6 +1059,14 @@ func Load() (*Config, error) {
 		R2Bucket:          r2Bucket,
 		R2PresignTTL:      r2PresignTTL,
 		R2QuotaBytes:      r2QuotaBytes,
+
+		MediaBaseURL:       mediaBaseURL,
+		MediaURLSecret:     mediaURLSecret,
+		MediaIDSalt:        mediaIDSalt,
+		MediaPrivateURLTTL: mediaPrivateURLTTL,
+		MediaMode:          mediaMode,
+		MediaCacheDir:      mediaCacheDir,
+		MediaCacheMaxBytes: mediaCacheMaxBytes,
 
 		StorageProviders:         storageProviders,
 		StorageQuotaThresholdPct: storageQuotaThresholdPct,

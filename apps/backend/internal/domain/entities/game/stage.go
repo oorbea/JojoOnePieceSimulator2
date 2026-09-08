@@ -16,16 +16,17 @@ import (
 // whatever was baked in at round-assignment time,
 // api/dto.NewGameStateResponse).
 type Stage struct {
-	name          string
-	description   string
-	picture       string
-	pictureThumb  string
-	pictureCard   string
-	pictureLqip   string
-	order         int
-	id            StageID
-	manga         enums.Manga
-	pictureStatus enums.PictureStatus
+	name           string
+	description    string
+	picture        string
+	pictureThumb   string
+	pictureCard    string
+	pictureLqip    string
+	pictureMediaID string
+	order          int
+	id             StageID
+	manga          enums.Manga
+	pictureStatus  enums.PictureStatus
 }
 
 // NewStage validates and builds a Stage. picture is the only picture field
@@ -59,6 +60,15 @@ func (s Stage) Picture() string      { return s.picture }
 func (s Stage) PictureThumb() string { return s.pictureThumb }
 func (s Stage) PictureCard() string  { return s.pictureCard }
 func (s Stage) PictureLqip() string  { return s.pictureLqip }
+
+// PictureMediaID returns the content-addressed group id media_objects rows
+// for this Stage's renditions are keyed by, or "" if not backfilled yet.
+func (s Stage) PictureMediaID() string { return s.pictureMediaID }
+
+// SetMediaID records the content-addressed group id - see
+// powers.Power.SetMediaID for why this is separate from
+// SetPictureRenditions.
+func (s *Stage) SetMediaID(mediaID string) { s.pictureMediaID = mediaID }
 
 // PictureStatus reports where this Stage's picture is in the async
 // compression pipeline.

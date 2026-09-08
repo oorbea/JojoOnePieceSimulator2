@@ -152,6 +152,17 @@ func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.Powe
 	return nil
 }
 
+// SetMediaID implements ports.IDevilFruitRepository.
+func (r *DevilFruitRepository) SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error {
+	if err := r.queries.UpdatePowerMediaID(ctx, db.UpdatePowerMediaIDParams{
+		ID:             pgtype.UUID{Bytes: id, Valid: true},
+		PictureMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting media id for devil fruit %s: %w", id, err)
+	}
+	return nil
+}
+
 // Delete removes the devil fruit (and its power/translations rows) with the
 // given id.
 func (r *DevilFruitRepository) Delete(ctx context.Context, id powers.PowerID) error {

@@ -17,6 +17,10 @@ RUN go mod download
 COPY apps/backend/. .
 # CGO_ENABLED=1 and -tags vips: see internal/infrastructure/imaging.
 RUN CGO_ENABLED=1 GOOS=linux go build -tags vips -o /out/server ./cmd/app
+# mediabackfill is a one-shot ops CLI (see cmd/mediabackfill's doc), never
+# the container's own entrypoint - run via
+# `docker compose exec backend mediabackfill --dry-run` etc.
+RUN CGO_ENABLED=1 GOOS=linux go build -tags vips -o /out/mediabackfill ./cmd/mediabackfill
 # goose CLI for `docker compose exec backend goose ...` (down/status - `up` is
 # already run automatically on server startup, see internal/infrastructure/postgres/migrate.go).
 # Built with `go install pkg@version`, not `go build`: cmd/goose pulls extra
@@ -33,6 +37,7 @@ RUN apk add --no-cache ca-certificates vips \
 USER app
 
 COPY --from=builder /out/server /usr/local/bin/server
+COPY --from=builder /out/mediabackfill /usr/local/bin/mediabackfill
 COPY --from=builder /out/goose /usr/local/bin/goose
 # The server embeds these via go:embed (see db/migrations/embed.go) for its
 # own startup migration; goose CLI needs them as real files on disk instead.

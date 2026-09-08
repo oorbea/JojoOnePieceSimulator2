@@ -35,6 +35,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -59,6 +60,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -83,6 +85,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -107,6 +110,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d

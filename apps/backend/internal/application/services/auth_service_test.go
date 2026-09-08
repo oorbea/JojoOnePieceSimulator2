@@ -194,6 +194,17 @@ func (f *fakeUserRepository) CountAdmins(_ context.Context) (int64, error) {
 	return count, nil
 }
 
+func (f *fakeUserRepository) SetAvatarMediaID(_ context.Context, id user.UserID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	u.SetAvatarMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IUserRepository = (*fakeUserRepository)(nil)
 
 // fakeIDGenerator returns deterministic, incrementing ids.

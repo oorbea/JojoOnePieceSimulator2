@@ -16,6 +16,7 @@ type User struct {
 	avatarThumbKey string
 	avatarCardKey  string
 	avatarLqip     string
+	avatarMediaID  string
 	id             UserID
 	role           enums.UserRole
 	avatarStatus   enums.PictureStatus
@@ -104,6 +105,20 @@ func (u *User) AvatarCardKey() string {
 
 func (u *User) AvatarLqip() string {
 	return u.avatarLqip
+}
+
+// AvatarMediaID returns the content-addressed group id media_objects rows
+// for this User's avatar renditions are keyed by, or "" if not backfilled
+// yet.
+func (u *User) AvatarMediaID() string {
+	return u.avatarMediaID
+}
+
+// SetAvatarMediaID records the content-addressed group id - see
+// powers.Power.SetMediaID for why this is separate from
+// SetAvatarRenditions.
+func (u *User) SetAvatarMediaID(mediaID string) {
+	u.avatarMediaID = mediaID
 }
 
 func (u *User) AvatarStatus() enums.PictureStatus {

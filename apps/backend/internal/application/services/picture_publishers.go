@@ -25,6 +25,9 @@ type PicturePublisher interface {
 	// UpdatePicture updates only the picture renditions and pipeline status
 	// for id. A nil main/thumb/card/lqip leaves that column untouched.
 	UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error
+	// SetMediaID updates only the content-addressed media group id, once the
+	// worker has persisted the corresponding media_objects rows.
+	SetMediaID(ctx context.Context, id string, mediaID string) error
 }
 
 // PictureTarget pairs a PicturePublisher with the object-storage key prefix
@@ -66,6 +69,14 @@ func (p *standPicturePublisher) UpdatePicture(ctx context.Context, id string, ma
 	return p.repo.UpdatePicture(ctx, powerID, main, thumb, card, lqip, status)
 }
 
+func (p *standPicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	powerID, err := powers.ParsePowerID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetMediaID(ctx, powerID, mediaID)
+}
+
 // devilFruitPicturePublisher adapts a ports.IDevilFruitRepository to
 // PicturePublisher.
 type devilFruitPicturePublisher struct {
@@ -99,6 +110,14 @@ func (p *devilFruitPicturePublisher) UpdatePicture(ctx context.Context, id strin
 	return p.repo.UpdatePicture(ctx, powerID, main, thumb, card, lqip, status)
 }
 
+func (p *devilFruitPicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	powerID, err := powers.ParsePowerID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetMediaID(ctx, powerID, mediaID)
+}
+
 // userPicturePublisher adapts a ports.IUserRepository to PicturePublisher, so
 // the picture worker can publish transcoded avatar renditions onto Users.
 type userPicturePublisher struct {
@@ -126,6 +145,14 @@ func (p *userPicturePublisher) UpdatePicture(ctx context.Context, id string, mai
 		return err
 	}
 	return p.repo.UpdateAvatar(ctx, userID, main, thumb, card, lqip, status)
+}
+
+func (p *userPicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	userID, err := user.ParseUserID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetAvatarMediaID(ctx, userID, mediaID)
 }
 
 // stagePicturePublisher adapts a ports.IStageRepository to PicturePublisher.
@@ -158,4 +185,12 @@ func (p *stagePicturePublisher) UpdatePicture(ctx context.Context, id string, ma
 		return err
 	}
 	return p.repo.UpdatePicture(ctx, stageID, main, thumb, card, lqip, status)
+}
+
+func (p *stagePicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	stageID, err := game.ParseStageID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetMediaID(ctx, stageID, mediaID)
 }

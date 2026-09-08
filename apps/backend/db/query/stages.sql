@@ -3,6 +3,7 @@
 -- name: ListStages :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -20,6 +21,7 @@ ORDER BY s.manga, s.position, s.name;
 -- name: FilterStageRows :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -38,6 +40,7 @@ ORDER BY s.manga, s.position, s.name;
 -- name: GetStageByID :one
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -69,12 +72,13 @@ RETURNING id, manga, position, name, picture, picture_thumb, picture_card, pictu
 -- UpdatePowerPicture (stands.sql).
 -- name: UpdateStagePicture :exec
 UPDATE stages
-SET picture        = COALESCE(sqlc.narg('picture')::text, picture),
-    picture_thumb  = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
-    picture_card   = COALESCE(sqlc.narg('picture_card')::text, picture_card),
-    picture_status = sqlc.arg('picture_status')::picture_status,
-    picture_lqip   = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
-    updated_at     = now()
+SET picture          = COALESCE(sqlc.narg('picture')::text, picture),
+    picture_thumb    = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
+    picture_card     = COALESCE(sqlc.narg('picture_card')::text, picture_card),
+    picture_status   = sqlc.arg('picture_status')::picture_status,
+    picture_lqip     = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
+    picture_media_id = COALESCE(sqlc.narg('picture_media_id')::text, picture_media_id),
+    updated_at       = now()
 WHERE id = sqlc.arg('id');
 
 -- name: DeleteStageByID :execrows
@@ -101,3 +105,8 @@ DELETE FROM stage_translations WHERE stage_id = $1 AND locale::text = ANY (sqlc.
 SELECT stage_id, locale, description
 FROM stage_translations
 WHERE stage_id = $1;
+
+-- Sets only a Stage's content-addressed media group id - see
+-- UpdatePowerMediaID (stands.sql).
+-- name: UpdateStageMediaID :exec
+UPDATE stages SET picture_media_id = $1 WHERE id = $2;

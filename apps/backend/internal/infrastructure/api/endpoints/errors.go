@@ -14,6 +14,11 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
 
+// errMediaSignatureInvalid is returned by the media handler when a private
+// URL's exp/sig prefix fails to verify (expired, tampered, or minted for a
+// different group/variant).
+var errMediaSignatureInvalid = errors.New("invalid media signature")
+
 // handleError maps a domain/service error onto the appropriate HTTP status
 // and writes the response body, logging anything that maps to a 500 so the
 // real cause isn't lost behind a generic message.
@@ -22,7 +27,7 @@ func handleError(w http.ResponseWriter, err error) {
 	var validationErr *dto.ValidationError
 	switch {
 	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound), errors.Is(err, ports.ErrDevilFruitNotFound),
-		errors.Is(err, ports.ErrGameNotFound), errors.Is(err, ports.ErrStageNotFound):
+		errors.Is(err, ports.ErrGameNotFound), errors.Is(err, ports.ErrStageNotFound), errors.Is(err, ports.ErrObjectNotFound):
 		writeError(w, http.StatusNotFound, code, err.Error())
 	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists),
 		errors.Is(err, services.ErrLastAdmin),
@@ -76,7 +81,7 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, enums.ErrInvalidLobbyVisibility):
 		writeError(w, http.StatusBadRequest, code, err.Error())
 	case errors.Is(err, ports.ErrUnauthenticated), errors.Is(err, ports.ErrInvalidGoogleToken), errors.Is(err, ports.ErrTicketInvalid),
-		errors.Is(err, ports.ErrRefreshInvalid), errors.Is(err, ports.ErrRefreshReuse):
+		errors.Is(err, ports.ErrRefreshInvalid), errors.Is(err, ports.ErrRefreshReuse), errors.Is(err, errMediaSignatureInvalid):
 		writeError(w, http.StatusUnauthorized, code, "unauthenticated")
 	case errors.Is(err, ports.ErrForbidden), errors.Is(err, game.ErrNotHost), errors.Is(err, game.ErrLobbyPrivate):
 		writeError(w, http.StatusForbidden, code, "forbidden")

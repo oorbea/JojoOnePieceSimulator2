@@ -170,6 +170,10 @@ func errorCode(err error) string {
 		return apierr.InvalidLobbyVisibility
 	case errors.Is(err, game.ErrLobbyPrivate):
 		return apierr.LobbyPrivate
+	case errors.Is(err, ports.ErrObjectNotFound):
+		return apierr.ObjectNotFound
+	case errors.Is(err, errMediaSignatureInvalid):
+		return apierr.MediaSignatureInvalid
 	default:
 		return apierr.Internal
 	}

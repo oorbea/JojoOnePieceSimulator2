@@ -26,10 +26,16 @@ const refreshTransportHeaderName = "X-Refresh-Token-Transport"
 type AuthEndpoints struct {
 	svc       *services.AuthService
 	cookieCfg CookieConfig
+	media     dto.MediaURLBuilder
 }
 
 func NewAuthEndpoints(svc *services.AuthService, cookieCfg CookieConfig) *AuthEndpoints {
 	return &AuthEndpoints{svc: svc, cookieCfg: cookieCfg}
+}
+
+// SetMediaURLBuilder - see StandEndpoints.SetMediaURLBuilder's doc.
+func (e *AuthEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /auth sub-router. Unlike /stands, these routes are
@@ -60,7 +66,7 @@ func wantsRefreshTokenInBody(r *http.Request) bool {
 func (e *AuthEndpoints) writeLoginResponse(w http.ResponseWriter, r *http.Request, status int, result *services.LoginResult) error {
 	setRefreshCookie(w, e.cookieCfg, result.RefreshToken, result.RefreshExpiresAt)
 
-	userResp, err := dto.NewUserResponse(r.Context(), result.User, e.svc.PictureURL)
+	userResp, err := dto.NewUserResponse(r.Context(), result.User, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}

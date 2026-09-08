@@ -66,6 +66,10 @@ var (
 	// header) by an IImageProcessor.
 	ErrInvalidImage = errors.New("invalid image")
 
+	// ErrObjectNotFound is returned by IStorageBackend.Get/IPictureStorage.Download
+	// when the requested key doesn't exist in object storage.
+	ErrObjectNotFound = errors.New("object not found in storage")
+
 	// ErrGameNotFound is returned when an IGameStore lookup (by GameID or by
 	// join code) finds no matching Game.
 	ErrGameNotFound = errors.New("game not found")

@@ -12,25 +12,25 @@ RETURNING id;
 
 -- name: GetUserByID :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE id = $1;
 
 -- name: GetUserByGoogleSub :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE google_sub = $1;
 
 -- name: GetUserByEmail :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE email = $1;
 
 -- name: GetUserByUsername :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE username = $1;
 
@@ -59,6 +59,7 @@ SET avatar_key       = COALESCE(sqlc.narg('avatar_key')::text, avatar_key),
     avatar_card_key  = COALESCE(sqlc.narg('avatar_card_key')::text, avatar_card_key),
     avatar_status    = sqlc.arg('avatar_status')::picture_status,
     avatar_lqip      = COALESCE(sqlc.narg('avatar_lqip')::text, avatar_lqip),
+    avatar_media_id  = COALESCE(sqlc.narg('avatar_media_id')::text, avatar_media_id),
     updated_at       = now()
 WHERE id = sqlc.arg('id');
 
@@ -84,7 +85,12 @@ WHERE role = 'ADMIN';
 
 -- name: ListUsers :many
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 ORDER BY created_at, id
 LIMIT $1 OFFSET $2;
+
+-- Sets only a User's content-addressed avatar media group id - see
+-- UpdatePowerMediaID (stands.sql).
+-- name: UpdateUserAvatarMediaID :exec
+UPDATE users SET avatar_media_id = $1 WHERE id = $2;

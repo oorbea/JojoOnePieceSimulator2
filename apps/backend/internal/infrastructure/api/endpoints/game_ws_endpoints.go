@@ -570,6 +570,7 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 	}
 	resp, err := dto.NewGameStateResponse(ctx, g, code, self,
 		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
+		e.media,
 		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), deadlines)
 	if err != nil {
 		log.Printf("game ws: building state for %s: %v", g.ID(), err)

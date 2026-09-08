@@ -2,6 +2,7 @@ package dto
 
 import (
 	"context"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 )
@@ -31,9 +32,14 @@ type UserResponse struct {
 // card bound to it render nothing for a user who never uploaded one. lqip is
 // always empty for the Google fallback - there is no local pipeline output
 // to embed for an external URL.
-func resolveAvatar(ctx context.Context, u *user.User, resolve PictureURLResolver) (main, thumb, card, lqip string, err error) {
+func resolveAvatar(ctx context.Context, u *user.User, resolve PictureURLResolver, media MediaURLBuilder) (main, thumb, card, lqip string, err error) {
 	if u.AvatarKey() == "" {
 		return u.GooglePicture(), u.GooglePicture(), u.GooglePicture(), "", nil
+	}
+	if mediaID := u.AvatarMediaID(); mediaID != "" {
+		now := time.Now()
+		return media.Private(mediaID, "main", now), media.Private(mediaID, "thumb", now),
+			media.Private(mediaID, "card", now), u.AvatarLqip(), nil
 	}
 	main, err = resolve(ctx, u.AvatarKey())
 	if err != nil {
@@ -56,9 +62,10 @@ func resolveAvatar(ctx context.Context, u *user.User, resolve PictureURLResolver
 
 // NewUserResponse builds a UserResponse from a domain User, resolving its
 // avatar (own upload, or the Google-synced picture as a fallback) through
-// resolve.
-func NewUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver) (UserResponse, error) {
-	avatar, avatarThumb, avatarCard, avatarLqip, err := resolveAvatar(ctx, u, resolve)
+// resolve, or through media's signed private URLs once AvatarMediaID is
+// backfilled.
+func NewUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver, media MediaURLBuilder) (UserResponse, error) {
+	avatar, avatarThumb, avatarCard, avatarLqip, err := resolveAvatar(ctx, u, resolve, media)
 	if err != nil {
 		return UserResponse{}, err
 	}

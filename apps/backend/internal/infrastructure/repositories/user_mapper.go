@@ -24,6 +24,7 @@ type userRow struct {
 	AvatarCardKey  string
 	AvatarStatus   string
 	AvatarLqip     string
+	AvatarMediaID  string
 }
 
 func userRowFromGetByID(r db.GetUserByIDRow) userRow {
@@ -31,7 +32,7 @@ func userRowFromGetByID(r db.GetUserByIDRow) userRow {
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
-		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip,
+		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
 	}
 }
 
@@ -40,7 +41,7 @@ func userRowFromGetByGoogleSub(r db.GetUserByGoogleSubRow) userRow {
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
-		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip,
+		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
 	}
 }
 
@@ -49,7 +50,7 @@ func userRowFromGetByEmail(r db.GetUserByEmailRow) userRow {
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
-		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip,
+		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
 	}
 }
 
@@ -58,7 +59,7 @@ func userRowFromGetByUsername(r db.GetUserByUsernameRow) userRow {
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
-		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip,
+		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
 	}
 }
 
@@ -67,7 +68,7 @@ func userRowFromListUsers(r db.ListUsersRow) userRow {
 		ID: r.ID, GoogleSub: r.GoogleSub, Email: r.Email, Username: r.Username,
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
-		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip,
+		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
 	}
 }
 
@@ -102,6 +103,7 @@ func buildUser(row userRow) (*user.User, error) {
 		return nil, err
 	}
 	u.SetAvatarRenditions(row.AvatarKey, row.AvatarThumbKey, row.AvatarCardKey, row.AvatarLqip, avatarStatus)
+	u.SetAvatarMediaID(row.AvatarMediaID)
 	if err := u.ChangeLanguage(language); err != nil {
 		return nil, err
 	}

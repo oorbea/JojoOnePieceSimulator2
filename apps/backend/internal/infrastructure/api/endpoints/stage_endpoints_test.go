@@ -130,6 +130,17 @@ func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, 
 	return nil
 }
 
+func (f *fakeStageRepository) SetMediaID(_ context.Context, id game.StageID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.stages[id]
+	if !ok {
+		return ports.ErrStageNotFound
+	}
+	s.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IStageRepository = (*fakeStageRepository)(nil)
 
 // fakeStageIDGenerator returns deterministic, incrementing ids, kept
@@ -179,7 +190,7 @@ func newStageTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fak
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	return endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints,
 		endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}),
-		stageEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{}, 0)
+		stageEndpoints, nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{}, 0)
 }
 
 func validStageBody(name string) map[string]any {

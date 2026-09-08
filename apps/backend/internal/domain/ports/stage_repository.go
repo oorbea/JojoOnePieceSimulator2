@@ -50,4 +50,7 @@ type IStageRepository interface {
 	// UpdatePicture updates only a Stage's picture renditions and pipeline
 	// status - same contract as IStandRepository.UpdatePicture.
 	UpdatePicture(ctx context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error
+	// SetMediaID updates only the content-addressed media group id - see
+	// IStandRepository.SetMediaID.
+	SetMediaID(ctx context.Context, id game.StageID, mediaID string) error
 }

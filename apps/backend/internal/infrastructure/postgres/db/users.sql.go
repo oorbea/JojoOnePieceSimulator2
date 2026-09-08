@@ -55,7 +55,7 @@ func (q *Queries) GetUserAvatarKeys(ctx context.Context, id pgtype.UUID) (GetUse
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE email = $1
 `
@@ -74,6 +74,7 @@ type GetUserByEmailRow struct {
 	AvatarCardKey  string
 	AvatarStatus   string
 	AvatarLqip     string
+	AvatarMediaID  string
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -93,13 +94,14 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.AvatarCardKey,
 		&i.AvatarStatus,
 		&i.AvatarLqip,
+		&i.AvatarMediaID,
 	)
 	return i, err
 }
 
 const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE google_sub = $1
 `
@@ -118,6 +120,7 @@ type GetUserByGoogleSubRow struct {
 	AvatarCardKey  string
 	AvatarStatus   string
 	AvatarLqip     string
+	AvatarMediaID  string
 }
 
 func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (GetUserByGoogleSubRow, error) {
@@ -137,13 +140,14 @@ func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (Get
 		&i.AvatarCardKey,
 		&i.AvatarStatus,
 		&i.AvatarLqip,
+		&i.AvatarMediaID,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE id = $1
 `
@@ -162,6 +166,7 @@ type GetUserByIDRow struct {
 	AvatarCardKey  string
 	AvatarStatus   string
 	AvatarLqip     string
+	AvatarMediaID  string
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
@@ -181,13 +186,14 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.AvatarCardKey,
 		&i.AvatarStatus,
 		&i.AvatarLqip,
+		&i.AvatarMediaID,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 WHERE username = $1
 `
@@ -206,6 +212,7 @@ type GetUserByUsernameRow struct {
 	AvatarCardKey  string
 	AvatarStatus   string
 	AvatarLqip     string
+	AvatarMediaID  string
 }
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
@@ -225,13 +232,14 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.AvatarCardKey,
 		&i.AvatarStatus,
 		&i.AvatarLqip,
+		&i.AvatarMediaID,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
 FROM users
 ORDER BY created_at, id
 LIMIT $1 OFFSET $2
@@ -256,6 +264,7 @@ type ListUsersRow struct {
 	AvatarCardKey  string
 	AvatarStatus   string
 	AvatarLqip     string
+	AvatarMediaID  string
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
@@ -281,6 +290,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 			&i.AvatarCardKey,
 			&i.AvatarStatus,
 			&i.AvatarLqip,
+			&i.AvatarMediaID,
 		); err != nil {
 			return nil, err
 		}
@@ -299,8 +309,9 @@ SET avatar_key       = COALESCE($1::text, avatar_key),
     avatar_card_key  = COALESCE($3::text, avatar_card_key),
     avatar_status    = $4::picture_status,
     avatar_lqip      = COALESCE($5::text, avatar_lqip),
+    avatar_media_id  = COALESCE($6::text, avatar_media_id),
     updated_at       = now()
-WHERE id = $6
+WHERE id = $7
 `
 
 type UpdateUserAvatarParams struct {
@@ -309,6 +320,7 @@ type UpdateUserAvatarParams struct {
 	AvatarCardKey  *string
 	AvatarStatus   string
 	AvatarLqip     *string
+	AvatarMediaID  *string
 	ID             pgtype.UUID
 }
 
@@ -325,8 +337,25 @@ func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarPara
 		arg.AvatarCardKey,
 		arg.AvatarStatus,
 		arg.AvatarLqip,
+		arg.AvatarMediaID,
 		arg.ID,
 	)
+	return err
+}
+
+const updateUserAvatarMediaID = `-- name: UpdateUserAvatarMediaID :exec
+UPDATE users SET avatar_media_id = $1 WHERE id = $2
+`
+
+type UpdateUserAvatarMediaIDParams struct {
+	AvatarMediaID string
+	ID            pgtype.UUID
+}
+
+// Sets only a User's content-addressed avatar media group id - see
+// UpdatePowerMediaID (stands.sql).
+func (q *Queries) UpdateUserAvatarMediaID(ctx context.Context, arg UpdateUserAvatarMediaIDParams) error {
+	_, err := q.db.Exec(ctx, updateUserAvatarMediaID, arg.AvatarMediaID, arg.ID)
 	return err
 }
 
