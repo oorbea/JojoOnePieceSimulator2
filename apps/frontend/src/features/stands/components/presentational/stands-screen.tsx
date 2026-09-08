@@ -18,6 +18,7 @@ import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import type { Locale } from '@/shared/contracts/enums'
+import { focusElement } from '@/shared/lib/a11y'
 import type { StandFormValues, StandResponse } from '@/features/stands/types/stands.types'
 
 import { StandCard } from './stand-card'
@@ -154,6 +155,9 @@ export function StandsScreen(props: Props) {
   // focus to the first newly-added card so a keyboard user isn't left on a
   // button that may have moved or unmounted (norma-teclado.md) - see
   // ObsidianVault/entrega-imagenes-red-lenta-2026-09-07.md's T3.10 note.
+  // focusElement (shared/lib/a11y.ts) covers both web (.focus() on the
+  // forwarded DOM node) and native (AccessibilityInfo.setAccessibilityFocus
+  // via findNodeHandle).
   const cardRefs = useRef(new Map<string, View | null>())
   const prevLengthRef = useRef(stands.length)
   const wasFetchingRef = useRef(isFetchingNextPage ?? false)
@@ -162,15 +166,7 @@ export function StandsScreen(props: Props) {
     wasFetchingRef.current = isFetchingNextPage ?? false
     if (wasFetching && !isFetchingNextPage && stands.length > prevLengthRef.current) {
       const firstNew = stands[prevLengthRef.current]
-      const el = firstNew ? cardRefs.current.get(firstNew.id) : null
-      // Native RN Views have no DOM-style .focus() (unlike react-native-web's
-      // host node) - moving accessibility focus there needs
-      // AccessibilityInfo.setAccessibilityFocus, out of scope for this pass.
-      // Guarding on the method's existence keeps native a no-op instead of a
-      // crash while still fixing the actual reported bug's platform (web).
-      if (el && typeof (el as unknown as { focus?: () => void }).focus === 'function') {
-        ;(el as unknown as { focus: () => void }).focus()
-      }
+      focusElement(firstNew ? (cardRefs.current.get(firstNew.id) ?? null) : null)
     }
     prevLengthRef.current = stands.length
   }, [stands, isFetchingNextPage])

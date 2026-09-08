@@ -17,6 +17,7 @@ import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import type { Locale } from '@/shared/contracts/enums'
+import { focusElement } from '@/shared/lib/a11y'
 import type {
   DevilFruitFormValues,
   DevilFruitResponse,
@@ -132,10 +133,7 @@ export function DevilFruitsScreen(props: Props) {
     wasFetchingRef.current = isFetchingNextPage ?? false
     if (wasFetching && !isFetchingNextPage && devilFruits.length > prevLengthRef.current) {
       const firstNew = devilFruits[prevLengthRef.current]
-      const el = firstNew ? cardRefs.current.get(firstNew.id) : null
-      if (el && typeof (el as unknown as { focus?: () => void }).focus === 'function') {
-        ;(el as unknown as { focus: () => void }).focus()
-      }
+      focusElement(firstNew ? (cardRefs.current.get(firstNew.id) ?? null) : null)
     }
     prevLengthRef.current = devilFruits.length
   }, [devilFruits, isFetchingNextPage])
