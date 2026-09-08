@@ -1,16 +1,14 @@
 import { Camera } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
-import { Image } from 'react-native'
 import { Paragraph, Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlassSelect } from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
-import { GlossOverlay } from '@/shared/components/presentational/gloss-overlay'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { PageShell } from '@/shared/components/presentational/page-shell'
-import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import type { Locale } from '@/shared/contracts/enums'
 import { LOCALE_ENDONYMS, SUPPORTED_LOCALES } from '@/shared/i18n'
@@ -91,17 +89,18 @@ export function ProfileScreen({
               pressStyle={{ scale: 0.95 }}
               {...a11yProps(t('profile.changePicture'), 'button', { disabled: isAvatarBusy })}
             >
-              <InsetRing rounded="$circle" />
-              <GlossOverlay coverage="third" shape="circle" />
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={{ width: '100%', height: '100%' }} />
-              ) : (
-                <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
-                  <Paragraph color="white" fontSize="$8" fontWeight="800">
-                    {profile.completeName.charAt(0).toUpperCase()}
-                  </Paragraph>
-                </YStack>
-              )}
+              <LazyImage
+                uri={avatarUri}
+                height={112}
+                rounded="$circle"
+                fallback={
+                  <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
+                    <Paragraph color="white" fontSize="$8" fontWeight="800">
+                      {profile.completeName.charAt(0).toUpperCase()}
+                    </Paragraph>
+                  </YStack>
+                }
+              />
               {isAvatarBusy ? (
                 <YStack
                   position="absolute"

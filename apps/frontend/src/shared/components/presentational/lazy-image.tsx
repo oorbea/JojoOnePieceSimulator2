@@ -19,7 +19,10 @@ export type LazyImageState = 'queued' | 'granted' | 'loaded' | 'error'
 type Props = {
   uri: string | null
   lqip?: string | null
-  height: number | string
+  // Required unless aspectRatio is given instead (e.g. a full-width 16:9
+  // hero banner that has no fixed pixel height) - Tamagui's own aspectRatio
+  // sizing takes over when height is omitted.
+  height?: number | string
   aspectRatio?: number
   contentFit?: ImageContentFit
   rounded?: string
@@ -83,7 +86,7 @@ export function LazyImage({
     <YStack
       ref={wellRef}
       width="100%"
-      style={{ height }}
+      style={height !== undefined ? { height } : undefined}
       aspectRatio={aspectRatio}
       rounded={asToken<'$card'>(rounded)}
       overflow="hidden"

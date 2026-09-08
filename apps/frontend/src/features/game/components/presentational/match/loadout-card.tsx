@@ -1,6 +1,5 @@
 import { Sparkles } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
-import { Image } from 'react-native'
 import { XStack, YStack } from 'tamagui'
 
 import { TraitChip } from '@/features/game/components/presentational/match/trait-chips'
@@ -10,8 +9,10 @@ import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fru
 import type { StandResponse } from '@/features/stands/types/stands.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { InsetRing, WiiCard } from '@/shared/components/presentational/wii-card'
+import { LazyImage } from '@/shared/components/presentational/lazy-image'
+import { WiiCard } from '@/shared/components/presentational/wii-card'
 import type { Manga } from '@/shared/contracts/enums'
+import { cardSource, lqipSource } from '@/shared/lib/picture-source'
 
 type Props = {
   participant: GameParticipant
@@ -121,36 +122,33 @@ type TFunc = (key: string) => string
 function StandBlock({ stand, visible, t }: { stand?: StandResponse; visible: boolean; t: TFunc }) {
   return (
     <YStack gap="$1.5">
-      <YStack
-        width="100%"
-        height={110}
-        rounded="$card"
-        overflow="hidden"
-        position="relative"
-        bg="$plasticEdge"
-      >
-        <InsetRing rounded="$card" />
-        {visible ? (
-          stand ? (
-            stand.pictureThumb || null ? (
-              <Image
-                source={{ uri: stand.pictureThumb }}
-                style={{ width: '100%', height: '100%' }}
-              />
-            ) : (
-              <YStack flex={1} items="center" justify="center">
-                <Sparkles size={26} color="$standPurple" />
-              </YStack>
-            )
-          ) : (
-            <YStack flex={1} items="center" justify="center">
-              <GlowText level="label" tone="soft">
-                {t('game.match.noStand')}
-              </GlowText>
-            </YStack>
-          )
-        ) : null}
-      </YStack>
+      {visible ? (
+        stand ? (
+          <LazyImage
+            uri={cardSource(stand)}
+            lqip={lqipSource(stand)}
+            height={110}
+            pictureStatus={stand.pictureStatus}
+            fallback={<Sparkles size={26} color="$standPurple" />}
+          />
+        ) : (
+          <YStack
+            width="100%"
+            height={110}
+            rounded="$card"
+            overflow="hidden"
+            items="center"
+            justify="center"
+            bg="$plasticEdge"
+          >
+            <GlowText level="label" tone="soft">
+              {t('game.match.noStand')}
+            </GlowText>
+          </YStack>
+        )
+      ) : (
+        <YStack width="100%" height={110} rounded="$card" overflow="hidden" bg="$plasticEdge" />
+      )}
 
       {visible && stand ? (
         <YStack gap="$1.5">
@@ -193,36 +191,33 @@ function DevilFruitBlock({
 }) {
   return (
     <YStack gap="$1.5">
-      <YStack
-        width="100%"
-        height={90}
-        rounded="$card"
-        overflow="hidden"
-        position="relative"
-        bg="$plasticEdge"
-      >
-        <InsetRing rounded="$card" />
-        {visible ? (
-          devilFruit ? (
-            devilFruit.pictureThumb || null ? (
-              <Image
-                source={{ uri: devilFruit.pictureThumb }}
-                style={{ width: '100%', height: '100%' }}
-              />
-            ) : (
-              <YStack flex={1} items="center" justify="center">
-                <Sparkles size={22} color="$tangerine" />
-              </YStack>
-            )
-          ) : (
-            <YStack flex={1} items="center" justify="center">
-              <GlowText level="label" tone="soft">
-                {t('game.match.noFruit')}
-              </GlowText>
-            </YStack>
-          )
-        ) : null}
-      </YStack>
+      {visible ? (
+        devilFruit ? (
+          <LazyImage
+            uri={cardSource(devilFruit)}
+            lqip={lqipSource(devilFruit)}
+            height={90}
+            pictureStatus={devilFruit.pictureStatus}
+            fallback={<Sparkles size={22} color="$tangerine" />}
+          />
+        ) : (
+          <YStack
+            width="100%"
+            height={90}
+            rounded="$card"
+            overflow="hidden"
+            items="center"
+            justify="center"
+            bg="$plasticEdge"
+          >
+            <GlowText level="label" tone="soft">
+              {t('game.match.noFruit')}
+            </GlowText>
+          </YStack>
+        )
+      ) : (
+        <YStack width="100%" height={90} rounded="$card" overflow="hidden" bg="$plasticEdge" />
+      )}
 
       {visible && devilFruit ? (
         <XStack items="center" justify="space-between" gap="$1.5">
