@@ -165,6 +165,18 @@ func (s *StandService) FilterStands(ctx context.Context, filters ports.StandFilt
 	return s.standRepo.Filter(ctx, filters, locale)
 }
 
+// PageStands returns up to limit+1 stands matching filters, ordered by
+// name after afterName - see ports.IStandRepository.Page's doc.
+func (s *StandService) PageStands(ctx context.Context, filters ports.StandFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	return s.standRepo.Page(ctx, filters, locale, afterName, limit)
+}
+
+// CountStands returns the total number of stands matching filters, ignoring
+// pagination.
+func (s *StandService) CountStands(ctx context.Context, filters ports.StandFilters, locale enums.Locale) (int, error) {
+	return s.standRepo.Count(ctx, filters, locale)
+}
+
 // StandOptions returns every stand's id/name only, unfiltered and
 // locale-free - backs the evolvesFrom picker without the cost of a full
 // catalogue fetch.

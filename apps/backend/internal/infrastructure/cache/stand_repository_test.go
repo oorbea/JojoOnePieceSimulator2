@@ -23,6 +23,8 @@ type countingStandRepository struct {
 	findByNameCalls int
 	getAllCalls     int
 	filterCalls     int
+	pageCalls       int
+	countCalls      int
 	updatePicCalls  int
 	notFoundErr     error
 }
@@ -84,6 +86,43 @@ func (r *countingStandRepository) Filter(_ context.Context, filters ports.StandF
 		results = append(results, s)
 	}
 	return results, nil
+}
+
+// Page/Count exist to prove StandRepository's decorator is a pure
+// pass-through for pagination (see cache/stand_repository.go's doc) - every
+// call must reach here, never a cache hit.
+func (r *countingStandRepository) Page(_ context.Context, filters ports.StandFilters, _ enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pageCalls++
+	var results []*powers.Stand
+	for _, s := range r.stands {
+		if filters.Rarity != nil && s.Rarity() != *filters.Rarity {
+			continue
+		}
+		if afterName != nil && s.Name() <= *afterName {
+			continue
+		}
+		results = append(results, s)
+	}
+	if len(results) > limit {
+		return results[:limit], true, nil
+	}
+	return results, false, nil
+}
+
+func (r *countingStandRepository) Count(_ context.Context, filters ports.StandFilters, _ enums.Locale) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.countCalls++
+	count := 0
+	for _, s := range r.stands {
+		if filters.Rarity != nil && s.Rarity() != *filters.Rarity {
+			continue
+		}
+		count++
+	}
+	return count, nil
 }
 
 func (r *countingStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {

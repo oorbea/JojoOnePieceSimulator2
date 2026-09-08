@@ -11,6 +11,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
@@ -136,8 +137,21 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-
 	locale := LocaleFromRequest(r)
+
+	// Opt-in pagination: a request with neither ?limit= nor ?cursor= gets
+	// the legacy bare-array response, byte-identical to before - see
+	// ObsidianVault/catalogue-pagination.md for why an unconditional switch
+	// to an envelope is a hazard (a stale tab's already-loaded JS bundle
+	// against a new backend).
+	pageParams, err := dto.PageParamsFromQuery(r.URL.Query())
+	if err != nil {
+		return err
+	}
+	if pageParams.Requested {
+		return e.listPage(w, r, filters, locale, pageParams)
+	}
+
 	var stands []*powers.Stand
 	if hasFilters {
 		stands, err = e.svc.FilterStands(r.Context(), filters, locale)
@@ -152,6 +166,53 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	writeJSON(w, http.StatusOK, resp)
+	return nil
+}
+
+// listPage serves the ?limit=/?cursor= paginated form of GET /stands. The
+// cursor's fingerprint binds it to the exact filter+locale combination it
+// was issued under - reusing it against different filters is a 400, not
+// silently-wrong results.
+func (e *StandEndpoints) listPage(w http.ResponseWriter, r *http.Request, filters ports.StandFilters, locale enums.Locale, params dto.PageParams) error {
+	fingerprint := dto.StandFiltersFingerprint(filters, locale)
+
+	var afterName *string
+	if params.HasCursor {
+		cursor, err := dto.DecodeCursor[dto.StandCursor](params.Cursor, fingerprint)
+		if err != nil {
+			return err
+		}
+		afterName = &cursor.Name
+	}
+
+	stands, hasMore, err := e.svc.PageStands(r.Context(), filters, locale, afterName, params.Limit)
+	if err != nil {
+		return err
+	}
+
+	var total *int
+	if params.WithTotal && !params.HasCursor {
+		count, err := e.svc.CountStands(r.Context(), filters, locale)
+		if err != nil {
+			return err
+		}
+		total = &count
+	}
+
+	var nextCursor *string
+	if hasMore && len(stands) > 0 {
+		encoded := dto.EncodeCursor(dto.StandCursor{Name: stands[len(stands)-1].Name()}, fingerprint)
+		nextCursor = &encoded
+	}
+
+	items, err := dto.NewStandResponses(r.Context(), stands, e.svc.PictureURL, e.media)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.StandPageResponse{
+		PageInfo: dto.NewPageInfo(nextCursor, total),
+		Items:    items,
+	})
 	return nil
 }
 

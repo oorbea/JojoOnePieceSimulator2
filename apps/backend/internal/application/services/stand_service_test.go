@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"sort"
 	"sync"
 	"testing"
 
@@ -76,6 +77,37 @@ func (f *fakeStandRepository) GetAll(_ context.Context, _ enums.Locale) ([]*powe
 
 func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
 	return f.GetAll(context.Background(), locale)
+}
+
+// Page mirrors the real repository's keyset semantics (sorted by name,
+// strictly after afterName, hasMore from an extra row) closely enough for
+// StandService.PageStands's own tests, without a real database.
+func (f *fakeStandRepository) Page(ctx context.Context, filters ports.StandFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, false, err
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].Name() < all[j].Name() })
+	start := 0
+	if afterName != nil {
+		for i, s := range all {
+			if s.Name() > *afterName {
+				start = i
+				break
+			}
+			start = i + 1
+		}
+	}
+	page := all[start:]
+	if len(page) > limit {
+		return page[:limit], true, nil
+	}
+	return page, false, nil
+}
+
+func (f *fakeStandRepository) Count(ctx context.Context, filters ports.StandFilters, locale enums.Locale) (int, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	return len(all), err
 }
 
 func (f *fakeStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {

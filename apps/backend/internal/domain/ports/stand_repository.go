@@ -41,6 +41,15 @@ type IStandRepository interface {
 	FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.Stand, error)
 	GetAll(ctx context.Context, locale enums.Locale) ([]*powers.Stand, error)
 	Filter(ctx context.Context, filters StandFilters, locale enums.Locale) ([]*powers.Stand, error)
+	// Page returns up to limit stands matching filters, ordered by name,
+	// strictly after afterName (nil means "from the start"). hasMore reports
+	// whether more rows exist beyond the returned page - callers ask for
+	// limit+1 rows and this reports true iff that extra row came back.
+	Page(ctx context.Context, filters StandFilters, locale enums.Locale, afterName *string, limit int) (stands []*powers.Stand, hasMore bool, err error)
+	// Count returns the total number of stands matching filters, ignoring
+	// pagination - used for a page response's `total`, typically only on the
+	// first page.
+	Count(ctx context.Context, filters StandFilters, locale enums.Locale) (int, error)
 	// Options returns every stand's id/name only, unfiltered and
 	// locale-free (powers.name is not translatable) - backs the
 	// evolvesFrom picker without the cost of a full catalogue fetch.

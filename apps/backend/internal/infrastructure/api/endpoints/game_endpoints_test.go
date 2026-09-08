@@ -276,6 +276,14 @@ func (fakeGameStandRepository) Options(context.Context) ([]ports.StandOption, er
 	return nil, nil
 }
 
+func (fakeGameStandRepository) Page(context.Context, ports.StandFilters, enums.Locale, *string, int) ([]*powers.Stand, bool, error) {
+	return nil, false, nil
+}
+
+func (fakeGameStandRepository) Count(context.Context, ports.StandFilters, enums.Locale) (int, error) {
+	return 0, nil
+}
+
 func (fakeGameStandRepository) Save(context.Context, *powers.Stand, ports.PowerTranslations) error {
 	return nil
 }

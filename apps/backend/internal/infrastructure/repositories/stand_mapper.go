@@ -78,6 +78,20 @@ func standRowsFromList(rs []db.ListStandRowsRow) []standRow {
 	return rows
 }
 
+func standRowsFromPage(rs []db.PageStandRowsRow) []standRow {
+	rows := make([]standRow, len(rs))
+	for i, r := range rs {
+		rows[i] = standRow{
+			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
+			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
+			Matched: r.Matched, Skills: r.Skills,
+		}
+	}
+	return rows
+}
+
 func standRowsFromFilter(rs []db.FilterStandRowsRow) []standRow {
 	rows := make([]standRow, len(rs))
 	for i, r := range rs {
