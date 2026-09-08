@@ -223,6 +223,14 @@ func (fakeGameStageRepository) Filter(context.Context, ports.StageFilters, enums
 	return nil, nil
 }
 
+func (fakeGameStageRepository) Page(context.Context, ports.StageFilters, enums.Locale, *ports.StagePageCursor, int) ([]game.Stage, bool, error) {
+	return nil, false, nil
+}
+
+func (fakeGameStageRepository) Count(context.Context, ports.StageFilters, enums.Locale) (int, error) {
+	return 0, nil
+}
+
 func (fakeGameStageRepository) FindByID(context.Context, game.StageID, enums.Locale) (game.Stage, error) {
 	return game.Stage{}, ports.ErrStageNotFound
 }
@@ -320,6 +328,14 @@ func (fakeGameDevilFruitRepository) GetAll(context.Context, enums.Locale) ([]*po
 
 func (fakeGameDevilFruitRepository) Filter(context.Context, ports.DevilFruitFilters, enums.Locale) ([]*powers.DevilFruit, error) {
 	return nil, nil
+}
+
+func (fakeGameDevilFruitRepository) Page(context.Context, ports.DevilFruitFilters, enums.Locale, *string, int) ([]*powers.DevilFruit, bool, error) {
+	return nil, false, nil
+}
+
+func (fakeGameDevilFruitRepository) Count(context.Context, ports.DevilFruitFilters, enums.Locale) (int, error) {
+	return 0, nil
 }
 
 func (fakeGameDevilFruitRepository) Save(context.Context, *powers.DevilFruit, ports.PowerTranslations) error {

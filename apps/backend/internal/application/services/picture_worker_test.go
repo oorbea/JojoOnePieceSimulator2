@@ -740,6 +740,14 @@ func (f *fakeDevilFruitRepository) Filter(_ context.Context, _ ports.DevilFruitF
 	return f.GetAll(context.Background(), locale)
 }
 
+func (f *fakeDevilFruitRepository) Page(context.Context, ports.DevilFruitFilters, enums.Locale, *string, int) ([]*powers.DevilFruit, bool, error) {
+	return nil, false, nil
+}
+
+func (f *fakeDevilFruitRepository) Count(context.Context, ports.DevilFruitFilters, enums.Locale) (int, error) {
+	return 0, nil
+}
+
 func (f *fakeDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -979,6 +987,14 @@ func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, 
 	}
 	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
+}
+
+func (f *fakeStageRepository) Page(context.Context, ports.StageFilters, enums.Locale, *ports.StagePageCursor, int) ([]game.Stage, bool, error) {
+	return nil, false, nil
+}
+
+func (f *fakeStageRepository) Count(context.Context, ports.StageFilters, enums.Locale) (int, error) {
+	return 0, nil
 }
 
 func (f *fakeStageRepository) SetMediaID(_ context.Context, id game.StageID, mediaID string) error {

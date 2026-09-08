@@ -22,6 +22,8 @@ type countingDevilFruitRepository struct {
 	findByNameCalls int
 	getAllCalls     int
 	filterCalls     int
+	pageCalls       int
+	countCalls      int
 	updatePicCalls  int
 	notFoundErr     error
 }
@@ -83,6 +85,34 @@ func (r *countingDevilFruitRepository) Filter(_ context.Context, filters ports.D
 		results = append(results, f)
 	}
 	return results, nil
+}
+
+func (r *countingDevilFruitRepository) Page(_ context.Context, filters ports.DevilFruitFilters, _ enums.Locale, _ *string, _ int) ([]*powers.DevilFruit, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pageCalls++
+	var results []*powers.DevilFruit
+	for _, f := range r.fruits {
+		if filters.Rarity != nil && f.Rarity() != *filters.Rarity {
+			continue
+		}
+		results = append(results, f)
+	}
+	return results, false, nil
+}
+
+func (r *countingDevilFruitRepository) Count(_ context.Context, filters ports.DevilFruitFilters, _ enums.Locale) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.countCalls++
+	count := 0
+	for _, f := range r.fruits {
+		if filters.Rarity != nil && f.Rarity() != *filters.Rarity {
+			continue
+		}
+		count++
+	}
+	return count, nil
 }
 
 func (r *countingDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {

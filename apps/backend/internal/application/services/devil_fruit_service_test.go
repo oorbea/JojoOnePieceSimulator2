@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sort"
 	"sync"
 	"testing"
 
@@ -76,6 +77,34 @@ func (f *fakeDevilFruitRepository) GetAll(_ context.Context, _ enums.Locale) ([]
 
 func (f *fakeDevilFruitRepository) Filter(_ context.Context, _ ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
 	return f.GetAll(context.Background(), locale)
+}
+
+func (f *fakeDevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, false, err
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].Name() < all[j].Name() })
+	start := 0
+	if afterName != nil {
+		for i, d := range all {
+			if d.Name() > *afterName {
+				start = i
+				break
+			}
+			start = i + 1
+		}
+	}
+	page := all[start:]
+	if len(page) > limit {
+		return page[:limit], true, nil
+	}
+	return page, false, nil
+}
+
+func (f *fakeDevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	return len(all), err
 }
 
 func (f *fakeDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {

@@ -37,6 +37,58 @@ WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
        OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
 ORDER BY s.manga, s.position, s.name;
 
+-- Keyset-paginated counterpart of FilterStageRows. The sort key is the
+-- triple (manga, position, name) - UNIQUE (manga, name) plus a fixed manga
+-- makes the triple unique overall, since position alone can tie within a
+-- manga (no UNIQUE(manga, position) - see 00008_stages.sql's doc on
+-- reordering). The row-value comparison below uses manga/position/name
+-- directly (no ::text cast) so Postgres compares manga by its own default
+-- btree opclass - enum declaration order - identical to plain
+-- `ORDER BY s.manga, s.position, s.name`. Casting to ::text here would sort
+-- alphabetically instead and silently desync the cursor from the ORDER BY,
+-- corrupting page boundaries - see ObsidianVault/catalogue-pagination.md.
+-- Go passes page_limit = limit + 1 and detects HasMore from the extra row.
+-- name: PageStageRows :many
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
+  AND (sqlc.narg('search')::text IS NULL
+       OR s.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+  AND (
+    sqlc.narg('after_manga')::manga IS NULL
+    OR (s.manga, s.position, s.name) > (sqlc.narg('after_manga')::manga, sqlc.narg('after_position')::int, sqlc.narg('after_name')::text)
+    )
+ORDER BY s.manga, s.position, s.name
+LIMIT sqlc.arg('page_limit')::int;
+
+-- Total count of stages matching the same filters as PageStageRows (no
+-- cursor) - used for the first page's `total` only.
+-- name: CountStageRows :one
+SELECT count(*)
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
+  AND (sqlc.narg('search')::text IS NULL
+       OR s.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\');
+
 -- name: GetStageByID :one
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,

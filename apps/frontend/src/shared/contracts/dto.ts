@@ -27,6 +27,13 @@ export const devilFruitResponseSchema = z.object({
 })
 export type DevilFruitResponse = z.infer<typeof devilFruitResponseSchema>
 
+export const devilFruitPageResponseSchema = z.object({
+  nextCursor: z.string().optional(),
+  total: z.number().int().optional(),
+  items: z.array(devilFruitResponseSchema),
+})
+export type DevilFruitPageResponse = z.infer<typeof devilFruitPageResponseSchema>
+
 export const gameRoundResultResponseSchema = z.object({
   winner: z.string(),
   decidedByCoinFlip: z.boolean(),
@@ -212,6 +219,13 @@ export const stageResponseSchema = z.object({
   pictureLqip: z.string(),
 })
 export type StageResponse = z.infer<typeof stageResponseSchema>
+
+export const stagePageResponseSchema = z.object({
+  nextCursor: z.string().optional(),
+  total: z.number().int().optional(),
+  items: z.array(stageResponseSchema),
+})
+export type StagePageResponse = z.infer<typeof stagePageResponseSchema>
 
 export const stageTranslationRequestSchema = z.object({
   description: z.string(),

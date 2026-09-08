@@ -64,3 +64,11 @@ func NewDevilFruitResponses(ctx context.Context, fruits []*powers.DevilFruit, re
 	}
 	return responses, nil
 }
+
+// DevilFruitPageResponse is GET /devil-fruits's response body when the
+// request opts into pagination - see StandPageResponse's doc for the wire
+// shape and why this is a concrete per-resource envelope.
+type DevilFruitPageResponse struct {
+	PageInfo
+	Items []DevilFruitResponse `json:"items"`
+}

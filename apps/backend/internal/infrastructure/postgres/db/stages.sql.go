@@ -11,6 +11,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countStageRows = `-- name: CountStageRows :one
+SELECT count(*)
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::manga IS NULL OR s.manga = $2::manga)
+  AND ($3::text IS NULL
+       OR s.name ILIKE '%' || $3::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $3::text || '%' ESCAPE '\')
+`
+
+type CountStageRowsParams struct {
+	Locales []string
+	Manga   *Manga
+	Search  *string
+}
+
+// Total count of stages matching the same filters as PageStageRows (no
+// cursor) - used for the first page's `total` only.
+func (q *Queries) CountStageRows(ctx context.Context, arg CountStageRowsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStageRows, arg.Locales, arg.Manga, arg.Search)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteStageByID = `-- name: DeleteStageByID :execrows
 DELETE FROM stages WHERE id = $1
 `
@@ -238,6 +269,106 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 	items := []ListStagesRow{}
 	for rows.Next() {
 		var i ListStagesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Manga,
+			&i.Position,
+			&i.Name,
+			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureCard,
+			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pageStageRows = `-- name: PageStageRows :many
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::manga IS NULL OR s.manga = $2::manga)
+  AND ($3::text IS NULL
+       OR s.name ILIKE '%' || $3::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $3::text || '%' ESCAPE '\')
+  AND (
+    $4::manga IS NULL
+    OR (s.manga, s.position, s.name) > ($4::manga, $5::int, $6::text)
+    )
+ORDER BY s.manga, s.position, s.name
+LIMIT $7::int
+`
+
+type PageStageRowsParams struct {
+	Locales       []string
+	Manga         *Manga
+	Search        *string
+	AfterManga    *Manga
+	AfterPosition *int32
+	AfterName     *string
+	PageLimit     int32
+}
+
+type PageStageRowsRow struct {
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
+}
+
+// Keyset-paginated counterpart of FilterStageRows. The sort key is the
+// triple (manga, position, name) - UNIQUE (manga, name) plus a fixed manga
+// makes the triple unique overall, since position alone can tie within a
+// manga (no UNIQUE(manga, position) - see 00008_stages.sql's doc on
+// reordering). The row-value comparison below uses manga/position/name
+// directly (no ::text cast) so Postgres compares manga by its own default
+// btree opclass - enum declaration order - identical to plain
+// `ORDER BY s.manga, s.position, s.name`. Casting to ::text here would sort
+// alphabetically instead and silently desync the cursor from the ORDER BY,
+// corrupting page boundaries - see ObsidianVault/catalogue-pagination.md.
+// Go passes page_limit = limit + 1 and detects HasMore from the extra row.
+func (q *Queries) PageStageRows(ctx context.Context, arg PageStageRowsParams) ([]PageStageRowsRow, error) {
+	rows, err := q.db.Query(ctx, pageStageRows,
+		arg.Locales,
+		arg.Manga,
+		arg.Search,
+		arg.AfterManga,
+		arg.AfterPosition,
+		arg.AfterName,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PageStageRowsRow{}
+	for rows.Next() {
+		var i PageStageRowsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Manga,

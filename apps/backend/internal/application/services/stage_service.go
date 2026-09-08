@@ -69,6 +69,19 @@ func (s *StageService) FilterStages(ctx context.Context, filters ports.StageFilt
 	return s.repo.Filter(ctx, filters, locale)
 }
 
+// PageStages returns up to limit+1 Stages matching filters, ordered by
+// (manga, position, name) after `after` - see ports.IStageRepository.Page's
+// doc.
+func (s *StageService) PageStages(ctx context.Context, filters ports.StageFilters, locale enums.Locale, after *ports.StagePageCursor, limit int) ([]game.Stage, bool, error) {
+	return s.repo.Page(ctx, filters, locale, after, limit)
+}
+
+// CountStages returns the total number of Stages matching filters, ignoring
+// pagination.
+func (s *StageService) CountStages(ctx context.Context, filters ports.StageFilters, locale enums.Locale) (int, error) {
+	return s.repo.Count(ctx, filters, locale)
+}
+
 // GetStage returns the Stage matching id, description resolved for locale,
 // or ports.ErrStageNotFound.
 func (s *StageService) GetStage(ctx context.Context, id game.StageID, locale enums.Locale) (game.Stage, error) {

@@ -134,6 +134,48 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 	return buildDevilFruits(devilFruitRowsFromFilter(rows))
 }
 
+// Page returns up to limit+1 devil fruits matching filters, ordered by name
+// after afterName, then trims the extra row and reports hasMore - see
+// PageDevilFruitRows's doc (no ancestor chain to worry about, unlike Stand).
+func (r *DevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	rows, err := r.queries.PageDevilFruitRows(ctx, db.PageDevilFruitRowsParams{
+		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:    searchPtr(filters.Search),
+		Locales:   fallbackStrings(locale),
+		AfterName: afterName,
+		PageLimit: int32(limit + 1),
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("paging devil fruits: %w", err)
+	}
+
+	fruits, err := buildDevilFruits(devilFruitRowsFromPage(rows))
+	if err != nil {
+		return nil, false, err
+	}
+	hasMore := len(fruits) > limit
+	if hasMore {
+		fruits = fruits[:limit]
+	}
+	return fruits, hasMore, nil
+}
+
+// Count returns the total number of devil fruits matching filters, ignoring
+// pagination.
+func (r *DevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	count, err := r.queries.CountDevilFruitRows(ctx, db.CountDevilFruitRowsParams{
+		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:    searchPtr(filters.Search),
+		Locales:   fallbackStrings(locale),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("counting devil fruits: %w", err)
+	}
+	return int(count), nil
+}
+
 // UpdatePicture updates only a devil fruit's picture renditions and pipeline
 // status, leaving every other column untouched. A nil main/thumb/card/lqip
 // leaves that column as-is.

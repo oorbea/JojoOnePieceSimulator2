@@ -29,6 +29,14 @@ type IDevilFruitRepository interface {
 	FindByName(ctx context.Context, name string, locale enums.Locale) (*powers.DevilFruit, error)
 	GetAll(ctx context.Context, locale enums.Locale) ([]*powers.DevilFruit, error)
 	Filter(ctx context.Context, filters DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error)
+	// Page returns up to limit+1 devil fruits matching filters, ordered by
+	// name after afterName, then the caller trims the extra row and reports
+	// hasMore - same contract as IStandRepository.Page, minus the
+	// ancestor-truncation concern (DevilFruit has no evolves_from chain).
+	Page(ctx context.Context, filters DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error)
+	// Count returns the total number of devil fruits matching filters,
+	// ignoring pagination.
+	Count(ctx context.Context, filters DevilFruitFilters, locale enums.Locale) (int, error)
 	Delete(ctx context.Context, id powers.PowerID) error
 	// UpdatePicture updates only a devil fruit's picture renditions and
 	// pipeline status. A nil main/thumb/card/lqip leaves that column untouched.

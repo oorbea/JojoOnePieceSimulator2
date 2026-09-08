@@ -69,6 +69,18 @@ func devilFruitRowsFromFilter(rs []db.FilterDevilFruitRowsRow) []devilFruitRow {
 	return rows
 }
 
+func devilFruitRowsFromPage(rs []db.PageDevilFruitRowsRow) []devilFruitRow {
+	rows := make([]devilFruitRow, len(rs))
+	for i, r := range rs {
+		rows[i] = devilFruitRow{
+			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FruitType: r.FruitType, Skills: r.Skills,
+		}
+	}
+	return rows
+}
+
 // buildDevilFruit turns a single devilFruitRow into a fully validated
 // *powers.DevilFruit. Unlike Stand, DevilFruit has no evolves_from chain, so
 // there is no topological resolution or cycle detection to do here.

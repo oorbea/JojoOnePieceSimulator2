@@ -25,8 +25,10 @@ var restTypes = []any{
 	dto.StandPageResponse{},
 	dto.DevilFruitRequest{},
 	dto.DevilFruitResponse{},
+	dto.DevilFruitPageResponse{},
 	dto.StageRequest{},
 	dto.StageResponse{},
+	dto.StagePageResponse{},
 	dto.TranslationRequest{},
 	dto.StageTranslationRequest{},
 	dto.TranslationResponse{},
@@ -119,8 +121,10 @@ var nonWireTypeNames = map[string]bool{
 	// object - see StandPageResponse's doc. StandCursor is never a wire
 	// type either: it only ever exists opaque, base64-encoded inside a
 	// cursor string (dto.EncodeCursor/DecodeCursor), never as JSON.
-	"PageInfo":    true,
-	"StandCursor": true,
+	"PageInfo":         true,
+	"StandCursor":      true,
+	"DevilFruitCursor": true,
+	"StageCursor":      true,
 	// PageParams is a server-side query-param parse result
 	// (dto.PageParamsFromQuery), never serialized in either direction.
 	"PageParams": true,

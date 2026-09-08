@@ -69,3 +69,11 @@ func fromGetStageByIDRow(r db.GetStageByIDRow) stageRow {
 		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 	}
 }
+
+func fromPageStageRow(r db.PageStageRowsRow) stageRow {
+	return stageRow{
+		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+	}
+}
