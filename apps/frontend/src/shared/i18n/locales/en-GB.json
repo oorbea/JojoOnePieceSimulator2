@@ -713,6 +713,8 @@
     "STREAM_TICKET_INVALID": "That connection expired. Reconnecting…",
     "REFRESH_INVALID": "Your session expired. Please sign in again.",
     "REFRESH_REUSE": "Your session was signed out for security reasons. Please sign in again.",
+    "OBJECT_NOT_FOUND": "This image couldn't be found.",
+    "MEDIA_SIGNATURE_INVALID": "This image link has expired.",
     "INTERNAL": "Something went wrong on our end."
   }
 }
