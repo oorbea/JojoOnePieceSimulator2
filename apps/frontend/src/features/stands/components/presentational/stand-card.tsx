@@ -1,15 +1,17 @@
 import { Pencil, Sparkles, Trash2 } from '@tamagui/lucide-icons-2'
-import { useState } from 'react'
+import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image, Pressable } from 'react-native'
+import { Pressable, type View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
-import { InsetRing, WiiCard } from '@/shared/components/presentational/wii-card'
+import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
+import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
+import { cardSource, fullSource, lqipSource } from '@/shared/lib/picture-source'
 import { STAND_STAT_LABELS } from '@/features/stands/lib/stand-stats'
 import type { StandResponse } from '@/features/stands/types/stands.types'
 
@@ -26,30 +28,53 @@ type Props = {
 // press; the thumbnail keeps its own Pressable for the full-size lightbox
 // so the two never fight over the same tap - see stands.previewA11y vs
 // stands.detailA11y for the two distinct affordances.
-export function StandCard({ stand, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props) {
+//
+// forwardRef targets the detail Pressable specifically (the card's main tab
+// stop) - "Cargar más" in stands-screen.tsx moves focus there for the first
+// newly-appended card after a page loads, per norma-teclado.md's
+// keyboard-accessibility requirement.
+export const StandCard = forwardRef<View, Props>(function StandCard(
+  { stand, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
+  ref
+) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [imageState, setImageState] = useState<LazyImageState>('queued')
+  const [retryToken, setRetryToken] = useState(0)
+  const uri = cardSource(stand)
+  const isImageError = imageState === 'error'
   return (
     <WiiCard padded width={280} gap="$3">
       <Pressable
-        onPress={() => setIsPreviewOpen(true)}
-        disabled={!stand.pictureThumb}
-        {...a11yProps(t('stands.previewA11y', { name: stand.name }), 'imagebutton')}
+        onPress={() => (isImageError ? setRetryToken((n) => n + 1) : setIsPreviewOpen(true))}
+        disabled={!uri}
+        {...a11yProps(
+          t(isImageError ? 'common.imageRetry' : 'stands.previewA11y', { name: stand.name }),
+          'imagebutton'
+        )}
       >
-        <YStack width="100%" height={140} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
-          <InsetRing rounded="$card" />
-          {stand.pictureThumb ? (
-            <Image source={{ uri: stand.pictureThumb }} style={{ width: '100%', height: '100%' }} />
-          ) : (
-            <YStack flex={1} items="center" justify="center">
-              <Sparkles size={32} color="$standPurple" />
-            </YStack>
-          )}
-        </YStack>
+        <LazyImage
+          uri={uri}
+          lqip={lqipSource(stand)}
+          height={140}
+          pictureStatus={stand.pictureStatus}
+          retryToken={retryToken}
+          onStateChange={setImageState}
+          fallback={<Sparkles size={32} color="$standPurple" />}
+        />
       </Pressable>
-      <ImageLightbox visible={isPreviewOpen} uri={stand.picture} onClose={() => setIsPreviewOpen(false)} />
+      <ImageLightbox
+        visible={isPreviewOpen}
+        uri={fullSource(stand)}
+        lqip={lqipSource(stand)}
+        onClose={() => setIsPreviewOpen(false)}
+      />
 
-      <Pressable onPress={onOpenDetail} {...a11yProps(t('stands.detailA11y', { name: stand.name }), 'button')}>
+      <Pressable
+        ref={ref}
+        onPress={onOpenDetail}
+        {...a11yProps(t('stands.detailA11y', { name: stand.name }), 'button')}
+      >
         <YStack gap="$3">
           <YStack gap="$1">
             <GlowText level="heading" numberOfLines={1}>
@@ -94,7 +119,11 @@ export function StandCard({ stand, onOpenDetail, readOnly, onEdit, onDelete, isE
             disabled={isEditBusy}
             accessibilityLabel={t('stands.editA11y', { name: stand.name })}
           >
-            {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
+            {isEditBusy ? (
+              <Spinner size="small" color="white" />
+            ) : (
+              <Pencil size={16} color="white" />
+            )}
           </GlossButton>
           <GlossButton
             tone="red"
@@ -109,4 +138,4 @@ export function StandCard({ stand, onOpenDetail, readOnly, onEdit, onDelete, isE
       )}
     </WiiCard>
   )
-}
+})

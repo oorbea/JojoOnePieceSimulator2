@@ -16,7 +16,15 @@
     "search": "Search",
     "typeToFilter": "Type to filter…",
     "noMatches": "No matches",
-    "clearLabel": "Clear {{label}}"
+    "clearLabel": "Clear {{label}}",
+    "imageLoading": "Image loading",
+    "imageUnavailable": "Image unavailable",
+    "imageGenerating": "Image generating",
+    "imageRetry": "Retry loading image",
+    "loadMore": "Load more",
+    "loadMoreRetry": "Retry",
+    "itemsLoadedOfTotal": "{{loaded}} / {{total}}",
+    "allItemsLoaded": "That's all ({{total}})"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",
@@ -713,6 +721,8 @@
     "STREAM_TICKET_INVALID": "That connection expired. Reconnecting…",
     "REFRESH_INVALID": "Your session expired. Please sign in again.",
     "REFRESH_REUSE": "Your session was signed out for security reasons. Please sign in again.",
+    "OBJECT_NOT_FOUND": "This image couldn't be found.",
+    "MEDIA_SIGNATURE_INVALID": "This image link has expired.",
     "INTERNAL": "Something went wrong on our end."
   }
 }

@@ -1,7 +1,9 @@
 -- Returns every stage, description resolved for locale via the same
 -- fallback-chain LATERAL join power_translations reads use (see stands.sql).
 -- name: ListStages :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -17,7 +19,9 @@ ORDER BY s.manga, s.position, s.name;
 -- resolved for locale - same sqlc.narg(...) IS NULL OR ... pattern as
 -- FilterStandRows/FilterDevilFruitRows (stands.sql/devil_fruits.sql).
 -- name: FilterStageRows :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -33,8 +37,62 @@ WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
        OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
 ORDER BY s.manga, s.position, s.name;
 
+-- Keyset-paginated counterpart of FilterStageRows. The sort key is the
+-- triple (manga, position, name) - UNIQUE (manga, name) plus a fixed manga
+-- makes the triple unique overall, since position alone can tie within a
+-- manga (no UNIQUE(manga, position) - see 00008_stages.sql's doc on
+-- reordering). The row-value comparison below uses manga/position/name
+-- directly (no ::text cast) so Postgres compares manga by its own default
+-- btree opclass - enum declaration order - identical to plain
+-- `ORDER BY s.manga, s.position, s.name`. Casting to ::text here would sort
+-- alphabetically instead and silently desync the cursor from the ORDER BY,
+-- corrupting page boundaries - see ObsidianVault/catalogue-pagination.md.
+-- Go passes page_limit = limit + 1 and detects HasMore from the extra row.
+-- name: PageStageRows :many
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
+  AND (sqlc.narg('search')::text IS NULL
+       OR s.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+  AND (
+    sqlc.narg('after_manga')::manga IS NULL
+    OR (s.manga, s.position, s.name) > (sqlc.narg('after_manga')::manga, sqlc.narg('after_position')::int, sqlc.narg('after_name')::text)
+    )
+ORDER BY s.manga, s.position, s.name
+LIMIT sqlc.arg('page_limit')::int;
+
+-- Total count of stages matching the same filters as PageStageRows (no
+-- cursor) - used for the first page's `total` only.
+-- name: CountStageRows :one
+SELECT count(*)
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
+  AND (sqlc.narg('search')::text IS NULL
+       OR s.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\');
+
 -- name: GetStageByID :one
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -47,27 +105,32 @@ FROM stages s
 WHERE s.id = sqlc.arg('id');
 
 -- name: UpsertStage :one
-INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_status)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (id) DO UPDATE
     SET manga          = EXCLUDED.manga,
         position       = EXCLUDED.position,
         name           = EXCLUDED.name,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
-RETURNING id, manga, position, name, picture, picture_thumb, picture_status;
+RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip;
 
 -- Updates only a Stage's picture renditions and pipeline status, without
 -- touching manga/position/name/translations - same shape as
 -- UpdatePowerPicture (stands.sql).
 -- name: UpdateStagePicture :exec
 UPDATE stages
-SET picture        = COALESCE(sqlc.narg('picture')::text, picture),
-    picture_thumb  = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
-    picture_status = sqlc.arg('picture_status')::picture_status,
-    updated_at     = now()
+SET picture          = COALESCE(sqlc.narg('picture')::text, picture),
+    picture_thumb    = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
+    picture_card     = COALESCE(sqlc.narg('picture_card')::text, picture_card),
+    picture_status   = sqlc.arg('picture_status')::picture_status,
+    picture_lqip     = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
+    picture_media_id = COALESCE(sqlc.narg('picture_media_id')::text, picture_media_id),
+    updated_at       = now()
 WHERE id = sqlc.arg('id');
 
 -- name: DeleteStageByID :execrows
@@ -94,3 +157,8 @@ DELETE FROM stage_translations WHERE stage_id = $1 AND locale::text = ANY (sqlc.
 SELECT stage_id, locale, description
 FROM stage_translations
 WHERE stage_id = $1;
+
+-- Sets only a Stage's content-addressed media group id - see
+-- UpdatePowerMediaID (stands.sql).
+-- name: UpdateStageMediaID :exec
+UPDATE stages SET picture_media_id = $1 WHERE id = $2;

@@ -25,6 +25,11 @@ type RateLimitConfig struct {
 	// client IP - both sit outside RequireAuth, so there is no user id to
 	// key on before the token is redeemed.
 	RefreshPerIP int
+	// MediaPerIP bounds GET /api/v1/media/**, keyed by client IP (the route
+	// sits outside RequireAuth - an <img src> carries no bearer token). Sized
+	// far above GlobalPerIP: a catalogue's cold load is ~100 image requests
+	// alone, on top of the one JSON request that used to cover it.
+	MediaPerIP int
 }
 
 // keyByClientIP keys the limiter on chi's resolved client IP, populated by
@@ -120,6 +125,15 @@ func ticketRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler { return next }
 	}
 	return limit(cfg.TicketPerUser, cfg.Window, keyByUserID)
+}
+
+// mediaRateLimit applies to GET /api/v1/media/**, keyed by client IP since
+// the route sits outside RequireAuth.
+func mediaRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
+	if !cfg.Enabled {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return limit(cfg.MediaPerIP, cfg.Window, keyByClientIP)
 }
 
 // refreshRateLimit applies to POST /auth/refresh and /auth/logout, keyed by

@@ -60,8 +60,10 @@ type StandInput struct {
 	Translations  ports.PowerTranslations
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	Rarity        enums.PowerRarity
 	PictureStatus enums.PictureStatus
+	PictureLqip   string
 	AttackPower   enums.StandStat
 	Speed         enums.StandStat
 	AttackRange   enums.StandStat
@@ -112,6 +114,8 @@ func (s *StandService) UpdateStand(ctx context.Context, id powers.PowerID, input
 	}
 	input.Picture = existing.Picture()
 	input.PictureThumb = existing.PictureThumb()
+	input.PictureCard = existing.PictureCard()
+	input.PictureLqip = existing.PictureLqip()
 	input.PictureStatus = existing.PictureStatus()
 	return s.saveStand(ctx, id, input)
 }
@@ -123,7 +127,7 @@ func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input S
 	if err != nil {
 		return nil, err
 	}
-	power.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureStatus)
+	power.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureCard, input.PictureLqip, input.PictureStatus)
 
 	var evolvesFromStand *powers.Stand
 	if input.EvolvesFrom != nil {
@@ -159,6 +163,25 @@ func (s *StandService) ListStands(ctx context.Context, locale enums.Locale) ([]*
 // description/skills resolved for locale.
 func (s *StandService) FilterStands(ctx context.Context, filters ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
 	return s.standRepo.Filter(ctx, filters, locale)
+}
+
+// PageStands returns up to limit+1 stands matching filters, ordered by
+// name after afterName - see ports.IStandRepository.Page's doc.
+func (s *StandService) PageStands(ctx context.Context, filters ports.StandFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	return s.standRepo.Page(ctx, filters, locale, afterName, limit)
+}
+
+// CountStands returns the total number of stands matching filters, ignoring
+// pagination.
+func (s *StandService) CountStands(ctx context.Context, filters ports.StandFilters, locale enums.Locale) (int, error) {
+	return s.standRepo.Count(ctx, filters, locale)
+}
+
+// StandOptions returns every stand's id/name only, unfiltered and
+// locale-free - backs the evolvesFrom picker without the cost of a full
+// catalogue fetch.
+func (s *StandService) StandOptions(ctx context.Context) ([]ports.StandOption, error) {
+	return s.standRepo.Options(ctx)
 }
 
 // StandTranslations returns every locale's content for id, for the admin
@@ -230,20 +253,20 @@ func (s *StandService) SetStandPicture(ctx context.Context, id powers.PowerID, p
 	// implementation) and mutated the persisted renditions, so stand's own
 	// getters can no longer be trusted to still reflect the pre-upload
 	// state.
-	previousMain, previousThumb, previousStatus := stand.Picture(), stand.PictureThumb(), stand.PictureStatus()
+	previousMain, previousThumb, previousCard, previousLqip, previousStatus := stand.Picture(), stand.PictureThumb(), stand.PictureCard(), stand.PictureLqip(), stand.PictureStatus()
 
-	if err := s.standRepo.UpdatePicture(ctx, id, nil, nil, enums.PicturePending); err != nil {
+	if err := s.standRepo.UpdatePicture(ctx, id, nil, nil, nil, nil, enums.PicturePending); err != nil {
 		return nil, err
 	}
 
 	if err := s.enqueuer.Enqueue(ports.PictureJob{SubjectID: id.String(), Kind: enums.StandSubject, Content: buf, ContentType: pic.ContentType}); err != nil {
-		if revertErr := s.standRepo.UpdatePicture(ctx, id, nil, nil, previousStatus); revertErr != nil {
+		if revertErr := s.standRepo.UpdatePicture(ctx, id, nil, nil, nil, nil, previousStatus); revertErr != nil {
 			log.Printf("reverting picture status for stand %s after enqueue failure: %v", id, revertErr)
 		}
 		return nil, err
 	}
 
-	stand.SetPictureRenditions(previousMain, previousThumb, enums.PicturePending)
+	stand.SetPictureRenditions(previousMain, previousThumb, previousCard, previousLqip, enums.PicturePending)
 	return stand, nil
 }
 

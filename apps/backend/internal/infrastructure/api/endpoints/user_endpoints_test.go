@@ -107,32 +107,38 @@ func (f *fakeUserRepo) UpdateLanguage(_ context.Context, id user.UserID, languag
 	return u.ChangeLanguage(language)
 }
 
-func (f *fakeUserRepo) UpdateAvatar(_ context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeUserRepo) UpdateAvatar(_ context.Context, id user.UserID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
 		return ports.ErrUserNotFound
 	}
-	newMain, newThumb := u.AvatarKey(), u.AvatarThumbKey()
+	newMain, newThumb, newCard, newLqip := u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), u.AvatarLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	u.SetAvatarRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	u.SetAvatarRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
-func (f *fakeUserRepo) AvatarKeys(_ context.Context, id user.UserID) (string, string, error) {
+func (f *fakeUserRepo) AvatarKeys(_ context.Context, id user.UserID) (string, string, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
-		return "", "", ports.ErrUserNotFound
+		return "", "", "", ports.ErrUserNotFound
 	}
-	return u.AvatarKey(), u.AvatarThumbKey(), nil
+	return u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), nil
 }
 
 func (f *fakeUserRepo) UpdateRole(_ context.Context, id user.UserID, role enums.UserRole) error {
@@ -185,6 +191,17 @@ func (f *fakeUserRepo) CountAdmins(_ context.Context) (int64, error) {
 	return count, nil
 }
 
+func (f *fakeUserRepo) SetAvatarMediaID(_ context.Context, id user.UserID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	u.SetAvatarMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IUserRepository = (*fakeUserRepo)(nil)
 
 // seedUser saves a ready-made user with userIDForToken's id for tok (only
@@ -233,7 +250,7 @@ func newUserTestServer(repo *fakeUserRepo) http.Handler {
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
 	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints,
-		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+		nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 }
 
 // doRequestAs is like doRequest but with an explicit bearer token instead of

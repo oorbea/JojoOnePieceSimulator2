@@ -15,17 +15,25 @@ import (
 // nested in the EvolvesFrom chain of any descendant, so enumerating the
 // affected keys is not tractable; flush-all is both correct and cheap for an
 // admin-write catalogue.
-const standsNamespace = "stands"
+// Bumped to v2 when PictureCard/PictureLqip/PictureMediaID were added to
+// the snapshot: Redis is appendonly on a persistent volume, so entries
+// written by the pre-v2 binary would otherwise survive the deploy and
+// deserialize with the new fields zeroed - silently serving stale/empty
+// media ids until standTTL expired. The version bump forces a cold cache
+// instead, which is cheap for a write-by-admin-only catalogue.
+const standsNamespace = "stands:v2"
 
 // devilFruitsNamespace holds every cached DevilFruit read (FindByID,
 // FindByName, GetAll, Filter) and is invalidated as a whole on any write -
 // same reasoning as standsNamespace.
-const devilFruitsNamespace = "devil_fruits"
+// Bumped to v2 - see standsNamespace's doc.
+const devilFruitsNamespace = "devil_fruits:v2"
 
 // stagesNamespace holds every cached Stage read (Stages, List, Filter,
 // FindByID) and is invalidated as a whole on any write - same reasoning as
 // standsNamespace.
-const stagesNamespace = "stages"
+// Bumped to v2 - see standsNamespace's doc.
+const stagesNamespace = "stages:v2"
 
 // presignNamespace holds cached presigned picture URLs, keyed by object
 // storage key. Never invalidated wholesale - entries are evicted
@@ -49,37 +57,31 @@ func allKey(locale enums.Locale) string {
 	return "all:" + locale.String()
 }
 
-// standFilterKey renders filters in a fixed field order (rarity,
-// attackPower, speed, attackRange, endurance, precision, potential,
-// evolvesFrom, search) so two requests differing only in query-param order
-// share one cache entry, then hashes the result to bound key length.
-func standFilterKey(filters ports.StandFilters, locale enums.Locale) string {
-	canonical := stringifyStat(filters.Rarity) + "|" +
-		stringifyStat(filters.AttackPower) + "|" +
-		stringifyStat(filters.Speed) + "|" +
-		stringifyStat(filters.AttackRange) + "|" +
-		stringifyStat(filters.Endurance) + "|" +
-		stringifyStat(filters.Precision) + "|" +
-		stringifyStat(filters.Potential) + "|" +
-		derefString(filters.EvolvesFrom) + "|" +
-		derefString(filters.Search)
-	return "filter:" + locale.String() + ":" + hashString(canonical)
+// optionsKey backs StandRepository.Options - locale-free (powers.name is not
+// translatable), so unlike every other key here it carries no locale
+// component.
+func optionsKey() string {
+	return "options"
 }
 
-// devilFruitFilterKey mirrors standFilterKey for ports.DevilFruitFilters
-// (rarity, fruitType, search).
+// standFilterKey hashes ports.StandFilters.Canonical() (the single source of
+// truth for a filter set's canonical string rendering - see that method's
+// doc) so two requests differing only in query-param order share one cache
+// entry, with the result bounded to a fixed length regardless of filter
+// count.
+func standFilterKey(filters ports.StandFilters, locale enums.Locale) string {
+	return "filter:" + locale.String() + ":" + hashString(filters.Canonical())
+}
+
+// devilFruitFilterKey mirrors standFilterKey for ports.DevilFruitFilters.
 func devilFruitFilterKey(filters ports.DevilFruitFilters, locale enums.Locale) string {
-	canonical := stringifyStat(filters.Rarity) + "|" + stringifyStat(filters.FruitType) + "|" +
-		derefString(filters.Search)
-	return "filter:" + locale.String() + ":" + hashString(canonical)
+	return "filter:" + locale.String() + ":" + hashString(filters.Canonical())
 }
 
 // stageFilterKey mirrors standFilterKey/devilFruitFilterKey for
-// ports.StageFilters (manga, search). ANY field added to StageFilters must
-// be added here too, or two different filters silently share one slot.
+// ports.StageFilters.
 func stageFilterKey(filters ports.StageFilters, locale enums.Locale) string {
-	canonical := stringifyStat(filters.Manga) + "|" + derefString(filters.Search)
-	return "filter:" + locale.String() + ":" + hashString(canonical)
+	return "filter:" + locale.String() + ":" + hashString(filters.Canonical())
 }
 
 // stageCatalogKey keys IStageCatalog.Stages, which takes no locale: the
@@ -92,22 +94,6 @@ func stageFilterKey(filters ports.StageFilters, locale enums.Locale) string {
 // resolution) and may diverge without one silently answering the other.
 func stageCatalogKey(manga enums.Manga) string {
 	return "catalog:" + enums.EnGB.String() + ":" + manga.String()
-}
-
-// stringifyStat renders an optional fmt.Stringer enum field as its String()
-// value, or "" when the pointer is nil (the field was unset).
-func stringifyStat[T fmt.Stringer](v *T) string {
-	if v == nil {
-		return ""
-	}
-	return (*v).String()
-}
-
-func derefString(v *string) string {
-	if v == nil {
-		return ""
-	}
-	return *v
 }
 
 func hashString(s string) string {

@@ -105,7 +105,9 @@ type StageSnapshot struct {
 	Description   string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 // RoundSnapshot mirrors Round. TiedVotes mirrors Round.TiedVotes, same
@@ -247,7 +249,7 @@ func snapshotStage(st Stage) StageSnapshot {
 	return StageSnapshot{
 		ID: st.id, Manga: st.manga.String(), Order: st.order, Name: st.name,
 		Description: st.description, Picture: st.picture, PictureThumb: st.pictureThumb,
-		PictureStatus: st.pictureStatus.String(),
+		PictureCard: st.pictureCard, PictureStatus: st.pictureStatus.String(), PictureLqip: st.pictureLqip,
 	}
 }
 
@@ -570,7 +572,7 @@ func restoreStage(ss StageSnapshot) (Stage, error) {
 	if err != nil {
 		return Stage{}, err
 	}
-	st.SetPictureRenditions(ss.Picture, ss.PictureThumb, status)
+	st.SetPictureRenditions(ss.Picture, ss.PictureThumb, ss.PictureCard, ss.PictureLqip, status)
 	return st, nil
 }
 

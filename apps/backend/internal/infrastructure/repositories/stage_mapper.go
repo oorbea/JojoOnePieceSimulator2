@@ -15,14 +15,17 @@ import (
 // columns under different generated row types, so this lets a single
 // mapper function serve all of them via a small per-caller adapter.
 type stageRow struct {
-	Manga         string
-	Name          string
-	Description   string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	Position      int32
-	ID            pgtype.UUID
+	Manga          string
+	Name           string
+	Description    string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Position       int32
+	ID             pgtype.UUID
 }
 
 func toStage(r stageRow) (game.Stage, error) {
@@ -38,27 +41,39 @@ func toStage(r stageRow) (game.Stage, error) {
 	if err != nil {
 		return game.Stage{}, err
 	}
-	st.SetPictureRenditions(r.Picture, r.PictureThumb, status)
+	st.SetPictureRenditions(r.Picture, r.PictureThumb, r.PictureCard, r.PictureLqip, status)
+	st.SetMediaID(r.PictureMediaID)
 	return st, nil
 }
 
 func fromListStagesRow(r db.ListStagesRow) stageRow {
 	return stageRow{
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
-		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 	}
 }
 
 func fromFilterStageRow(r db.FilterStageRowsRow) stageRow {
 	return stageRow{
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
-		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 	}
 }
 
 func fromGetStageByIDRow(r db.GetStageByIDRow) stageRow {
 	return stageRow{
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
-		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureStatus: r.PictureStatus,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+	}
+}
+
+func fromPageStageRow(r db.PageStageRowsRow) stageRow {
+	return stageRow{
+		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
+		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
+		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 	}
 }

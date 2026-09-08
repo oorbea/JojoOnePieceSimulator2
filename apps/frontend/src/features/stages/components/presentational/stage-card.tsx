@@ -1,15 +1,17 @@
 import { Map, Pencil, Trash2 } from '@tamagui/lucide-icons-2'
-import { useState } from 'react'
+import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image, Pressable } from 'react-native'
+import { Pressable, type View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
-import { InsetRing, WiiCard } from '@/shared/components/presentational/wii-card'
+import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
+import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
+import { cardSource, fullSource, lqipSource } from '@/shared/lib/picture-source'
 import type { StageResponse } from '@/features/stages/types/stages.types'
 
 type Props = {
@@ -24,40 +26,50 @@ type Props = {
 // Same grid-card recipe as StandCard - thumb well, name + badges, actions -
 // swapping the stat grid (Stands have none here) for the stage's
 // description, since that's the field an admin actually wants to preview.
-export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props) {
+// forwardRef targets the detail Pressable (the card's main tab stop) - see
+// StandCard's identical doc for why "Cargar más" needs it.
+export const StageCard = forwardRef<View, Props>(function StageCard(
+  { stage, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
+  ref
+) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [imageState, setImageState] = useState<LazyImageState>('queued')
+  const [retryToken, setRetryToken] = useState(0)
+  const uri = cardSource(stage)
+  const isImageError = imageState === 'error'
   return (
     <WiiCard padded width={280} gap="$3">
       <Pressable
-        onPress={() => setIsPreviewOpen(true)}
-        disabled={!stage.picture}
-        {...a11yProps(t('stages.previewA11y', { name: stage.name }), 'imagebutton')}
+        onPress={() => (isImageError ? setRetryToken((n) => n + 1) : setIsPreviewOpen(true))}
+        disabled={!uri}
+        {...a11yProps(
+          t(isImageError ? 'common.imageRetry' : 'stages.previewA11y', { name: stage.name }),
+          'imagebutton'
+        )}
       >
-        <YStack
-          width="100%"
+        <LazyImage
+          uri={uri}
+          lqip={lqipSource(stage)}
           height={140}
-          rounded="$card"
-          overflow="hidden"
-          position="relative"
-          bg="$plasticEdge"
-        >
-          <InsetRing rounded="$card" />
-          {/* Read `picture` (not `pictureThumb`) with a `|| null` fallback -
-              see admin-panel-crud-ux-fixes.md: pictureThumb is empty until the
-              worker finishes, and `??` wouldn't catch an empty string. */}
-          {stage.picture || null ? (
-            <Image source={{ uri: stage.picture }} style={{ width: '100%', height: '100%' }} />
-          ) : (
-            <YStack flex={1} items="center" justify="center">
-              <Map size={32} color="$wiiBlue" />
-            </YStack>
-          )}
-        </YStack>
+          pictureStatus={stage.pictureStatus}
+          retryToken={retryToken}
+          onStateChange={setImageState}
+          fallback={<Map size={32} color="$wiiBlue" />}
+        />
       </Pressable>
-      <ImageLightbox visible={isPreviewOpen} uri={stage.picture || null} onClose={() => setIsPreviewOpen(false)} />
+      <ImageLightbox
+        visible={isPreviewOpen}
+        uri={fullSource(stage)}
+        lqip={lqipSource(stage)}
+        onClose={() => setIsPreviewOpen(false)}
+      />
 
-      <Pressable onPress={onOpenDetail} {...a11yProps(t('stages.detailA11y', { name: stage.name }), 'button')}>
+      <Pressable
+        ref={ref}
+        onPress={onOpenDetail}
+        {...a11yProps(t('stages.detailA11y', { name: stage.name }), 'button')}
+      >
         <YStack gap="$3">
           <YStack gap="$1">
             <GlowText level="heading" numberOfLines={1}>
@@ -104,4 +116,4 @@ export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isE
       )}
     </WiiCard>
   )
-}
+})

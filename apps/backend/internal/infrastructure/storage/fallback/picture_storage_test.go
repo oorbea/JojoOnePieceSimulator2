@@ -43,6 +43,16 @@ func (b *fakeBackend) Put(_ context.Context, key string, content io.Reader, _ st
 	return nil
 }
 
+func (b *fakeBackend) Get(_ context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	data, ok := b.objects[key]
+	if !ok {
+		return nil, ports.ObjectInfo{}, ports.ErrObjectNotFound
+	}
+	return io.NopCloser(bytes.NewReader(data)), ports.ObjectInfo{ContentType: "image/webp", Size: int64(len(data))}, nil
+}
+
 func (b *fakeBackend) PresignGet(_ context.Context, key string) (string, error) {
 	return "https://" + b.name + ".test/" + key, nil
 }

@@ -110,32 +110,38 @@ func (f *fakeUserRepository) UpdateLanguage(_ context.Context, id user.UserID, l
 	return u.ChangeLanguage(language)
 }
 
-func (f *fakeUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
 		return ports.ErrUserNotFound
 	}
-	newMain, newThumb := u.AvatarKey(), u.AvatarThumbKey()
+	newMain, newThumb, newCard, newLqip := u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), u.AvatarLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	u.SetAvatarRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	u.SetAvatarRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
-func (f *fakeUserRepository) AvatarKeys(_ context.Context, id user.UserID) (string, string, error) {
+func (f *fakeUserRepository) AvatarKeys(_ context.Context, id user.UserID) (string, string, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
-		return "", "", ports.ErrUserNotFound
+		return "", "", "", ports.ErrUserNotFound
 	}
-	return u.AvatarKey(), u.AvatarThumbKey(), nil
+	return u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), nil
 }
 
 func (f *fakeUserRepository) UpdateRole(_ context.Context, id user.UserID, role enums.UserRole) error {
@@ -186,6 +192,17 @@ func (f *fakeUserRepository) CountAdmins(_ context.Context) (int64, error) {
 		}
 	}
 	return count, nil
+}
+
+func (f *fakeUserRepository) SetAvatarMediaID(_ context.Context, id user.UserID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	u.SetAvatarMediaID(mediaID)
+	return nil
 }
 
 var _ ports.IUserRepository = (*fakeUserRepository)(nil)

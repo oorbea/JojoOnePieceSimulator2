@@ -20,8 +20,10 @@ type DevilFruitInput struct {
 	Translations  ports.PowerTranslations
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	Rarity        enums.PowerRarity
 	PictureStatus enums.PictureStatus
+	PictureLqip   string
 	FruitType     enums.FruitType
 }
 
@@ -67,7 +69,9 @@ func (s *DevilFruitService) UpdateDevilFruit(ctx context.Context, id powers.Powe
 	}
 	input.Picture = existing.Picture()
 	input.PictureThumb = existing.PictureThumb()
+	input.PictureCard = existing.PictureCard()
 	input.PictureStatus = existing.PictureStatus()
+	input.PictureLqip = existing.PictureLqip()
 	return s.saveDevilFruit(ctx, id, input)
 }
 
@@ -78,7 +82,7 @@ func (s *DevilFruitService) saveDevilFruit(ctx context.Context, id powers.PowerI
 	if err != nil {
 		return nil, err
 	}
-	power.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureStatus)
+	power.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureCard, input.PictureLqip, input.PictureStatus)
 
 	fruit, err := powers.NewDevilFruit(*power, input.FruitType)
 	if err != nil {
@@ -107,6 +111,19 @@ func (s *DevilFruitService) ListDevilFruits(ctx context.Context, locale enums.Lo
 // description/skills resolved for locale.
 func (s *DevilFruitService) FilterDevilFruits(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
 	return s.repo.Filter(ctx, filters, locale)
+}
+
+// PageDevilFruits returns up to limit+1 devil fruits matching filters,
+// ordered by name after afterName - see ports.IDevilFruitRepository.Page's
+// doc.
+func (s *DevilFruitService) PageDevilFruits(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	return s.repo.Page(ctx, filters, locale, afterName, limit)
+}
+
+// CountDevilFruits returns the total number of devil fruits matching
+// filters, ignoring pagination.
+func (s *DevilFruitService) CountDevilFruits(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	return s.repo.Count(ctx, filters, locale)
 }
 
 // DevilFruitTranslations returns every locale's content for id, for the
@@ -175,20 +192,20 @@ func (s *DevilFruitService) SetDevilFruitPicture(ctx context.Context, id powers.
 	// Captured before touching the repo or the worker, same reasoning as
 	// StandService.SetStandPicture: once Enqueue returns, the worker may
 	// already have run and mutated the persisted renditions.
-	previousMain, previousThumb, previousStatus := fruit.Picture(), fruit.PictureThumb(), fruit.PictureStatus()
+	previousMain, previousThumb, previousCard, previousLqip, previousStatus := fruit.Picture(), fruit.PictureThumb(), fruit.PictureCard(), fruit.PictureLqip(), fruit.PictureStatus()
 
-	if err := s.repo.UpdatePicture(ctx, id, nil, nil, enums.PicturePending); err != nil {
+	if err := s.repo.UpdatePicture(ctx, id, nil, nil, nil, nil, enums.PicturePending); err != nil {
 		return nil, err
 	}
 
 	if err := s.enqueuer.Enqueue(ports.PictureJob{SubjectID: id.String(), Kind: enums.DevilFruitSubject, Content: buf, ContentType: pic.ContentType}); err != nil {
-		if revertErr := s.repo.UpdatePicture(ctx, id, nil, nil, previousStatus); revertErr != nil {
+		if revertErr := s.repo.UpdatePicture(ctx, id, nil, nil, nil, nil, previousStatus); revertErr != nil {
 			log.Printf("reverting picture status for devil fruit %s after enqueue failure: %v", id, revertErr)
 		}
 		return nil, err
 	}
 
-	fruit.SetPictureRenditions(previousMain, previousThumb, enums.PicturePending)
+	fruit.SetPictureRenditions(previousMain, previousThumb, previousCard, previousLqip, enums.PicturePending)
 	return fruit, nil
 }
 

@@ -87,6 +87,8 @@ var Codes = []string{
 	StreamTicketInvalid,
 	RefreshInvalid,
 	RefreshReuse,
+	ObjectNotFound,
+	MediaSignatureInvalid,
 	Internal,
 }
 
@@ -163,6 +165,8 @@ const (
 	StreamTicketInvalid      = "STREAM_TICKET_INVALID"
 	RefreshInvalid           = "REFRESH_INVALID"
 	RefreshReuse             = "REFRESH_REUSE"
+	ObjectNotFound           = "OBJECT_NOT_FOUND"
+	MediaSignatureInvalid    = "MEDIA_SIGNATURE_INVALID"
 	// Internal is the fallback code for any error not otherwise mapped -
 	// endpoints.errorCode's default case.
 	Internal = "INTERNAL"

@@ -15,6 +15,11 @@
 - [No co-author, atomic commits](feedback_no_coauthor_atomic_commits.md) — 2026-08-14: never add Co-Authored-By trailer, split unrelated changes into separate commits
 - [Sorteo reel + roster redesign shipped 2026-08-17](sorteo_roster_redesign_2026-08-17.md) — reel geometry bug fixed (justify="center" landed past strip end), haki wording, per-locale loadout text, roster shows only avatar+username with hover card/modal
 - [Backend tests must run via Docker](feedback_backend_tests_via_docker.md) — Windows App Control blocks host `go test` binaries on this machine; use `docker compose ... backend-test go test ./...`, not a workaround
-- [Round-resolved vote tally shipped 2026-08-28](game_round_result_2026-08-28.md) — per-option counts + voter avatars inline; required splitting Game.resolveRound/CompleteRound to make RESOLVING a real observable pause; two-browser tie walkthrough still pending
+- [Round-resolved vote tally shipped 2026-08-28](game_round_result_2026-08-28.md) — per-option counts + voter avatars inline; required splitting Game.resolveRound/CompleteRound to make RESOLVING a real observable pause
+- [Live walkthrough closed the gap 2026-09-02](game_round_result_live_walkthrough_2026-09-02.md) — two-account tie/revote/reconnect confirmed live; found+fixed real Redis-wire TiedVotes bug a first test pass missed
+- [Auth is Google-only, no dev bypass](auth_google_only_no_dev_bypass.md) — multi-account live tests need the owner to log in both tabs manually
+- [Two-tab two-account browser testing trick](two_tab_two_account_browser_testing.md) — log in tab A then B; never call `navigate` on an already-authed tab or it re-reads localStorage and swaps accounts
 - [Sorteo V1 pacing shipped 2026-08-30](sorteo_v1_pacing_2026-08-30.md) — jugador-por-jugador tempo, big power-reveal card, synced skip, RevealSpeed config; per-power FX explicitly planned-only, see vault gameplay-power-fx.md
 - [Vault ops must use obsidian-skills](feedback_obsidian_skills_mandatory.md) — 2026-08-31: never mcp__obsidian-vault__* (wrong vault, points to BrainTrust), use obsidian:* skills for this repo's ObsidianVault/
+- [Flaky test: picture-events-bridge](flaky_test_picture_events_bridge.md) — network-error backoff case occasionally double-counts mint call in CI; rerun job first, seen on PR #38
+- [Frontend verify must use jest cache + targeted runs](feedback_frontend_verify_cache.md) — 2026-09-08: pass --cacheDirectory on the persistent volume, run only affected test files during iteration, full suite once at the end

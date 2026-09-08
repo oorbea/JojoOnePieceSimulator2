@@ -135,6 +135,17 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 	return fruits, nil
 }
 
+// Page is a pass-through, deliberately not cached - same reasoning as
+// StandRepository.Page (ObsidianVault/catalogue-pagination.md).
+func (r *DevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	return r.next.Page(ctx, filters, locale, afterName, limit)
+}
+
+// Count is a pass-through - same reasoning as Page.
+func (r *DevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	return r.next.Count(ctx, filters, locale)
+}
+
 // Translations bypasses the cache: admin edit forms need a fresh read of
 // every locale's content, and this path is not part of the hot,
 // high-traffic read surface the cache exists for.
@@ -156,8 +167,18 @@ func (r *DevilFruitRepository) Delete(ctx context.Context, id powers.PowerID) er
 // on success. Called both by the PATCH .../picture handler (moving a
 // DevilFruit to PENDING) and by the background picture worker (publishing
 // READY/FAILED).
-func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
-	if err := r.next.UpdatePicture(ctx, id, main, thumb, status); err != nil {
+func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
+	if err := r.next.UpdatePicture(ctx, id, main, thumb, card, lqip, status); err != nil {
+		return err
+	}
+	r.invalidate(ctx)
+	return nil
+}
+
+// SetMediaID delegates, then invalidates the whole devil fruits namespace
+// on success - same reasoning as UpdatePicture.
+func (r *DevilFruitRepository) SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error {
+	if err := r.next.SetMediaID(ctx, id, mediaID); err != nil {
 		return err
 	}
 	r.invalidate(ctx)

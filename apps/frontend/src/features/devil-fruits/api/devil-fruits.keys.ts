@@ -8,6 +8,9 @@ export const devilFruitKeys = {
   all: () => [...devilFruitKeys.allLocales, useLanguageStore.getState().locale] as const,
   list: (filters?: DevilFruitFilters) =>
     [...devilFruitKeys.all(), 'list', filters ?? {}] as const,
+  // Distinct from `list` on purpose - see standKeys.page's doc.
+  page: (filters?: DevilFruitFilters) =>
+    [...devilFruitKeys.all(), 'page', filters ?? {}] as const,
   detail: (id: string) => [...devilFruitKeys.all(), 'detail', id] as const,
   // Admin edit form only - same reasoning as standKeys.translations.
   translations: (id: string) => [...devilFruitKeys.allLocales, 'translations', id] as const,

@@ -19,21 +19,24 @@ import (
 // it through its public getters instead of reaching into any repository's
 // own (also unexported) row types.
 type StandSnapshot struct {
-	ID            [16]byte       `json:"id"`
-	Name          string         `json:"name"`
-	Description   string         `json:"description"`
-	Rarity        string         `json:"rarity"`
-	Skills        []string       `json:"skills"`
-	Picture       string         `json:"picture"`
-	PictureThumb  string         `json:"pictureThumb"`
-	PictureStatus string         `json:"pictureStatus"`
-	AttackPower   string         `json:"attackPower"`
-	Speed         string         `json:"speed"`
-	AttackRange   string         `json:"attackRange"`
-	Endurance     string         `json:"endurance"`
-	Precision     string         `json:"precision"`
-	Potential     string         `json:"potential"`
-	EvolvesFrom   *StandSnapshot `json:"evolvesFrom,omitempty"`
+	ID             [16]byte       `json:"id"`
+	Name           string         `json:"name"`
+	Description    string         `json:"description"`
+	Rarity         string         `json:"rarity"`
+	Skills         []string       `json:"skills"`
+	Picture        string         `json:"picture"`
+	PictureThumb   string         `json:"pictureThumb"`
+	PictureCard    string         `json:"pictureCard"`
+	PictureStatus  string         `json:"pictureStatus"`
+	PictureLqip    string         `json:"pictureLqip"`
+	PictureMediaID string         `json:"pictureMediaId"`
+	AttackPower    string         `json:"attackPower"`
+	Speed          string         `json:"speed"`
+	AttackRange    string         `json:"attackRange"`
+	Endurance      string         `json:"endurance"`
+	Precision      string         `json:"precision"`
+	Potential      string         `json:"potential"`
+	EvolvesFrom    *StandSnapshot `json:"evolvesFrom,omitempty"`
 }
 
 // OfStand captures stand (and, recursively, its whole EvolvesFrom ancestor
@@ -45,21 +48,24 @@ func OfStand(stand *powers.Stand) StandSnapshot {
 		evolvesFrom = &s
 	}
 	return StandSnapshot{
-		ID:            stand.ID(),
-		Name:          stand.Name(),
-		Description:   stand.Description(),
-		Rarity:        stand.Rarity().String(),
-		Skills:        stand.Skills(),
-		Picture:       stand.Picture(),
-		PictureThumb:  stand.PictureThumb(),
-		PictureStatus: stand.PictureStatus().String(),
-		AttackPower:   stand.AttackPower().String(),
-		Speed:         stand.Speed().String(),
-		AttackRange:   stand.AttackRange().String(),
-		Endurance:     stand.Endurance().String(),
-		Precision:     stand.Precision().String(),
-		Potential:     stand.Potential().String(),
-		EvolvesFrom:   evolvesFrom,
+		ID:             stand.ID(),
+		Name:           stand.Name(),
+		Description:    stand.Description(),
+		Rarity:         stand.Rarity().String(),
+		Skills:         stand.Skills(),
+		Picture:        stand.Picture(),
+		PictureThumb:   stand.PictureThumb(),
+		PictureCard:    stand.PictureCard(),
+		PictureStatus:  stand.PictureStatus().String(),
+		PictureLqip:    stand.PictureLqip(),
+		PictureMediaID: stand.PictureMediaID(),
+		AttackPower:    stand.AttackPower().String(),
+		Speed:          stand.Speed().String(),
+		AttackRange:    stand.AttackRange().String(),
+		Endurance:      stand.Endurance().String(),
+		Precision:      stand.Precision().String(),
+		Potential:      stand.Potential().String(),
+		EvolvesFrom:    evolvesFrom,
 	}
 }
 
@@ -89,7 +95,8 @@ func (s StandSnapshot) Hydrate() (*powers.Stand, error) {
 	if err != nil {
 		return nil, fmt.Errorf("stand %q: picture_status: %w", s.Name, err)
 	}
-	power.SetPictureRenditions(s.Picture, s.PictureThumb, pictureStatus)
+	power.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
+	power.SetMediaID(s.PictureMediaID)
 
 	attackPower, err := enums.ParseStandStat(s.AttackPower)
 	if err != nil {

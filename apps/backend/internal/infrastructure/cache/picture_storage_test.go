@@ -3,6 +3,7 @@ package cache_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"sync"
 	"testing"
 	"time"
@@ -36,6 +37,10 @@ func (s *countingPictureStorage) Delete(_ context.Context, key string) error {
 	defer s.mu.Unlock()
 	s.deletedKeys = append(s.deletedKeys, key)
 	return nil
+}
+
+func (s *countingPictureStorage) Download(_ context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	return nil, ports.ObjectInfo{}, ports.ErrObjectNotFound
 }
 
 var _ ports.IPictureStorage = (*countingPictureStorage)(nil)

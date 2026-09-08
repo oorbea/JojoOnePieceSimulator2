@@ -11,6 +11,66 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countStandRows = `-- name: CountStandRows :one
+SELECT count(*)
+FROM stands s
+         JOIN powers p ON p.id = s.id
+         LEFT JOIN stands ef ON ef.id = s.evolves_from_id
+         LEFT JOIN powers efp ON efp.id = ef.id
+         LEFT JOIN LATERAL (
+    SELECT pt.description
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) base_tr ON true
+WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
+  AND ($3::stand_stat IS NULL OR s.attack_power = $3::stand_stat)
+  AND ($4::stand_stat IS NULL OR s.speed = $4::stand_stat)
+  AND ($5::stand_stat IS NULL OR s.attack_range = $5::stand_stat)
+  AND ($6::stand_stat IS NULL OR s.endurance = $6::stand_stat)
+  AND ($7::stand_stat IS NULL OR s."precision" = $7::stand_stat)
+  AND ($8::stand_stat IS NULL OR s.potential = $8::stand_stat)
+  AND ($9::text IS NULL OR efp.name = $9::text)
+  AND ($10::text IS NULL
+    OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
+    OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')
+`
+
+type CountStandRowsParams struct {
+	Locales         []string
+	Rarity          *PowerRarity
+	AttackPower     *StandStat
+	Speed           *StandStat
+	AttackRange     *StandStat
+	Endurance       *StandStat
+	Precision       *StandStat
+	Potential       *StandStat
+	EvolvesFromName *string
+	Search          *string
+}
+
+// Total count of stands matching the same filters as PageStandRows (no
+// cursor, no ancestor recursion, no translation join needed except for the
+// search-over-description case) - used for the first page's `total` only.
+func (q *Queries) CountStandRows(ctx context.Context, arg CountStandRowsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStandRows,
+		arg.Locales,
+		arg.Rarity,
+		arg.AttackPower,
+		arg.Speed,
+		arg.AttackRange,
+		arg.Endurance,
+		arg.Precision,
+		arg.Potential,
+		arg.EvolvesFromName,
+		arg.Search,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deletePowerTranslations = `-- name: DeletePowerTranslations :exec
 DELETE FROM power_translations WHERE power_id = $1 AND locale::text = ANY ($2::text[])
 `
@@ -45,7 +105,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 p.rarity,
                                 p.picture,
                                 p.picture_thumb,
+                                p.picture_card,
                                 p.picture_status,
+                                p.picture_lqip,
+                                p.picture_media_id,
                                 s.attack_power,
                                 s.speed,
                                 s.attack_range,
@@ -82,7 +145,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                            AND ($10::text IS NULL
                                 OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
                                 OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')),
-     chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
+     chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
                FROM base
                UNION
                SELECT p2.id,
@@ -90,7 +153,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                       p2.rarity,
                       p2.picture,
                       p2.picture_thumb,
+                      p2.picture_card,
                       p2.picture_status,
+                      p2.picture_lqip,
+                      p2.picture_media_id,
                       s2.attack_power,
                       s2.speed,
                       s2.attack_range,
@@ -107,7 +173,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -117,15 +186,18 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -160,22 +232,25 @@ type FilterStandRowsParams struct {
 }
 
 type FilterStandRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Returns every stand matching the (all-optional) filters, marked
@@ -209,7 +284,10 @@ func (q *Queries) FilterStandRows(ctx context.Context, arg FilterStandRowsParams
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -283,7 +361,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
+                                 p.picture_card,
                                  p.picture_status,
+                                 p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -301,7 +382,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
+                                 p2.picture_card,
                                  p2.picture_status,
+                                 p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -318,7 +402,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -328,15 +415,18 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -363,22 +453,25 @@ type GetStandRowsByIDParams struct {
 }
 
 type GetStandRowsByIDRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Same shape as GetStandRowsByName, keyed by id instead of name.
@@ -398,7 +491,10 @@ func (q *Queries) GetStandRowsByID(ctx context.Context, arg GetStandRowsByIDPara
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -425,7 +521,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
+                                 p.picture_card,
                                  p.picture_status,
+                                 p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -443,7 +542,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
+                                 p2.picture_card,
                                  p2.picture_status,
+                                 p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -460,7 +562,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -470,15 +575,18 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -505,22 +613,25 @@ type GetStandRowsByNameParams struct {
 }
 
 type GetStandRowsByNameRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Returns the stand matching `name` (matched = true) plus its full ancestor
@@ -546,7 +657,10 @@ func (q *Queries) GetStandRowsByName(ctx context.Context, arg GetStandRowsByName
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -567,6 +681,43 @@ func (q *Queries) GetStandRowsByName(ctx context.Context, arg GetStandRowsByName
 	return items, nil
 }
 
+const listStandOptions = `-- name: ListStandOptions :many
+SELECT p.id, p.name
+FROM stands s
+         JOIN powers p ON p.id = s.id
+ORDER BY p.name
+`
+
+type ListStandOptionsRow struct {
+	ID   pgtype.UUID
+	Name string
+}
+
+// Every stand's id/name only, unfiltered and translation-free - powers.name
+// is deliberately non-translatable (see 00008_stages.sql), so this is
+// locale-free and stays cheap even with thousands of rows. Backs the
+// evolvesFrom picker, which needs the full id->name set regardless of the
+// catalogue's own pagination/filters.
+func (q *Queries) ListStandOptions(ctx context.Context) ([]ListStandOptionsRow, error) {
+	rows, err := q.db.Query(ctx, listStandOptions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStandOptionsRow{}
+	for rows.Next() {
+		var i ListStandOptionsRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStandRows = `-- name: ListStandRows :many
 SELECT p.id,
        p.name,
@@ -574,7 +725,10 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
+       p.picture_media_id,
        s.attack_power,
        s.speed,
        s.attack_range,
@@ -597,22 +751,25 @@ ORDER BY p.name
 `
 
 type ListStandRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Returns every stand (matched = true always, no filter applied). Kept in
@@ -634,7 +791,10 @@ func (q *Queries) ListStandRows(ctx context.Context, locales []string) ([]ListSt
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -655,47 +815,297 @@ func (q *Queries) ListStandRows(ctx context.Context, locales []string) ([]ListSt
 	return items, nil
 }
 
+const pageStandRows = `-- name: PageStandRows :many
+WITH RECURSIVE base AS (SELECT p.id,
+                                p.name,
+                                p.rarity,
+                                p.picture,
+                                p.picture_thumb,
+                                p.picture_card,
+                                p.picture_status,
+                                p.picture_lqip,
+                                p.picture_media_id,
+                                s.attack_power,
+                                s.speed,
+                                s.attack_range,
+                                s.endurance,
+                                s."precision",
+                                s.potential,
+                                s.evolves_from_id,
+                                true AS matched
+                         FROM stands s
+                                  JOIN powers p ON p.id = s.id
+                                  LEFT JOIN stands ef ON ef.id = s.evolves_from_id
+                                  LEFT JOIN powers efp ON efp.id = ef.id
+                                  LEFT JOIN LATERAL (
+                             SELECT pt.description
+                             FROM power_translations pt
+                             WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+                             ORDER BY array_position($1::text[], pt.locale::text)
+                             LIMIT 1
+                             ) base_tr ON true
+                         WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
+                           AND ($3::stand_stat IS NULL OR
+                                s.attack_power = $3::stand_stat)
+                           AND ($4::stand_stat IS NULL OR s.speed = $4::stand_stat)
+                           AND ($5::stand_stat IS NULL OR
+                                s.attack_range = $5::stand_stat)
+                           AND ($6::stand_stat IS NULL OR
+                                s.endurance = $6::stand_stat)
+                           AND ($7::stand_stat IS NULL OR
+                                s."precision" = $7::stand_stat)
+                           AND ($8::stand_stat IS NULL OR
+                                s.potential = $8::stand_stat)
+                           AND ($9::text IS NULL OR
+                                efp.name = $9::text)
+                           AND ($10::text IS NULL
+                                OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
+                                OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')
+                           AND ($11::text IS NULL OR p.name > $11::text)
+                         ORDER BY p.name
+                         LIMIT $12::int),
+     chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
+               FROM base
+               UNION
+               SELECT p2.id,
+                      p2.name,
+                      p2.rarity,
+                      p2.picture,
+                      p2.picture_thumb,
+                      p2.picture_card,
+                      p2.picture_status,
+                      p2.picture_lqip,
+                      p2.picture_media_id,
+                      s2.attack_power,
+                      s2.speed,
+                      s2.attack_range,
+                      s2.endurance,
+                      s2."precision",
+                      s2.potential,
+                      s2.evolves_from_id,
+                      false AS matched
+               FROM stands s2
+                        JOIN powers p2 ON p2.id = s2.id
+                        JOIN chain c ON c.evolves_from_id = s2.id),
+     dedup AS (SELECT id,
+                      name,
+                      rarity,
+                      picture,
+                      picture_thumb,
+                      picture_card,
+                      picture_status,
+                      picture_lqip,
+                      picture_media_id,
+                      attack_power,
+                      speed,
+                      attack_range,
+                      endurance,
+                      "precision",
+                      potential,
+                      evolves_from_id,
+                      bool_or(matched) AS matched
+               FROM chain
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
+SELECT d.id,
+       d.name,
+       COALESCE(tr.description, '') AS description,
+       d.rarity,
+       d.picture,
+       d.picture_thumb,
+       d.picture_card,
+       d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
+       d.attack_power,
+       d.speed,
+       d.attack_range,
+       d.endurance,
+       d."precision",
+       d.potential,
+       d.evolves_from_id,
+       d.matched,
+       COALESCE(tr.skills, '{}')::text[] AS skills
+FROM dedup d
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
+ORDER BY d.name
+`
+
+type PageStandRowsParams struct {
+	Locales         []string
+	Rarity          *PowerRarity
+	AttackPower     *StandStat
+	Speed           *StandStat
+	AttackRange     *StandStat
+	Endurance       *StandStat
+	Precision       *StandStat
+	Potential       *StandStat
+	EvolvesFromName *string
+	Search          *string
+	AfterName       *string
+	PageLimit       int32
+}
+
+type PageStandRowsRow struct {
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
+}
+
+// Keyset-paginated counterpart of FilterStandRows: same filter WHERE clause,
+// but the cursor predicate and LIMIT sit INSIDE the `base` CTE, before the
+// ancestor recursion runs - not on the outer SELECT. Limiting the outer
+// SELECT would truncate ancestor rows (matched = false) that a later-page
+// item's evolves_from chain needs, and buildStandsLenient silently drops any
+// stand whose ancestor is missing from the loaded set - see
+// ObsidianVault/catalogue-pagination.md. Go passes page_limit = limit + 1 and
+// detects HasMore from the extra row, so no separate COUNT is needed here.
+func (q *Queries) PageStandRows(ctx context.Context, arg PageStandRowsParams) ([]PageStandRowsRow, error) {
+	rows, err := q.db.Query(ctx, pageStandRows,
+		arg.Locales,
+		arg.Rarity,
+		arg.AttackPower,
+		arg.Speed,
+		arg.AttackRange,
+		arg.Endurance,
+		arg.Precision,
+		arg.Potential,
+		arg.EvolvesFromName,
+		arg.Search,
+		arg.AfterName,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PageStandRowsRow{}
+	for rows.Next() {
+		var i PageStandRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Rarity,
+			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureCard,
+			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
+			&i.AttackPower,
+			&i.Speed,
+			&i.AttackRange,
+			&i.Endurance,
+			&i.Precision,
+			&i.Potential,
+			&i.EvolvesFromID,
+			&i.Matched,
+			&i.Skills,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updatePowerMediaID = `-- name: UpdatePowerMediaID :exec
+UPDATE powers SET picture_media_id = $1 WHERE id = $2
+`
+
+type UpdatePowerMediaIDParams struct {
+	PictureMediaID string
+	ID             pgtype.UUID
+}
+
+// Sets only a Power's content-addressed media group id, once the worker has
+// both transcoded the image and persisted its media_objects rows - see
+// powers.Power.SetMediaID's doc for why this is separate from
+// UpdatePowerPicture.
+func (q *Queries) UpdatePowerMediaID(ctx context.Context, arg UpdatePowerMediaIDParams) error {
+	_, err := q.db.Exec(ctx, updatePowerMediaID, arg.PictureMediaID, arg.ID)
+	return err
+}
+
 const updatePowerPicture = `-- name: UpdatePowerPicture :exec
 UPDATE powers
-SET picture        = COALESCE($1::text, picture),
-    picture_thumb  = COALESCE($2::text, picture_thumb),
-    picture_status = $3::picture_status,
-    updated_at     = now()
-WHERE id = $4
+SET picture          = COALESCE($1::text, picture),
+    picture_thumb    = COALESCE($2::text, picture_thumb),
+    picture_card     = COALESCE($3::text, picture_card),
+    picture_status   = $4::picture_status,
+    picture_lqip     = COALESCE($5::text, picture_lqip),
+    picture_media_id = COALESCE($6::text, picture_media_id),
+    updated_at       = now()
+WHERE id = $7
 `
 
 type UpdatePowerPictureParams struct {
-	Picture       *string
-	PictureThumb  *string
-	PictureStatus string
-	ID            pgtype.UUID
+	Picture        *string
+	PictureThumb   *string
+	PictureCard    *string
+	PictureStatus  string
+	PictureLqip    *string
+	PictureMediaID *string
+	ID             pgtype.UUID
 }
 
 // Updates only a Power's picture renditions and pipeline status, without
 // touching name/description/skills/stats - used by the PATCH .../picture
 // handler (status -> PENDING) and by the background compression worker
-// (status -> READY/FAILED). picture/picture_thumb are left untouched when
-// NULL is passed, so the handler can move a row to PENDING without
-// clobbering the renditions currently being served.
+// (status -> READY/FAILED). picture/picture_thumb/picture_card/picture_lqip/
+// picture_media_id are left untouched when NULL is passed, so the handler
+// can move a row to PENDING without clobbering the renditions currently
+// being served.
 func (q *Queries) UpdatePowerPicture(ctx context.Context, arg UpdatePowerPictureParams) error {
 	_, err := q.db.Exec(ctx, updatePowerPicture,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
+		arg.PictureMediaID,
 		arg.ID,
 	)
 	return err
 }
 
 const upsertPower = `-- name: UpsertPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'STAND', $2, $3, $4, $5, $6)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, 'STAND', $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
 RETURNING id
 `
@@ -706,7 +1116,9 @@ type UpsertPowerParams struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 func (q *Queries) UpsertPower(ctx context.Context, arg UpsertPowerParams) (pgtype.UUID, error) {
@@ -716,7 +1128,9 @@ func (q *Queries) UpsertPower(ctx context.Context, arg UpsertPowerParams) (pgtyp
 		arg.Rarity,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)

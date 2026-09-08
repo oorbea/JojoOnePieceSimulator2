@@ -10,6 +10,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
@@ -19,11 +20,17 @@ import (
 // constants and the sniffContentType/parsePowerID/decode helpers declared in
 // stand_endpoints.go - both catalogues share the same JSON/multipart rules.
 type DevilFruitEndpoints struct {
-	svc *services.DevilFruitService
+	svc   *services.DevilFruitService
+	media dto.MediaURLBuilder
 }
 
 func NewDevilFruitEndpoints(svc *services.DevilFruitService) *DevilFruitEndpoints {
 	return &DevilFruitEndpoints{svc: svc}
+}
+
+// SetMediaURLBuilder - see StandEndpoints.SetMediaURLBuilder's doc.
+func (e *DevilFruitEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /devil-fruits sub-router: GET/POST on the collection,
@@ -73,6 +80,17 @@ func (e *DevilFruitEndpoints) list(w http.ResponseWriter, r *http.Request) error
 	}
 
 	locale := LocaleFromRequest(r)
+
+	// Opt-in pagination - see StandEndpoints.list's doc for why an
+	// unconditional envelope switch is a hazard.
+	pageParams, err := dto.PageParamsFromQuery(r.URL.Query())
+	if err != nil {
+		return err
+	}
+	if pageParams.Requested {
+		return e.listPage(w, r, filters, locale, pageParams)
+	}
+
 	var fruits []*powers.DevilFruit
 	if hasFilters {
 		fruits, err = e.svc.FilterDevilFruits(r.Context(), filters, locale)
@@ -82,11 +100,56 @@ func (e *DevilFruitEndpoints) list(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewDevilFruitResponses(r.Context(), fruits, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponses(r.Context(), fruits, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
 	writeJSON(w, http.StatusOK, resp)
+	return nil
+}
+
+// listPage serves the ?limit=/?cursor= paginated form of GET /devil-fruits -
+// see StandEndpoints.listPage's doc.
+func (e *DevilFruitEndpoints) listPage(w http.ResponseWriter, r *http.Request, filters ports.DevilFruitFilters, locale enums.Locale, params dto.PageParams) error {
+	fingerprint := dto.DevilFruitFiltersFingerprint(filters, locale)
+
+	var afterName *string
+	if params.HasCursor {
+		cursor, err := dto.DecodeCursor[dto.DevilFruitCursor](params.Cursor, fingerprint)
+		if err != nil {
+			return err
+		}
+		afterName = &cursor.Name
+	}
+
+	fruits, hasMore, err := e.svc.PageDevilFruits(r.Context(), filters, locale, afterName, params.Limit)
+	if err != nil {
+		return err
+	}
+
+	var total *int
+	if params.WithTotal && !params.HasCursor {
+		count, err := e.svc.CountDevilFruits(r.Context(), filters, locale)
+		if err != nil {
+			return err
+		}
+		total = &count
+	}
+
+	var nextCursor *string
+	if hasMore && len(fruits) > 0 {
+		encoded := dto.EncodeCursor(dto.DevilFruitCursor{Name: fruits[len(fruits)-1].Name()}, fingerprint)
+		nextCursor = &encoded
+	}
+
+	items, err := dto.NewDevilFruitResponses(r.Context(), fruits, e.svc.PictureURL, e.media)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.DevilFruitPageResponse{
+		PageInfo: dto.NewPageInfo(nextCursor, total),
+		Items:    items,
+	})
 	return nil
 }
 
@@ -122,7 +185,7 @@ func (e *DevilFruitEndpoints) create(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -158,7 +221,7 @@ func (e *DevilFruitEndpoints) get(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -204,7 +267,7 @@ func (e *DevilFruitEndpoints) update(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -281,7 +344,7 @@ func (e *DevilFruitEndpoints) patchPicture(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 
-	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL)
+	resp, err := dto.NewDevilFruitResponse(r.Context(), fruit, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}

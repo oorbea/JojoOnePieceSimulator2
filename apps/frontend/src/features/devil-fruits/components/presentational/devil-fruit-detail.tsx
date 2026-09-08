@@ -1,14 +1,15 @@
 import { Apple } from '@tamagui/lucide-icons-2'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image, Pressable } from 'react-native'
+import { Pressable } from 'react-native'
 import { XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
-import { InsetRing } from '@/shared/components/presentational/wii-card'
+import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
 import { a11yProps } from '@/shared/lib/a11y'
+import { fullSource, lqipSource } from '@/shared/lib/picture-source'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 
 type Props = {
@@ -20,31 +21,35 @@ type Props = {
 export function DevilFruitDetail({ devilFruit }: Props) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [imageState, setImageState] = useState<LazyImageState>('queued')
+  const [retryToken, setRetryToken] = useState(0)
+  const uri = fullSource(devilFruit)
+  const isImageError = imageState === 'error'
   return (
     <YStack gap="$4">
       <Pressable
-        onPress={() => setIsPreviewOpen(true)}
-        disabled={!devilFruit.picture}
-        {...a11yProps(t('devilFruits.previewA11y', { name: devilFruit.name }), 'imagebutton')}
+        onPress={() => (isImageError ? setRetryToken((n) => n + 1) : setIsPreviewOpen(true))}
+        disabled={!uri}
+        {...a11yProps(
+          t(isImageError ? 'common.imageRetry' : 'devilFruits.previewA11y', { name: devilFruit.name }),
+          'imagebutton'
+        )}
       >
-        <YStack width="100%" height={220} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
-          <InsetRing rounded="$card" />
-          {devilFruit.picture ? (
-            <Image
-              source={{ uri: devilFruit.picture }}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="contain"
-            />
-          ) : (
-            <YStack flex={1} items="center" justify="center">
-              <Apple size={40} color="$strawHatRed" />
-            </YStack>
-          )}
-        </YStack>
+        <LazyImage
+          uri={uri}
+          lqip={lqipSource(devilFruit)}
+          height={220}
+          contentFit="contain"
+          pictureStatus={devilFruit.pictureStatus}
+          retryToken={retryToken}
+          onStateChange={setImageState}
+          fallback={<Apple size={40} color="$strawHatRed" />}
+        />
       </Pressable>
       <ImageLightbox
         visible={isPreviewOpen}
-        uri={devilFruit.picture || null}
+        uri={uri}
+        lqip={lqipSource(devilFruit)}
         onClose={() => setIsPreviewOpen(false)}
       />
 

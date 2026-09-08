@@ -64,6 +64,12 @@ type GameEndpoints struct {
 	cfg GameWSConfig
 
 	conns connRegistry
+	media dto.MediaURLBuilder
+}
+
+// SetMediaURLBuilder - see StandEndpoints.SetMediaURLBuilder's doc.
+func (e *GameEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // NewGameEndpoints builds a GameEndpoints. stages/users back the per-viewer
@@ -255,6 +261,7 @@ func (e *GameEndpoints) respondState(w http.ResponseWriter, r *http.Request, g *
 	}
 	resp, err := dto.NewGameStateResponse(r.Context(), g, code, self,
 		e.cfg.ResolveStandPicture, e.cfg.ResolveDevilFruitPicture, e.cfg.ResolveStagePicture, e.cfg.ResolveAvatarPicture,
+		e.media,
 		e.stageTextResolver(locale), e.standTextResolver(locale), e.devilFruitTextResolver(locale), deadlines)
 	if err != nil {
 		return err

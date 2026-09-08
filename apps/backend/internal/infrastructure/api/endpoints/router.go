@@ -43,7 +43,7 @@ type CORSConfig struct {
 // its own REST sub-group internally (chi can't mount two handlers on the
 // same pattern with different middleware), so /games is mounted here
 // alongside /events, outside this file's own Timeout group.
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, gameEndpoints *GameEndpoints, stageEndpoints *StageEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig) http.Handler {
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, gameEndpoints *GameEndpoints, stageEndpoints *StageEndpoints, mediaEndpoints *MediaEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig, compressLevel int) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -66,11 +66,16 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 	r.Use(middleware.ClientIPFromXFF())
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(globalRateLimit(rateCfg))
+	// globalRateLimit is NOT applied at the root: /api/v1/media sits outside
+	// it entirely (its own, much higher, mediaRateLimit tier - a catalogue's
+	// cold load is ~100 image requests, which would blow through
+	// GlobalPerIP instantly) and every other group below applies it
+	// explicitly instead.
 	r.Use(resolveLocale)
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Timeout(60 * time.Second))
+		r.Use(globalRateLimit(rateCfg))
 
 		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -82,6 +87,16 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Timeout(60 * time.Second))
+			r.Use(globalRateLimit(rateCfg))
+			// Compress sits outside/before cacheHeaders (applied inside each
+			// Routes(...) group below) so the ETag hashes the uncompressed
+			// body cacheHeaders itself caches, and so Compress can rewrite
+			// the Content-Length cacheHeaders sets. Never applied to /events
+			// or /games/{id}/ws (mounted outside this group) - Compress
+			// buffers the body, which would break both streams.
+			if compressLevel > 0 {
+				r.Use(middleware.Compress(compressLevel, "application/json", "text/html", "text/plain", "application/javascript"))
+			}
 
 			r.Mount("/auth", authEndpoints.Routes(rateCfg))
 
@@ -94,9 +109,23 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 			})
 		})
 
-		r.Mount("/events", eventsEndpoints.Routes(rateCfg))
-		// Outside the Timeout group on purpose - see this function's doc.
-		r.Mount("/games", gameEndpoints.Routes(rateCfg))
+		r.Group(func(r chi.Router) {
+			r.Use(globalRateLimit(rateCfg))
+			r.Mount("/events", eventsEndpoints.Routes(rateCfg))
+			// Outside the Timeout group on purpose - see this function's doc.
+			r.Mount("/games", gameEndpoints.Routes(rateCfg))
+		})
+
+		// /media sits outside RequireAuth (an <img src> carries no bearer
+		// token - see MediaEndpoints' doc) and outside globalRateLimit,
+		// behind mediaRateLimit instead. No Timeout group either: proxying
+		// straight from R2/B2/Supabase on a disk-cache miss is already
+		// bounded by the underlying SDK's own timeouts, and this route
+		// carries no other long-lived work to bound.
+		r.Group(func(r chi.Router) {
+			r.Use(mediaRateLimit(rateCfg))
+			r.Mount("/media", mediaEndpoints.Routes())
+		})
 	})
 
 	return r

@@ -58,7 +58,9 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand, transla
 		Rarity:        stand.Rarity().String(),
 		Picture:       stand.Picture(),
 		PictureThumb:  stand.PictureThumb(),
+		PictureCard:   stand.PictureCard(),
 		PictureStatus: stand.PictureStatus().String(),
+		PictureLqip:   stand.PictureLqip(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting power %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
@@ -117,19 +119,32 @@ func (r *StandRepository) FindByID(ctx context.Context, id powers.PowerID, local
 
 // UpdatePicture updates only a stand's picture renditions and pipeline
 // status, leaving every other column (name, skills, stats, ...) untouched.
-// A nil main or thumb leaves that column as-is - used by the PATCH
+// A nil main/thumb/card/lqip leaves that column as-is - used by the PATCH
 // .../picture handler to move a stand to PENDING without touching the
 // renditions still being served, and by the background compression worker
 // to publish new renditions once ready.
-func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	err := r.queries.UpdatePowerPicture(ctx, db.UpdatePowerPictureParams{
 		ID:            pgtype.UUID{Bytes: id, Valid: true},
 		Picture:       main,
 		PictureThumb:  thumb,
+		PictureCard:   card,
 		PictureStatus: status.String(),
+		PictureLqip:   lqip,
 	})
 	if err != nil {
 		return fmt.Errorf("updating picture for stand %s: %w", id, err)
+	}
+	return nil
+}
+
+// SetMediaID implements ports.IStandRepository.
+func (r *StandRepository) SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error {
+	if err := r.queries.UpdatePowerMediaID(ctx, db.UpdatePowerMediaIDParams{
+		ID:             pgtype.UUID{Bytes: id, Valid: true},
+		PictureMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting media id for stand %s: %w", id, err)
 	}
 	return nil
 }
@@ -186,6 +201,20 @@ func (r *StandRepository) GetAll(ctx context.Context, locale enums.Locale) ([]*p
 	return buildStandsLenient(standRowsFromList(rows)), nil
 }
 
+// Options loads every stand's id/name only, unfiltered and locale-free -
+// backs the evolvesFrom picker without the cost of a full catalogue fetch.
+func (r *StandRepository) Options(ctx context.Context) ([]ports.StandOption, error) {
+	rows, err := r.queries.ListStandOptions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing stand options: %w", err)
+	}
+	options := make([]ports.StandOption, len(rows))
+	for i, row := range rows {
+		options[i] = ports.StandOption{ID: powers.PowerID(row.ID.Bytes), Name: row.Name}
+	}
+	return options, nil
+}
+
 // Filter loads every stand matching the given (all-optional) filters,
 // description/skills resolved for locale.
 func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters, locale enums.Locale) ([]*powers.Stand, error) {
@@ -205,6 +234,57 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 		return nil, fmt.Errorf("filtering stands: %w", err)
 	}
 	return buildStandsLenient(standRowsFromFilter(rows)), nil
+}
+
+// Page returns up to limit+1 stands matching filters, ordered by name after
+// afterName, then trims the extra row and reports hasMore - see
+// PageStandRows's doc for why the LIMIT lives inside the CTE's base term.
+func (r *StandRepository) Page(ctx context.Context, filters ports.StandFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	rows, err := r.queries.PageStandRows(ctx, db.PageStandRowsParams{
+		Rarity:          enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		AttackPower:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackPower),
+		Speed:           enumStrPtr[enums.StandStat, db.StandStat](filters.Speed),
+		AttackRange:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackRange),
+		Endurance:       enumStrPtr[enums.StandStat, db.StandStat](filters.Endurance),
+		Precision:       enumStrPtr[enums.StandStat, db.StandStat](filters.Precision),
+		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
+		EvolvesFromName: filters.EvolvesFrom,
+		Search:          searchPtr(filters.Search),
+		Locales:         fallbackStrings(locale),
+		AfterName:       afterName,
+		PageLimit:       int32(limit + 1),
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("paging stands: %w", err)
+	}
+
+	stands := buildStandsLenient(standRowsFromPage(rows))
+	hasMore := len(stands) > limit
+	if hasMore {
+		stands = stands[:limit]
+	}
+	return stands, hasMore, nil
+}
+
+// Count returns the total number of stands matching filters, ignoring
+// pagination.
+func (r *StandRepository) Count(ctx context.Context, filters ports.StandFilters, locale enums.Locale) (int, error) {
+	count, err := r.queries.CountStandRows(ctx, db.CountStandRowsParams{
+		Rarity:          enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		AttackPower:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackPower),
+		Speed:           enumStrPtr[enums.StandStat, db.StandStat](filters.Speed),
+		AttackRange:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackRange),
+		Endurance:       enumStrPtr[enums.StandStat, db.StandStat](filters.Endurance),
+		Precision:       enumStrPtr[enums.StandStat, db.StandStat](filters.Precision),
+		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
+		EvolvesFromName: filters.EvolvesFrom,
+		Search:          searchPtr(filters.Search),
+		Locales:         fallbackStrings(locale),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("counting stands: %w", err)
+	}
+	return int(count), nil
 }
 
 // Translations returns every locale's content for id, for admin edit forms.

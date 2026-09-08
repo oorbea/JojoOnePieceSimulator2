@@ -79,12 +79,16 @@ func (f *wsFakeUserRepository) UpdateLanguage(context.Context, user.UserID, enum
 	return nil
 }
 
-func (f *wsFakeUserRepository) UpdateAvatar(context.Context, user.UserID, *string, *string, enums.PictureStatus) error {
+func (f *wsFakeUserRepository) UpdateAvatar(context.Context, user.UserID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
 
-func (f *wsFakeUserRepository) AvatarKeys(context.Context, user.UserID) (string, string, error) {
-	return "", "", nil
+func (f *wsFakeUserRepository) AvatarKeys(context.Context, user.UserID) (string, string, string, error) {
+	return "", "", "", nil
+}
+
+func (f *wsFakeUserRepository) SetAvatarMediaID(context.Context, user.UserID, string) error {
+	return nil
 }
 
 func (f *wsFakeUserRepository) UpdateRole(context.Context, user.UserID, enums.UserRole) error {
@@ -618,7 +622,7 @@ func TestBuildEventFrame_TimedFrames_UseStampedClosesAt(t *testing.T) {
 	window := 30 * time.Second
 
 	cases := []struct {
-		evt game.DomainEvent
+		evt       game.DomainEvent
 		closesAt  func(payload any) string
 		name      string
 		wantFrame string

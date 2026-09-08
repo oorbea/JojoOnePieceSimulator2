@@ -7,6 +7,7 @@ package s3store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -15,6 +16,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
@@ -102,6 +104,30 @@ func (b *Backend) Put(ctx context.Context, key string, content io.Reader, conten
 		return fmt.Errorf("uploading %q to %s: %w", key, b.name, err)
 	}
 	return nil
+}
+
+// Get implements storage.Backend, mapping a missing key to
+// ports.ErrObjectNotFound instead of a generic error.
+func (b *Backend) Get(ctx context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	out, err := b.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		var nsk *types.NoSuchKey
+		if errors.As(err, &nsk) {
+			return nil, ports.ObjectInfo{}, fmt.Errorf("%w: %q on %s", ports.ErrObjectNotFound, key, b.name)
+		}
+		return nil, ports.ObjectInfo{}, fmt.Errorf("downloading %q from %s: %w", key, b.name, err)
+	}
+	info := ports.ObjectInfo{}
+	if out.ContentType != nil {
+		info.ContentType = *out.ContentType
+	}
+	if out.ContentLength != nil {
+		info.Size = *out.ContentLength
+	}
+	return out.Body, info, nil
 }
 
 // PresignGet implements storage.Backend.

@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { getStandsPage } from '@/features/stands/api/stands.api'
+import { standKeys } from '@/features/stands/api/stands.keys'
 import { StandsScreen, type StandStatFilterKey } from '@/features/stands/components/presentational/stands-screen'
-import { useStands } from '@/features/stands/hooks/use-stands'
+import { useStandOptions } from '@/features/stands/hooks/use-stand-options'
 import type { StandFilters, StandResponse } from '@/features/stands/types/stands.types'
-import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import { raritySchema, standStatSchema } from '@/shared/contracts/enums'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
+import { usePaginatedCatalogue } from '@/shared/hooks/use-paginated-catalogue'
 
 const STAT_FILTER_KEYS: StandStatFilterKey[] = [
   'attackPower',
@@ -53,31 +56,44 @@ export function CatalogStandsContainer() {
     STAT_FILTER_KEYS.filter((key) => statFilters[key]).length + (evolvesFromFilter ? 1 : 0)
   const hasActiveFilters = Boolean(rarityFilter) || moreFiltersCount > 0 || Boolean(filters.q)
 
-  // Unfiltered roster feeds the "Evolves From" filter's own options - same
-  // trap as the admin container's evolvesFromOptions: deriving them from the
-  // filtered grid would make applying any filter narrow this picker too.
-  const { data: allStands } = useStands()
+  // The id/name-only /stands/options endpoint feeds the "Evolves From"
+  // filter's own options - a full catalogue fetch here would duplicate the
+  // grid's own payload and, under pagination, wouldn't even have the full
+  // set. Same trap as the admin container's evolvesFromOptions: deriving
+  // them from the filtered grid would make applying any filter narrow this
+  // picker too.
+  const { data: standOptions } = useStandOptions()
 
   const evolvesFromNameFilter = useMemo(() => {
-    if (!evolvesFromFilter || !allStands) return undefined
-    return allStands.find((s) => s.id === evolvesFromFilter)?.name
-  }, [evolvesFromFilter, allStands])
+    if (!evolvesFromFilter || !standOptions) return undefined
+    return standOptions.find((s) => s.id === evolvesFromFilter)?.name
+  }, [evolvesFromFilter, standOptions])
 
   const gridFilters = useMemo(
     () => (evolvesFromNameFilter ? { ...filters, evolvesFrom: evolvesFromNameFilter } : filters),
     [filters, evolvesFromNameFilter]
   )
 
+  const appliedFilters = hasActiveFilters ? gridFilters : undefined
   const {
-    data: stands,
+    items: stands,
     isLoading,
     isError,
+    isFetchNextPageError,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    total,
     refetch,
-  } = useStands(hasActiveFilters ? gridFilters : undefined)
+  } = usePaginatedCatalogue(
+    standKeys.page(appliedFilters),
+    (cursor, limit) => getStandsPage(appliedFilters, cursor, limit),
+    { hasPendingPicture: (s) => s.pictureStatus === 'PENDING' }
+  )
 
   const evolvesFromOptions = useMemo(
-    () => (allStands ?? []).map((s) => ({ value: s.id, label: s.name })),
-    [allStands]
+    () => (standOptions ?? []).map((s) => ({ value: s.id, label: s.name })),
+    [standOptions]
   )
   const rarityFilterOptions = useMemo(
     () => raritySchema.options.map((v) => ({ value: v, label: t(`enums.rarity.${v}`) })),
@@ -127,6 +143,11 @@ export function CatalogStandsContainer() {
       detailStand={detailStand}
       onOpenDetail={setDetailStand}
       onCloseDetail={() => setDetailStand(null)}
+      hasNextPage={hasNextPage}
+      isFetchingNextPage={isFetchingNextPage}
+      isLoadMoreError={isFetchNextPageError}
+      onLoadMore={() => void fetchNextPage()}
+      total={total}
     />
   )
 }

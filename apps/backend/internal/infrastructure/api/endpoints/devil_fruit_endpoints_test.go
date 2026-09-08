@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -102,6 +104,34 @@ func (f *fakeDevilFruitRepository) Filter(_ context.Context, filters ports.Devil
 	return results, nil
 }
 
+func (f *fakeDevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, false, err
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].Name() < all[j].Name() })
+	start := 0
+	if afterName != nil {
+		for i, d := range all {
+			if d.Name() > *afterName {
+				start = i
+				break
+			}
+			start = i + 1
+		}
+	}
+	page := all[start:]
+	if len(page) > limit {
+		return page[:limit], true, nil
+	}
+	return page, false, nil
+}
+
+func (f *fakeDevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	return len(all), err
+}
+
 func (f *fakeDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -122,21 +152,38 @@ func (f *fakeDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) 
 	return nil
 }
 
-func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	fruit, ok := f.fruits[id]
 	if !ok {
 		return ports.ErrDevilFruitNotFound
 	}
-	newMain, newThumb := fruit.Picture(), fruit.PictureThumb()
+	newMain, newThumb, newCard, newLqip := fruit.Picture(), fruit.PictureThumb(), fruit.PictureCard(), fruit.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	fruit.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	fruit.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	return nil
+}
+
+func (f *fakeDevilFruitRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	fruit, ok := f.fruits[id]
+	if !ok {
+		return ports.ErrDevilFruitNotFound
+	}
+	fruit.SetMediaID(mediaID)
 	return nil
 }
 
@@ -182,8 +229,8 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background(), endpoints.GameWSConfig{})
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, fakeTokenIssuer{},
-		endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, nil, fakeTokenIssuer{},
+		endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 	return h, repo, pictures
 }
 
@@ -329,6 +376,149 @@ func TestListDevilFruits_SearchByNameAndDescription(t *testing.T) {
 	}
 }
 
+// TestListDevilFruits_NoPageParams_StaysBareArray mirrors
+// TestListStands_NoPageParams_StaysBareArray - see that test's doc.
+func TestListDevilFruits_NoPageParams_StaysBareArray(t *testing.T) {
+	h, _, _ := newDevilFruitTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Gomu Gomu no Mi"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	body := rec.Body.Bytes()
+	first := ""
+	for _, b := range body {
+		if b == ' ' || b == '\n' || b == '\t' || b == '\r' {
+			continue
+		}
+		first = string(b)
+		break
+	}
+	if first != "[" {
+		t.Fatalf("first non-whitespace byte = %q, want %q (bare array)", first, "[")
+	}
+}
+
+// TestListDevilFruits_Page_WalkingCursorToExhaustion_EqualsUnpaginatedList
+// mirrors the Stand test of the same shape - DevilFruit has no evolves_from
+// chain, so there is no T3.6-style ancestor-truncation risk, but the
+// exhaustion/ordering contract is identical.
+func TestListDevilFruits_Page_WalkingCursorToExhaustion_EqualsUnpaginatedList(t *testing.T) {
+	h, _, _ := newDevilFruitTestServer()
+
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Gomu Gomu no Mi"))
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Mera Mera no Mi"))
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Hito Hito no Mi"))
+
+	unpagedRec := doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits", nil)
+	var unpaged []map[string]any
+	if err := json.Unmarshal(unpagedRec.Body.Bytes(), &unpaged); err != nil {
+		t.Fatalf("unmarshal unpaged: %v", err)
+	}
+
+	var pagedNames []string
+	cursor := ""
+	pages := 0
+	for {
+		path := "/api/v1/devil-fruits?limit=1"
+		if cursor != "" {
+			path += "&cursor=" + url.QueryEscape(cursor)
+		}
+		rec := doRequest(t, h, http.MethodGet, path, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("page %d: status = %d, body = %s", pages, rec.Code, rec.Body.String())
+		}
+		var page struct {
+			Items      []map[string]any `json:"items"`
+			NextCursor *string          `json:"nextCursor"`
+			Total      *int             `json:"total"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+			t.Fatalf("page %d: unmarshal: %v", pages, err)
+		}
+		if pages == 0 && (page.Total == nil || *page.Total != len(unpaged)) {
+			t.Errorf("first page total = %v, want %d", page.Total, len(unpaged))
+		}
+		if pages > 0 && page.Total != nil {
+			t.Errorf("page %d: total = %v, want absent on non-first pages", pages, *page.Total)
+		}
+		if len(page.Items) != 1 {
+			t.Fatalf("page %d: len(items) = %d, want 1", pages, len(page.Items))
+		}
+		pagedNames = append(pagedNames, page.Items[0]["name"].(string))
+
+		pages++
+		if page.NextCursor == nil {
+			break
+		}
+		cursor = *page.NextCursor
+		if pages > len(unpaged)+1 {
+			t.Fatalf("cursor never reached exhaustion after %d pages", pages)
+		}
+	}
+
+	if len(pagedNames) != len(unpaged) {
+		t.Fatalf("paged through %d items, want %d (every unpaginated item exactly once)", len(pagedNames), len(unpaged))
+	}
+	wantNames := make(map[string]int, len(unpaged))
+	for _, d := range unpaged {
+		wantNames[d["name"].(string)]++
+	}
+	gotNames := make(map[string]int, len(pagedNames))
+	for _, name := range pagedNames {
+		gotNames[name]++
+	}
+	for name, want := range wantNames {
+		if got := gotNames[name]; got != want {
+			t.Errorf("%q appeared %d times across pages, want %d", name, got, want)
+		}
+	}
+	for i := 1; i < len(pagedNames); i++ {
+		if pagedNames[i-1] >= pagedNames[i] {
+			t.Errorf("paged order not strictly increasing at %d: %q >= %q", i, pagedNames[i-1], pagedNames[i])
+		}
+	}
+}
+
+// TestListDevilFruits_Page_CursorFromDifferentFilters_Returns400 mirrors the
+// Stand test of the same name.
+func TestListDevilFruits_Page_CursorFromDifferentFilters_Returns400(t *testing.T) {
+	h, _, _ := newDevilFruitTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Gomu Gomu no Mi"))
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Mera Mera no Mi"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits?limit=1", nil)
+	var page struct {
+		NextCursor *string `json:"nextCursor"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &page)
+	if page.NextCursor == nil {
+		t.Fatal("expected a nextCursor with 2 devil fruits and limit=1")
+	}
+
+	replayed := doRequest(t, h, http.MethodGet,
+		"/api/v1/devil-fruits?limit=1&fruitType=LOGIA&cursor="+url.QueryEscape(*page.NextCursor), nil)
+	if replayed.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d (cursor replayed under different filters), body = %s",
+			replayed.Code, http.StatusBadRequest, replayed.Body.String())
+	}
+}
+
+// TestListDevilFruits_Page_TamperedCursor_Returns400 mirrors the Stand test
+// of the same name.
+func TestListDevilFruits_Page_TamperedCursor_Returns400(t *testing.T) {
+	h, _, _ := newDevilFruitTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Gomu Gomu no Mi"))
+
+	for _, cursor := range []string{"not-base64!!!", "AAAA"} {
+		rec := doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits?limit=1&cursor="+url.QueryEscape(cursor), nil)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("cursor=%q: status = %d, want %d", cursor, rec.Code, http.StatusBadRequest)
+		}
+	}
+}
+
 func TestUpdateDevilFruit(t *testing.T) {
 	h, _, _ := newDevilFruitTestServer()
 	createRec := doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Yami Yami no Mi"))
@@ -397,8 +587,8 @@ func TestPatchDevilFruitPicture(t *testing.T) {
 	if got["pictureStatus"] != "READY" {
 		t.Fatalf("pictureStatus after sync worker run = %v, want READY", got["pictureStatus"])
 	}
-	if len(pictures.objects) != 2 {
-		t.Errorf("uploaded objects = %d, want 2 (main + thumb)", len(pictures.objects))
+	if len(pictures.objects) != 3 {
+		t.Errorf("uploaded objects = %d, want 3 (main + thumb + card)", len(pictures.objects))
 	}
 }
 

@@ -10,6 +10,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -116,6 +118,70 @@ func (f *fakeStandRepository) Filter(_ context.Context, filters ports.StandFilte
 	return results, nil
 }
 
+// matches applies the same filter semantics as Filter, factored out so
+// Page/Count don't duplicate it.
+func (f *fakeStandRepository) matches(stand *powers.Stand, filters ports.StandFilters) bool {
+	if filters.Rarity != nil && stand.Rarity() != *filters.Rarity {
+		return false
+	}
+	if filters.AttackPower != nil && stand.AttackPower() != *filters.AttackPower {
+		return false
+	}
+	if filters.Speed != nil && stand.Speed() != *filters.Speed {
+		return false
+	}
+	if filters.Search != nil {
+		needle := strings.ToLower(*filters.Search)
+		if !strings.Contains(strings.ToLower(stand.Name()), needle) &&
+			!strings.Contains(strings.ToLower(stand.Description()), needle) {
+			return false
+		}
+	}
+	return true
+}
+
+// Page mirrors the real repository's keyset semantics (sorted by name,
+// strictly after afterName, hasMore from an extra row).
+func (f *fakeStandRepository) Page(_ context.Context, filters ports.StandFilters, _ enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var results []*powers.Stand
+	for _, stand := range f.stands {
+		if !f.matches(stand, filters) {
+			continue
+		}
+		results = append(results, stand)
+	}
+	sort.Slice(results, func(i, j int) bool { return results[i].Name() < results[j].Name() })
+	start := 0
+	if afterName != nil {
+		for i, s := range results {
+			if s.Name() > *afterName {
+				start = i
+				break
+			}
+			start = i + 1
+		}
+	}
+	page := results[start:]
+	if len(page) > limit {
+		return page[:limit], true, nil
+	}
+	return page, false, nil
+}
+
+func (f *fakeStandRepository) Count(_ context.Context, filters ports.StandFilters, _ enums.Locale) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	count := 0
+	for _, stand := range f.stands {
+		if f.matches(stand, filters) {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (f *fakeStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -136,21 +202,48 @@ func (f *fakeStandRepository) Delete(_ context.Context, id powers.PowerID) error
 	return nil
 }
 
-func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	stand, ok := f.stands[id]
 	if !ok {
 		return ports.ErrStandNotFound
 	}
-	newMain, newThumb := stand.Picture(), stand.PictureThumb()
+	newMain, newThumb, newCard, newLqip := stand.Picture(), stand.PictureThumb(), stand.PictureCard(), stand.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	stand.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	stand.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	return nil
+}
+
+func (f *fakeStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	options := make([]ports.StandOption, 0, len(f.stands))
+	for _, stand := range f.stands {
+		options = append(options, ports.StandOption{ID: stand.ID(), Name: stand.Name()})
+	}
+	return options, nil
+}
+
+func (f *fakeStandRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	stand, ok := f.stands[id]
+	if !ok {
+		return ports.ErrStandNotFound
+	}
+	stand.SetMediaID(mediaID)
 	return nil
 }
 
@@ -245,6 +338,16 @@ func (f *fakePictureStorage) Delete(_ context.Context, key string) error {
 	return nil
 }
 
+func (f *fakePictureStorage) Download(_ context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	data, ok := f.objects[key]
+	if !ok {
+		return nil, ports.ObjectInfo{}, ports.ErrObjectNotFound
+	}
+	return io.NopCloser(bytes.NewReader(data)), ports.ObjectInfo{ContentType: "image/webp", Size: int64(len(data))}, nil
+}
+
 func (f *fakePictureStorage) has(key string) bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -277,13 +380,16 @@ func (f *fakeImageProcessor) Probe(_ []byte) (ports.ImageMeta, error) {
 	return ports.ImageMeta{Width: 1, Height: 1, Pages: 1}, f.probeErr
 }
 
-func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (ports.EncodedImage, ports.EncodedImage, error) {
+func (f *fakeImageProcessor) Transcode(_ context.Context, _ []byte, _ ports.TranscodeOptions) (map[string]ports.EncodedImage, error) {
 	if f.transcodeErr != nil {
-		return ports.EncodedImage{}, ports.EncodedImage{}, f.transcodeErr
+		return nil, f.transcodeErr
 	}
-	main := ports.EncodedImage{Bytes: []byte("main-webp"), ContentType: "image/webp"}
-	thumb := ports.EncodedImage{Bytes: []byte("thumb-webp"), ContentType: "image/webp"}
-	return main, thumb, nil
+	return map[string]ports.EncodedImage{
+		"card":  {Bytes: []byte("card-webp"), ContentType: "image/webp"},
+		"thumb": {Bytes: []byte("thumb-webp"), ContentType: "image/webp"},
+		"main":  {Bytes: []byte("main-webp"), ContentType: "image/webp"},
+		"lqip":  {Bytes: []byte("lqip-webp"), ContentType: "image/webp"},
+	}, nil
 }
 
 var _ ports.IImageProcessor = (*fakeImageProcessor)(nil)
@@ -331,7 +437,7 @@ func newTestServerWithDeps(rateCfg endpoints.RateLimitConfig, pictures *fakePict
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{})
+	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, rateCfg, endpoints.CacheConfig{}, 0)
 }
 
 func validStandBody(name string) map[string]any {
@@ -557,7 +663,7 @@ func TestPatchStandPicture_Undecodable(t *testing.T) {
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 
 	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Undecodable"))
 	var created map[string]any
@@ -589,7 +695,7 @@ func TestPatchStandPicture_QueueFull(t *testing.T) {
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 
 	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Queue Full"))
 	var created map[string]any
@@ -652,7 +758,7 @@ func TestPatchStandPicture_TooLarge(t *testing.T) {
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{}), endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 
 	createRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Gold Experience"))
 	var created map[string]any
@@ -878,6 +984,182 @@ func TestListStands_SearchNoMatch(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &matched)
 	if len(matched) != 0 {
 		t.Fatalf("len(matched) = %d, want 0", len(matched))
+	}
+}
+
+// TestListStands_NoPageParams_StaysBareArray is the regression lock for the
+// opt-in contract: a request with neither ?limit= nor ?cursor= must get the
+// legacy bare array, byte-identical to before pagination existed - see
+// ObsidianVault/catalogue-pagination.md on why an unconditional envelope
+// switch is a hazard for an already-loaded tab.
+func TestListStands_NoPageParams_StaysBareArray(t *testing.T) {
+	h := newTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Silver Chariot"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stands", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	body := rec.Body.Bytes()
+	first := ""
+	for _, b := range body {
+		if b == ' ' || b == '\n' || b == '\t' || b == '\r' {
+			continue
+		}
+		first = string(b)
+		break
+	}
+	if first != "[" {
+		t.Fatalf("first non-whitespace byte = %q, want %q (bare array)", first, "[")
+	}
+}
+
+// TestListStands_Page_WalkingCursorToExhaustion_EqualsUnpaginatedList is the
+// test that would catch T3.6's silent-data-loss bug: an evolves_from
+// ancestor that orders AFTER its descendant (e.g. "Seed Zeta" evolving into
+// "Seed Beta") must still hydrate correctly even though LIMIT sits inside
+// the base CTE, before the recursion that pulls the ancestor in.
+func TestListStands_Page_WalkingCursorToExhaustion_EqualsUnpaginatedList(t *testing.T) {
+	h := newTestServer()
+
+	zetaRec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Seed Zeta"))
+	var zeta map[string]any
+	_ = json.Unmarshal(zetaRec.Body.Bytes(), &zeta)
+	zetaID := zeta["id"].(string)
+
+	betaBody := validStandBody("Seed Beta")
+	betaBody["evolvesFromId"] = zetaID
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", betaBody)
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Seed Alpha"))
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Seed Gamma"))
+
+	unpagedRec := doRequest(t, h, http.MethodGet, "/api/v1/stands", nil)
+	var unpaged []map[string]any
+	if err := json.Unmarshal(unpagedRec.Body.Bytes(), &unpaged); err != nil {
+		t.Fatalf("unmarshal unpaged: %v", err)
+	}
+
+	var pagedNames []string
+	cursor := ""
+	pages := 0
+	for {
+		path := "/api/v1/stands?limit=1"
+		if cursor != "" {
+			path += "&cursor=" + url.QueryEscape(cursor)
+		}
+		rec := doRequest(t, h, http.MethodGet, path, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("page %d: status = %d, body = %s", pages, rec.Code, rec.Body.String())
+		}
+		var page struct {
+			Items      []map[string]any `json:"items"`
+			NextCursor *string          `json:"nextCursor"`
+			Total      *int             `json:"total"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+			t.Fatalf("page %d: unmarshal: %v", pages, err)
+		}
+		if pages == 0 && (page.Total == nil || *page.Total != len(unpaged)) {
+			t.Errorf("first page total = %v, want %d", page.Total, len(unpaged))
+		}
+		if pages > 0 && page.Total != nil {
+			t.Errorf("page %d: total = %v, want absent on non-first pages", pages, *page.Total)
+		}
+		if len(page.Items) != 1 {
+			t.Fatalf("page %d: len(items) = %d, want 1", pages, len(page.Items))
+		}
+		pagedNames = append(pagedNames, page.Items[0]["name"].(string))
+
+		// Every evolvesFrom chain must still hydrate on every page, cursor
+		// window notwithstanding - this is the T3.6 assertion.
+		if page.Items[0]["name"] == "Seed Beta" {
+			evolvesFrom, ok := page.Items[0]["evolvesFrom"].(map[string]any)
+			if !ok || evolvesFrom["name"] != "Seed Zeta" {
+				t.Errorf("Seed Beta.evolvesFrom = %v, want {name: Seed Zeta} (T3.6 silent-data-loss bug)", page.Items[0]["evolvesFrom"])
+			}
+		}
+
+		pages++
+		if page.NextCursor == nil {
+			break
+		}
+		cursor = *page.NextCursor
+		if pages > len(unpaged)+1 {
+			t.Fatalf("cursor never reached exhaustion after %d pages", pages)
+		}
+	}
+
+	// The unpaginated /stands endpoint (backed by the fake repository's
+	// GetAll, which - unlike real Postgres's ORDER BY p.name - iterates a Go
+	// map in unspecified order) isn't itself ordered, so this compares sets,
+	// not positions: every item from the unpaginated response must appear
+	// exactly once in the paged walk - which is exactly the invariant T3.6
+	// broke (a stand silently dropped because its ancestor fell outside the
+	// page's LIMIT window).
+	wantNames := make(map[string]int, len(unpaged))
+	for _, s := range unpaged {
+		wantNames[s["name"].(string)]++
+	}
+	gotNames := make(map[string]int, len(pagedNames))
+	for _, name := range pagedNames {
+		gotNames[name]++
+	}
+	if len(pagedNames) != len(unpaged) {
+		t.Fatalf("paged through %d items, want %d (every unpaginated item exactly once)", len(pagedNames), len(unpaged))
+	}
+	for name, want := range wantNames {
+		if got := gotNames[name]; got != want {
+			t.Errorf("%q appeared %d times across pages, want %d", name, got, want)
+		}
+	}
+
+	// Independently, the paged walk itself must be strictly sorted by name -
+	// that's PageStandRows's ORDER BY p.name contract.
+	for i := 1; i < len(pagedNames); i++ {
+		if pagedNames[i-1] >= pagedNames[i] {
+			t.Errorf("paged order not strictly increasing at %d: %q >= %q", i, pagedNames[i-1], pagedNames[i])
+		}
+	}
+}
+
+// TestListStands_Page_CursorFromDifferentFilters_Returns400 proves a cursor
+// is bound to the exact filter set it was issued under.
+func TestListStands_Page_CursorFromDifferentFilters_Returns400(t *testing.T) {
+	h := newTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Silver Chariot"))
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Star Platinum"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stands?limit=1", nil)
+	var page struct {
+		NextCursor *string `json:"nextCursor"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &page)
+	if page.NextCursor == nil {
+		t.Fatal("expected a nextCursor with 2 stands and limit=1")
+	}
+
+	replayed := doRequest(t, h, http.MethodGet,
+		"/api/v1/stands?limit=1&attackPower=A&cursor="+url.QueryEscape(*page.NextCursor), nil)
+	if replayed.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d (cursor replayed under different filters), body = %s",
+			replayed.Code, http.StatusBadRequest, replayed.Body.String())
+	}
+}
+
+// TestListStands_Page_TamperedCursor_Returns400 - a hand-edited/corrupted
+// cursor must never crash or silently misbehave.
+func TestListStands_Page_TamperedCursor_Returns400(t *testing.T) {
+	h := newTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Silver Chariot"))
+
+	for _, cursor := range []string{"not-base64!!!", "AAAA", ""} {
+		if cursor == "" {
+			continue // empty cursor means "no cursor", not tampered - covered elsewhere
+		}
+		rec := doRequest(t, h, http.MethodGet, "/api/v1/stands?limit=1&cursor="+url.QueryEscape(cursor), nil)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("cursor=%q: status = %d, want %d", cursor, rec.Code, http.StatusBadRequest)
+		}
 	}
 }
 

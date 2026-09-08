@@ -52,7 +52,9 @@ func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFrui
 		Rarity:        fruit.Rarity().String(),
 		Picture:       fruit.Picture(),
 		PictureThumb:  fruit.PictureThumb(),
+		PictureCard:   fruit.PictureCard(),
 		PictureStatus: fruit.PictureStatus().String(),
+		PictureLqip:   fruit.PictureLqip(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting power %q: %w", fruit.Name(), wrapPgError(err, ports.ErrDevilFruitAlreadyExists))
@@ -132,18 +134,73 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 	return buildDevilFruits(devilFruitRowsFromFilter(rows))
 }
 
+// Page returns up to limit+1 devil fruits matching filters, ordered by name
+// after afterName, then trims the extra row and reports hasMore - see
+// PageDevilFruitRows's doc (no ancestor chain to worry about, unlike Stand).
+func (r *DevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	rows, err := r.queries.PageDevilFruitRows(ctx, db.PageDevilFruitRowsParams{
+		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:    searchPtr(filters.Search),
+		Locales:   fallbackStrings(locale),
+		AfterName: afterName,
+		PageLimit: int32(limit + 1),
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("paging devil fruits: %w", err)
+	}
+
+	fruits, err := buildDevilFruits(devilFruitRowsFromPage(rows))
+	if err != nil {
+		return nil, false, err
+	}
+	hasMore := len(fruits) > limit
+	if hasMore {
+		fruits = fruits[:limit]
+	}
+	return fruits, hasMore, nil
+}
+
+// Count returns the total number of devil fruits matching filters, ignoring
+// pagination.
+func (r *DevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	count, err := r.queries.CountDevilFruitRows(ctx, db.CountDevilFruitRowsParams{
+		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:    searchPtr(filters.Search),
+		Locales:   fallbackStrings(locale),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("counting devil fruits: %w", err)
+	}
+	return int(count), nil
+}
+
 // UpdatePicture updates only a devil fruit's picture renditions and pipeline
-// status, leaving every other column untouched. A nil main or thumb leaves
-// that column as-is.
-func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+// status, leaving every other column untouched. A nil main/thumb/card/lqip
+// leaves that column as-is.
+func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	err := r.queries.UpdatePowerPicture(ctx, db.UpdatePowerPictureParams{
 		ID:            pgtype.UUID{Bytes: id, Valid: true},
 		Picture:       main,
 		PictureThumb:  thumb,
+		PictureCard:   card,
 		PictureStatus: status.String(),
+		PictureLqip:   lqip,
 	})
 	if err != nil {
 		return fmt.Errorf("updating picture for devil fruit %s: %w", id, err)
+	}
+	return nil
+}
+
+// SetMediaID implements ports.IDevilFruitRepository.
+func (r *DevilFruitRepository) SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error {
+	if err := r.queries.UpdatePowerMediaID(ctx, db.UpdatePowerMediaIDParams{
+		ID:             pgtype.UUID{Bytes: id, Valid: true},
+		PictureMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting media id for devil fruit %s: %w", id, err)
 	}
 	return nil
 }

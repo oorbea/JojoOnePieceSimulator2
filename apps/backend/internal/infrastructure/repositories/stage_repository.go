@@ -101,6 +101,70 @@ func (r *StageRepository) Filter(ctx context.Context, filters ports.StageFilters
 	return stages, nil
 }
 
+// Page implements ports.IStageRepository. after carries all three cursor
+// fields together (nil for the first page) - see PageStageRows's doc for why
+// the row-value comparison must not cast manga to ::text.
+func (r *StageRepository) Page(ctx context.Context, filters ports.StageFilters, locale enums.Locale, after *ports.StagePageCursor, limit int) ([]game.Stage, bool, error) {
+	var dbManga *db.Manga
+	if filters.Manga != nil {
+		m := db.Manga(filters.Manga.String())
+		dbManga = &m
+	}
+	var afterManga *db.Manga
+	var afterPosition *int32
+	var afterName *string
+	if after != nil {
+		m := db.Manga(after.Manga.String())
+		afterManga = &m
+		pos := int32(after.Position)
+		afterPosition = &pos
+		afterName = &after.Name
+	}
+	rows, err := r.queries.PageStageRows(ctx, db.PageStageRowsParams{
+		Manga:         dbManga,
+		Search:        searchPtr(filters.Search),
+		Locales:       fallbackStrings(locale),
+		AfterManga:    afterManga,
+		AfterPosition: afterPosition,
+		AfterName:     afterName,
+		PageLimit:     int32(limit + 1),
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("paging stages: %w", err)
+	}
+	stages := make([]game.Stage, 0, len(rows))
+	for _, row := range rows {
+		st, err := toStage(fromPageStageRow(row))
+		if err != nil {
+			return nil, false, err
+		}
+		stages = append(stages, st)
+	}
+	hasMore := len(stages) > limit
+	if hasMore {
+		stages = stages[:limit]
+	}
+	return stages, hasMore, nil
+}
+
+// Count implements ports.IStageRepository.
+func (r *StageRepository) Count(ctx context.Context, filters ports.StageFilters, locale enums.Locale) (int, error) {
+	var dbManga *db.Manga
+	if filters.Manga != nil {
+		m := db.Manga(filters.Manga.String())
+		dbManga = &m
+	}
+	count, err := r.queries.CountStageRows(ctx, db.CountStageRowsParams{
+		Manga:   dbManga,
+		Search:  searchPtr(filters.Search),
+		Locales: fallbackStrings(locale),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("counting stages: %w", err)
+	}
+	return int(count), nil
+}
+
 // FindByID implements ports.IStageRepository.
 func (r *StageRepository) FindByID(ctx context.Context, id game.StageID, locale enums.Locale) (game.Stage, error) {
 	row, err := r.queries.GetStageByID(ctx, db.GetStageByIDParams{
@@ -138,7 +202,9 @@ func (r *StageRepository) Save(ctx context.Context, s game.Stage, translations p
 		Name:          s.Name(),
 		Picture:       s.Picture(),
 		PictureThumb:  s.PictureThumb(),
+		PictureCard:   s.PictureCard(),
 		PictureStatus: s.PictureStatus().String(),
+		PictureLqip:   s.PictureLqip(),
 	}); err != nil {
 		return fmt.Errorf("saving stage %s: %w", s.ID(), wrapPgError(err, ports.ErrStageAlreadyExists))
 	}
@@ -183,15 +249,28 @@ func (r *StageRepository) Translations(ctx context.Context, id game.StageID) (po
 }
 
 // UpdatePicture implements ports.IStageRepository.
-func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	err := r.queries.UpdateStagePicture(ctx, db.UpdateStagePictureParams{
 		ID:            pgtype.UUID{Bytes: id, Valid: true},
 		Picture:       main,
 		PictureThumb:  thumb,
+		PictureCard:   card,
 		PictureStatus: status.String(),
+		PictureLqip:   lqip,
 	})
 	if err != nil {
 		return fmt.Errorf("updating picture for stage %s: %w", id, err)
+	}
+	return nil
+}
+
+// SetMediaID implements ports.IStageRepository.
+func (r *StageRepository) SetMediaID(ctx context.Context, id game.StageID, mediaID string) error {
+	if err := r.queries.UpdateStageMediaID(ctx, db.UpdateStageMediaIDParams{
+		ID:             pgtype.UUID{Bytes: id, Valid: true},
+		PictureMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting media id for stage %s: %w", id, err)
 	}
 	return nil
 }

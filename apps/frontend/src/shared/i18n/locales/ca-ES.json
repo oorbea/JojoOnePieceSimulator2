@@ -16,7 +16,15 @@
     "search": "Cerca",
     "typeToFilter": "Escriu per filtrar…",
     "noMatches": "Sense resultats",
-    "clearLabel": "Esborra {{label}}"
+    "clearLabel": "Esborra {{label}}",
+    "imageLoading": "Carregant imatge",
+    "imageUnavailable": "Imatge no disponible",
+    "imageGenerating": "Generant imatge",
+    "imageRetry": "Reintenta carregar la imatge",
+    "loadMore": "Carrega'n més",
+    "loadMoreRetry": "Reintenta",
+    "itemsLoadedOfTotal": "{{loaded}} / {{total}}",
+    "allItemsLoaded": "Això és tot ({{total}})"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",
@@ -713,6 +721,8 @@
     "STREAM_TICKET_INVALID": "Aquesta connexió ha caducat. Reconnectant…",
     "REFRESH_INVALID": "La teva sessió ha caducat. Torna a iniciar sessió.",
     "REFRESH_REUSE": "La teva sessió s'ha tancat per motius de seguretat. Torna a iniciar sessió.",
+    "OBJECT_NOT_FOUND": "No s'ha pogut trobar aquesta imatge.",
+    "MEDIA_SIGNATURE_INVALID": "Aquest enllaç d'imatge ha caducat.",
     "INTERNAL": "Alguna cosa ha anat malament per la nostra part."
   }
 }

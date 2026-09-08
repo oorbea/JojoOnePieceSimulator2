@@ -29,6 +29,6 @@ func (p *Processor) Probe(buf []byte) (ports.ImageMeta, error) {
 	return ports.ImageMeta{}, errNotBuilt
 }
 
-func (p *Processor) Transcode(ctx context.Context, buf []byte, opts ports.TranscodeOptions) (ports.EncodedImage, ports.EncodedImage, error) {
-	return ports.EncodedImage{}, ports.EncodedImage{}, errNotBuilt
+func (p *Processor) Transcode(ctx context.Context, buf []byte, opts ports.TranscodeOptions) (map[string]ports.EncodedImage, error) {
+	return nil, errNotBuilt
 }

@@ -41,4 +41,9 @@ type IPictureStorage interface {
 	// Delete removes the object under key. Deleting a key that doesn't
 	// exist is not an error.
 	Delete(ctx context.Context, key string) error
+	// Download returns key's full bytes and metadata - the read path the
+	// media proxy uses instead of a redirect to a presigned URL. Returns
+	// ErrObjectNotFound if key doesn't exist. The caller must Close the
+	// returned ReadCloser.
+	Download(ctx context.Context, key string) (io.ReadCloser, ObjectInfo, error)
 }

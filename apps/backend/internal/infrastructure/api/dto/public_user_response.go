@@ -16,12 +16,14 @@ type PublicUserResponse struct {
 	CompleteName string `json:"completeName"`
 	Avatar       string `json:"avatar"`
 	AvatarThumb  string `json:"avatarThumb"`
+	AvatarCard   string `json:"avatarCard"`
+	AvatarLqip   string `json:"avatarLqip"`
 }
 
 // NewPublicUserResponse builds a PublicUserResponse from a domain User,
 // resolving its avatar the same way NewUserResponse does.
-func NewPublicUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver) (PublicUserResponse, error) {
-	avatar, avatarThumb, err := resolveAvatar(ctx, u, resolve)
+func NewPublicUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver, media MediaURLBuilder) (PublicUserResponse, error) {
+	avatar, avatarThumb, avatarCard, avatarLqip, err := resolveAvatar(ctx, u, resolve, media)
 	if err != nil {
 		return PublicUserResponse{}, err
 	}
@@ -31,5 +33,7 @@ func NewPublicUserResponse(ctx context.Context, u *user.User, resolve PictureURL
 		CompleteName: u.CompleteName(),
 		Avatar:       avatar,
 		AvatarThumb:  avatarThumb,
+		AvatarCard:   avatarCard,
+		AvatarLqip:   avatarLqip,
 	}, nil
 }

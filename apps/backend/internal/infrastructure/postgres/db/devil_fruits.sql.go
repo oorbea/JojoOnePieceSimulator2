@@ -11,6 +11,45 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countDevilFruitRows = `-- name: CountDevilFruitRows :one
+SELECT count(*)
+FROM devil_fruits d
+         JOIN powers p ON p.id = d.id
+         LEFT JOIN LATERAL (
+    SELECT pt.description
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
+  AND ($3::fruit_type IS NULL OR d.fruit_type = $3::fruit_type)
+  AND ($4::text IS NULL
+       OR p.name ILIKE '%' || $4::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $4::text || '%' ESCAPE '\')
+`
+
+type CountDevilFruitRowsParams struct {
+	Locales   []string
+	Rarity    *PowerRarity
+	FruitType *FruitType
+	Search    *string
+}
+
+// Total count of devil fruits matching the same filters as
+// PageDevilFruitRows (no cursor) - used for the first page's `total` only.
+func (q *Queries) CountDevilFruitRows(ctx context.Context, arg CountDevilFruitRowsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countDevilFruitRows,
+		arg.Locales,
+		arg.Rarity,
+		arg.FruitType,
+		arg.Search,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteDevilFruitByID = `-- name: DeleteDevilFruitByID :execrows
 DELETE FROM powers WHERE id = $1 AND kind = 'DEVIL_FRUIT'
 `
@@ -30,7 +69,10 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -58,15 +100,18 @@ type FilterDevilFruitRowsParams struct {
 }
 
 type FilterDevilFruitRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Returns every devil fruit matching the (all-optional) filters.
@@ -91,7 +136,10 @@ func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruit
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -112,7 +160,10 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -133,15 +184,18 @@ type GetDevilFruitRowByIDParams struct {
 }
 
 type GetDevilFruitRowByIDRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Returns the devil fruit matching `id`, along with its resolved
@@ -158,7 +212,10 @@ func (q *Queries) GetDevilFruitRowByID(ctx context.Context, arg GetDevilFruitRow
 		&i.Rarity,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
+		&i.PictureMediaID,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -172,7 +229,10 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -193,15 +253,18 @@ type GetDevilFruitRowByNameParams struct {
 }
 
 type GetDevilFruitRowByNameRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Same shape as GetDevilFruitRowByID, keyed by name instead of id.
@@ -215,7 +278,10 @@ func (q *Queries) GetDevilFruitRowByName(ctx context.Context, arg GetDevilFruitR
 		&i.Rarity,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
+		&i.PictureMediaID,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -229,7 +295,10 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
+       p.picture_media_id,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -245,15 +314,18 @@ ORDER BY p.name
 `
 
 type ListDevilFruitRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	FruitType     string
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
 }
 
 // Returns every devil fruit in the system.
@@ -273,7 +345,111 @@ func (q *Queries) ListDevilFruitRows(ctx context.Context, locales []string) ([]L
 			&i.Rarity,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
+			&i.FruitType,
+			&i.Skills,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pageDevilFruitRows = `-- name: PageDevilFruitRows :many
+SELECT p.id,
+       p.name,
+       COALESCE(tr.description, '') AS description,
+       p.rarity,
+       p.picture,
+       p.picture_thumb,
+       p.picture_card,
+       p.picture_status,
+       p.picture_lqip,
+       p.picture_media_id,
+       d.fruit_type,
+       COALESCE(tr.skills, '{}')::text[] AS skills
+FROM devil_fruits d
+         JOIN powers p ON p.id = d.id
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
+  AND ($3::fruit_type IS NULL OR d.fruit_type = $3::fruit_type)
+  AND ($4::text IS NULL
+       OR p.name ILIKE '%' || $4::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $4::text || '%' ESCAPE '\')
+  AND ($5::text IS NULL OR p.name > $5::text)
+ORDER BY p.name
+LIMIT $6::int
+`
+
+type PageDevilFruitRowsParams struct {
+	Locales   []string
+	Rarity    *PowerRarity
+	FruitType *FruitType
+	Search    *string
+	AfterName *string
+	PageLimit int32
+}
+
+type PageDevilFruitRowsRow struct {
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	FruitType      string
+	Skills         []string
+}
+
+// Keyset-paginated counterpart of FilterDevilFruitRows. Unlike Stand, a
+// DevilFruit has no evolves_from chain to worry about, so this is a plain
+// LIMIT/cursor over the same filtered WHERE clause - no recursive CTE, no
+// ancestor-truncation trap (see stands.sql's PageStandRows for that one).
+// Go passes page_limit = limit + 1 and detects HasMore from the extra row.
+func (q *Queries) PageDevilFruitRows(ctx context.Context, arg PageDevilFruitRowsParams) ([]PageDevilFruitRowsRow, error) {
+	rows, err := q.db.Query(ctx, pageDevilFruitRows,
+		arg.Locales,
+		arg.Rarity,
+		arg.FruitType,
+		arg.Search,
+		arg.AfterName,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PageDevilFruitRowsRow{}
+	for rows.Next() {
+		var i PageDevilFruitRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Rarity,
+			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureCard,
+			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -305,14 +481,16 @@ func (q *Queries) UpsertDevilFruit(ctx context.Context, arg UpsertDevilFruitPara
 }
 
 const upsertDevilFruitPower = `-- name: UpsertDevilFruitPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
 RETURNING id
 `
@@ -323,7 +501,9 @@ type UpsertDevilFruitPowerParams struct {
 	Rarity        string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 func (q *Queries) UpsertDevilFruitPower(ctx context.Context, arg UpsertDevilFruitPowerParams) (pgtype.UUID, error) {
@@ -333,7 +513,9 @@ func (q *Queries) UpsertDevilFruitPower(ctx context.Context, arg UpsertDevilFrui
 		arg.Rarity,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)

@@ -17,6 +17,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/auth"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache"
@@ -151,9 +152,21 @@ func main() {
 			JobTimeout:     cfg.PictureJobTimeout,
 			MaxDimension:   cfg.PictureMaxDimension,
 			ThumbDimension: cfg.PictureThumbDimension,
+			CardDimension:  cfg.PictureCardDimension,
 			Quality:        cfg.PictureWebPQuality,
+			LqipDimension:  cfg.PictureLqipDimension,
+			LqipQuality:    cfg.PictureLqipQuality,
+			LqipMaxBytes:   cfg.MediaLqipMaxBytes,
+			MediaIDSalt:    cfg.MediaIDSalt,
 		}, pictureHub)
+	mediaRepo := repositories.NewMediaRepository(pool)
+	pictureWorker.SetMediaRepository(mediaRepo)
 	pictureWorker.Start()
+
+	mediaURLs := dto.NewMediaURLBuilder(cfg.MediaBaseURL, cfg.MediaURLSecret, cfg.MediaPrivateURLTTL)
+	mediaEndpoints := endpoints.NewMediaEndpoints(pictures, mediaRepo, mediaURLs, endpoints.MediaConfig{
+		Mode: cfg.MediaMode, CacheDir: cfg.MediaCacheDir, CacheMaxBytes: cfg.MediaCacheMaxBytes,
+	})
 
 	// The reconciler walks every configured bucket to correct any drift
 	// between it and the ledger (Record/Forget on the fallback chain are
@@ -171,10 +184,12 @@ func main() {
 	standService := services.NewStandService(standRepo, idgen.UUIDGenerator[powers.PowerID]{}, pictures,
 		imageProcessor, pictureWorker, picturePolicy)
 	standEndpoints := endpoints.NewStandEndpoints(standService)
+	standEndpoints.SetMediaURLBuilder(mediaURLs)
 
 	devilFruitService := services.NewDevilFruitService(devilFruitRepo, idgen.UUIDGenerator[powers.PowerID]{}, pictures,
 		imageProcessor, pictureWorker, picturePolicy)
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(devilFruitService)
+	devilFruitEndpoints.SetMediaURLBuilder(mediaURLs)
 
 	googleVerifier := auth.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenIssuer := auth.NewJWTIssuer([]byte(cfg.JWTSecret), cfg.JWTIssuer, cfg.JWTTTL)
@@ -233,9 +248,11 @@ func main() {
 		Secure:   cfg.AuthCookieSecure,
 		SameSite: authCookieSameSite,
 	})
+	authEndpoints.SetMediaURLBuilder(mediaURLs)
 
 	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
 	userEndpoints := endpoints.NewUserEndpoints(userService)
+	userEndpoints.SetMediaURLBuilder(mediaURLs)
 
 	// Game (Gauntlet/Versus) application layer, now fully wired: a Redis
 	// game store when REDIS_URL is set (falling back to the in-memory one
@@ -298,6 +315,7 @@ func main() {
 	stageService := services.NewStageService(stageRepo, idgen.UUIDGenerator[game.StageID]{},
 		pictures, imageProcessor, pictureWorker, picturePolicy)
 	stageEndpoints := endpoints.NewStageEndpoints(stageService)
+	stageEndpoints.SetMediaURLBuilder(mediaURLs)
 
 	gameHistory := repositories.NewGameHistory(pool)
 
@@ -327,6 +345,7 @@ func main() {
 		ResolveStagePicture:      stageService.PictureURL,
 		ResolveAvatarPicture:     userService.AvatarURL,
 	})
+	gameEndpoints.SetMediaURLBuilder(mediaURLs)
 
 	// ctx (cancelled on SIGINT/SIGTERM) lets the stream handler exit
 	// promptly on shutdown instead of blocking srv.Shutdown's grace window.
@@ -349,6 +368,7 @@ func main() {
 		WritePerUser:  cfg.RateLimitWritePerUser,
 		TicketPerUser: cfg.RateLimitTicketPerUser,
 		RefreshPerIP:  cfg.RateLimitRefreshPerIP,
+		MediaPerIP:    cfg.RateLimitMediaPerIP,
 	}
 
 	// The ETag/Cache-Control layer is independent of Redis - it stays on
@@ -359,7 +379,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, mediaEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg, cfg.HTTPCompressLevel),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

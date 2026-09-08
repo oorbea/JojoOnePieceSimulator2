@@ -6,7 +6,7 @@ import { raritySchema, standStatSchema, type Rarity, type StandStat } from '@/sh
 // StandResponse/StandInput are generated (dto.StandResponse/StandRequest) -
 // Go decides the shape, this is a rename re-export. See
 // ObsidianVault/contratos-tipos-generados.md.
-export type { StandResponse, StandRequest as StandInput } from '@/shared/contracts/dto'
+export type { StandResponse, StandRequest as StandInput, StandOptionResponse } from '@/shared/contracts/dto'
 
 export const standFormSchema = z.object({
   name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),

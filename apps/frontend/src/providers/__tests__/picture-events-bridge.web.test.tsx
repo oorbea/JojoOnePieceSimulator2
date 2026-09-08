@@ -79,6 +79,7 @@ function adminSession() {
       username: 'a',
       completeName: 'A',
       picture: null,
+      pictureThumb: null,
       role: 'ADMIN' as const,
       language: 'en-GB' as const,
     },

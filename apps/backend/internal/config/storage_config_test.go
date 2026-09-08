@@ -18,6 +18,8 @@ func baseStorageEnv(t *testing.T) {
 		"R2_ACCESS_KEY_ID":     "id",
 		"R2_SECRET_ACCESS_KEY": "secret",
 		"R2_BUCKET":            "bucket",
+		"MEDIA_URL_SECRET":     "01234567890123456789012345678901",
+		"MEDIA_ID_SALT":        "0123456789012345",
 	}
 	for k, v := range env {
 		t.Setenv(k, v)

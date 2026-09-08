@@ -10,6 +10,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
@@ -20,11 +21,17 @@ import (
 // Reuses stand_endpoints.go's maxMultipartMemory/sniffLen/sniffContentType
 // constants/helpers - the picture pipeline is identical.
 type StageEndpoints struct {
-	svc *services.StageService
+	svc   *services.StageService
+	media dto.MediaURLBuilder
 }
 
 func NewStageEndpoints(svc *services.StageService) *StageEndpoints {
 	return &StageEndpoints{svc: svc}
+}
+
+// SetMediaURLBuilder - see StandEndpoints.SetMediaURLBuilder's doc.
+func (e *StageEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /stages sub-router.
@@ -68,6 +75,17 @@ func (e *StageEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	locale := LocaleFromRequest(r)
+
+	// Opt-in pagination - see StandEndpoints.list's doc for why an
+	// unconditional envelope switch is a hazard.
+	pageParams, err := dto.PageParamsFromQuery(r.URL.Query())
+	if err != nil {
+		return err
+	}
+	if pageParams.Requested {
+		return e.listPage(w, r, filters, locale, pageParams)
+	}
+
 	var stages []game.Stage
 	if hasFilters {
 		stages, err = e.svc.FilterStages(r.Context(), filters, locale)
@@ -77,11 +95,62 @@ func (e *StageEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponses(r.Context(), stages, e.svc.PictureURL)
+	resp, err := dto.NewStageResponses(r.Context(), stages, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
 	writeJSON(w, http.StatusOK, resp)
+	return nil
+}
+
+// listPage serves the ?limit=/?cursor= paginated form of GET /stages - see
+// StandEndpoints.listPage's doc. The cursor carries all three
+// (manga, position, name) sort-key fields together.
+func (e *StageEndpoints) listPage(w http.ResponseWriter, r *http.Request, filters ports.StageFilters, locale enums.Locale, params dto.PageParams) error {
+	fingerprint := dto.StageFiltersFingerprint(filters, locale)
+
+	var after *ports.StagePageCursor
+	if params.HasCursor {
+		cursor, err := dto.DecodeCursor[dto.StageCursor](params.Cursor, fingerprint)
+		if err != nil {
+			return err
+		}
+		manga, err := enums.ParseManga(cursor.Manga)
+		if err != nil {
+			return &dto.ValidationError{Errors: []string{"cursor: invalid manga"}}
+		}
+		after = &ports.StagePageCursor{Manga: manga, Position: cursor.Position, Name: cursor.Name}
+	}
+
+	stages, hasMore, err := e.svc.PageStages(r.Context(), filters, locale, after, params.Limit)
+	if err != nil {
+		return err
+	}
+
+	var total *int
+	if params.WithTotal && !params.HasCursor {
+		count, err := e.svc.CountStages(r.Context(), filters, locale)
+		if err != nil {
+			return err
+		}
+		total = &count
+	}
+
+	var nextCursor *string
+	if hasMore && len(stages) > 0 {
+		last := stages[len(stages)-1]
+		encoded := dto.EncodeCursor(dto.StageCursor{Manga: last.Manga().String(), Position: last.Order(), Name: last.Name()}, fingerprint)
+		nextCursor = &encoded
+	}
+
+	items, err := dto.NewStageResponses(r.Context(), stages, e.svc.PictureURL, e.media)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.StagePageResponse{
+		PageInfo: dto.NewPageInfo(nextCursor, total),
+		Items:    items,
+	})
 	return nil
 }
 
@@ -114,7 +183,7 @@ func (e *StageEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -146,7 +215,7 @@ func (e *StageEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -189,7 +258,7 @@ func (e *StageEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -266,7 +335,7 @@ func (e *StageEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
