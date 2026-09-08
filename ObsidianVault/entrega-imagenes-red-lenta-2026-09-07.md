@@ -89,11 +89,48 @@ that were the actual target of the bug report.
 `PICTURE_LQIP_QUALITY=30`, `MEDIA_LQIP_MAX_BYTES=512`,
 `HTTP_COMPRESS_LEVEL=5`.
 
-## Next
+## T2 status
 
-T2 (media proxy) and T3 (pagination + frontend concurrency queue +
-skeletons) are still fully unimplemented — see the approved plan
-(`el-otro-d-a-estuve-encapsulated-feather.md` in the owner's local Claude
-plans directory) for the full design. Planned vault notes
-`media-proxy-content-addressed.md` and `catalogue-pagination.md` don't exist
-yet — write them when T2/T3 actually start.
+Shipped 2026-09-08, see [[media-proxy-content-addressed]] — the
+content-addressed media proxy closes root cause (e) at the root. Backfill
+(`cmd/mediabackfill`) hasn't run yet (blocked on the owner adding
+`MEDIA_URL_SECRET`/`MEDIA_ID_SALT` to `deployments/.env`), so every existing
+row still resolves through the old presign fallback for now.
+
+## T3 status (2026-09-08, partial)
+
+Root cause (a) — the concurrency stampede, the one that actually produced
+"zero images loaded" — is now fixed: `shared/lib/image-queue.ts` caps
+concurrent image fetches (4 web / 3 native) with priority lanes and a
+watchdog, `LazyImage` owns the whole image well (skeleton → LQIP → real
+image), and it's adopted in `stand-card.tsx` as the reference
+implementation. `expo-image` is in, per the owner's explicit call to use it
+even before a fresh native/EAS build exists — it degrades cleanly to web via
+RNW in the meantime; native testing needs that build later.
+
+**Not done yet** (the bulk of the original T3 scope):
+- Adoption of `LazyImage` in `devil-fruit-card.tsx`/`stage-card.tsx` and the
+  ~8 other call sites (`power-block.tsx`, `stage-banner.tsx`,
+  `loadout-card.tsx`, `home-screen.tsx`, `profile-screen.tsx`,
+  `participant-avatar.tsx`, the three `*-detail.tsx`, `image-lightbox.tsx`).
+- Backend keyset pagination (Stand/DevilFruit/Stage) — see the plan's T3.5-3.8
+  for the `LIMIT`-inside-the-CTE `base` term trap that would otherwise
+  silently drop stands with a late-ordering `evolvesFrom` ancestor.
+- "Cargar más" UI, service worker media caching (`jops-img-v1`).
+
+So retesting the original poor-coverage scenario today would show real
+progress (images load progressively, capped concurrency, no more
+all-at-once stampede) but not the full picture — full catalogues still ship
+unpaginated, and only Stand's grid has the new well.
+
+Two bugs fixed in passing while building this: `react-hooks/set-state-in-effect`
+tripped on `use-image-slot.ts`'s naive reset-in-effect (fixed with this
+repo's own established render-time-key-reset pattern, see
+`use-loadout-reveal.ts`); and `errors.OBJECT_NOT_FOUND`/
+`errors.MEDIA_SIGNATURE_INVALID` were missing from all three i18n locales
+since T2 shipped (`contracts.test.ts` was failing on `develop` before this
+session touched it) — added alongside this work since it was cheap and
+already breaking `test:ci`.
+
+See also [[catalogue-pagination]] (not yet written — write it when the
+backend pagination piece actually starts).
