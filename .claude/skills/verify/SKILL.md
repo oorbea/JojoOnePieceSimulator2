@@ -50,6 +50,10 @@ Run from the repo root (or `apps/backend` with `-f ../../deployments/...`). Redi
 `db-up` running first — that's expected and not part of this check unless the diff actually touches
 those packages, in which case bring `db-up` up first (see `docker-setup.md`).
 
+This is already cache-backed with no extra flags needed: `docker-compose.test.yml`'s
+`backend-test`/`typegen` services mount `go-mod-cache`/`go-build-cache` as named volumes, so module
+downloads and compiled packages survive across runs on their own.
+
 ## 3. Frontend — Docker, no dedicated compose service yet
 
 No `frontend-test` service exists in `docker-compose.test.yml` today. The pattern that works
@@ -66,16 +70,36 @@ docker run --rm -v "$(pwd):/repo:ro" -v jojo-frontend-work:/work node:22-alpine 
   rm -rf /work/repo/frontend && mv /work/repo/frontend_new /work/repo/frontend
   cd /work/repo/frontend
   CI=true pnpm install --frozen-lockfile --prefer-offline
-  pnpm typecheck && pnpm lint && pnpm test:ci
+  pnpm typecheck && pnpm lint && pnpm jest --ci --maxWorkers=2 --cacheDirectory=/work/.jest-cache
 '
 ```
 
-The named volume (`jojo-frontend-work`) caches `node_modules`/the pnpm store across runs so repeat
-verifications in the same session are fast. **Never** bind-mount the real `apps/frontend` directly
-into `pnpm install` — it would overwrite the Windows host's `node_modules` with Linux binaries.
+The named volume (`jojo-frontend-work`) caches `node_modules`/the pnpm store **and now the jest
+transform cache** (`--cacheDirectory=/work/.jest-cache`, on that same volume, so it survives across
+containers) across runs. **Never** bind-mount the real `apps/frontend` directly into
+`pnpm install` — it would overwrite the Windows host's `node_modules` with Linux binaries.
 
-If `pnpm test:ci` shows a handful of failures under full worker parallelism that pass in isolation
-or with `pnpm jest --ci --maxWorkers=2`, that's the known Docker flake pattern (see
+**Mandatory: always pass `--cacheDirectory` on the persistent volume for every Docker-based lint/
+typecheck/test run, backend or frontend** (owner directive, 2026-09-08 — see
+`feedback_frontend_verify_cache` in Claude's own memory). A full frontend `pnpm jest` run without it
+was measured at ~90-95s; the same run warm was ~40-50s. Skipping the cache flag is not a shortcut,
+it's strictly slower and burns the owner's wall-clock time waiting on you.
+
+**During iteration** (fixing one typecheck/lint/test failure at a time), don't re-run the whole
+suite — run only the affected files:
+
+```bash
+pnpm exec eslint <changed-files>
+pnpm jest --ci --maxWorkers=2 --cacheDirectory=/work/.jest-cache <affected-test-file-names>
+```
+
+Run the full `pnpm typecheck && pnpm lint && pnpm jest --ci --maxWorkers=2
+--cacheDirectory=/work/.jest-cache` (or `pnpm test:ci` with the same cache flag baked in) **once**,
+as the final check before reporting a tanda done or committing — targeted runs during iteration
+don't replace that final full pass.
+
+If `pnpm jest` shows a handful of failures under full worker parallelism that pass in isolation or
+with `--maxWorkers=2` (already the default above), that's the known Docker flake pattern (see
 `norma-verificacion-docker.md`) — re-run once before treating it as a real regression.
 
 ## 4. Contracts — regenerate and diff
