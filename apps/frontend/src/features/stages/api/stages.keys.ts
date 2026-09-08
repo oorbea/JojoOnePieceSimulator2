@@ -10,6 +10,8 @@ export const stageKeys = {
   allLocales: [...queryKeys.root, 'stages'] as const,
   all: () => [...stageKeys.allLocales, useLanguageStore.getState().locale] as const,
   list: (filters?: StageFilters) => [...stageKeys.all(), 'list', filters ?? {}] as const,
+  // Distinct from `list` on purpose - see standKeys.page's doc.
+  page: (filters?: StageFilters) => [...stageKeys.all(), 'page', filters ?? {}] as const,
   detail: (id: string) => [...stageKeys.all(), 'detail', id] as const,
   // Admin edit form only - carries every locale at once, so it hangs off
   // allLocales (not all()) and must not be branched by the active UI

@@ -1,7 +1,7 @@
 import { Apple, Pencil, Trash2 } from '@tamagui/lucide-icons-2'
-import { useState } from 'react'
+import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image, Pressable } from 'react-native'
+import { Image, Pressable, type View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -21,7 +21,12 @@ type Props = {
   isEditBusy?: boolean
 }
 
-export function DevilFruitCard({ devilFruit, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props) {
+// forwardRef targets the detail Pressable (the card's main tab stop) - see
+// StandCard's identical doc for why "Cargar más" needs it.
+export const DevilFruitCard = forwardRef<View, Props>(function DevilFruitCard(
+  { devilFruit, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
+  ref
+) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   return (
@@ -45,6 +50,7 @@ export function DevilFruitCard({ devilFruit, onOpenDetail, readOnly, onEdit, onD
       <ImageLightbox visible={isPreviewOpen} uri={devilFruit.picture} onClose={() => setIsPreviewOpen(false)} />
 
       <Pressable
+        ref={ref}
         onPress={onOpenDetail}
         {...a11yProps(t('devilFruits.detailA11y', { name: devilFruit.name }), 'button')}
       >
@@ -88,4 +94,4 @@ export function DevilFruitCard({ devilFruit, onOpenDetail, readOnly, onEdit, onD
       )}
     </WiiCard>
   )
-}
+})

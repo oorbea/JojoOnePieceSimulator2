@@ -1,4 +1,4 @@
-import { useInfiniteQuery, type Query } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useMemo, useRef } from 'react'
 import { Platform } from 'react-native'
 
@@ -43,14 +43,18 @@ export function usePaginatedCatalogue<T>(
   const pollAttempts = useRef(0)
 
   const query = useInfiniteQuery({
-    queryKey,
+    // limit rides along in the key - a different page size for the same
+    // filters is a distinct cached result, and @tanstack/eslint-plugin-query's
+    // exhaustive-deps rule flags it as a real bug otherwise (queryFn closes
+    // over it but the cache wouldn't know to invalidate/refetch on change).
+    queryKey: [...queryKey, limit],
     queryFn: ({ pageParam }) => fetchPage(pageParam, limit),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     refetchInterval:
       Platform.OS === 'web'
         ? undefined
-        : (q: Query<{ pages: CataloguePage<T>[] }>) => {
+        : (q) => {
             const hasPending = q.state.data?.pages.some((page) => page.items.some(hasPendingPicture))
             if (!hasPending) {
               pollAttempts.current = 0
@@ -64,8 +68,23 @@ export function usePaginatedCatalogue<T>(
     refetchIntervalInBackground: true,
   })
 
+  // Explicit fields, not `{...query}` - spreading a TanStack Query result
+  // subscribes the caller to every internal field's changes (isPending,
+  // isPlaceholderData, etc.), most of which nothing here reads - see
+  // @tanstack/eslint-plugin-query's no-rest-destructuring rule.
   const items = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data])
   const total = query.data?.pages[0]?.total
 
-  return { ...query, items, total }
+  return {
+    items,
+    total,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isFetchNextPageError: query.isFetchNextPageError,
+    fetchNextPage: query.fetchNextPage,
+    refetch: query.refetch,
+  }
 }
