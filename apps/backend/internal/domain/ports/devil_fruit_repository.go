@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"strings"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -14,6 +15,16 @@ type DevilFruitFilters struct {
 	// locale-resolved description. Unescaped - callers must escape any
 	// LIKE metacharacter (%, _, \) before this reaches SQL.
 	Search *string
+}
+
+// Canonical - see StandFilters.Canonical's doc for why this exists and what
+// it's the single source of truth for.
+func (f DevilFruitFilters) Canonical() string {
+	return strings.Join([]string{
+		optStringer(f.Rarity),
+		optStringer(f.FruitType),
+		optString(f.Search),
+	}, "|")
 }
 
 type IDevilFruitRepository interface {

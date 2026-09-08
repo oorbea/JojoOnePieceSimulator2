@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"strings"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -27,6 +28,32 @@ type StandFilters struct {
 	// locale-resolved description. Unescaped - callers must escape any
 	// LIKE metacharacter (%, _, \) before this reaches SQL.
 	Search *string
+}
+
+// Canonical renders every field in a fixed order, joined by "|", so two
+// requests differing only in query-param order produce the identical
+// string - the single source of truth both cache/keys.go's standFilterKey
+// (hashed, for the cache key) and dto/pagination.go's
+// StandFiltersFingerprint (hashed again with locale, for the pagination
+// cursor) build on. Before this method existed, both call sites duplicated
+// this field list separately, and a field added to StandFilters without
+// updating both was a silent correctness gap - see
+// ObsidianVault/catalogue-pagination.md. A field added to the struct now
+// only has one place to add it here; canonical_test.go's field-count
+// assertion fails loudly if this method itself falls out of sync with the
+// struct instead.
+func (f StandFilters) Canonical() string {
+	return strings.Join([]string{
+		optStringer(f.Rarity),
+		optStringer(f.AttackPower),
+		optStringer(f.Speed),
+		optStringer(f.AttackRange),
+		optStringer(f.Endurance),
+		optStringer(f.Precision),
+		optStringer(f.Potential),
+		optString(f.EvolvesFrom),
+		optString(f.Search),
+	}, "|")
 }
 
 type IStandRepository interface {
