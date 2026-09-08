@@ -16,7 +16,11 @@
     "search": "Buscar",
     "typeToFilter": "Escribe para filtrar…",
     "noMatches": "Sin resultados",
-    "clearLabel": "Borrar {{label}}"
+    "clearLabel": "Borrar {{label}}",
+    "imageLoading": "Cargando imagen",
+    "imageUnavailable": "Imagen no disponible",
+    "imageGenerating": "Generando imagen",
+    "imageRetry": "Reintentar cargar imagen"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",
