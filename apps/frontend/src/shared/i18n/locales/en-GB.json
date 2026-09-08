@@ -20,7 +20,11 @@
     "imageLoading": "Image loading",
     "imageUnavailable": "Image unavailable",
     "imageGenerating": "Image generating",
-    "imageRetry": "Retry loading image"
+    "imageRetry": "Retry loading image",
+    "loadMore": "Load more",
+    "loadMoreRetry": "Retry",
+    "itemsLoadedOfTotal": "{{loaded}} / {{total}}",
+    "allItemsLoaded": "That's all ({{total}})"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",

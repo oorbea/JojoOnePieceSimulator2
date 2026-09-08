@@ -1,6 +1,8 @@
 import { Plus, Sparkles, TriangleAlert } from '@tamagui/lucide-icons-2'
+import { useEffect, useRef } from 'react'
 import type { Control, FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import type { View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
@@ -83,6 +85,15 @@ type BaseProps = {
   detailStand: StandResponse | null
   onOpenDetail: (stand: StandResponse) => void
   onCloseDetail: () => void
+  // Pagination is opt-in: omitting all of these (the admin container's
+  // case, which deliberately keeps the full unpaginated fetch - see
+  // ObsidianVault/entrega-imagenes-red-lenta-2026-09-07.md's T1.4 note)
+  // renders no "Cargar más" section at all.
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
+  isLoadMoreError?: boolean
+  onLoadMore?: () => void
+  total?: number
 }
 
 type WritableProps = {
@@ -131,8 +142,39 @@ export function StandsScreen(props: Props) {
     detailStand,
     onOpenDetail,
     onCloseDetail,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoadMoreError,
+    onLoadMore,
+    total,
   } = props
   const { t } = useTranslation()
+
+  // Focus management for "Cargar más": after a successful append, move
+  // focus to the first newly-added card so a keyboard user isn't left on a
+  // button that may have moved or unmounted (norma-teclado.md) - see
+  // ObsidianVault/entrega-imagenes-red-lenta-2026-09-07.md's T3.10 note.
+  const cardRefs = useRef(new Map<string, View | null>())
+  const prevLengthRef = useRef(stands.length)
+  const wasFetchingRef = useRef(isFetchingNextPage ?? false)
+  useEffect(() => {
+    const wasFetching = wasFetchingRef.current
+    wasFetchingRef.current = isFetchingNextPage ?? false
+    if (wasFetching && !isFetchingNextPage && stands.length > prevLengthRef.current) {
+      const firstNew = stands[prevLengthRef.current]
+      const el = firstNew ? cardRefs.current.get(firstNew.id) : null
+      // Native RN Views have no DOM-style .focus() (unlike react-native-web's
+      // host node) - moving accessibility focus there needs
+      // AccessibilityInfo.setAccessibilityFocus, out of scope for this pass.
+      // Guarding on the method's existence keeps native a no-op instead of a
+      // crash while still fixing the actual reported bug's platform (web).
+      if (el && typeof (el as unknown as { focus?: () => void }).focus === 'function') {
+        ;(el as unknown as { focus: () => void }).focus()
+      }
+    }
+    prevLengthRef.current = stands.length
+  }, [stands, isFetchingNextPage])
+
   return (
     <YStack flex={1} position="relative">
       <PageShell align="top" scroll maxWidth={960}>
@@ -241,22 +283,66 @@ export function StandsScreen(props: Props) {
             )}
           </GlassPanel>
         ) : (
-          <XStack flexWrap="wrap" gap="$4" justify="center">
-            {stands.map((stand) =>
-              props.readOnly ? (
-                <StandCard key={stand.id} stand={stand} onOpenDetail={() => onOpenDetail(stand)} readOnly />
-              ) : (
-                <StandCard
-                  key={stand.id}
-                  stand={stand}
-                  onOpenDetail={() => onOpenDetail(stand)}
-                  onEdit={() => props.onEdit(stand)}
-                  onDelete={() => props.onDelete(stand)}
-                  isEditBusy={props.openingEditId === stand.id}
-                />
-              )
-            )}
-          </XStack>
+          <>
+            <XStack flexWrap="wrap" gap="$4" justify="center">
+              {stands.map((stand) =>
+                props.readOnly ? (
+                  <StandCard
+                    key={stand.id}
+                    ref={(el) => {
+                      cardRefs.current.set(stand.id, el)
+                    }}
+                    stand={stand}
+                    onOpenDetail={() => onOpenDetail(stand)}
+                    readOnly
+                  />
+                ) : (
+                  <StandCard
+                    key={stand.id}
+                    ref={(el) => {
+                      cardRefs.current.set(stand.id, el)
+                    }}
+                    stand={stand}
+                    onOpenDetail={() => onOpenDetail(stand)}
+                    onEdit={() => props.onEdit(stand)}
+                    onDelete={() => props.onDelete(stand)}
+                    isEditBusy={props.openingEditId === stand.id}
+                  />
+                )
+              )}
+            </XStack>
+
+            {onLoadMore ? (
+              <YStack width="100%" items="center" gap="$2" py="$4">
+                {hasNextPage ? (
+                  <>
+                    <GlossButton
+                      tone={isLoadMoreError ? 'orange' : 'blue'}
+                      btnSize="md"
+                      onPress={onLoadMore}
+                      disabled={isFetchingNextPage}
+                      accessibilityLabel={t(isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore')}
+                    >
+                      {isFetchingNextPage ? (
+                        <Spinner size="small" color="white" />
+                      ) : (
+                        t(isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore')
+                      )}
+                    </GlossButton>
+                    {typeof total === 'number' ? (
+                      <GlowText level="label" tone="soft">
+                        {t('common.itemsLoadedOfTotal', { loaded: stands.length, total })}
+                      </GlowText>
+                    ) : null}
+                  </>
+                ) : typeof total === 'number' ? (
+                  <GlowText level="label" tone="soft">
+                    {t('common.allItemsLoaded', { total })}
+                  </GlowText>
+                ) : null}
+              </YStack>
+            ) : null}
+          </>
         )}
       </PageShell>
 
