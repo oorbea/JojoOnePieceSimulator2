@@ -66,6 +66,7 @@ export const StandCard = forwardRef<View, Props>(function StandCard(
       <ImageLightbox
         visible={isPreviewOpen}
         uri={fullSource(stand)}
+        lqip={lqipSource(stand)}
         onClose={() => setIsPreviewOpen(false)}
       />
 

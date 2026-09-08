@@ -1,14 +1,15 @@
 import { Map } from '@tamagui/lucide-icons-2'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image, Pressable } from 'react-native'
+import { Pressable } from 'react-native'
 import { XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
-import { InsetRing } from '@/shared/components/presentational/wii-card'
+import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
 import { a11yProps } from '@/shared/lib/a11y'
+import { fullSource, lqipSource } from '@/shared/lib/picture-source'
 import type { StageResponse } from '@/features/stages/types/stages.types'
 
 type Props = {
@@ -18,27 +19,32 @@ type Props = {
 export function StageDetail({ stage }: Props) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [imageState, setImageState] = useState<LazyImageState>('queued')
+  const [retryToken, setRetryToken] = useState(0)
+  const uri = fullSource(stage)
+  const isImageError = imageState === 'error'
   return (
     <YStack gap="$4">
       <Pressable
-        onPress={() => setIsPreviewOpen(true)}
-        disabled={!stage.picture}
-        {...a11yProps(t('stages.previewA11y', { name: stage.name }), 'imagebutton')}
+        onPress={() => (isImageError ? setRetryToken((n) => n + 1) : setIsPreviewOpen(true))}
+        disabled={!uri}
+        {...a11yProps(
+          t(isImageError ? 'common.imageRetry' : 'stages.previewA11y', { name: stage.name }),
+          'imagebutton'
+        )}
       >
-        <YStack width="100%" height={220} rounded="$card" overflow="hidden" position="relative" bg="$plasticEdge">
-          <InsetRing rounded="$card" />
-          {/* `|| null`, not `??` - see admin-panel-crud-ux-fixes.md, empty
-              string is falsy but not nullish and shouldn't sneak through. */}
-          {stage.picture || null ? (
-            <Image source={{ uri: stage.picture }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-          ) : (
-            <YStack flex={1} items="center" justify="center">
-              <Map size={40} color="$wiiBlue" />
-            </YStack>
-          )}
-        </YStack>
+        <LazyImage
+          uri={uri}
+          lqip={lqipSource(stage)}
+          height={220}
+          contentFit="contain"
+          pictureStatus={stage.pictureStatus}
+          retryToken={retryToken}
+          onStateChange={setImageState}
+          fallback={<Map size={40} color="$wiiBlue" />}
+        />
       </Pressable>
-      <ImageLightbox visible={isPreviewOpen} uri={stage.picture || null} onClose={() => setIsPreviewOpen(false)} />
+      <ImageLightbox visible={isPreviewOpen} uri={uri} lqip={lqipSource(stage)} onClose={() => setIsPreviewOpen(false)} />
 
       <XStack gap="$2" flexWrap="wrap">
         <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
