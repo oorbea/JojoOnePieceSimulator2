@@ -5,7 +5,6 @@ tags:
   - jojo-onepiece-simulator
   - backend
   - performance
-  - in-progress
 ---
 
 # Catalogue pagination (2026-09-08)
