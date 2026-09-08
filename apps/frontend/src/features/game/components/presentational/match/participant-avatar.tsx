@@ -1,11 +1,10 @@
 import { Bot } from '@tamagui/lucide-icons-2'
-import { Image } from 'react-native'
 import { YStack } from 'tamagui'
 
 import { teamTone, teamToneColor } from '@/features/game/lib/lobby-rules'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { InsetRing } from '@/shared/components/presentational/wii-card'
+import { LazyImage } from '@/shared/components/presentational/lazy-image'
 
 // Deterministic (never random) tone for a participant with no picture at
 // all - the same id always gets the same colour, reusing the four tones
@@ -40,26 +39,31 @@ export function ParticipantAvatar({ participant, size, isSelf = false }: Props) 
       height={size}
       rounded="$circle"
       overflow="hidden"
-      position="relative"
-      items="center"
-      justify="center"
-      bg={(isBot ? '$plasticEdge' : toneFor(participant.id)) as never}
       borderWidth={isSelf ? 2.5 : 1.5}
       borderColor={isSelf ? ('$wiiBlue' as never) : '$glassEdge'}
     >
-      <InsetRing rounded="$circle" />
-      {participant.avatarThumb ? (
-        <Image
-          source={{ uri: participant.avatarThumb }}
-          style={{ width: '100%', height: '100%' }}
-        />
-      ) : isBot ? (
-        <Bot size={size * 0.46} color="$panelTextSoft" />
-      ) : (
-        <GlowText level="heading" tone="onColor" fontSize={size * 0.42}>
-          {initialFor(participant.displayName)}
-        </GlowText>
-      )}
+      <LazyImage
+        uri={participant.avatarThumb || null}
+        height={size}
+        rounded="$circle"
+        fallback={
+          <YStack
+            flex={1}
+            width="100%"
+            items="center"
+            justify="center"
+            bg={(isBot ? '$plasticEdge' : toneFor(participant.id)) as never}
+          >
+            {isBot ? (
+              <Bot size={size * 0.46} color="$panelTextSoft" />
+            ) : (
+              <GlowText level="heading" tone="onColor" fontSize={size * 0.42}>
+                {initialFor(participant.displayName)}
+              </GlowText>
+            )}
+          </YStack>
+        }
+      />
     </YStack>
   )
 }

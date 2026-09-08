@@ -22,6 +22,8 @@ type countingDevilFruitRepository struct {
 	findByNameCalls int
 	getAllCalls     int
 	filterCalls     int
+	pageCalls       int
+	countCalls      int
 	updatePicCalls  int
 	notFoundErr     error
 }
@@ -85,6 +87,34 @@ func (r *countingDevilFruitRepository) Filter(_ context.Context, filters ports.D
 	return results, nil
 }
 
+func (r *countingDevilFruitRepository) Page(_ context.Context, filters ports.DevilFruitFilters, _ enums.Locale, _ *string, _ int) ([]*powers.DevilFruit, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pageCalls++
+	var results []*powers.DevilFruit
+	for _, f := range r.fruits {
+		if filters.Rarity != nil && f.Rarity() != *filters.Rarity {
+			continue
+		}
+		results = append(results, f)
+	}
+	return results, false, nil
+}
+
+func (r *countingDevilFruitRepository) Count(_ context.Context, filters ports.DevilFruitFilters, _ enums.Locale) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.countCalls++
+	count := 0
+	for _, f := range r.fruits {
+		if filters.Rarity != nil && f.Rarity() != *filters.Rarity {
+			continue
+		}
+		count++
+	}
+	return count, nil
+}
+
 func (r *countingDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -102,7 +132,7 @@ func (r *countingDevilFruitRepository) Delete(_ context.Context, id powers.Power
 	return nil
 }
 
-func (r *countingDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (r *countingDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.updatePicCalls++
@@ -110,14 +140,31 @@ func (r *countingDevilFruitRepository) UpdatePicture(_ context.Context, id power
 	if !ok {
 		return ports.ErrDevilFruitNotFound
 	}
-	newMain, newThumb := f.Picture(), f.PictureThumb()
+	newMain, newThumb, newCard, newLqip := f.Picture(), f.PictureThumb(), f.PictureCard(), f.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	f.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	f.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	return nil
+}
+
+func (r *countingDevilFruitRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	f, ok := r.fruits[id]
+	if !ok {
+		return ports.ErrDevilFruitNotFound
+	}
+	f.SetMediaID(mediaID)
 	return nil
 }
 
@@ -225,7 +272,7 @@ func TestDevilFruitRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	}
 
 	main := "new-key"
-	if err := repo.UpdatePicture(ctx, fruit.ID(), &main, nil, enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(ctx, fruit.ID(), &main, nil, nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 
@@ -255,8 +302,8 @@ func TestDevilFruitRepository_Save_ErrorDoesNotInvalidate(t *testing.T) {
 	if err := repo.Save(ctx, fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}}); err == nil {
 		t.Fatal("Save over a failing repository: err = nil, want an error")
 	}
-	if c.gen["devil_fruits"] != 0 {
-		t.Errorf("devil_fruits generation = %d, want 0 (a failed Save must not invalidate)", c.gen["devil_fruits"])
+	if c.gen["devil_fruits:v2"] != 0 {
+		t.Errorf("devil_fruits generation = %d, want 0 (a failed Save must not invalidate)", c.gen["devil_fruits:v2"])
 	}
 }
 

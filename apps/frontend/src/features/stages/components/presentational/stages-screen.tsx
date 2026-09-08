@@ -1,6 +1,8 @@
-import { Map, Plus, TriangleAlert } from '@tamagui/lucide-icons-2'
+import { Map as MapIcon, Plus, TriangleAlert } from '@tamagui/lucide-icons-2'
+import { useEffect, useRef } from 'react'
 import type { Control, FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import type { View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
@@ -15,6 +17,7 @@ import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import type { Locale } from '@/shared/contracts/enums'
+import { focusElement } from '@/shared/lib/a11y'
 import type { StageFormValues, StageResponse } from '@/features/stages/types/stages.types'
 
 import { StageCard } from './stage-card'
@@ -59,6 +62,13 @@ type BaseProps = {
   detailStage: StageResponse | null
   onOpenDetail: (stage: StageResponse) => void
   onCloseDetail: () => void
+  // Pagination is opt-in - see StandsScreen's identical props for the full
+  // doc (admin screen omits all of these and renders no "Cargar más").
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
+  isLoadMoreError?: boolean
+  onLoadMore?: () => void
+  total?: number
 }
 
 type WritableProps = {
@@ -98,8 +108,29 @@ export function StagesScreen(props: Props) {
     detailStage,
     onOpenDetail,
     onCloseDetail,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoadMoreError,
+    onLoadMore,
+    total,
   } = props
   const { t } = useTranslation()
+
+  // Focus management for "Cargar más" - see StandsScreen's identical effect
+  // for the full doc.
+  const cardRefs = useRef(new Map<string, View | null>())
+  const prevLengthRef = useRef(stages.length)
+  const wasFetchingRef = useRef(isFetchingNextPage ?? false)
+  useEffect(() => {
+    const wasFetching = wasFetchingRef.current
+    wasFetchingRef.current = isFetchingNextPage ?? false
+    if (wasFetching && !isFetchingNextPage && stages.length > prevLengthRef.current) {
+      const firstNew = stages[prevLengthRef.current]
+      focusElement(firstNew ? (cardRefs.current.get(firstNew.id) ?? null) : null)
+    }
+    prevLengthRef.current = stages.length
+  }, [stages, isFetchingNextPage])
+
   return (
     <YStack flex={1} position="relative">
       <PageShell align="top" scroll maxWidth={960}>
@@ -160,7 +191,7 @@ export function StagesScreen(props: Props) {
           </GlassPanel>
         ) : stages.length === 0 ? (
           <GlassPanel tone="plastic" elevate={0} width="100%" p="$6" gap="$3" items="center">
-            <Map size={28} color="$wiiBlue" />
+            <MapIcon size={28} color="$wiiBlue" />
             <GlowText level="label" align="center">
               {t(hasActiveFilters ? 'stages.emptyFilteredTitle' : 'stages.emptyTitle')}
             </GlowText>
@@ -176,22 +207,66 @@ export function StagesScreen(props: Props) {
             )}
           </GlassPanel>
         ) : (
-          <XStack flexWrap="wrap" gap="$4" justify="center">
-            {stages.map((stage) =>
-              props.readOnly ? (
-                <StageCard key={stage.id} stage={stage} onOpenDetail={() => onOpenDetail(stage)} readOnly />
-              ) : (
-                <StageCard
-                  key={stage.id}
-                  stage={stage}
-                  onOpenDetail={() => onOpenDetail(stage)}
-                  onEdit={() => props.onEdit(stage)}
-                  onDelete={() => props.onDelete(stage)}
-                  isEditBusy={props.openingEditId === stage.id}
-                />
-              )
-            )}
-          </XStack>
+          <>
+            <XStack flexWrap="wrap" gap="$4" justify="center">
+              {stages.map((stage) =>
+                props.readOnly ? (
+                  <StageCard
+                    key={stage.id}
+                    ref={(el) => {
+                      cardRefs.current.set(stage.id, el)
+                    }}
+                    stage={stage}
+                    onOpenDetail={() => onOpenDetail(stage)}
+                    readOnly
+                  />
+                ) : (
+                  <StageCard
+                    key={stage.id}
+                    ref={(el) => {
+                      cardRefs.current.set(stage.id, el)
+                    }}
+                    stage={stage}
+                    onOpenDetail={() => onOpenDetail(stage)}
+                    onEdit={() => props.onEdit(stage)}
+                    onDelete={() => props.onDelete(stage)}
+                    isEditBusy={props.openingEditId === stage.id}
+                  />
+                )
+              )}
+            </XStack>
+
+            {onLoadMore ? (
+              <YStack width="100%" items="center" gap="$2" py="$4">
+                {hasNextPage ? (
+                  <>
+                    <GlossButton
+                      tone={isLoadMoreError ? 'orange' : 'blue'}
+                      btnSize="md"
+                      onPress={onLoadMore}
+                      disabled={isFetchingNextPage}
+                      accessibilityLabel={t(isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore')}
+                    >
+                      {isFetchingNextPage ? (
+                        <Spinner size="small" color="white" />
+                      ) : (
+                        t(isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore')
+                      )}
+                    </GlossButton>
+                    {typeof total === 'number' ? (
+                      <GlowText level="label" tone="soft">
+                        {t('common.itemsLoadedOfTotal', { loaded: stages.length, total })}
+                      </GlowText>
+                    ) : null}
+                  </>
+                ) : typeof total === 'number' ? (
+                  <GlowText level="label" tone="soft">
+                    {t('common.allItemsLoaded', { total })}
+                  </GlowText>
+                ) : null}
+              </YStack>
+            ) : null}
+          </>
         )}
       </PageShell>
 

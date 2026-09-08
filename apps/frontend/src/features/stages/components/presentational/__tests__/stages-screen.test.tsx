@@ -21,7 +21,9 @@ function baseStage(overrides: Partial<StageResponse> = {}): StageResponse {
     description: 'A globe-trotting journey to save Holly Kujo.',
     picture: '',
     pictureThumb: '',
+    pictureCard: '',
     pictureStatus: 'NONE',
+    pictureLqip: '',
     ...overrides,
   }
 }
@@ -32,11 +34,27 @@ type HarnessProps = {
   search?: string
   onSearchChange?: (search: string) => void
   hasActiveFilters?: boolean
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
+  isLoadMoreError?: boolean
+  onLoadMore?: () => void
+  total?: number
 }
 
 // Real (not mocked) detail-modal state - see stands-screen.test.tsx's
 // Harness for why.
-function Harness({ readOnly, stages, search, onSearchChange, hasActiveFilters }: HarnessProps) {
+function Harness({
+  readOnly,
+  stages,
+  search,
+  onSearchChange,
+  hasActiveFilters,
+  hasNextPage,
+  isFetchingNextPage,
+  isLoadMoreError,
+  onLoadMore,
+  total,
+}: HarnessProps) {
   const {
     control,
     formState: { errors },
@@ -65,6 +83,11 @@ function Harness({ readOnly, stages, search, onSearchChange, hasActiveFilters }:
     detailStage,
     onOpenDetail: setDetailStage,
     onCloseDetail: () => setDetailStage(null),
+    hasNextPage,
+    isFetchingNextPage,
+    isLoadMoreError,
+    onLoadMore,
+    total,
   }
 
   if (readOnly) return <StagesScreen {...base} readOnly />
@@ -166,6 +189,43 @@ describe('StagesScreen', () => {
 
       expect(screen.getAllByText('A globe-trotting journey to save Holly Kujo.')).toHaveLength(2)
       expect(screen.queryByLabelText('Edit Stardust Crusaders')).toBeNull()
+    })
+  })
+
+  describe('"Cargar más" (load more)', () => {
+    it('renders no load-more section when onLoadMore is omitted', async () => {
+      await renderWithProviders(<Harness hasNextPage total={40} />)
+
+      expect(screen.queryByLabelText('Load more')).toBeNull()
+    })
+
+    it('shows the Load more button with the loaded/total count when there is a next page', async () => {
+      const onLoadMore = jest.fn()
+      await renderWithProviders(<Harness hasNextPage onLoadMore={onLoadMore} total={40} />)
+
+      expect(screen.getByLabelText('Load more')).toBeTruthy()
+      expect(screen.getByText('1 / 40')).toBeTruthy()
+
+      await act(async () => {
+        fireEvent.press(screen.getByLabelText('Load more'))
+      })
+      expect(onLoadMore).toHaveBeenCalled()
+    })
+
+    it('shows a Retry label instead of Load more once a page load fails', async () => {
+      await renderWithProviders(
+        <Harness hasNextPage onLoadMore={jest.fn()} isLoadMoreError total={40} />
+      )
+
+      expect(screen.getByLabelText('Retry')).toBeTruthy()
+      expect(screen.queryByLabelText('Load more')).toBeNull()
+    })
+
+    it('shows "That\'s all" once the list is exhausted', async () => {
+      await renderWithProviders(<Harness hasNextPage={false} onLoadMore={jest.fn()} total={1} />)
+
+      expect(screen.getByText("That's all (1)")).toBeTruthy()
+      expect(screen.queryByLabelText('Load more')).toBeNull()
     })
   })
 })

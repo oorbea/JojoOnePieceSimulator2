@@ -137,6 +137,7 @@ func TestNewGameStateResponse_TiedVotes(t *testing.T) {
 
 	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse: %v", err)
@@ -217,6 +218,7 @@ func TestNewGameStateResponse_ResolvedRound_VotedParticipantIDsNeverNull(t *test
 	}
 	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse: %v", err)
@@ -274,12 +276,14 @@ func TestNewGameStateResponse_LoadoutStandText_PerViewerLocale(t *testing.T) {
 
 	esResp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, esResolver, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse (es-ES): %v", err)
 	}
 	caResp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, caResolver, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse (ca-ES): %v", err)
@@ -323,6 +327,7 @@ func TestNewGameStateResponse_LoadoutStandText_FallsBackOnMissingTranslation(t *
 
 	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, empty, empty, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse: %v", err)
@@ -399,6 +404,7 @@ func TestNewGameStateResponse_ParticipantAvatar(t *testing.T) {
 
 	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, presignThumb,
+		dto.MediaURLBuilder{},
 		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse: %v", err)
@@ -433,6 +439,7 @@ func TestNewGameStateResponse_Deadlines(t *testing.T) {
 	votingEndsAt := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, noFruitText, noFruitText,
 		dto.GameStateDeadlines{VotingEndsAt: &votingEndsAt})
 	if err != nil {
@@ -451,6 +458,7 @@ func TestNewGameStateResponse_Deadlines(t *testing.T) {
 	}
 	empty, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse (zero deadlines): %v", err)
@@ -469,6 +477,7 @@ func TestNewGameStateResponse_Deadlines(t *testing.T) {
 	resultEndsAt := time.Date(2026, 1, 1, 12, 0, 6, 0, time.UTC)
 	resultResp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
 		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
 		noStageText, noFruitText, noFruitText,
 		dto.GameStateDeadlines{ResultEndsAt: &resultEndsAt})
 	if err != nil {

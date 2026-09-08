@@ -428,16 +428,29 @@ type GameResultParticipant struct {
 	IsBot         bool
 }
 
+type MediaObject struct {
+	GroupID     string
+	Variant     string
+	StorageKey  string
+	ContentType string
+	Bytes       int64
+	Scope       string
+	CreatedAt   pgtype.Timestamptz
+}
+
 type Power struct {
-	ID            pgtype.UUID
-	Kind          string
-	Name          string
-	Rarity        string
-	Picture       string
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	PictureThumb  string
-	PictureStatus string
+	ID             pgtype.UUID
+	Kind           string
+	Name           string
+	Rarity         string
+	Picture        string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	PictureThumb   string
+	PictureStatus  string
+	PictureCard    string
+	PictureLqip    string
+	PictureMediaID string
 }
 
 type PowerTranslation struct {
@@ -448,15 +461,18 @@ type PowerTranslation struct {
 }
 
 type Stage struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+	Picture        string
+	PictureThumb   string
+	PictureStatus  string
+	PictureCard    string
+	PictureLqip    string
+	PictureMediaID string
 }
 
 type StageTranslation struct {
@@ -498,4 +514,7 @@ type User struct {
 	AvatarThumbKey string
 	AvatarStatus   string
 	Language       string
+	AvatarCardKey  string
+	AvatarLqip     string
+	AvatarMediaID  string
 }

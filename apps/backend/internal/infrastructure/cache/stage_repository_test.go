@@ -24,6 +24,8 @@ type countingStageRepository struct {
 	stagesCalls    int
 	listCalls      int
 	filterCalls    int
+	pageCalls      int
+	countCalls     int
 	findByIDCalls  int
 	translateCalls int
 	updatePicCalls int
@@ -74,6 +76,34 @@ func (r *countingStageRepository) Filter(_ context.Context, filters ports.StageF
 	return results, nil
 }
 
+func (r *countingStageRepository) Page(_ context.Context, filters ports.StageFilters, _ enums.Locale, _ *ports.StagePageCursor, _ int) ([]game.Stage, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pageCalls++
+	var results []game.Stage
+	for _, s := range r.stages {
+		if filters.Manga != nil && s.Manga() != *filters.Manga {
+			continue
+		}
+		results = append(results, s)
+	}
+	return results, false, nil
+}
+
+func (r *countingStageRepository) Count(_ context.Context, filters ports.StageFilters, _ enums.Locale) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.countCalls++
+	count := 0
+	for _, s := range r.stages {
+		if filters.Manga != nil && s.Manga() != *filters.Manga {
+			continue
+		}
+		count++
+	}
+	return count, nil
+}
+
 func (r *countingStageRepository) FindByID(_ context.Context, id game.StageID, _ enums.Locale) (game.Stage, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -113,7 +143,7 @@ func (r *countingStageRepository) Translations(_ context.Context, id game.StageI
 	return ports.StageTranslations{enums.EnGB: s.Description()}, nil
 }
 
-func (r *countingStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+func (r *countingStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.updatePicCalls++
@@ -121,14 +151,32 @@ func (r *countingStageRepository) UpdatePicture(_ context.Context, id game.Stage
 	if !ok {
 		return ports.ErrStageNotFound
 	}
-	newMain, newThumb := s.Picture(), s.PictureThumb()
+	newMain, newThumb, newCard, newLqip := s.Picture(), s.PictureThumb(), s.PictureCard(), s.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	s.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	r.stages[id] = s
+	return nil
+}
+
+func (r *countingStageRepository) SetMediaID(_ context.Context, id game.StageID, mediaID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s, ok := r.stages[id]
+	if !ok {
+		return ports.ErrStageNotFound
+	}
+	s.SetMediaID(mediaID)
 	r.stages[id] = s
 	return nil
 }
@@ -277,7 +325,7 @@ func TestStageRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	// The background picture worker's path: publishing READY once a
 	// transcode finishes must be visible to readers immediately.
 	main, thumb := "stages/main.webp", "stages/thumb.webp"
-	if err := repo.UpdatePicture(ctx, stage.ID(), &main, &thumb, enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(ctx, stage.ID(), &main, &thumb, nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

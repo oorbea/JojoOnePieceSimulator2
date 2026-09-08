@@ -112,32 +112,38 @@ func (f *fakeGameUserRepository) UpdateLanguage(_ context.Context, id user.UserI
 	return u.ChangeLanguage(language)
 }
 
-func (f *fakeGameUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeGameUserRepository) UpdateAvatar(_ context.Context, id user.UserID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
 		return ports.ErrUserNotFound
 	}
-	newMain, newThumb := u.AvatarKey(), u.AvatarThumbKey()
+	newMain, newThumb, newCard, newLqip := u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), u.AvatarLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	u.SetAvatarRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	u.SetAvatarRenditions(newMain, newThumb, newCard, newLqip, status)
 	return nil
 }
 
-func (f *fakeGameUserRepository) AvatarKeys(_ context.Context, id user.UserID) (string, string, error) {
+func (f *fakeGameUserRepository) AvatarKeys(_ context.Context, id user.UserID) (string, string, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	u, ok := f.users[id]
 	if !ok {
-		return "", "", ports.ErrUserNotFound
+		return "", "", "", ports.ErrUserNotFound
 	}
-	return u.AvatarKey(), u.AvatarThumbKey(), nil
+	return u.AvatarKey(), u.AvatarThumbKey(), u.AvatarCardKey(), nil
 }
 
 func (f *fakeGameUserRepository) UpdateRole(_ context.Context, id user.UserID, role enums.UserRole) error {
@@ -190,6 +196,17 @@ func (f *fakeGameUserRepository) CountAdmins(_ context.Context) (int64, error) {
 	return count, nil
 }
 
+func (f *fakeGameUserRepository) SetAvatarMediaID(_ context.Context, id user.UserID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	u.SetAvatarMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IUserRepository = (*fakeGameUserRepository)(nil)
 
 // fakeGameStageRepository is a minimal in-memory ports.IStageRepository -
@@ -206,6 +223,14 @@ func (fakeGameStageRepository) Filter(context.Context, ports.StageFilters, enums
 	return nil, nil
 }
 
+func (fakeGameStageRepository) Page(context.Context, ports.StageFilters, enums.Locale, *ports.StagePageCursor, int) ([]game.Stage, bool, error) {
+	return nil, false, nil
+}
+
+func (fakeGameStageRepository) Count(context.Context, ports.StageFilters, enums.Locale) (int, error) {
+	return 0, nil
+}
+
 func (fakeGameStageRepository) FindByID(context.Context, game.StageID, enums.Locale) (game.Stage, error) {
 	return game.Stage{}, ports.ErrStageNotFound
 }
@@ -220,9 +245,11 @@ func (fakeGameStageRepository) Translations(context.Context, game.StageID) (port
 	return ports.StageTranslations{}, nil
 }
 
-func (fakeGameStageRepository) UpdatePicture(context.Context, game.StageID, *string, *string, enums.PictureStatus) error {
+func (fakeGameStageRepository) UpdatePicture(context.Context, game.StageID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
+
+func (fakeGameStageRepository) SetMediaID(context.Context, game.StageID, string) error { return nil }
 
 var _ ports.IStageRepository = fakeGameStageRepository{}
 
@@ -253,19 +280,33 @@ func (fakeGameStandRepository) Filter(context.Context, ports.StandFilters, enums
 	return nil, nil
 }
 
+func (fakeGameStandRepository) Options(context.Context) ([]ports.StandOption, error) {
+	return nil, nil
+}
+
+func (fakeGameStandRepository) Page(context.Context, ports.StandFilters, enums.Locale, *string, int) ([]*powers.Stand, bool, error) {
+	return nil, false, nil
+}
+
+func (fakeGameStandRepository) Count(context.Context, ports.StandFilters, enums.Locale) (int, error) {
+	return 0, nil
+}
+
 func (fakeGameStandRepository) Save(context.Context, *powers.Stand, ports.PowerTranslations) error {
 	return nil
 }
 
 func (fakeGameStandRepository) Delete(context.Context, powers.PowerID) error { return nil }
 
-func (fakeGameStandRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, enums.PictureStatus) error {
+func (fakeGameStandRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
 
 func (f fakeGameStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	return f.translations[id], nil
 }
+
+func (fakeGameStandRepository) SetMediaID(context.Context, powers.PowerID, string) error { return nil }
 
 var _ ports.IStandRepository = fakeGameStandRepository{}
 
@@ -289,18 +330,30 @@ func (fakeGameDevilFruitRepository) Filter(context.Context, ports.DevilFruitFilt
 	return nil, nil
 }
 
+func (fakeGameDevilFruitRepository) Page(context.Context, ports.DevilFruitFilters, enums.Locale, *string, int) ([]*powers.DevilFruit, bool, error) {
+	return nil, false, nil
+}
+
+func (fakeGameDevilFruitRepository) Count(context.Context, ports.DevilFruitFilters, enums.Locale) (int, error) {
+	return 0, nil
+}
+
 func (fakeGameDevilFruitRepository) Save(context.Context, *powers.DevilFruit, ports.PowerTranslations) error {
 	return nil
 }
 
 func (fakeGameDevilFruitRepository) Delete(context.Context, powers.PowerID) error { return nil }
 
-func (fakeGameDevilFruitRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, enums.PictureStatus) error {
+func (fakeGameDevilFruitRepository) UpdatePicture(context.Context, powers.PowerID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
 
 func (f fakeGameDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	return f.translations[id], nil
+}
+
+func (fakeGameDevilFruitRepository) SetMediaID(context.Context, powers.PowerID, string) error {
+	return nil
 }
 
 var _ ports.IDevilFruitRepository = fakeGameDevilFruitRepository{}
@@ -479,7 +532,7 @@ func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 		users, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{})
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{})
+	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 
 	return h, &gameEndpointsTestDeps{users: users, svc: svc, tickets: tickets}
 }

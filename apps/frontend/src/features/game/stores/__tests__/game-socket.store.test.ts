@@ -148,6 +148,7 @@ beforeEach(() => {
         username: 'a',
         completeName: 'A',
         picture: null,
+        pictureThumb: null,
         role: 'REGULAR',
         language: 'en-GB',
       },

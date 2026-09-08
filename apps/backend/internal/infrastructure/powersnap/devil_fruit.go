@@ -12,28 +12,34 @@ import (
 // DevilFruit's fields are all unexported, so it can't be marshaled directly -
 // this reads it through its public getters, same reasoning as StandSnapshot.
 type DevilFruitSnapshot struct {
-	ID            [16]byte `json:"id"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Rarity        string   `json:"rarity"`
-	Skills        []string `json:"skills"`
-	Picture       string   `json:"picture"`
-	PictureThumb  string   `json:"pictureThumb"`
-	PictureStatus string   `json:"pictureStatus"`
-	FruitType     string   `json:"fruitType"`
+	ID             [16]byte `json:"id"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
+	Rarity         string   `json:"rarity"`
+	Skills         []string `json:"skills"`
+	Picture        string   `json:"picture"`
+	PictureThumb   string   `json:"pictureThumb"`
+	PictureCard    string   `json:"pictureCard"`
+	PictureStatus  string   `json:"pictureStatus"`
+	PictureLqip    string   `json:"pictureLqip"`
+	PictureMediaID string   `json:"pictureMediaId"`
+	FruitType      string   `json:"fruitType"`
 }
 
 func OfDevilFruit(fruit *powers.DevilFruit) DevilFruitSnapshot {
 	return DevilFruitSnapshot{
-		ID:            fruit.ID(),
-		Name:          fruit.Name(),
-		Description:   fruit.Description(),
-		Rarity:        fruit.Rarity().String(),
-		Skills:        fruit.Skills(),
-		Picture:       fruit.Picture(),
-		PictureThumb:  fruit.PictureThumb(),
-		PictureStatus: fruit.PictureStatus().String(),
-		FruitType:     fruit.FruitType().String(),
+		ID:             fruit.ID(),
+		Name:           fruit.Name(),
+		Description:    fruit.Description(),
+		Rarity:         fruit.Rarity().String(),
+		Skills:         fruit.Skills(),
+		Picture:        fruit.Picture(),
+		PictureThumb:   fruit.PictureThumb(),
+		PictureCard:    fruit.PictureCard(),
+		PictureStatus:  fruit.PictureStatus().String(),
+		PictureLqip:    fruit.PictureLqip(),
+		PictureMediaID: fruit.PictureMediaID(),
+		FruitType:      fruit.FruitType().String(),
 	}
 }
 
@@ -51,7 +57,8 @@ func (s DevilFruitSnapshot) Hydrate() (*powers.DevilFruit, error) {
 	if err != nil {
 		return nil, fmt.Errorf("devil fruit %q: picture_status: %w", s.Name, err)
 	}
-	power.SetPictureRenditions(s.Picture, s.PictureThumb, pictureStatus)
+	power.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
+	power.SetMediaID(s.PictureMediaID)
 
 	fruitType, err := enums.ParseFruitType(s.FruitType)
 	if err != nil {

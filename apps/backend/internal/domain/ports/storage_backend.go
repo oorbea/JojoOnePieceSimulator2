@@ -5,6 +5,12 @@ import (
 	"io"
 )
 
+// ObjectInfo is the metadata Get returns alongside an object's bytes.
+type ObjectInfo struct {
+	ContentType string
+	Size        int64
+}
+
 // IStorageBackend is one S3-API-compatible object-storage provider
 // (Cloudflare R2, Backblaze B2, Supabase Storage, ...). It is deliberately
 // narrower and more mechanical than IPictureStorage: no quota/fallback
@@ -18,6 +24,9 @@ type IStorageBackend interface {
 	// Put uploads content under key. content must have exactly size bytes
 	// left to read.
 	Put(ctx context.Context, key string, content io.Reader, contentType string, size int64) error
+	// Get downloads key's full bytes. Returns ErrObjectNotFound if key
+	// doesn't exist. The caller must Close the returned ReadCloser.
+	Get(ctx context.Context, key string) (io.ReadCloser, ObjectInfo, error)
 	// PresignGet returns a time-limited GET URL for key.
 	PresignGet(ctx context.Context, key string) (string, error)
 	// Del deletes key. Deleting a key that doesn't exist is not an error.

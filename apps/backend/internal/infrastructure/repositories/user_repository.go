@@ -117,12 +117,14 @@ func (r *UserRepository) UpdateLanguage(ctx context.Context, id user.UserID, lan
 }
 
 // UpdateAvatar updates only id's avatar renditions and pipeline status.
-func (r *UserRepository) UpdateAvatar(ctx context.Context, id user.UserID, main, thumb *string, status enums.PictureStatus) error {
+func (r *UserRepository) UpdateAvatar(ctx context.Context, id user.UserID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	err := r.queries.UpdateUserAvatar(ctx, db.UpdateUserAvatarParams{
 		ID:             pgtype.UUID{Bytes: id, Valid: true},
 		AvatarKey:      main,
 		AvatarThumbKey: thumb,
+		AvatarCardKey:  card,
 		AvatarStatus:   status.String(),
+		AvatarLqip:     lqip,
 	})
 	if err != nil {
 		return fmt.Errorf("updating avatar for user %s: %w", id, err)
@@ -130,17 +132,28 @@ func (r *UserRepository) UpdateAvatar(ctx context.Context, id user.UserID, main,
 	return nil
 }
 
-// AvatarKeys returns the main and thumbnail object-storage keys currently
-// stored for id's avatar.
-func (r *UserRepository) AvatarKeys(ctx context.Context, id user.UserID) (string, string, error) {
+// AvatarKeys returns the main, thumbnail and card object-storage keys
+// currently stored for id's avatar.
+func (r *UserRepository) AvatarKeys(ctx context.Context, id user.UserID) (string, string, string, error) {
 	row, err := r.queries.GetUserAvatarKeys(ctx, pgtype.UUID{Bytes: id, Valid: true})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", "", fmt.Errorf("%w: %s", ports.ErrUserNotFound, id)
+			return "", "", "", fmt.Errorf("%w: %s", ports.ErrUserNotFound, id)
 		}
-		return "", "", fmt.Errorf("querying avatar keys for user %s: %w", id, err)
+		return "", "", "", fmt.Errorf("querying avatar keys for user %s: %w", id, err)
 	}
-	return row.AvatarKey, row.AvatarThumbKey, nil
+	return row.AvatarKey, row.AvatarThumbKey, row.AvatarCardKey, nil
+}
+
+// SetAvatarMediaID implements ports.IUserRepository.
+func (r *UserRepository) SetAvatarMediaID(ctx context.Context, id user.UserID, mediaID string) error {
+	if err := r.queries.UpdateUserAvatarMediaID(ctx, db.UpdateUserAvatarMediaIDParams{
+		ID:            pgtype.UUID{Bytes: id, Valid: true},
+		AvatarMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting avatar media id for user %s: %w", id, err)
+	}
+	return nil
 }
 
 // UpdateRole changes only id's role.

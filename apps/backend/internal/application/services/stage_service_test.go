@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -59,6 +60,52 @@ func (f *fakeStageRepository) Filter(_ context.Context, filters ports.StageFilte
 	return out, nil
 }
 
+func (f *fakeStageRepository) Page(ctx context.Context, filters ports.StageFilters, locale enums.Locale, after *ports.StagePageCursor, limit int) ([]game.Stage, bool, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, false, err
+	}
+	less := func(i, j int) bool {
+		if all[i].Manga() != all[j].Manga() {
+			return all[i].Manga().String() < all[j].Manga().String()
+		}
+		if all[i].Order() != all[j].Order() {
+			return all[i].Order() < all[j].Order()
+		}
+		return all[i].Name() < all[j].Name()
+	}
+	sort.Slice(all, less)
+	start := 0
+	if after != nil {
+		afterKey := func(s game.Stage) bool {
+			if s.Manga() != after.Manga {
+				return s.Manga().String() > after.Manga.String()
+			}
+			if s.Order() != after.Position {
+				return s.Order() > after.Position
+			}
+			return s.Name() > after.Name
+		}
+		for i, s := range all {
+			if afterKey(s) {
+				start = i
+				break
+			}
+			start = i + 1
+		}
+	}
+	page := all[start:]
+	if len(page) > limit {
+		return page[:limit], true, nil
+	}
+	return page, false, nil
+}
+
+func (f *fakeStageRepository) Count(ctx context.Context, filters ports.StageFilters, locale enums.Locale) (int, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	return len(all), err
+}
+
 func (f *fakeStageRepository) FindByID(_ context.Context, id game.StageID, _ enums.Locale) (game.Stage, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -100,21 +147,38 @@ func (f *fakeStageRepository) Translations(_ context.Context, id game.StageID) (
 	return t, nil
 }
 
-func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	s, ok := f.stages[id]
 	if !ok {
 		return ports.ErrStageNotFound
 	}
-	newMain, newThumb := s.Picture(), s.PictureThumb()
+	newMain, newThumb, newCard, newLqip := s.Picture(), s.PictureThumb(), s.PictureCard(), s.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	s.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	return nil
+}
+
+func (f *fakeStageRepository) SetMediaID(_ context.Context, id game.StageID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.stages[id]
+	if !ok {
+		return ports.ErrStageNotFound
+	}
+	s.SetMediaID(mediaID)
 	return nil
 }
 
@@ -318,7 +382,7 @@ func TestUpdateStage_PreservesExistingPicture(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	stage := newTestStage(t, repo, idGen, "Jojolion")
-	if err := repo.UpdatePicture(context.Background(), stage.ID(), strPtr("stages/x/main.webp"), strPtr("stages/x/main_thumb.webp"), enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(context.Background(), stage.ID(), strPtr("stages/x/main.webp"), strPtr("stages/x/main_thumb.webp"), nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
@@ -63,11 +64,21 @@ func isAVIF(head []byte) bool {
 
 // StandEndpoints wires the Stand HTTP surface to the application service.
 type StandEndpoints struct {
-	svc *services.StandService
+	svc   *services.StandService
+	media dto.MediaURLBuilder
 }
 
 func NewStandEndpoints(svc *services.StandService) *StandEndpoints {
 	return &StandEndpoints{svc: svc}
+}
+
+// SetMediaURLBuilder wires the content-addressed media URL builder after
+// construction (see PictureWorker.SetMediaRepository's doc for why - every
+// existing caller/test keeps compiling unchanged). The zero value is safe:
+// resolveCatalogPictures/resolveAvatar never call into it while a subject's
+// PictureMediaID/AvatarMediaID is still empty (not backfilled yet).
+func (e *StandEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /stands sub-router: GET/POST on the collection,
@@ -82,6 +93,7 @@ func (e *StandEndpoints) Routes(rateCfg RateLimitConfig, cacheCfg CacheConfig) c
 	read := readRateLimit(rateCfg)
 	cache := cacheHeaders(cacheCfg)
 	r.With(read, cache).Get("/", Wrap(e.list))
+	r.With(read, cache).Get("/options", Wrap(e.options))
 	r.With(read, cache).Get("/{id}", Wrap(e.get))
 
 	r.Group(func(r chi.Router) {
@@ -125,8 +137,21 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-
 	locale := LocaleFromRequest(r)
+
+	// Opt-in pagination: a request with neither ?limit= nor ?cursor= gets
+	// the legacy bare-array response, byte-identical to before - see
+	// ObsidianVault/catalogue-pagination.md for why an unconditional switch
+	// to an envelope is a hazard (a stale tab's already-loaded JS bundle
+	// against a new backend).
+	pageParams, err := dto.PageParamsFromQuery(r.URL.Query())
+	if err != nil {
+		return err
+	}
+	if pageParams.Requested {
+		return e.listPage(w, r, filters, locale, pageParams)
+	}
+
 	var stands []*powers.Stand
 	if hasFilters {
 		stands, err = e.svc.FilterStands(r.Context(), filters, locale)
@@ -136,11 +161,80 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStandResponses(r.Context(), stands, e.svc.PictureURL)
+	resp, err := dto.NewStandResponses(r.Context(), stands, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
 	writeJSON(w, http.StatusOK, resp)
+	return nil
+}
+
+// listPage serves the ?limit=/?cursor= paginated form of GET /stands. The
+// cursor's fingerprint binds it to the exact filter+locale combination it
+// was issued under - reusing it against different filters is a 400, not
+// silently-wrong results.
+func (e *StandEndpoints) listPage(w http.ResponseWriter, r *http.Request, filters ports.StandFilters, locale enums.Locale, params dto.PageParams) error {
+	fingerprint := dto.StandFiltersFingerprint(filters, locale)
+
+	var afterName *string
+	if params.HasCursor {
+		cursor, err := dto.DecodeCursor[dto.StandCursor](params.Cursor, fingerprint)
+		if err != nil {
+			return err
+		}
+		afterName = &cursor.Name
+	}
+
+	stands, hasMore, err := e.svc.PageStands(r.Context(), filters, locale, afterName, params.Limit)
+	if err != nil {
+		return err
+	}
+
+	var total *int
+	if params.WithTotal && !params.HasCursor {
+		count, err := e.svc.CountStands(r.Context(), filters, locale)
+		if err != nil {
+			return err
+		}
+		total = &count
+	}
+
+	var nextCursor *string
+	if hasMore && len(stands) > 0 {
+		encoded := dto.EncodeCursor(dto.StandCursor{Name: stands[len(stands)-1].Name()}, fingerprint)
+		nextCursor = &encoded
+	}
+
+	items, err := dto.NewStandResponses(r.Context(), stands, e.svc.PictureURL, e.media)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.StandPageResponse{
+		PageInfo: dto.NewPageInfo(nextCursor, total),
+		Items:    items,
+	})
+	return nil
+}
+
+// options godoc
+//
+//	@Summary		List every stand's id/name
+//	@Description	Backs the evolvesFrom picker - locale-free (powers.name is not
+//	@Description	translatable) and unfiltered, so it stays cheap regardless of the
+//	@Description	catalogue's own pagination/filters.
+//	@Tags			stands
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{array}		dto.StandOptionResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/stands/options [get]
+func (e *StandEndpoints) options(w http.ResponseWriter, r *http.Request) error {
+	options, err := e.svc.StandOptions(r.Context())
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.NewStandOptionResponses(options))
 	return nil
 }
 
@@ -176,7 +270,7 @@ func (e *StandEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -212,7 +306,7 @@ func (e *StandEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -258,7 +352,7 @@ func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -344,7 +438,7 @@ func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}

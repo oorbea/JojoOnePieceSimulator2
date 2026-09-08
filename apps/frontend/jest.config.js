@@ -9,6 +9,7 @@ module.exports = {
       displayName: 'logic',
       preset: 'jest-expo/web',
       setupFiles: ['<rootDir>/jest.setup.ts'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup-after-env.ts'],
       testEnvironment: 'jsdom',
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
@@ -70,6 +71,7 @@ module.exports = {
       displayName: 'native',
       preset: 'jest-expo',
       setupFiles: ['<rootDir>/jest.setup.ts'],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup-after-env.ts'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
       },

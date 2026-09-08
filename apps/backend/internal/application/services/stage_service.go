@@ -69,6 +69,19 @@ func (s *StageService) FilterStages(ctx context.Context, filters ports.StageFilt
 	return s.repo.Filter(ctx, filters, locale)
 }
 
+// PageStages returns up to limit+1 Stages matching filters, ordered by
+// (manga, position, name) after `after` - see ports.IStageRepository.Page's
+// doc.
+func (s *StageService) PageStages(ctx context.Context, filters ports.StageFilters, locale enums.Locale, after *ports.StagePageCursor, limit int) ([]game.Stage, bool, error) {
+	return s.repo.Page(ctx, filters, locale, after, limit)
+}
+
+// CountStages returns the total number of Stages matching filters, ignoring
+// pagination.
+func (s *StageService) CountStages(ctx context.Context, filters ports.StageFilters, locale enums.Locale) (int, error) {
+	return s.repo.Count(ctx, filters, locale)
+}
+
 // GetStage returns the Stage matching id, description resolved for locale,
 // or ports.ErrStageNotFound.
 func (s *StageService) GetStage(ctx context.Context, id game.StageID, locale enums.Locale) (game.Stage, error) {
@@ -77,7 +90,7 @@ func (s *StageService) GetStage(ctx context.Context, id game.StageID, locale enu
 
 // CreateStage builds and persists a new Stage with a freshly generated ID.
 func (s *StageService) CreateStage(ctx context.Context, input StageInput) (game.Stage, error) {
-	return s.saveStage(ctx, s.ids.NewID(), "", "", enums.PictureNone, input)
+	return s.saveStage(ctx, s.ids.NewID(), "", "", "", "", enums.PictureNone, input)
 }
 
 // UpdateStage replaces the content of the Stage matching id, keeping its ID
@@ -88,16 +101,16 @@ func (s *StageService) UpdateStage(ctx context.Context, id game.StageID, input S
 	if err != nil {
 		return game.Stage{}, err
 	}
-	return s.saveStage(ctx, id, existing.Picture(), existing.PictureThumb(), existing.PictureStatus(), input)
+	return s.saveStage(ctx, id, existing.Picture(), existing.PictureThumb(), existing.PictureCard(), existing.PictureLqip(), existing.PictureStatus(), input)
 }
 
-func (s *StageService) saveStage(ctx context.Context, id game.StageID, picture, pictureThumb string, pictureStatus enums.PictureStatus, input StageInput) (game.Stage, error) {
+func (s *StageService) saveStage(ctx context.Context, id game.StageID, picture, pictureThumb, pictureCard, pictureLqip string, pictureStatus enums.PictureStatus, input StageInput) (game.Stage, error) {
 	description := input.Translations[enums.EnGB]
 	st, err := game.NewStage(id, input.Manga, input.Order, input.Name, description, picture)
 	if err != nil {
 		return game.Stage{}, err
 	}
-	st.SetPictureRenditions(picture, pictureThumb, pictureStatus)
+	st.SetPictureRenditions(picture, pictureThumb, pictureCard, pictureLqip, pictureStatus)
 
 	if err := s.repo.Save(ctx, st, input.Translations); err != nil {
 		return game.Stage{}, err
@@ -166,20 +179,20 @@ func (s *StageService) SetStagePicture(ctx context.Context, id game.StageID, pic
 		return game.Stage{}, ports.ErrInvalidImage
 	}
 
-	previousMain, previousThumb, previousStatus := st.Picture(), st.PictureThumb(), st.PictureStatus()
+	previousMain, previousThumb, previousCard, previousLqip, previousStatus := st.Picture(), st.PictureThumb(), st.PictureCard(), st.PictureLqip(), st.PictureStatus()
 
-	if err := s.repo.UpdatePicture(ctx, id, nil, nil, enums.PicturePending); err != nil {
+	if err := s.repo.UpdatePicture(ctx, id, nil, nil, nil, nil, enums.PicturePending); err != nil {
 		return game.Stage{}, err
 	}
 
 	if err := s.enqueuer.Enqueue(ports.PictureJob{SubjectID: id.String(), Kind: enums.StageSubject, Content: buf, ContentType: pic.ContentType}); err != nil {
-		if revertErr := s.repo.UpdatePicture(ctx, id, nil, nil, previousStatus); revertErr != nil {
+		if revertErr := s.repo.UpdatePicture(ctx, id, nil, nil, nil, nil, previousStatus); revertErr != nil {
 			log.Printf("reverting picture status for stage %s after enqueue failure: %v", id, revertErr)
 		}
 		return game.Stage{}, err
 	}
 
-	st.SetPictureRenditions(previousMain, previousThumb, enums.PicturePending)
+	st.SetPictureRenditions(previousMain, previousThumb, previousCard, previousLqip, enums.PicturePending)
 	return st, nil
 }
 

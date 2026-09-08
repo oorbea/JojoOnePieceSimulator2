@@ -23,6 +23,8 @@ type countingStandRepository struct {
 	findByNameCalls int
 	getAllCalls     int
 	filterCalls     int
+	pageCalls       int
+	countCalls      int
 	updatePicCalls  int
 	notFoundErr     error
 }
@@ -86,6 +88,53 @@ func (r *countingStandRepository) Filter(_ context.Context, filters ports.StandF
 	return results, nil
 }
 
+// Page/Count exist to prove StandRepository's decorator is a pure
+// pass-through for pagination (see cache/stand_repository.go's doc) - every
+// call must reach here, never a cache hit.
+func (r *countingStandRepository) Page(_ context.Context, filters ports.StandFilters, _ enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pageCalls++
+	var results []*powers.Stand
+	for _, s := range r.stands {
+		if filters.Rarity != nil && s.Rarity() != *filters.Rarity {
+			continue
+		}
+		if afterName != nil && s.Name() <= *afterName {
+			continue
+		}
+		results = append(results, s)
+	}
+	if len(results) > limit {
+		return results[:limit], true, nil
+	}
+	return results, false, nil
+}
+
+func (r *countingStandRepository) Count(_ context.Context, filters ports.StandFilters, _ enums.Locale) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.countCalls++
+	count := 0
+	for _, s := range r.stands {
+		if filters.Rarity != nil && s.Rarity() != *filters.Rarity {
+			continue
+		}
+		count++
+	}
+	return count, nil
+}
+
+func (r *countingStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	options := make([]ports.StandOption, 0, len(r.stands))
+	for _, s := range r.stands {
+		options = append(options, ports.StandOption{ID: s.ID(), Name: s.Name()})
+	}
+	return options, nil
+}
+
 func (r *countingStandRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -103,7 +152,7 @@ func (r *countingStandRepository) Delete(_ context.Context, id powers.PowerID) e
 	return nil
 }
 
-func (r *countingStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (r *countingStandRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.updatePicCalls++
@@ -111,14 +160,31 @@ func (r *countingStandRepository) UpdatePicture(_ context.Context, id powers.Pow
 	if !ok {
 		return ports.ErrStandNotFound
 	}
-	newMain, newThumb := s.Picture(), s.PictureThumb()
+	newMain, newThumb, newCard, newLqip := s.Picture(), s.PictureThumb(), s.PictureCard(), s.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	s.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	return nil
+}
+
+func (r *countingStandRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s, ok := r.stands[id]
+	if !ok {
+		return ports.ErrStandNotFound
+	}
+	s.SetMediaID(mediaID)
 	return nil
 }
 
@@ -226,7 +292,7 @@ func TestStandRepository_UpdatePicture_InvalidatesCache(t *testing.T) {
 	}
 
 	main := "new-key"
-	if err := repo.UpdatePicture(ctx, stand.ID(), &main, nil, enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(ctx, stand.ID(), &main, nil, nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 
@@ -255,8 +321,8 @@ func TestStandRepository_Save_ErrorDoesNotInvalidate(t *testing.T) {
 	if err := repo.Save(ctx, stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}}); err == nil {
 		t.Fatal("Save over a failing repository: err = nil, want an error")
 	}
-	if c.gen["stands"] != 0 {
-		t.Errorf("stands generation = %d, want 0 (a failed Save must not invalidate)", c.gen["stands"])
+	if c.gen["stands:v2"] != 0 {
+		t.Errorf("stands generation = %d, want 0 (a failed Save must not invalidate)", c.gen["stands:v2"])
 	}
 }
 

@@ -23,11 +23,17 @@ const (
 // UserEndpoints wires the user profile/admin HTTP surface to the
 // application service.
 type UserEndpoints struct {
-	svc *services.UserService
+	svc   *services.UserService
+	media dto.MediaURLBuilder
 }
 
 func NewUserEndpoints(svc *services.UserService) *UserEndpoints {
 	return &UserEndpoints{svc: svc}
+}
+
+// SetMediaURLBuilder - see StandEndpoints.SetMediaURLBuilder's doc.
+func (e *UserEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /users sub-router. Every /me route resolves the
@@ -90,7 +96,7 @@ func (e *UserEndpoints) getMe(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
+	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -135,7 +141,7 @@ func (e *UserEndpoints) updateMe(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
+	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -205,7 +211,7 @@ func (e *UserEndpoints) patchMePicture(w http.ResponseWriter, r *http.Request) e
 		return err
 	}
 
-	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
+	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -232,7 +238,7 @@ func (e *UserEndpoints) deleteMePicture(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
+	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -283,7 +289,7 @@ func (e *UserEndpoints) getByID(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewPublicUserResponse(r.Context(), u, e.svc.AvatarURL)
+	resp, err := dto.NewPublicUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -332,7 +338,7 @@ func (e *UserEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	}
 	resp := make([]dto.UserResponse, 0, len(users))
 	for _, u := range users {
-		userResp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
+		userResp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 		if err != nil {
 			return err
 		}
@@ -375,7 +381,7 @@ func (e *UserEndpoints) adminUpdateUsername(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
+	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -424,7 +430,7 @@ func (e *UserEndpoints) updateRole(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL)
+	resp, err := dto.NewUserResponse(r.Context(), u, e.svc.AvatarURL, e.media)
 	if err != nil {
 		return err
 	}

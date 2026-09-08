@@ -2,7 +2,8 @@ import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
 import { assertContract } from '@/shared/api/assert-contract'
-import { stageResponseSchema } from '@/shared/contracts/dto'
+import { stagePageResponseSchema, stageResponseSchema } from '@/shared/contracts/dto'
+import type { CataloguePage } from '@/shared/hooks/use-paginated-catalogue'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import type { StageTranslationFormValues } from '@/shared/lib/stage-translations'
 import type { Locale } from '@/shared/contracts/enums'
@@ -13,6 +14,22 @@ export async function getStages(filters?: StageFilters): Promise<StageResponse[]
   if (__DEV__) {
     for (const stage of response.data) assertContract(stageResponseSchema, stage, 'GET /stages[]')
   }
+  return response.data
+}
+
+// getStagesPage is the ?limit=/?cursor= paginated counterpart of getStages -
+// see stands.api.ts's getStandsPage for the full doc. The cursor carries the
+// (manga, position, name) triple opaquely - no frontend awareness needed of
+// PageStageRows's ::manga cast trap (ObsidianVault/catalogue-pagination.md).
+export async function getStagesPage(
+  filters: StageFilters | undefined,
+  cursor: string | undefined,
+  limit: number
+): Promise<CataloguePage<StageResponse>> {
+  const response = await apiClient.get<CataloguePage<StageResponse>>('/stages', {
+    params: { ...filters, limit, cursor },
+  })
+  if (__DEV__) assertContract(stagePageResponseSchema, response.data, 'GET /stages?limit=')
   return response.data
 }
 

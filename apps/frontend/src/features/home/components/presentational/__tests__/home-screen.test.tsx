@@ -10,6 +10,7 @@ const USER: SessionUser = {
   username: 'OriolO',
   completeName: 'Jotaro Kujo',
   picture: null,
+  pictureThumb: null,
   role: 'REGULAR',
   language: 'en-GB',
 }

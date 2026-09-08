@@ -1,12 +1,17 @@
-import { Image, Modal, Pressable } from 'react-native'
+import { Modal, Pressable } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { YStack } from 'tamagui'
 
+import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { a11yProps } from '@/shared/lib/a11y'
 
 type ImageLightboxProps = {
   visible: boolean
   uri: string | null
+  // LQIP for the full-size rendition, if the caller has one (see
+  // shared/lib/picture-source.ts's lqipSource) - shows a blurred preview
+  // instead of a bare skeleton while the full picture loads.
+  lqip?: string | null
   onClose: () => void
 }
 
@@ -14,8 +19,9 @@ type ImageLightboxProps = {
 // admin panel and the read-only public catalog. Tap anywhere to dismiss -
 // same Modal + dimmed backdrop recipe as ConfirmSheet, but no inner
 // GlassPanel so the image can use the full viewport instead of being boxed
-// in.
-export function ImageLightbox({ visible, uri, onClose }: ImageLightboxProps) {
+// in. Uses LazyImage's own `lane: 'high'` priority - a user just tapped to
+// see this specific image, it shouldn't wait behind the grid's queue.
+export function ImageLightbox({ visible, uri, lqip, onClose }: ImageLightboxProps) {
   const { t } = useTranslation()
   if (!uri) return null
 
@@ -23,7 +29,7 @@ export function ImageLightbox({ visible, uri, onClose }: ImageLightboxProps) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable onPress={onClose} style={{ flex: 1 }} {...a11yProps(t('common.closePreview'), 'button')}>
         <YStack flex={1} items="center" justify="center" bg="rgba(10,12,20,0.9)" p="$4">
-          <Image source={{ uri }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          <LazyImage uri={uri} lqip={lqip} height="100%" contentFit="contain" priorityHint="high" />
         </YStack>
       </Pressable>
     </Modal>

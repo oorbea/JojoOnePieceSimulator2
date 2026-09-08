@@ -19,12 +19,15 @@ import (
 // fakes. id is the subject's id formatted as a string; each adapter parses
 // it back into its own concrete id type.
 type PicturePublisher interface {
-	// PictureKeys returns the main and thumbnail object-storage keys
+	// PictureKeys returns the main, thumbnail and card object-storage keys
 	// currently stored for id.
-	PictureKeys(ctx context.Context, id string) (main, thumb string, err error)
+	PictureKeys(ctx context.Context, id string) (main, thumb, card string, err error)
 	// UpdatePicture updates only the picture renditions and pipeline status
-	// for id. A nil main or thumb leaves that column untouched.
-	UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error
+	// for id. A nil main/thumb/card/lqip leaves that column untouched.
+	UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error
+	// SetMediaID updates only the content-addressed media group id, once the
+	// worker has persisted the corresponding media_objects rows.
+	SetMediaID(ctx context.Context, id string, mediaID string) error
 }
 
 // PictureTarget pairs a PicturePublisher with the object-storage key prefix
@@ -46,24 +49,32 @@ func NewStandPicturePublisher(repo ports.IStandRepository) PicturePublisher {
 	return &standPicturePublisher{repo: repo}
 }
 
-func (p *standPicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, error) {
+func (p *standPicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, string, error) {
 	powerID, err := powers.ParsePowerID(id)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	stand, err := p.repo.FindByID(ctx, powerID, enums.EnGB)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	return stand.Picture(), stand.PictureThumb(), nil
+	return stand.Picture(), stand.PictureThumb(), stand.PictureCard(), nil
 }
 
-func (p *standPicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error {
+func (p *standPicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	powerID, err := powers.ParsePowerID(id)
 	if err != nil {
 		return err
 	}
-	return p.repo.UpdatePicture(ctx, powerID, main, thumb, status)
+	return p.repo.UpdatePicture(ctx, powerID, main, thumb, card, lqip, status)
+}
+
+func (p *standPicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	powerID, err := powers.ParsePowerID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetMediaID(ctx, powerID, mediaID)
 }
 
 // devilFruitPicturePublisher adapts a ports.IDevilFruitRepository to
@@ -79,24 +90,32 @@ func NewDevilFruitPicturePublisher(repo ports.IDevilFruitRepository) PicturePubl
 	return &devilFruitPicturePublisher{repo: repo}
 }
 
-func (p *devilFruitPicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, error) {
+func (p *devilFruitPicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, string, error) {
 	powerID, err := powers.ParsePowerID(id)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	fruit, err := p.repo.FindByID(ctx, powerID, enums.EnGB)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	return fruit.Picture(), fruit.PictureThumb(), nil
+	return fruit.Picture(), fruit.PictureThumb(), fruit.PictureCard(), nil
 }
 
-func (p *devilFruitPicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error {
+func (p *devilFruitPicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	powerID, err := powers.ParsePowerID(id)
 	if err != nil {
 		return err
 	}
-	return p.repo.UpdatePicture(ctx, powerID, main, thumb, status)
+	return p.repo.UpdatePicture(ctx, powerID, main, thumb, card, lqip, status)
+}
+
+func (p *devilFruitPicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	powerID, err := powers.ParsePowerID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetMediaID(ctx, powerID, mediaID)
 }
 
 // userPicturePublisher adapts a ports.IUserRepository to PicturePublisher, so
@@ -112,20 +131,28 @@ func NewUserPicturePublisher(repo ports.IUserRepository) PicturePublisher {
 	return &userPicturePublisher{repo: repo}
 }
 
-func (p *userPicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, error) {
+func (p *userPicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, string, error) {
 	userID, err := user.ParseUserID(id)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	return p.repo.AvatarKeys(ctx, userID)
 }
 
-func (p *userPicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error {
+func (p *userPicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	userID, err := user.ParseUserID(id)
 	if err != nil {
 		return err
 	}
-	return p.repo.UpdateAvatar(ctx, userID, main, thumb, status)
+	return p.repo.UpdateAvatar(ctx, userID, main, thumb, card, lqip, status)
+}
+
+func (p *userPicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	userID, err := user.ParseUserID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetAvatarMediaID(ctx, userID, mediaID)
 }
 
 // stagePicturePublisher adapts a ports.IStageRepository to PicturePublisher.
@@ -140,22 +167,30 @@ func NewStagePicturePublisher(repo ports.IStageRepository) PicturePublisher {
 	return &stagePicturePublisher{repo: repo}
 }
 
-func (p *stagePicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, error) {
+func (p *stagePicturePublisher) PictureKeys(ctx context.Context, id string) (string, string, string, error) {
 	stageID, err := game.ParseStageID(id)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	st, err := p.repo.FindByID(ctx, stageID, enums.EnGB)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
-	return st.Picture(), st.PictureThumb(), nil
+	return st.Picture(), st.PictureThumb(), st.PictureCard(), nil
 }
 
-func (p *stagePicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb *string, status enums.PictureStatus) error {
+func (p *stagePicturePublisher) UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	stageID, err := game.ParseStageID(id)
 	if err != nil {
 		return err
 	}
-	return p.repo.UpdatePicture(ctx, stageID, main, thumb, status)
+	return p.repo.UpdatePicture(ctx, stageID, main, thumb, card, lqip, status)
+}
+
+func (p *stagePicturePublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	stageID, err := game.ParseStageID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetMediaID(ctx, stageID, mediaID)
 }

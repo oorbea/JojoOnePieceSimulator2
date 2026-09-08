@@ -12,7 +12,9 @@ function baseStage(overrides: Partial<StageResponse> = {}): StageResponse {
     description: 'A globe-trotting journey to save Holly Kujo.',
     picture: '',
     pictureThumb: '',
+    pictureCard: '',
     pictureStatus: 'NONE',
+    pictureLqip: '',
     ...overrides,
   }
 }

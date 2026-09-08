@@ -13,7 +13,9 @@ function baseFruit(overrides: Partial<DevilFruitResponse> = {}): DevilFruitRespo
     skills: ['Gomu Gomu no Pistol'],
     picture: '',
     pictureThumb: '',
+    pictureCard: '',
     pictureStatus: 'NONE',
+    pictureLqip: '',
     fruitType: 'PARAMECIA',
     ...overrides,
   }

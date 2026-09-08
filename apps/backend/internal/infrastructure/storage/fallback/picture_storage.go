@@ -220,6 +220,17 @@ func (s *PictureStorage) backendFor(ctx context.Context, key string) (ports.ISto
 	return backend, nil
 }
 
+// Download implements ports.IPictureStorage, resolving the provider the same
+// way PresignGetURL does (via the ledger, falling back to tier 0 for a
+// pre-ledger key).
+func (s *PictureStorage) Download(ctx context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	backend, err := s.backendFor(ctx, key)
+	if err != nil {
+		return nil, ports.ObjectInfo{}, err
+	}
+	return backend.Get(ctx, key)
+}
+
 // PresignGetURL implements ports.IPictureStorage.
 func (s *PictureStorage) PresignGetURL(ctx context.Context, key string) (string, error) {
 	backend, err := s.backendFor(ctx, key)

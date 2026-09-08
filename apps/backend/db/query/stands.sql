@@ -1,12 +1,14 @@
 -- name: UpsertPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_status)
-VALUES ($1, 'STAND', $2, $3, $4, $5, $6)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, 'STAND', $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
 RETURNING id;
 
@@ -56,15 +58,19 @@ DELETE FROM powers WHERE id = $1 AND kind = 'STAND';
 -- Updates only a Power's picture renditions and pipeline status, without
 -- touching name/description/skills/stats - used by the PATCH .../picture
 -- handler (status -> PENDING) and by the background compression worker
--- (status -> READY/FAILED). picture/picture_thumb are left untouched when
--- NULL is passed, so the handler can move a row to PENDING without
--- clobbering the renditions currently being served.
+-- (status -> READY/FAILED). picture/picture_thumb/picture_card/picture_lqip/
+-- picture_media_id are left untouched when NULL is passed, so the handler
+-- can move a row to PENDING without clobbering the renditions currently
+-- being served.
 -- name: UpdatePowerPicture :exec
 UPDATE powers
-SET picture        = COALESCE(sqlc.narg('picture')::text, picture),
-    picture_thumb  = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
-    picture_status = sqlc.arg('picture_status')::picture_status,
-    updated_at     = now()
+SET picture          = COALESCE(sqlc.narg('picture')::text, picture),
+    picture_thumb    = COALESCE(sqlc.narg('picture_thumb')::text, picture_thumb),
+    picture_card     = COALESCE(sqlc.narg('picture_card')::text, picture_card),
+    picture_status   = sqlc.arg('picture_status')::picture_status,
+    picture_lqip     = COALESCE(sqlc.narg('picture_lqip')::text, picture_lqip),
+    picture_media_id = COALESCE(sqlc.narg('picture_media_id')::text, picture_media_id),
+    updated_at       = now()
 WHERE id = sqlc.arg('id');
 
 -- Returns the stand matching `name` (matched = true) plus its full ancestor
@@ -80,7 +86,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
+                                 p.picture_card,
                                  p.picture_status,
+                                 p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -98,7 +107,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
+                                 p2.picture_card,
                                  p2.picture_status,
+                                 p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -115,7 +127,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -125,15 +140,18 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -160,7 +178,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.rarity,
                                  p.picture,
                                  p.picture_thumb,
+                                 p.picture_card,
                                  p.picture_status,
+                                 p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -178,7 +199,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.rarity,
                                  p2.picture,
                                  p2.picture_thumb,
+                                 p2.picture_card,
                                  p2.picture_status,
+                                 p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -195,7 +219,10 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -205,15 +232,18 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -243,7 +273,10 @@ SELECT p.id,
        p.rarity,
        p.picture,
        p.picture_thumb,
+       p.picture_card,
        p.picture_status,
+       p.picture_lqip,
+       p.picture_media_id,
        s.attack_power,
        s.speed,
        s.attack_range,
@@ -274,7 +307,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 p.rarity,
                                 p.picture,
                                 p.picture_thumb,
+                                p.picture_card,
                                 p.picture_status,
+                                p.picture_lqip,
+                                p.picture_media_id,
                                 s.attack_power,
                                 s.speed,
                                 s.attack_range,
@@ -319,7 +355,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                       p2.rarity,
                       p2.picture,
                       p2.picture_thumb,
+                      p2.picture_card,
                       p2.picture_status,
+                      p2.picture_lqip,
+                      p2.picture_media_id,
                       s2.attack_power,
                       s2.speed,
                       s2.attack_range,
@@ -336,7 +375,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                       rarity,
                       picture,
                       picture_thumb,
+                      picture_card,
                       picture_status,
+                      picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -346,15 +388,18 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_status, attack_power, speed,
-                        attack_range, endurance, "precision", potential, evolves_from_id)
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
        COALESCE(tr.description, '') AS description,
        d.rarity,
        d.picture,
        d.picture_thumb,
+       d.picture_card,
        d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -373,3 +418,178 @@ FROM dedup d
     LIMIT 1
     ) tr ON true
 ORDER BY d.name;
+
+-- Keyset-paginated counterpart of FilterStandRows: same filter WHERE clause,
+-- but the cursor predicate and LIMIT sit INSIDE the `base` CTE, before the
+-- ancestor recursion runs - not on the outer SELECT. Limiting the outer
+-- SELECT would truncate ancestor rows (matched = false) that a later-page
+-- item's evolves_from chain needs, and buildStandsLenient silently drops any
+-- stand whose ancestor is missing from the loaded set - see
+-- ObsidianVault/catalogue-pagination.md. Go passes page_limit = limit + 1 and
+-- detects HasMore from the extra row, so no separate COUNT is needed here.
+-- name: PageStandRows :many
+WITH RECURSIVE base AS (SELECT p.id,
+                                p.name,
+                                p.rarity,
+                                p.picture,
+                                p.picture_thumb,
+                                p.picture_card,
+                                p.picture_status,
+                                p.picture_lqip,
+                                p.picture_media_id,
+                                s.attack_power,
+                                s.speed,
+                                s.attack_range,
+                                s.endurance,
+                                s."precision",
+                                s.potential,
+                                s.evolves_from_id,
+                                true AS matched
+                         FROM stands s
+                                  JOIN powers p ON p.id = s.id
+                                  LEFT JOIN stands ef ON ef.id = s.evolves_from_id
+                                  LEFT JOIN powers efp ON efp.id = ef.id
+                                  LEFT JOIN LATERAL (
+                             SELECT pt.description
+                             FROM power_translations pt
+                             WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+                             ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+                             LIMIT 1
+                             ) base_tr ON true
+                         WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity')::power_rarity)
+                           AND (sqlc.narg('attack_power')::stand_stat IS NULL OR
+                                s.attack_power = sqlc.narg('attack_power')::stand_stat)
+                           AND (sqlc.narg('speed')::stand_stat IS NULL OR s.speed = sqlc.narg('speed')::stand_stat)
+                           AND (sqlc.narg('attack_range')::stand_stat IS NULL OR
+                                s.attack_range = sqlc.narg('attack_range')::stand_stat)
+                           AND (sqlc.narg('endurance')::stand_stat IS NULL OR
+                                s.endurance = sqlc.narg('endurance')::stand_stat)
+                           AND (sqlc.narg('precision')::stand_stat IS NULL OR
+                                s."precision" = sqlc.narg('precision')::stand_stat)
+                           AND (sqlc.narg('potential')::stand_stat IS NULL OR
+                                s.potential = sqlc.narg('potential')::stand_stat)
+                           AND (sqlc.narg('evolves_from_name')::text IS NULL OR
+                                efp.name = sqlc.narg('evolves_from_name')::text)
+                           AND (sqlc.narg('search')::text IS NULL
+                                OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+                                OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+                           AND (sqlc.narg('after_name')::text IS NULL OR p.name > sqlc.narg('after_name')::text)
+                         ORDER BY p.name
+                         LIMIT sqlc.arg('page_limit')::int),
+     chain AS (SELECT *
+               FROM base
+               UNION
+               SELECT p2.id,
+                      p2.name,
+                      p2.rarity,
+                      p2.picture,
+                      p2.picture_thumb,
+                      p2.picture_card,
+                      p2.picture_status,
+                      p2.picture_lqip,
+                      p2.picture_media_id,
+                      s2.attack_power,
+                      s2.speed,
+                      s2.attack_range,
+                      s2.endurance,
+                      s2."precision",
+                      s2.potential,
+                      s2.evolves_from_id,
+                      false AS matched
+               FROM stands s2
+                        JOIN powers p2 ON p2.id = s2.id
+                        JOIN chain c ON c.evolves_from_id = s2.id),
+     dedup AS (SELECT id,
+                      name,
+                      rarity,
+                      picture,
+                      picture_thumb,
+                      picture_card,
+                      picture_status,
+                      picture_lqip,
+                      picture_media_id,
+                      attack_power,
+                      speed,
+                      attack_range,
+                      endurance,
+                      "precision",
+                      potential,
+                      evolves_from_id,
+                      bool_or(matched) AS matched
+               FROM chain
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
+                        attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
+SELECT d.id,
+       d.name,
+       COALESCE(tr.description, '') AS description,
+       d.rarity,
+       d.picture,
+       d.picture_thumb,
+       d.picture_card,
+       d.picture_status,
+       d.picture_lqip,
+       d.picture_media_id,
+       d.attack_power,
+       d.speed,
+       d.attack_range,
+       d.endurance,
+       d."precision",
+       d.potential,
+       d.evolves_from_id,
+       d.matched,
+       COALESCE(tr.skills, '{}')::text[] AS skills
+FROM dedup d
+         LEFT JOIN LATERAL (
+    SELECT pt.description, pt.skills
+    FROM power_translations pt
+    WHERE pt.power_id = d.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) tr ON true
+ORDER BY d.name;
+
+-- Total count of stands matching the same filters as PageStandRows (no
+-- cursor, no ancestor recursion, no translation join needed except for the
+-- search-over-description case) - used for the first page's `total` only.
+-- name: CountStandRows :one
+SELECT count(*)
+FROM stands s
+         JOIN powers p ON p.id = s.id
+         LEFT JOIN stands ef ON ef.id = s.evolves_from_id
+         LEFT JOIN powers efp ON efp.id = ef.id
+         LEFT JOIN LATERAL (
+    SELECT pt.description
+    FROM power_translations pt
+    WHERE pt.power_id = p.id AND pt.locale::text = ANY (sqlc.arg('locales')::text[])
+    ORDER BY array_position(sqlc.arg('locales')::text[], pt.locale::text)
+    LIMIT 1
+    ) base_tr ON true
+WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity')::power_rarity)
+  AND (sqlc.narg('attack_power')::stand_stat IS NULL OR s.attack_power = sqlc.narg('attack_power')::stand_stat)
+  AND (sqlc.narg('speed')::stand_stat IS NULL OR s.speed = sqlc.narg('speed')::stand_stat)
+  AND (sqlc.narg('attack_range')::stand_stat IS NULL OR s.attack_range = sqlc.narg('attack_range')::stand_stat)
+  AND (sqlc.narg('endurance')::stand_stat IS NULL OR s.endurance = sqlc.narg('endurance')::stand_stat)
+  AND (sqlc.narg('precision')::stand_stat IS NULL OR s."precision" = sqlc.narg('precision')::stand_stat)
+  AND (sqlc.narg('potential')::stand_stat IS NULL OR s.potential = sqlc.narg('potential')::stand_stat)
+  AND (sqlc.narg('evolves_from_name')::text IS NULL OR efp.name = sqlc.narg('evolves_from_name')::text)
+  AND (sqlc.narg('search')::text IS NULL
+    OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
+    OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\');
+
+-- Every stand's id/name only, unfiltered and translation-free - powers.name
+-- is deliberately non-translatable (see 00008_stages.sql), so this is
+-- locale-free and stays cheap even with thousands of rows. Backs the
+-- evolvesFrom picker, which needs the full id->name set regardless of the
+-- catalogue's own pagination/filters.
+-- name: ListStandOptions :many
+SELECT p.id, p.name
+FROM stands s
+         JOIN powers p ON p.id = s.id
+ORDER BY p.name;
+
+-- Sets only a Power's content-addressed media group id, once the worker has
+-- both transcoded the image and persisted its media_objects rows - see
+-- powers.Power.SetMediaID's doc for why this is separate from
+-- UpdatePowerPicture.
+-- name: UpdatePowerMediaID :exec
+UPDATE powers SET picture_media_id = $1 WHERE id = $2;

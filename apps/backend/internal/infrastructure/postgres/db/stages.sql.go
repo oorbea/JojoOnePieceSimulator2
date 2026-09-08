@@ -11,6 +11,37 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countStageRows = `-- name: CountStageRows :one
+SELECT count(*)
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::manga IS NULL OR s.manga = $2::manga)
+  AND ($3::text IS NULL
+       OR s.name ILIKE '%' || $3::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $3::text || '%' ESCAPE '\')
+`
+
+type CountStageRowsParams struct {
+	Locales []string
+	Manga   *Manga
+	Search  *string
+}
+
+// Total count of stages matching the same filters as PageStageRows (no
+// cursor) - used for the first page's `total` only.
+func (q *Queries) CountStageRows(ctx context.Context, arg CountStageRowsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStageRows, arg.Locales, arg.Manga, arg.Search)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteStageByID = `-- name: DeleteStageByID :execrows
 DELETE FROM stages WHERE id = $1
 `
@@ -41,7 +72,9 @@ func (q *Queries) DeleteStageTranslations(ctx context.Context, arg DeleteStageTr
 }
 
 const filterStageRows = `-- name: FilterStageRows :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -65,14 +98,17 @@ type FilterStageRowsParams struct {
 }
 
 type FilterStageRowsRow struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	Description   string
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
 }
 
 // Returns every stage matching the (all-optional) filters, description
@@ -94,7 +130,10 @@ func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams
 			&i.Name,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -108,7 +147,9 @@ func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams
 }
 
 const getStageByID = `-- name: GetStageByID :one
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -127,14 +168,17 @@ type GetStageByIDParams struct {
 }
 
 type GetStageByIDRow struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	Description   string
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
 }
 
 func (q *Queries) GetStageByID(ctx context.Context, arg GetStageByIDParams) (GetStageByIDRow, error) {
@@ -147,7 +191,10 @@ func (q *Queries) GetStageByID(ctx context.Context, arg GetStageByIDParams) (Get
 		&i.Name,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
+		&i.PictureMediaID,
 		&i.Description,
 	)
 	return i, err
@@ -182,7 +229,9 @@ func (q *Queries) GetStageTranslations(ctx context.Context, stageID pgtype.UUID)
 }
 
 const listStages = `-- name: ListStages :many
-SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_status,
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -196,14 +245,17 @@ ORDER BY s.manga, s.position, s.name
 `
 
 type ListStagesRow struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	Picture       string
-	PictureThumb  string
-	PictureStatus string
-	Description   string
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
 }
 
 // Returns every stage, description resolved for locale via the same
@@ -224,7 +276,10 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 			&i.Name,
 			&i.Picture,
 			&i.PictureThumb,
+			&i.PictureCard,
 			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -237,20 +292,142 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 	return items, nil
 }
 
+const pageStageRows = `-- name: PageStageRows :many
+SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
+       s.picture_lqip,
+       s.picture_media_id,
+       COALESCE(tr.description, '') AS description
+FROM stages s
+         LEFT JOIN LATERAL (
+    SELECT st.description
+    FROM stage_translations st
+    WHERE st.stage_id = s.id AND st.locale::text = ANY ($1::text[])
+    ORDER BY array_position($1::text[], st.locale::text)
+    LIMIT 1
+    ) tr ON true
+WHERE ($2::manga IS NULL OR s.manga = $2::manga)
+  AND ($3::text IS NULL
+       OR s.name ILIKE '%' || $3::text || '%' ESCAPE '\'
+       OR tr.description ILIKE '%' || $3::text || '%' ESCAPE '\')
+  AND (
+    $4::manga IS NULL
+    OR (s.manga, s.position, s.name) > ($4::manga, $5::int, $6::text)
+    )
+ORDER BY s.manga, s.position, s.name
+LIMIT $7::int
+`
+
+type PageStageRowsParams struct {
+	Locales       []string
+	Manga         *Manga
+	Search        *string
+	AfterManga    *Manga
+	AfterPosition *int32
+	AfterName     *string
+	PageLimit     int32
+}
+
+type PageStageRowsRow struct {
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
+}
+
+// Keyset-paginated counterpart of FilterStageRows. The sort key is the
+// triple (manga, position, name) - UNIQUE (manga, name) plus a fixed manga
+// makes the triple unique overall, since position alone can tie within a
+// manga (no UNIQUE(manga, position) - see 00008_stages.sql's doc on
+// reordering). The row-value comparison below uses manga/position/name
+// directly (no ::text cast) so Postgres compares manga by its own default
+// btree opclass - enum declaration order - identical to plain
+// `ORDER BY s.manga, s.position, s.name`. Casting to ::text here would sort
+// alphabetically instead and silently desync the cursor from the ORDER BY,
+// corrupting page boundaries - see ObsidianVault/catalogue-pagination.md.
+// Go passes page_limit = limit + 1 and detects HasMore from the extra row.
+func (q *Queries) PageStageRows(ctx context.Context, arg PageStageRowsParams) ([]PageStageRowsRow, error) {
+	rows, err := q.db.Query(ctx, pageStageRows,
+		arg.Locales,
+		arg.Manga,
+		arg.Search,
+		arg.AfterManga,
+		arg.AfterPosition,
+		arg.AfterName,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PageStageRowsRow{}
+	for rows.Next() {
+		var i PageStageRowsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Manga,
+			&i.Position,
+			&i.Name,
+			&i.Picture,
+			&i.PictureThumb,
+			&i.PictureCard,
+			&i.PictureStatus,
+			&i.PictureLqip,
+			&i.PictureMediaID,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateStageMediaID = `-- name: UpdateStageMediaID :exec
+UPDATE stages SET picture_media_id = $1 WHERE id = $2
+`
+
+type UpdateStageMediaIDParams struct {
+	PictureMediaID string
+	ID             pgtype.UUID
+}
+
+// Sets only a Stage's content-addressed media group id - see
+// UpdatePowerMediaID (stands.sql).
+func (q *Queries) UpdateStageMediaID(ctx context.Context, arg UpdateStageMediaIDParams) error {
+	_, err := q.db.Exec(ctx, updateStageMediaID, arg.PictureMediaID, arg.ID)
+	return err
+}
+
 const updateStagePicture = `-- name: UpdateStagePicture :exec
 UPDATE stages
-SET picture        = COALESCE($1::text, picture),
-    picture_thumb  = COALESCE($2::text, picture_thumb),
-    picture_status = $3::picture_status,
-    updated_at     = now()
-WHERE id = $4
+SET picture          = COALESCE($1::text, picture),
+    picture_thumb    = COALESCE($2::text, picture_thumb),
+    picture_card     = COALESCE($3::text, picture_card),
+    picture_status   = $4::picture_status,
+    picture_lqip     = COALESCE($5::text, picture_lqip),
+    picture_media_id = COALESCE($6::text, picture_media_id),
+    updated_at       = now()
+WHERE id = $7
 `
 
 type UpdateStagePictureParams struct {
-	Picture       *string
-	PictureThumb  *string
-	PictureStatus string
-	ID            pgtype.UUID
+	Picture        *string
+	PictureThumb   *string
+	PictureCard    *string
+	PictureStatus  string
+	PictureLqip    *string
+	PictureMediaID *string
+	ID             pgtype.UUID
 }
 
 // Updates only a Stage's picture renditions and pipeline status, without
@@ -260,24 +437,29 @@ func (q *Queries) UpdateStagePicture(ctx context.Context, arg UpdateStagePicture
 	_, err := q.db.Exec(ctx, updateStagePicture,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
+		arg.PictureMediaID,
 		arg.ID,
 	)
 	return err
 }
 
 const upsertStage = `-- name: UpsertStage :one
-INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_status)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (id) DO UPDATE
     SET manga          = EXCLUDED.manga,
         position       = EXCLUDED.position,
         name           = EXCLUDED.name,
         picture        = EXCLUDED.picture,
         picture_thumb  = EXCLUDED.picture_thumb,
+        picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
+        picture_lqip   = EXCLUDED.picture_lqip,
         updated_at     = now()
-RETURNING id, manga, position, name, picture, picture_thumb, picture_status
+RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip
 `
 
 type UpsertStageParams struct {
@@ -287,7 +469,9 @@ type UpsertStageParams struct {
 	Name          string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 type UpsertStageRow struct {
@@ -297,7 +481,9 @@ type UpsertStageRow struct {
 	Name          string
 	Picture       string
 	PictureThumb  string
+	PictureCard   string
 	PictureStatus string
+	PictureLqip   string
 }
 
 func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (UpsertStageRow, error) {
@@ -308,7 +494,9 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		arg.Name,
 		arg.Picture,
 		arg.PictureThumb,
+		arg.PictureCard,
 		arg.PictureStatus,
+		arg.PictureLqip,
 	)
 	var i UpsertStageRow
 	err := row.Scan(
@@ -318,7 +506,9 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		&i.Name,
 		&i.Picture,
 		&i.PictureThumb,
+		&i.PictureCard,
 		&i.PictureStatus,
+		&i.PictureLqip,
 	)
 	return i, err
 }

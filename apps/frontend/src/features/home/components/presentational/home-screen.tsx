@@ -1,13 +1,11 @@
 import { Apple, Gamepad2, Landmark, Sparkles, User } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
-import { Image } from 'react-native'
 import { Paragraph, XStack, YStack } from 'tamagui'
 
 import { ChannelTile } from '@/shared/components/presentational/channel-tile'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { GlossOverlay } from '@/shared/components/presentational/gloss-overlay'
-import { InsetRing } from '@/shared/components/presentational/wii-card'
+import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import type { SessionUser } from '@/shared/stores/session.store'
 
@@ -58,18 +56,19 @@ export function HomeScreen({ user, onNavigate }: Props) {
         items="center"
         $md={{ flexDirection: 'row' }}
       >
-        <YStack width={96} height={96} rounded="$circle" overflow="hidden" position="relative">
-          <InsetRing rounded="$circle" />
-          <GlossOverlay coverage="third" shape="circle" />
-          {user.picture ? (
-            <Image source={{ uri: user.picture }} style={{ width: '100%', height: '100%' }} />
-          ) : (
-            <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
-              <Paragraph color="white" fontSize="$8" fontWeight="800">
-                {user.completeName.charAt(0).toUpperCase()}
-              </Paragraph>
-            </YStack>
-          )}
+        <YStack width={96} height={96} rounded="$circle" overflow="hidden">
+          <LazyImage
+            uri={user.pictureThumb || user.picture || null}
+            height={96}
+            rounded="$circle"
+            fallback={
+              <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
+                <Paragraph color="white" fontSize="$8" fontWeight="800">
+                  {user.completeName.charAt(0).toUpperCase()}
+                </Paragraph>
+              </YStack>
+            }
+          />
         </YStack>
 
         <YStack items="center" gap="$3" $md={{ items: 'flex-start' }}>

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sort"
 	"sync"
 	"testing"
 
@@ -78,6 +79,34 @@ func (f *fakeDevilFruitRepository) Filter(_ context.Context, _ ports.DevilFruitF
 	return f.GetAll(context.Background(), locale)
 }
 
+func (f *fakeDevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, false, err
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].Name() < all[j].Name() })
+	start := 0
+	if afterName != nil {
+		for i, d := range all {
+			if d.Name() > *afterName {
+				start = i
+				break
+			}
+			start = i + 1
+		}
+	}
+	page := all[start:]
+	if len(page) > limit {
+		return page[:limit], true, nil
+	}
+	return page, false, nil
+}
+
+func (f *fakeDevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	return len(all), err
+}
+
 func (f *fakeDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -98,21 +127,38 @@ func (f *fakeDevilFruitRepository) Delete(_ context.Context, id powers.PowerID) 
 	return nil
 }
 
-func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb *string, status enums.PictureStatus) error {
+func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	fruit, ok := f.fruits[id]
 	if !ok {
 		return ports.ErrDevilFruitNotFound
 	}
-	newMain, newThumb := fruit.Picture(), fruit.PictureThumb()
+	newMain, newThumb, newCard, newLqip := fruit.Picture(), fruit.PictureThumb(), fruit.PictureCard(), fruit.PictureLqip()
 	if main != nil {
 		newMain = *main
 	}
 	if thumb != nil {
 		newThumb = *thumb
 	}
-	fruit.SetPictureRenditions(newMain, newThumb, status)
+	if card != nil {
+		newCard = *card
+	}
+	if lqip != nil {
+		newLqip = *lqip
+	}
+	fruit.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	return nil
+}
+
+func (f *fakeDevilFruitRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	fruit, ok := f.fruits[id]
+	if !ok {
+		return ports.ErrDevilFruitNotFound
+	}
+	fruit.SetMediaID(mediaID)
 	return nil
 }
 
@@ -213,7 +259,7 @@ func TestUpdateDevilFruit_PreservesExistingPicture(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	fruit := newTestDevilFruit(t, repo, idGen, "Mera Mera no Mi")
-	if err := repo.UpdatePicture(context.Background(), fruit.ID(), strPtr("devil-fruits/x/main.webp"), strPtr("devil-fruits/x/main_thumb.webp"), enums.PictureReady); err != nil {
+	if err := repo.UpdatePicture(context.Background(), fruit.ID(), strPtr("devil-fruits/x/main.webp"), strPtr("devil-fruits/x/main_thumb.webp"), nil, nil, enums.PictureReady); err != nil {
 		t.Fatalf("UpdatePicture: %v", err)
 	}
 

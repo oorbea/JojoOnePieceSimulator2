@@ -82,6 +82,19 @@ out here too — they are ordinary `.env.example` entries, not extra secrets:
 | `JWT_SECRET` | `[SECRET]` | HS256 signing key for this backend's own access tokens. **At least 32 characters** — `config.go` refuses to boot below that. Rotating it invalidates every issued token (no refresh tokens: everyone logs in again). |
 | `ADMIN_EMAILS` | `[CONFIG]` | Comma-separated Google account emails promoted to `ADMIN` on login, matched case-insensitively. Empty means nobody is an admin, i.e. the whole admin UI is unreachable. |
 | `STREAM_TICKET_TTL` | `[CONFIG]` | How long a minted SSE/WebSocket connection ticket stays redeemable (default `30s`). Not a secret — the whole point is that it's short-lived and single-use, unlike the JWT it replaced in `?token=`. See `ObsidianVault/stream-connection-tickets-2026-09-02.md`. |
+| `MEDIA_URL_SECRET` | `[SECRET]` | HMAC key signing private (avatar) media URLs (`GET /api/v1/media/p/...`). **At least 32 characters** — `config.go` refuses to boot below that. Rotating it revokes every live private URL at once. |
+| `MEDIA_ID_SALT` | `[SECRET]` | Mixed into the content-hash that derives a public media URL's group id, so the id isn't reproducible from a source image alone by someone who doesn't know the salt. **At least 16 characters**. See `ObsidianVault/media-proxy-content-addressed.md`. |
+| `MEDIA_BASE_URL` | `[CONFIG]` | Origin+prefix media URLs are built under. Prod: relative (`/api/v1/media`, same-origin behind NPM). **Local dev must be absolute** (`http://localhost:8080/api/v1/media`) — frontend `:3000` and backend `:8080` are different origins there, and a relative URL falls through to the frontend nginx's SPA fallback with a silent 200/`index.html` instead of an image. |
+| `MEDIA_PRIVATE_URL_TTL` | `[CONFIG]` | How long a signed private (avatar) media URL stays valid (default `24h`). |
+| `MEDIA_MODE` | `[CONFIG]` | `proxy` (default) or `redirect` — proxy serves bytes directly, redirect 302s to the presigned object-storage URL as an escape hatch. |
+| `MEDIA_CACHE_DIR` | `[CONFIG]` | On-disk cache for the media proxy's own reads from object storage (default `/tmp/media`). |
+| `MEDIA_CACHE_MAX_BYTES` | `[CONFIG]` | LRU cap for `MEDIA_CACHE_DIR` (default `268435456`, 256 MiB). |
+| `RATE_LIMIT_MEDIA_PER_IP` | `[CONFIG]` | Per-IP rate limit on `GET /api/v1/media/**`, separate from the global tier since a cold catalogue load is ~100 image requests (default `1200`). |
+| `PICTURE_CARD_DIMENSION` | `[CONFIG]` | Grid-thumbnail rendition size in px, the smallest of the three (default `128`). |
+| `PICTURE_LQIP_DIMENSION` | `[CONFIG]` | Inline blurred-placeholder rendition size in px (default `16`). |
+| `PICTURE_LQIP_QUALITY` | `[CONFIG]` | WebP quality for the LQIP rendition (default `30`). |
+| `MEDIA_LQIP_MAX_BYTES` | `[CONFIG]` | Rejects (and logs) an LQIP data URI above this size instead of bloating every list response (default `512`). |
+| `HTTP_COMPRESS_LEVEL` | `[CONFIG]` | gzip level for the `/api/v1` REST group, excluding SSE/WebSocket routes (default `5`, `0` disables). |
 
 ### Branch protection
 

@@ -2,7 +2,8 @@ import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
 import { assertContract } from '@/shared/api/assert-contract'
-import { devilFruitResponseSchema } from '@/shared/contracts/dto'
+import { devilFruitPageResponseSchema, devilFruitResponseSchema } from '@/shared/contracts/dto'
+import type { CataloguePage } from '@/shared/hooks/use-paginated-catalogue'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import type { TranslationFormValues } from '@/shared/lib/power-translations'
 import type {
@@ -17,6 +18,22 @@ export async function getDevilFruits(filters?: DevilFruitFilters): Promise<Devil
     for (const fruit of response.data) {
       assertContract(devilFruitResponseSchema, fruit, 'GET /devil-fruits[]')
     }
+  }
+  return response.data
+}
+
+// getDevilFruitsPage is the ?limit=/?cursor= paginated counterpart of
+// getDevilFruits - see stands.api.ts's getStandsPage for the full doc.
+export async function getDevilFruitsPage(
+  filters: DevilFruitFilters | undefined,
+  cursor: string | undefined,
+  limit: number
+): Promise<CataloguePage<DevilFruitResponse>> {
+  const response = await apiClient.get<CataloguePage<DevilFruitResponse>>('/devil-fruits', {
+    params: { ...filters, limit, cursor },
+  })
+  if (__DEV__) {
+    assertContract(devilFruitPageResponseSchema, response.data, 'GET /devil-fruits?limit=')
   }
   return response.data
 }

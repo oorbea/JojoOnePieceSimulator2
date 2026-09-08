@@ -14,9 +14,19 @@ export const standKeys = {
   allLocales: [...queryKeys.root, 'stands'] as const,
   all: () => [...standKeys.allLocales, useLanguageStore.getState().locale] as const,
   list: (filters?: StandFilters) => [...standKeys.all(), 'list', filters ?? {}] as const,
+  // Distinct from `list` on purpose: an infinite query's cached shape
+  // ({pages, pageParams}) is not interchangeable with a plain useQuery's
+  // array, so the paginated catalogue screen (usePaginatedCatalogue) must
+  // never share a key with the admin screen's full-fetch useStands - even
+  // when both happen to carry the same (often empty) filters.
+  page: (filters?: StandFilters) => [...standKeys.all(), 'page', filters ?? {}] as const,
   detail: (id: string) => [...standKeys.all(), 'detail', id] as const,
   // Admin edit form only - carries every locale at once, so it hangs off
   // allLocales (not all()) and must not be branched by the active UI
   // locale. Mutations already invalidate allLocales, which drops this too.
   translations: (id: string) => [...standKeys.allLocales, 'translations', id] as const,
+  // The evolvesFrom picker's id/name set is locale-free (powers.name is not
+  // translatable - see stands.api.ts's getStandOptions), so this hangs off
+  // allLocales too, same reasoning as `translations` above.
+  options: () => [...standKeys.allLocales, 'options'] as const,
 }

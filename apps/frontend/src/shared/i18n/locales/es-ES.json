@@ -16,7 +16,15 @@
     "search": "Buscar",
     "typeToFilter": "Escribe para filtrar…",
     "noMatches": "Sin resultados",
-    "clearLabel": "Borrar {{label}}"
+    "clearLabel": "Borrar {{label}}",
+    "imageLoading": "Cargando imagen",
+    "imageUnavailable": "Imagen no disponible",
+    "imageGenerating": "Generando imagen",
+    "imageRetry": "Reintentar cargar imagen",
+    "loadMore": "Cargar más",
+    "loadMoreRetry": "Reintentar",
+    "itemsLoadedOfTotal": "{{loaded}} / {{total}}",
+    "allItemsLoaded": "Eso es todo ({{total}})"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",
@@ -713,6 +721,8 @@
     "STREAM_TICKET_INVALID": "Esa conexión ha caducado. Reconectando…",
     "REFRESH_INVALID": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
     "REFRESH_REUSE": "Tu sesión se ha cerrado por motivos de seguridad. Vuelve a iniciar sesión.",
+    "OBJECT_NOT_FOUND": "No se ha podido encontrar esta imagen.",
+    "MEDIA_SIGNATURE_INVALID": "Este enlace de imagen ha caducado.",
     "INTERNAL": "Algo ha ido mal por nuestra parte."
   }
 }

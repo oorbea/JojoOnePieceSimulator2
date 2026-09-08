@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { getDevilFruitsPage } from '@/features/devil-fruits/api/devil-fruits.api'
+import { devilFruitKeys } from '@/features/devil-fruits/api/devil-fruits.keys'
 import { DevilFruitsScreen } from '@/features/devil-fruits/components/presentational/devil-fruits-screen'
-import { useDevilFruits } from '@/features/devil-fruits/hooks/use-devil-fruits'
 import type { DevilFruitFilters, DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
-import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import { fruitTypeSchema, raritySchema } from '@/shared/contracts/enums'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
+import { usePaginatedCatalogue } from '@/shared/hooks/use-paginated-catalogue'
 
 // Read-only counterpart to DevilFruitsContainer - see
 // CatalogStandsContainer's doc comment for what this deliberately drops.
@@ -27,12 +29,22 @@ export function CatalogDevilFruitsContainer() {
   }, [rarityFilter, fruitTypeFilter, debouncedSearch])
   const hasActiveFilters = Object.keys(filters).length > 0
 
+  const appliedFilters = hasActiveFilters ? filters : undefined
   const {
-    data: devilFruits,
+    items: devilFruits,
     isLoading,
     isError,
+    isFetchNextPageError,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    total,
     refetch,
-  } = useDevilFruits(hasActiveFilters ? filters : undefined)
+  } = usePaginatedCatalogue(
+    devilFruitKeys.page(appliedFilters),
+    (cursor, limit) => getDevilFruitsPage(appliedFilters, cursor, limit),
+    { hasPendingPicture: (f) => f.pictureStatus === 'PENDING' }
+  )
 
   const rarityFilterOptions = useMemo(
     () => raritySchema.options.map((v) => ({ value: v, label: t(`enums.rarity.${v}`) })),
@@ -62,6 +74,11 @@ export function CatalogDevilFruitsContainer() {
       detailFruit={detailFruit}
       onOpenDetail={setDetailFruit}
       onCloseDetail={() => setDetailFruit(null)}
+      hasNextPage={hasNextPage}
+      isFetchingNextPage={isFetchingNextPage}
+      isLoadMoreError={isFetchNextPageError}
+      onLoadMore={() => void fetchNextPage()}
+      total={total}
     />
   )
 }
