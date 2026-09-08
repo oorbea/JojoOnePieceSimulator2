@@ -184,16 +184,23 @@ extra. States: has-more → button + `N / total`; loading → disabled +
 spinner; a failed page → button becomes "Retry" (`tone="orange"`), already-
 loaded pages stay on screen; exhausted → button gone, "That's all (total)".
 
-**Focus management**: `StandCard` gained `forwardRef` targeting its main
-(detail) Pressable; `stands-screen.tsx` tracks refs by id and moves focus to
-the first newly-appended card after a successful load, so a keyboard user
-never lands on a button that moved or unmounted. **Web-only** - RN's native
-`View` has no DOM-style `.focus()` (unlike react-native-web's host node);
-moving native accessibility focus needs
-`AccessibilityInfo.setAccessibilityFocus` via `findNodeHandle`, out of scope
-for this pass. Guarded on `typeof el.focus === 'function'` so native is a
-silent no-op rather than a crash - not a regression (native never had this
-before), but a known gap.
+**Focus management**: `StandCard`/`DevilFruitCard`/`StageCard` all gained
+`forwardRef` targeting their main (detail) Pressable; each screen tracks
+refs by id and moves focus to the first newly-appended card after a
+successful load, so a keyboard user never lands on a button that moved or
+unmounted. Cross-platform via `focusElement` (`shared/lib/a11y.ts`, closed
+2026-09-08): web calls `.focus()` on the forwarded DOM node (RNW's
+Pressable ref), native calls `AccessibilityInfo.setAccessibilityFocus` via
+`findNodeHandle` - RN's `View` has no DOM-style `.focus()`, so the two
+platforms need genuinely different calls, not just a guarded no-op. `null`/
+unresolvable handles are silently skipped (best-effort, never on a user's
+direct action). `shared/lib/__tests__/a11y.test.ts` covers the web branch
+only - jest.mock('react-native', ...) hit a module-instance mismatch when
+forcing the native branch from jsdom (findNodeHandle got mocked,
+AccessibilityInfo.setAccessibilityFocus didn't, for reasons not worth the
+time to chase for a 15-line helper); the native branch is simple enough to
+read for correctness and gets the same manual on-device verification every
+other `Platform.OS !== 'web'` branch in this codebase does.
 
 Adopted first in the public Stand catalogue, then rolled out to
 DevilFruit/Stage the same session (2026-09-08) - `DevilFruitCard`/`StageCard`
