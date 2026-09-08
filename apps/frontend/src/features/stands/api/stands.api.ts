@@ -2,7 +2,8 @@ import { Platform } from 'react-native'
 
 import { apiClient } from '@/shared/api/client'
 import { assertContract } from '@/shared/api/assert-contract'
-import { standResponseSchema } from '@/shared/contracts/dto'
+import { standPageResponseSchema, standResponseSchema } from '@/shared/contracts/dto'
+import type { CataloguePage } from '@/shared/hooks/use-paginated-catalogue'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
 import type { TranslationFormValues } from '@/shared/lib/power-translations'
 import type {
@@ -19,6 +20,27 @@ export async function getStands(filters?: StandFilters): Promise<StandResponse[]
   if (__DEV__) {
     for (const stand of response.data) assertContract(standResponseSchema, stand, 'GET /stands[]')
   }
+  return response.data
+}
+
+// getStandsPage is the ?limit=/?cursor= paginated counterpart of getStands,
+// for screens using use-paginated-catalogue.ts's usePaginatedCatalogue
+// instead of the legacy full-catalogue fetch. Presence of `limit` is what
+// opts the backend into the envelope response - see
+// ObsidianVault/catalogue-pagination.md.
+export async function getStandsPage(
+  filters: StandFilters | undefined,
+  cursor: string | undefined,
+  limit: number
+): Promise<CataloguePage<StandResponse>> {
+  const response = await apiClient.get<CataloguePage<StandResponse>>('/stands', {
+    params: { ...filters, limit, cursor },
+  })
+  // Dev-only contract check against the whole envelope (items + nextCursor/
+  // total), stronger than the per-item loop above - see
+  // standPageResponseSchema's doc for why this single call also validates
+  // every item's (recursive) evolvesFrom shape.
+  if (__DEV__) assertContract(standPageResponseSchema, response.data, 'GET /stands?limit=')
   return response.data
 }
 

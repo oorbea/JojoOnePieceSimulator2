@@ -1,7 +1,7 @@
 import { Pencil, Sparkles, Trash2 } from '@tamagui/lucide-icons-2'
-import { useState } from 'react'
+import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pressable } from 'react-native'
+import { Pressable, type View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -28,7 +28,15 @@ type Props = {
 // press; the thumbnail keeps its own Pressable for the full-size lightbox
 // so the two never fight over the same tap - see stands.previewA11y vs
 // stands.detailA11y for the two distinct affordances.
-export function StandCard({ stand, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props) {
+//
+// forwardRef targets the detail Pressable specifically (the card's main tab
+// stop) - "Cargar más" in stands-screen.tsx moves focus there for the first
+// newly-appended card after a page loads, per norma-teclado.md's
+// keyboard-accessibility requirement.
+export const StandCard = forwardRef<View, Props>(function StandCard(
+  { stand, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
+  ref
+) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [imageState, setImageState] = useState<LazyImageState>('queued')
@@ -62,6 +70,7 @@ export function StandCard({ stand, onOpenDetail, readOnly, onEdit, onDelete, isE
       />
 
       <Pressable
+        ref={ref}
         onPress={onOpenDetail}
         {...a11yProps(t('stands.detailA11y', { name: stand.name }), 'button')}
       >
@@ -128,4 +137,4 @@ export function StandCard({ stand, onOpenDetail, readOnly, onEdit, onDelete, isE
       )}
     </WiiCard>
   )
-}
+})

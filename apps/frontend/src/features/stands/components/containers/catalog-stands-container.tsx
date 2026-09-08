@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { getStandsPage } from '@/features/stands/api/stands.api'
+import { standKeys } from '@/features/stands/api/stands.keys'
 import { StandsScreen, type StandStatFilterKey } from '@/features/stands/components/presentational/stands-screen'
 import { useStandOptions } from '@/features/stands/hooks/use-stand-options'
-import { useStands } from '@/features/stands/hooks/use-stands'
 import type { StandFilters, StandResponse } from '@/features/stands/types/stands.types'
-import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import { raritySchema, standStatSchema } from '@/shared/contracts/enums'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
+import { usePaginatedCatalogue } from '@/shared/hooks/use-paginated-catalogue'
 
 const STAT_FILTER_KEYS: StandStatFilterKey[] = [
   'attackPower',
@@ -72,12 +74,22 @@ export function CatalogStandsContainer() {
     [filters, evolvesFromNameFilter]
   )
 
+  const appliedFilters = hasActiveFilters ? gridFilters : undefined
   const {
-    data: stands,
+    items: stands,
     isLoading,
     isError,
+    isFetchNextPageError,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    total,
     refetch,
-  } = useStands(hasActiveFilters ? gridFilters : undefined)
+  } = usePaginatedCatalogue(
+    standKeys.page(appliedFilters),
+    (cursor, limit) => getStandsPage(appliedFilters, cursor, limit),
+    { hasPendingPicture: (s) => s.pictureStatus === 'PENDING' }
+  )
 
   const evolvesFromOptions = useMemo(
     () => (standOptions ?? []).map((s) => ({ value: s.id, label: s.name })),
@@ -131,6 +143,11 @@ export function CatalogStandsContainer() {
       detailStand={detailStand}
       onOpenDetail={setDetailStand}
       onCloseDetail={() => setDetailStand(null)}
+      hasNextPage={hasNextPage}
+      isFetchingNextPage={isFetchingNextPage}
+      isLoadMoreError={isFetchNextPageError}
+      onLoadMore={() => void fetchNextPage()}
+      total={total}
     />
   )
 }
