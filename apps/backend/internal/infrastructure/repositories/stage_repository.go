@@ -101,6 +101,70 @@ func (r *StageRepository) Filter(ctx context.Context, filters ports.StageFilters
 	return stages, nil
 }
 
+// Page implements ports.IStageRepository. after carries all three cursor
+// fields together (nil for the first page) - see PageStageRows's doc for why
+// the row-value comparison must not cast manga to ::text.
+func (r *StageRepository) Page(ctx context.Context, filters ports.StageFilters, locale enums.Locale, after *ports.StagePageCursor, limit int) ([]game.Stage, bool, error) {
+	var dbManga *db.Manga
+	if filters.Manga != nil {
+		m := db.Manga(filters.Manga.String())
+		dbManga = &m
+	}
+	var afterManga *db.Manga
+	var afterPosition *int32
+	var afterName *string
+	if after != nil {
+		m := db.Manga(after.Manga.String())
+		afterManga = &m
+		pos := int32(after.Position)
+		afterPosition = &pos
+		afterName = &after.Name
+	}
+	rows, err := r.queries.PageStageRows(ctx, db.PageStageRowsParams{
+		Manga:         dbManga,
+		Search:        searchPtr(filters.Search),
+		Locales:       fallbackStrings(locale),
+		AfterManga:    afterManga,
+		AfterPosition: afterPosition,
+		AfterName:     afterName,
+		PageLimit:     int32(limit + 1),
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("paging stages: %w", err)
+	}
+	stages := make([]game.Stage, 0, len(rows))
+	for _, row := range rows {
+		st, err := toStage(fromPageStageRow(row))
+		if err != nil {
+			return nil, false, err
+		}
+		stages = append(stages, st)
+	}
+	hasMore := len(stages) > limit
+	if hasMore {
+		stages = stages[:limit]
+	}
+	return stages, hasMore, nil
+}
+
+// Count implements ports.IStageRepository.
+func (r *StageRepository) Count(ctx context.Context, filters ports.StageFilters, locale enums.Locale) (int, error) {
+	var dbManga *db.Manga
+	if filters.Manga != nil {
+		m := db.Manga(filters.Manga.String())
+		dbManga = &m
+	}
+	count, err := r.queries.CountStageRows(ctx, db.CountStageRowsParams{
+		Manga:   dbManga,
+		Search:  searchPtr(filters.Search),
+		Locales: fallbackStrings(locale),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("counting stages: %w", err)
+	}
+	return int(count), nil
+}
+
 // FindByID implements ports.IStageRepository.
 func (r *StageRepository) FindByID(ctx context.Context, id game.StageID, locale enums.Locale) (game.Stage, error) {
 	row, err := r.queries.GetStageByID(ctx, db.GetStageByIDParams{

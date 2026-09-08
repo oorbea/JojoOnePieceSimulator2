@@ -135,6 +135,17 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 	return fruits, nil
 }
 
+// Page is a pass-through, deliberately not cached - same reasoning as
+// StandRepository.Page (ObsidianVault/catalogue-pagination.md).
+func (r *DevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	return r.next.Page(ctx, filters, locale, afterName, limit)
+}
+
+// Count is a pass-through - same reasoning as Page.
+func (r *DevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	return r.next.Count(ctx, filters, locale)
+}
+
 // Translations bypasses the cache: admin edit forms need a fresh read of
 // every locale's content, and this path is not part of the hot,
 // high-traffic read surface the cache exists for.

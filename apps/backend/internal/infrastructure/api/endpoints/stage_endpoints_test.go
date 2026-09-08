@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -60,6 +62,51 @@ func (f *fakeStageRepository) Filter(_ context.Context, filters ports.StageFilte
 		out = append(out, *s)
 	}
 	return out, nil
+}
+
+func (f *fakeStageRepository) Page(ctx context.Context, filters ports.StageFilters, locale enums.Locale, after *ports.StagePageCursor, limit int) ([]game.Stage, bool, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	if err != nil {
+		return nil, false, err
+	}
+	sort.Slice(all, func(i, j int) bool {
+		if all[i].Manga() != all[j].Manga() {
+			return all[i].Manga().String() < all[j].Manga().String()
+		}
+		if all[i].Order() != all[j].Order() {
+			return all[i].Order() < all[j].Order()
+		}
+		return all[i].Name() < all[j].Name()
+	})
+	start := 0
+	if after != nil {
+		afterKey := func(s game.Stage) bool {
+			if s.Manga() != after.Manga {
+				return s.Manga().String() > after.Manga.String()
+			}
+			if s.Order() != after.Position {
+				return s.Order() > after.Position
+			}
+			return s.Name() > after.Name
+		}
+		for i, s := range all {
+			if afterKey(s) {
+				start = i
+				break
+			}
+			start = i + 1
+		}
+	}
+	page := all[start:]
+	if len(page) > limit {
+		return page[:limit], true, nil
+	}
+	return page, false, nil
+}
+
+func (f *fakeStageRepository) Count(ctx context.Context, filters ports.StageFilters, locale enums.Locale) (int, error) {
+	all, err := f.Filter(ctx, filters, locale)
+	return len(all), err
 }
 
 func (f *fakeStageRepository) FindByID(_ context.Context, id game.StageID, _ enums.Locale) (game.Stage, error) {
@@ -385,6 +432,165 @@ func TestListStages_InvalidManga(t *testing.T) {
 	rec := doRequest(t, h, http.MethodGet, "/api/v1/stages?manga=NOT_A_MANGA", nil)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+// TestListStages_NoPageParams_StaysBareArray mirrors
+// TestListStands_NoPageParams_StaysBareArray - see that test's doc.
+func TestListStages_NoPageParams_StaysBareArray(t *testing.T) {
+	h := newStageTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", validStageBody("Phantom Blood"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stages", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	body := rec.Body.Bytes()
+	first := ""
+	for _, b := range body {
+		if b == ' ' || b == '\n' || b == '\t' || b == '\r' {
+			continue
+		}
+		first = string(b)
+		break
+	}
+	if first != "[" {
+		t.Fatalf("first non-whitespace byte = %q, want %q (bare array)", first, "[")
+	}
+}
+
+// TestListStages_Page_WalkingCursorToExhaustion_EqualsUnpaginatedList mirrors
+// the Stand test of the same shape, but also seeds stages sharing a manga
+// with different order values, exercising the (manga, position, name)
+// triple-key cursor - see PageStageRows's doc on the ::manga cast trap.
+func TestListStages_Page_WalkingCursorToExhaustion_EqualsUnpaginatedList(t *testing.T) {
+	h := newStageTestServer()
+
+	a := validStageBody("Phantom Blood")
+	a["order"] = 1
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", a)
+	b := validStageBody("Battle Tendency")
+	b["order"] = 2
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", b)
+	c := validStageBody("Stardust Crusaders")
+	c["order"] = 1 // ties with "a" on (manga, order) - broken by name
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", c)
+	d := validStageBody("Alabasta")
+	d["manga"] = "ONE_PIECE"
+	d["order"] = 1
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", d)
+
+	unpagedRec := doRequest(t, h, http.MethodGet, "/api/v1/stages", nil)
+	var unpaged []map[string]any
+	if err := json.Unmarshal(unpagedRec.Body.Bytes(), &unpaged); err != nil {
+		t.Fatalf("unmarshal unpaged: %v", err)
+	}
+
+	var pagedNames []string
+	cursor := ""
+	pages := 0
+	for {
+		path := "/api/v1/stages?limit=1"
+		if cursor != "" {
+			path += "&cursor=" + url.QueryEscape(cursor)
+		}
+		rec := doRequest(t, h, http.MethodGet, path, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("page %d: status = %d, body = %s", pages, rec.Code, rec.Body.String())
+		}
+		var page struct {
+			Items      []map[string]any `json:"items"`
+			NextCursor *string          `json:"nextCursor"`
+			Total      *int             `json:"total"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+			t.Fatalf("page %d: unmarshal: %v", pages, err)
+		}
+		if pages == 0 && (page.Total == nil || *page.Total != len(unpaged)) {
+			t.Errorf("first page total = %v, want %d", page.Total, len(unpaged))
+		}
+		if pages > 0 && page.Total != nil {
+			t.Errorf("page %d: total = %v, want absent on non-first pages", pages, *page.Total)
+		}
+		if len(page.Items) != 1 {
+			t.Fatalf("page %d: len(items) = %d, want 1", pages, len(page.Items))
+		}
+		pagedNames = append(pagedNames, page.Items[0]["name"].(string))
+
+		pages++
+		if page.NextCursor == nil {
+			break
+		}
+		cursor = *page.NextCursor
+		if pages > len(unpaged)+1 {
+			t.Fatalf("cursor never reached exhaustion after %d pages", pages)
+		}
+	}
+
+	if len(pagedNames) != len(unpaged) {
+		t.Fatalf("paged through %d items, want %d (every unpaginated item exactly once)", len(pagedNames), len(unpaged))
+	}
+	wantNames := make(map[string]int, len(unpaged))
+	for _, s := range unpaged {
+		wantNames[s["name"].(string)]++
+	}
+	gotNames := make(map[string]int, len(pagedNames))
+	for _, name := range pagedNames {
+		gotNames[name]++
+	}
+	for name, want := range wantNames {
+		if got := gotNames[name]; got != want {
+			t.Errorf("%q appeared %d times across pages, want %d", name, got, want)
+		}
+	}
+	// JOJO (declared first in CREATE TYPE manga) must sort before ONE_PIECE,
+	// and within JOJO, order=1 before order=2, ties on order broken by name.
+	want := []string{"Phantom Blood", "Stardust Crusaders", "Battle Tendency", "Alabasta"}
+	if len(pagedNames) == len(want) {
+		for i := range want {
+			if pagedNames[i] != want[i] {
+				t.Errorf("paged order[%d] = %q, want %q (full order: %v)", i, pagedNames[i], want[i], pagedNames)
+				break
+			}
+		}
+	}
+}
+
+// TestListStages_Page_CursorFromDifferentFilters_Returns400 mirrors the
+// Stand test of the same name.
+func TestListStages_Page_CursorFromDifferentFilters_Returns400(t *testing.T) {
+	h := newStageTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", validStageBody("Phantom Blood"))
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", validStageBody("Battle Tendency"))
+
+	rec := doRequest(t, h, http.MethodGet, "/api/v1/stages?limit=1", nil)
+	var page struct {
+		NextCursor *string `json:"nextCursor"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &page)
+	if page.NextCursor == nil {
+		t.Fatal("expected a nextCursor with 2 stages and limit=1")
+	}
+
+	replayed := doRequest(t, h, http.MethodGet,
+		"/api/v1/stages?limit=1&manga=ONE_PIECE&cursor="+url.QueryEscape(*page.NextCursor), nil)
+	if replayed.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d (cursor replayed under different filters), body = %s",
+			replayed.Code, http.StatusBadRequest, replayed.Body.String())
+	}
+}
+
+// TestListStages_Page_TamperedCursor_Returns400 mirrors the Stand test of
+// the same name.
+func TestListStages_Page_TamperedCursor_Returns400(t *testing.T) {
+	h := newStageTestServer()
+	doRequest(t, h, http.MethodPost, "/api/v1/stages", validStageBody("Phantom Blood"))
+
+	for _, cursor := range []string{"not-base64!!!", "AAAA"} {
+		rec := doRequest(t, h, http.MethodGet, "/api/v1/stages?limit=1&cursor="+url.QueryEscape(cursor), nil)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("cursor=%q: status = %d, want %d", cursor, rec.Code, http.StatusBadRequest)
+		}
 	}
 }
 

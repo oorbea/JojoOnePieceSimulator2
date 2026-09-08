@@ -45,6 +45,21 @@ type StandCursor struct {
 	Name string `json:"name"`
 }
 
+// DevilFruitCursor is the decoded shape of a DevilFruit page cursor's `k`
+// field - same shape as StandCursor (DevilFruit sorts by name alone too).
+type DevilFruitCursor struct {
+	Name string `json:"name"`
+}
+
+// StageCursor is the decoded shape of a Stage page cursor's `k` field -
+// Stage sorts by the triple (manga, position, name), so all three ride in
+// the cursor together.
+type StageCursor struct {
+	Manga    string `json:"manga"`
+	Position int    `json:"position"`
+	Name     string `json:"name"`
+}
+
 type cursorEnvelope[K any] struct {
 	V int    `json:"v"`
 	F string `json:"f"`
@@ -163,6 +178,74 @@ func standFiltersCanonical(f ports.StandFilters) string {
 // to, given the request's current filters and locale.
 func StandFiltersFingerprint(filters ports.StandFilters, locale fmt.Stringer) string {
 	return FilterFingerprint(standFiltersCanonical(filters) + "|" + locale.String())
+}
+
+// devilFruitFiltersCanonical mirrors standFiltersCanonical for
+// ports.DevilFruitFilters - see that function's doc for the anti-drift
+// follow-up this duplication should eventually become.
+func devilFruitFiltersCanonical(f ports.DevilFruitFilters) string {
+	str := func(v *string) string {
+		if v == nil {
+			return ""
+		}
+		return *v
+	}
+	parts := []string{str(f.Search)}
+	if f.Rarity != nil {
+		parts = append(parts, f.Rarity.String())
+	} else {
+		parts = append(parts, "")
+	}
+	if f.FruitType != nil {
+		parts = append(parts, f.FruitType.String())
+	} else {
+		parts = append(parts, "")
+	}
+	out := ""
+	for i, p := range parts {
+		if i > 0 {
+			out += "|"
+		}
+		out += p
+	}
+	return out
+}
+
+// DevilFruitFiltersFingerprint is the fingerprint a DevilFruit page cursor
+// is bound to, given the request's current filters and locale.
+func DevilFruitFiltersFingerprint(filters ports.DevilFruitFilters, locale fmt.Stringer) string {
+	return FilterFingerprint(devilFruitFiltersCanonical(filters) + "|" + locale.String())
+}
+
+// stageFiltersCanonical mirrors standFiltersCanonical for
+// ports.StageFilters.
+func stageFiltersCanonical(f ports.StageFilters) string {
+	str := func(v *string) string {
+		if v == nil {
+			return ""
+		}
+		return *v
+	}
+	parts := []string{str(f.Search)}
+	if f.Manga != nil {
+		parts = append(parts, f.Manga.String())
+	} else {
+		parts = append(parts, "")
+	}
+	out := ""
+	for i, p := range parts {
+		if i > 0 {
+			out += "|"
+		}
+		out += p
+	}
+	return out
+}
+
+// StageFiltersFingerprint is the fingerprint a Stage page cursor is bound
+// to, given the request's current filters and locale.
+func StageFiltersFingerprint(filters ports.StageFilters, locale fmt.Stringer) string {
+	return FilterFingerprint(stageFiltersCanonical(filters) + "|" + locale.String())
 }
 
 // PageParams is the parsed, validated ?limit=&cursor=&total= query params

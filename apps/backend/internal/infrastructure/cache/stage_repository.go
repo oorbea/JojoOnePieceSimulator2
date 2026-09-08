@@ -112,6 +112,17 @@ func (r *StageRepository) Filter(ctx context.Context, filters ports.StageFilters
 	return stages, nil
 }
 
+// Page is a pass-through, deliberately not cached - same reasoning as
+// StandRepository.Page (ObsidianVault/catalogue-pagination.md).
+func (r *StageRepository) Page(ctx context.Context, filters ports.StageFilters, locale enums.Locale, after *ports.StagePageCursor, limit int) ([]game.Stage, bool, error) {
+	return r.next.Page(ctx, filters, locale, after, limit)
+}
+
+// Count is a pass-through - same reasoning as Page.
+func (r *StageRepository) Count(ctx context.Context, filters ports.StageFilters, locale enums.Locale) (int, error) {
+	return r.next.Count(ctx, filters, locale)
+}
+
 // FindByID is read-through: a hit avoids next entirely, including a cached
 // ports.ErrStageNotFound tombstone. Cached per locale - see keys.go.
 // Unlike the Stand/DevilFruit decorators this returns a value, not a

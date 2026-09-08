@@ -57,3 +57,11 @@ func NewStageResponses(ctx context.Context, stages []game.Stage, resolve Picture
 	}
 	return responses, nil
 }
+
+// StagePageResponse is GET /stages's response body when the request opts
+// into pagination - see StandPageResponse's doc for the wire shape and why
+// this is a concrete per-resource envelope.
+type StagePageResponse struct {
+	PageInfo
+	Items []StageResponse `json:"items"`
+}

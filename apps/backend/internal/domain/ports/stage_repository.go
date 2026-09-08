@@ -17,6 +17,14 @@ type StageFilters struct {
 	Search *string
 }
 
+// StagePageCursor is the decoded (manga, position, name) key a Stage page
+// cursor carries - see IStageRepository.Page.
+type StagePageCursor struct {
+	Manga    enums.Manga
+	Position int
+	Name     string
+}
+
 // IStageRepository is the admin-facing CRUD counterpart to IStageCatalog -
 // one adapter satisfies both, the same relationship IStandRepository has
 // with the read side of the Stand catalogue.
@@ -30,6 +38,15 @@ type IStageRepository interface {
 	// (which is gameplay-facing and always resolves at a fixed
 	// enums.EnGB - see that port's doc).
 	Filter(ctx context.Context, filters StageFilters, locale enums.Locale) ([]game.Stage, error)
+	// Page returns up to limit+1 Stages matching filters, ordered by
+	// (manga, position, name) after `after` (nil for the first page), then
+	// the caller trims the extra row and reports hasMore. `after` carries all
+	// three cursor fields together - a Stage page cursor is only ever issued
+	// with all of them set, never partially.
+	Page(ctx context.Context, filters StageFilters, locale enums.Locale, after *StagePageCursor, limit int) ([]game.Stage, bool, error)
+	// Count returns the total number of Stages matching filters, ignoring
+	// pagination.
+	Count(ctx context.Context, filters StageFilters, locale enums.Locale) (int, error)
 	// FindByID returns the Stage matching id, description resolved for
 	// locale, or ErrStageNotFound.
 	FindByID(ctx context.Context, id game.StageID, locale enums.Locale) (game.Stage, error)

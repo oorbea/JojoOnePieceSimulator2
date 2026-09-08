@@ -113,6 +113,19 @@ func (s *DevilFruitService) FilterDevilFruits(ctx context.Context, filters ports
 	return s.repo.Filter(ctx, filters, locale)
 }
 
+// PageDevilFruits returns up to limit+1 devil fruits matching filters,
+// ordered by name after afterName - see ports.IDevilFruitRepository.Page's
+// doc.
+func (s *DevilFruitService) PageDevilFruits(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
+	return s.repo.Page(ctx, filters, locale, afterName, limit)
+}
+
+// CountDevilFruits returns the total number of devil fruits matching
+// filters, ignoring pagination.
+func (s *DevilFruitService) CountDevilFruits(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
+	return s.repo.Count(ctx, filters, locale)
+}
+
 // DevilFruitTranslations returns every locale's content for id, for the
 // admin edit form.
 func (s *DevilFruitService) DevilFruitTranslations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {

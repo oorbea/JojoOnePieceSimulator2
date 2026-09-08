@@ -36,6 +36,7 @@ export type { ErrorCode, ErrorResponse } from './errors'
 export type {
   AdminUpdateUserRequest,
   DevilFruitResponse,
+  DevilFruitPageResponse,
   GameRoundResultResponse,
   GameStageResponse,
   GameRoundResponse,
@@ -55,6 +56,7 @@ export type {
   PublicLobbyListResponse,
   PublicUserResponse,
   StageResponse,
+  StagePageResponse,
   StageTranslationRequest,
   StageRequest,
   StageTranslationResponse,

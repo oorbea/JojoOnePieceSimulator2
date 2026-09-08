@@ -10,6 +10,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
 )
@@ -79,6 +80,17 @@ func (e *DevilFruitEndpoints) list(w http.ResponseWriter, r *http.Request) error
 	}
 
 	locale := LocaleFromRequest(r)
+
+	// Opt-in pagination - see StandEndpoints.list's doc for why an
+	// unconditional envelope switch is a hazard.
+	pageParams, err := dto.PageParamsFromQuery(r.URL.Query())
+	if err != nil {
+		return err
+	}
+	if pageParams.Requested {
+		return e.listPage(w, r, filters, locale, pageParams)
+	}
+
 	var fruits []*powers.DevilFruit
 	if hasFilters {
 		fruits, err = e.svc.FilterDevilFruits(r.Context(), filters, locale)
@@ -93,6 +105,51 @@ func (e *DevilFruitEndpoints) list(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 	writeJSON(w, http.StatusOK, resp)
+	return nil
+}
+
+// listPage serves the ?limit=/?cursor= paginated form of GET /devil-fruits -
+// see StandEndpoints.listPage's doc.
+func (e *DevilFruitEndpoints) listPage(w http.ResponseWriter, r *http.Request, filters ports.DevilFruitFilters, locale enums.Locale, params dto.PageParams) error {
+	fingerprint := dto.DevilFruitFiltersFingerprint(filters, locale)
+
+	var afterName *string
+	if params.HasCursor {
+		cursor, err := dto.DecodeCursor[dto.DevilFruitCursor](params.Cursor, fingerprint)
+		if err != nil {
+			return err
+		}
+		afterName = &cursor.Name
+	}
+
+	fruits, hasMore, err := e.svc.PageDevilFruits(r.Context(), filters, locale, afterName, params.Limit)
+	if err != nil {
+		return err
+	}
+
+	var total *int
+	if params.WithTotal && !params.HasCursor {
+		count, err := e.svc.CountDevilFruits(r.Context(), filters, locale)
+		if err != nil {
+			return err
+		}
+		total = &count
+	}
+
+	var nextCursor *string
+	if hasMore && len(fruits) > 0 {
+		encoded := dto.EncodeCursor(dto.DevilFruitCursor{Name: fruits[len(fruits)-1].Name()}, fingerprint)
+		nextCursor = &encoded
+	}
+
+	items, err := dto.NewDevilFruitResponses(r.Context(), fruits, e.svc.PictureURL, e.media)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.DevilFruitPageResponse{
+		PageInfo: dto.NewPageInfo(nextCursor, total),
+		Items:    items,
+	})
 	return nil
 }
 

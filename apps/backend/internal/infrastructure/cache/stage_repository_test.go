@@ -24,6 +24,8 @@ type countingStageRepository struct {
 	stagesCalls    int
 	listCalls      int
 	filterCalls    int
+	pageCalls      int
+	countCalls     int
 	findByIDCalls  int
 	translateCalls int
 	updatePicCalls int
@@ -72,6 +74,34 @@ func (r *countingStageRepository) Filter(_ context.Context, filters ports.StageF
 		results = append(results, s)
 	}
 	return results, nil
+}
+
+func (r *countingStageRepository) Page(_ context.Context, filters ports.StageFilters, _ enums.Locale, _ *ports.StagePageCursor, _ int) ([]game.Stage, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.pageCalls++
+	var results []game.Stage
+	for _, s := range r.stages {
+		if filters.Manga != nil && s.Manga() != *filters.Manga {
+			continue
+		}
+		results = append(results, s)
+	}
+	return results, false, nil
+}
+
+func (r *countingStageRepository) Count(_ context.Context, filters ports.StageFilters, _ enums.Locale) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.countCalls++
+	count := 0
+	for _, s := range r.stages {
+		if filters.Manga != nil && s.Manga() != *filters.Manga {
+			continue
+		}
+		count++
+	}
+	return count, nil
 }
 
 func (r *countingStageRepository) FindByID(_ context.Context, id game.StageID, _ enums.Locale) (game.Stage, error) {
