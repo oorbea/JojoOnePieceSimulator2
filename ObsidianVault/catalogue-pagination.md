@@ -151,9 +151,56 @@ repository).
 shape exactly (`PageInfo` embedded, `items` array) - both registered in
 `cmd/typegen/registry.go`'s `restTypes`, same as Stand.
 
+## Frontend consumption (shipped 2026-09-08, Stand only)
+
+`src/shared/hooks/use-paginated-catalogue.ts` is a generic `useInfiniteQuery`
+wrapper: `usePaginatedCatalogue(queryKey, fetchPage, {hasPendingPicture})`
+returns `{items, total, hasNextPage, isFetchingNextPage,
+isFetchNextPageError, fetchNextPage, ...}` - `items` is every loaded page
+flattened, `fetchPage(cursor, limit)` is the only per-resource piece. Keeps
+the same native-only polling fallback (web uses `PictureEventsBridge`'s SSE
+push instead) the three unpaginated hooks already have, generalized via the
+`hasPendingPicture` predicate instead of a hardcoded `pictureStatus ===
+'PENDING'` check.
+
+**Query key must differ from the unpaginated one, even for identical
+filters.** An infinite query caches `{pages, pageParams}`; a plain
+`useQuery` caches a bare array. `standKeys.page(filters)` exists
+specifically so the admin screen's full `useStands()` fetch and the public
+catalogue's paginated fetch never collide under the same key when both
+happen to be unfiltered - both still hang off `standKeys.all()`, so a
+mutation's existing `allLocales` invalidation covers both without change.
+
+**UI**: `stands-screen.tsx` gained an explicit "Cargar más" `GlossButton`
+below the grid (not infinite scroll - `norma-teclado.md` requires it be
+keyboard-reachable), all optional props (`hasNextPage`/`onLoadMore`/etc) so
+the admin screen's usage (still full-fetch, no pagination) renders nothing
+extra. States: has-more → button + `N / total`; loading → disabled +
+spinner; a failed page → button becomes "Retry" (`tone="orange"`), already-
+loaded pages stay on screen; exhausted → button gone, "That's all (total)".
+
+**Focus management**: `StandCard` gained `forwardRef` targeting its main
+(detail) Pressable; `stands-screen.tsx` tracks refs by id and moves focus to
+the first newly-appended card after a successful load, so a keyboard user
+never lands on a button that moved or unmounted. **Web-only** - RN's native
+`View` has no DOM-style `.focus()` (unlike react-native-web's host node);
+moving native accessibility focus needs
+`AccessibilityInfo.setAccessibilityFocus` via `findNodeHandle`, out of scope
+for this pass. Guarded on `typeof el.focus === 'function'` so native is a
+silent no-op rather than a crash - not a regression (native never had this
+before), but a known gap.
+
+Adopted only in the public Stand catalogue (`CatalogStandsContainer`) as the
+reference implementation - same incremental-rollout pattern as `LazyImage`
+landing in `stand-card.tsx` first. DevilFruit/Stage catalogue screens and
+the admin screens are unchanged.
+
 ## Still open
 
-- Frontend: no `use-paginated-catalogue.ts` hook, no "Cargar más" UI yet -
-  all three of `GET /stands`/`GET /devil-fruits`/`GET /stages` are
-  paginatable server-side but nothing calls them that way.
+- Frontend: DevilFruit/Stage catalogue screens still use the full
+  unpaginated fetch - `use-paginated-catalogue.ts` is generic and ready, but
+  `catalog-devil-fruits-container.tsx`/`catalog-stages-container.tsx` and
+  their screens haven't been wired the way Stand's was.
+- Native accessibility focus after "Cargar más" (see above) - currently a
+  no-op on native, not a crash, but not the real fix either.
 - The `Canonical()` anti-drift refactor mentioned above.
