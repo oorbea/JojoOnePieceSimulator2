@@ -44,19 +44,44 @@ docker run --rm -v "$(pwd):/repo:ro" -v jojo-frontend-work:/work node:22-alpine 
   # conservando node_modules ya instalado, y pnpm install de nuevo (rápido, usa el store cacheado)
   cd /work/repo/frontend
   CI=true pnpm install --frozen-lockfile --prefer-offline
-  pnpm typecheck && pnpm lint && pnpm test:ci
+  pnpm typecheck && pnpm lint && pnpm jest --ci --maxWorkers=2 --cacheDirectory=/work/.jest-cache
 '
 ```
 No existe todavía un `docker-compose` dedicado para esto - candidato a añadir un servicio
 `frontend-test` real a `docker-compose.test.yml` si esta norma se usa a menudo (evitaría reinventar
 el volumen/copy cada vez). Anotado como mejora pendiente, no bloqueante.
 
-**Flakiness conocida bajo Docker con muchos workers**: `pnpm test:ci` con el paralelismo por
-defecto de Jest mostró 2 tests fallando por timing (`use-loadout-reveal.test.tsx`,
+**Flakiness conocida bajo Docker con muchos workers**: `pnpm test:ci`/`pnpm jest` con el
+paralelismo por defecto de Jest mostró tests fallando por timing (`use-loadout-reveal.test.tsx`,
 `tooltip.test.tsx`) que pasan limpio en aislamiento o con `--maxWorkers=2` - mismo patrón que el
 flake de `StageCard` ya documentado en [[game-match-assignment-frontend]]. Si un test falla solo en
 la corrida completa y pasa en aislamiento, es candidato a este mismo patrón antes de asumir una
-regresión real.
+regresión real. `--maxWorkers=2` ya es el valor recomendado por defecto (ver caché abajo), así que
+esto raramente hace falta invocarlo aparte.
+
+## Caché obligatoria en todas las verificaciones Docker (2026-09-08)
+
+A petición explícita del owner, tras medir que verificar sin caché tardaba muchísimo más de lo
+necesario: **toda comprobación en Docker (lint, typecheck, tests) debe aprovechar caché, siempre**,
+no es opcional.
+
+- **Backend**: ya viene resuelto sin flags extra - `docker-compose.test.yml`'s `backend-test`/
+  `typegen` montan `go-mod-cache`/`go-build-cache` como volúmenes nombrados, así que descargas de
+  módulos y paquetes compilados sobreviven entre ejecuciones automáticamente.
+- **Frontend**: el `node_modules`/pnpm store ya se cacheaba (`jojo-frontend-work`), pero el propio
+  runner de Jest no - cada ejecución recompilaba todo desde cero. Fix: pasar
+  `--cacheDirectory=/work/.jest-cache` (mismo volumen nombrado, así sobrevive entre contenedores) a
+  todo `pnpm jest`. Medido: ~90-95s en frío vs ~40-50s en caliente para la suite completa (61-62
+  suites, ~1200 tests).
+- **Durante iteración** (arreglar un fallo de typecheck/lint/test a la vez): no relanzar la suite
+  entera - correr solo los ficheros afectados (`pnpm exec eslint <ficheros>`,
+  `pnpm jest --ci --maxWorkers=2 --cacheDirectory=... <tests afectados>`). La suite completa
+  (`pnpm typecheck && pnpm lint && pnpm jest ...` / `pnpm test:ci` con el flag de caché) se corre
+  **una sola vez**, como comprobación final antes de dar la tanda por cerrada o hacer commit - las
+  corridas dirigidas durante la iteración no sustituyen a esa pasada final.
+
+Ver `feedback_frontend_verify_cache` (memoria de Claude) y el `Stop` hook en `settings.json`
+(actualizado para recordar los comandos con caché), y `.claude/skills/verify/SKILL.md` §2/§3.
 
 ## Contratos generados (2026-09-02)
 
