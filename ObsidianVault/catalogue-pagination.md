@@ -75,15 +75,20 @@ combination is a 400 (`DecodeCursor`'s fingerprint check), not
 silently-wrong results. `TestListStands_Page_CursorFromDifferentFilters_Returns400`
 locks this.
 
-**Known duplication, deliberate for now:** `standFiltersCanonical` in
-`dto/pagination.go` renders `ports.StandFilters` in the same fixed field
-order `cache/keys.go`'s `standFilterKey` already does, but as a second,
-separately-maintained copy - the anti-drift fix the original plan called
-for (`Canonical()` on `StandFilters` itself, consumed by both) hasn't
-landed. A field added to `StandFilters` without updating both places doesn't
-break correctness (worst case: a wrong-but-consistent fingerprint, still
-caught by DecodeCursor's equality check) but does mean two filter
-combinations could theoretically collide to the same fingerprint. Follow-up.
+**Anti-drift fix, closed 2026-09-08:** `StandFilters`/`DevilFruitFilters`/
+`StageFilters` each gained a `Canonical() string` method in `ports` -
+the single source of truth for a filter set's canonical rendering,
+consumed by both `cache/keys.go`'s `*FilterKey` functions and
+`dto/pagination.go`'s `*FiltersFingerprint` functions. Before this, each
+call site duplicated its own copy of the field list, exactly the trap
+`admin-search-and-filters.md` already documents - a field added to a
+*Filters struct without updating both was a silent gap (worst case: two
+different filter combinations hashing to the same cache entry or cursor
+fingerprint). `ports/canonical_test.go` locks it with a reflect-based
+field-count assertion (`Canonical()`'s `|`-segment count must equal the
+struct's `NumField()`) plus a per-field "changing this field changes the
+output" check - so a field added without extending `Canonical()` fails
+loudly in `go test` instead of compiling silently wrong.
 
 ## Caching
 
@@ -220,4 +225,3 @@ design (see T1.4's note on why the admin container needs the full set).
 
 - Native accessibility focus after "Cargar más" (see above) - currently a
   no-op on native, not a crash, but not the real fix either.
-- The `Canonical()` anti-drift refactor mentioned above.
