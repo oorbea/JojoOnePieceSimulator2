@@ -117,11 +117,9 @@ RNW in the meantime; native testing needs that build later.
   see [[catalogue-pagination]] for Stand's `LIMIT`-inside-the-CTE `base` term
   trap and DevilFruit/Stage's own `::manga` cast trap, both verified.
 - ~~Frontend consumption of the new `?limit=`/`?cursor=` pagination~~
-  **Reference adoption closed 2026-09-08** — `use-paginated-catalogue.ts` +
-  a "Cargar más" button now live in the public Stand catalogue, see
-  [[catalogue-pagination]]. DevilFruit/Stage catalogue UI adoption still
-  open (backend endpoints ready, hook is generic and ready, screens not
-  wired yet).
+  **Closed 2026-09-08** — `use-paginated-catalogue.ts` + a "Cargar más"
+  button now live in all three public catalogues (Stand, DevilFruit, Stage),
+  see [[catalogue-pagination]].
 - Service worker media caching (`jops-img-v1`).
 
 So retesting the original poor-coverage scenario today would show real
