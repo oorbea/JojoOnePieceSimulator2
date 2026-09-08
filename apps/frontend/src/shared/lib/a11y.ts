@@ -1,4 +1,4 @@
-import { Platform, type AccessibilityRole } from 'react-native'
+import { AccessibilityInfo, findNodeHandle, Platform, type AccessibilityRole, type View } from 'react-native'
 
 // RN's accessibilityLabel/accessibilityRole pass straight through to the
 // DOM on web (Tamagui doesn't translate them), which React logs as unknown
@@ -31,4 +31,28 @@ export function a11yProps(label?: string, role?: AccessibilityRole, state?: A11y
     ...(role ? { accessibilityRole: role } : null),
     ...(state ? { accessibilityState: state } : null),
   }
+}
+
+// Moves focus to a card/element after a UI-driven change (e.g. "Cargar más"
+// appending a page) - a single cross-platform entry point instead of every
+// call site re-deriving the web/native branch itself.
+//
+// Web: react-native-web's Pressable forwards its ref to a real DOM node, so
+// a plain `.focus()` works.
+//
+// Native: RN's View has no DOM-style `.focus()` - moving accessibility
+// focus needs `AccessibilityInfo.setAccessibilityFocus` with the element's
+// native node handle (`findNodeHandle`). A ref that hasn't mounted yet, or
+// one belonging to a host component `findNodeHandle` can't resolve, yields
+// `null` - silently skip rather than throw, since this only ever fires
+// best-effort after a data change, never on a user's direct action.
+export function focusElement(el: View | null): void {
+  if (!el) return
+  if (Platform.OS === 'web') {
+    const maybeFocusable = el as unknown as { focus?: () => void }
+    if (typeof maybeFocusable.focus === 'function') maybeFocusable.focus()
+    return
+  }
+  const tag = findNodeHandle(el)
+  if (tag != null) AccessibilityInfo.setAccessibilityFocus(tag)
 }
