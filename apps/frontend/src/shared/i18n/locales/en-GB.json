@@ -16,7 +16,11 @@
     "search": "Search",
     "typeToFilter": "Type to filter…",
     "noMatches": "No matches",
-    "clearLabel": "Clear {{label}}"
+    "clearLabel": "Clear {{label}}",
+    "imageLoading": "Image loading",
+    "imageUnavailable": "Image unavailable",
+    "imageGenerating": "Image generating",
+    "imageRetry": "Retry loading image"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",

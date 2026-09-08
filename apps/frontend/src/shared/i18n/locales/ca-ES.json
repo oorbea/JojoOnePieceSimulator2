@@ -16,7 +16,11 @@
     "search": "Cerca",
     "typeToFilter": "Escriu per filtrar…",
     "noMatches": "Sense resultats",
-    "clearLabel": "Esborra {{label}}"
+    "clearLabel": "Esborra {{label}}",
+    "imageLoading": "Carregant imatge",
+    "imageUnavailable": "Imatge no disponible",
+    "imageGenerating": "Generant imatge",
+    "imageRetry": "Reintenta carregar la imatge"
   },
   "auth": {
     "appName": "JoJo x One Piece Simulator",

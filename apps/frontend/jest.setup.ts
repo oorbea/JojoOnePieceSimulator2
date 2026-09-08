@@ -90,6 +90,29 @@ jest.mock('@tamagui/linear-gradient', () => {
   return { LinearGradient: View }
 })
 
+// jest-expo doesn't mock expo-image (it's a real native module, not part of
+// the Expo SDK preset it ships a mock for). Map to RN's Image, forwarding
+// only the props lazy-image.test.tsx/skeleton.test.tsx actually assert on -
+// the rest (contentFit, transition, recyclingKey, placeholder) are real
+// expo-image props RN's Image doesn't understand and would warn about.
+jest.mock('expo-image', () => {
+  const React = require('react')
+  const { Image } = require('react-native')
+  const MockImage = React.forwardRef((props: any, ref: any) =>
+    React.createElement(Image, {
+      ref,
+      source: props.source,
+      style: props.style,
+      onLoad: props.onLoad,
+      onError: props.onError,
+      accessibilityLabel: props.accessibilityLabel,
+      testID: props.testID,
+    })
+  )
+  MockImage.displayName = 'MockExpoImage'
+  return { Image: MockImage }
+})
+
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
   launchImageLibraryAsync: jest.fn().mockResolvedValue({ canceled: true, assets: null }),
@@ -127,3 +150,4 @@ jest.mock('expo-secure-store', () => ({
 jest.mock('expo-localization', () => ({
   getLocales: () => [{ languageTag: 'en-GB', languageCode: 'en' }],
 }))
+

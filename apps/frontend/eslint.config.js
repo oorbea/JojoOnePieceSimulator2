@@ -35,4 +35,13 @@ module.exports = defineConfig([
       'import/no-unresolved': 'off',
     },
   },
+  {
+    // Same alias-vs-platform-suffix gap as above, for
+    // '@/shared/hooks/use-in-viewport' (use-in-viewport.web.ts /
+    // use-in-viewport.native.ts).
+    files: ['src/shared/components/presentational/lazy-image.tsx'],
+    rules: {
+      'import/no-unresolved': 'off',
+    },
+  },
 ])
