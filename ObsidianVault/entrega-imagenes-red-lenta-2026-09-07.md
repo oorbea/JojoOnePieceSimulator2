@@ -6,7 +6,6 @@ tags:
   - backend
   - frontend
   - performance
-  - in-progress
 ---
 
 # Entrega de imágenes en red lenta (2026-09-07)
@@ -118,6 +117,10 @@ RNW in the meantime; native testing needs that build later.
   optional `lqip` prop + `lane: 'high'`). `LazyImage`'s `height` prop is now
   optional when `aspectRatio` is given instead, for `StageBanner`'s
   full-width 16:9 hero with no fixed pixel height.
+- ~~Service worker media caching (`jops-img-v1`)~~ **Closed 2026-09-08** -
+  `public/sw.js` cache-firsts `GET /api/v1/media/**` into its own
+  `IMG_CACHE_NAME`, distinct from the shell's `CACHE_NAME` so a shell-only
+  deploy never evicts it. See [[media-proxy-content-addressed]].
 - ~~Backend keyset pagination for DevilFruit/Stage~~ **Closed 2026-09-08** —
   see [[catalogue-pagination]] for Stand's `LIMIT`-inside-the-CTE `base` term
   trap and DevilFruit/Stage's own `::manga` cast trap, both verified.
