@@ -331,6 +331,13 @@ export const gameStateResponseSchema = z.object({
 })
 export type GameStateResponse = z.infer<typeof gameStateResponseSchema>
 
+export const standPageResponseSchema = z.object({
+  nextCursor: z.string().optional(),
+  total: z.number().int().optional(),
+  items: z.array(standResponseSchema),
+})
+export type StandPageResponse = z.infer<typeof standPageResponseSchema>
+
 export const streamTicketResponseSchema = z.object({
   ticket: z.string(),
   expiresAt: z.iso.datetime({ offset: true }),

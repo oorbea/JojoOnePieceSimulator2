@@ -236,6 +236,57 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 	return buildStandsLenient(standRowsFromFilter(rows)), nil
 }
 
+// Page returns up to limit+1 stands matching filters, ordered by name after
+// afterName, then trims the extra row and reports hasMore - see
+// PageStandRows's doc for why the LIMIT lives inside the CTE's base term.
+func (r *StandRepository) Page(ctx context.Context, filters ports.StandFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	rows, err := r.queries.PageStandRows(ctx, db.PageStandRowsParams{
+		Rarity:          enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		AttackPower:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackPower),
+		Speed:           enumStrPtr[enums.StandStat, db.StandStat](filters.Speed),
+		AttackRange:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackRange),
+		Endurance:       enumStrPtr[enums.StandStat, db.StandStat](filters.Endurance),
+		Precision:       enumStrPtr[enums.StandStat, db.StandStat](filters.Precision),
+		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
+		EvolvesFromName: filters.EvolvesFrom,
+		Search:          searchPtr(filters.Search),
+		Locales:         fallbackStrings(locale),
+		AfterName:       afterName,
+		PageLimit:       int32(limit + 1),
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("paging stands: %w", err)
+	}
+
+	stands := buildStandsLenient(standRowsFromPage(rows))
+	hasMore := len(stands) > limit
+	if hasMore {
+		stands = stands[:limit]
+	}
+	return stands, hasMore, nil
+}
+
+// Count returns the total number of stands matching filters, ignoring
+// pagination.
+func (r *StandRepository) Count(ctx context.Context, filters ports.StandFilters, locale enums.Locale) (int, error) {
+	count, err := r.queries.CountStandRows(ctx, db.CountStandRowsParams{
+		Rarity:          enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		AttackPower:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackPower),
+		Speed:           enumStrPtr[enums.StandStat, db.StandStat](filters.Speed),
+		AttackRange:     enumStrPtr[enums.StandStat, db.StandStat](filters.AttackRange),
+		Endurance:       enumStrPtr[enums.StandStat, db.StandStat](filters.Endurance),
+		Precision:       enumStrPtr[enums.StandStat, db.StandStat](filters.Precision),
+		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
+		EvolvesFromName: filters.EvolvesFrom,
+		Search:          searchPtr(filters.Search),
+		Locales:         fallbackStrings(locale),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("counting stands: %w", err)
+	}
+	return int(count), nil
+}
+
 // Translations returns every locale's content for id, for admin edit forms.
 func (r *StandRepository) Translations(ctx context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	rows, err := r.queries.GetPowerTranslations(ctx, pgtype.UUID{Bytes: id, Valid: true})

@@ -145,6 +145,22 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 	return stands, nil
 }
 
+// Page is a pass-through, deliberately not cached - see
+// ObsidianVault/catalogue-pagination.md: filters x locales x pages is a
+// combinatorial spray of entries each read once before the next admin write
+// invalidates the whole namespace, and a paginated read is already a cheap
+// indexed LIMIT over a few hundred rows. The expensive read this cache
+// exists for is GetAll ("all:<locale>"), which pagination replaces rather
+// than needing its own caching layer.
+func (r *StandRepository) Page(ctx context.Context, filters ports.StandFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.Stand, bool, error) {
+	return r.next.Page(ctx, filters, locale, afterName, limit)
+}
+
+// Count is a pass-through - same reasoning as Page.
+func (r *StandRepository) Count(ctx context.Context, filters ports.StandFilters, locale enums.Locale) (int, error) {
+	return r.next.Count(ctx, filters, locale)
+}
+
 // Options is read-through, cached as a single (locale-free) entry - read on
 // every catalogue mount for the evolvesFrom picker, and invalidated by the
 // same whole-namespace flush every write already triggers.

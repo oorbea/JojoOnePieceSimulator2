@@ -82,6 +82,27 @@ func (f *fakeStandRepository) Filter(_ context.Context, _ ports.StandFilters, lo
 	return f.GetAll(context.Background(), locale)
 }
 
+// Page/Count are minimal fakes - not exercised by picture_worker_test.go's
+// scenarios, just enough to satisfy ports.IStandRepository.
+func (f *fakeStandRepository) Page(_ context.Context, _ ports.StandFilters, _ enums.Locale, _ *string, limit int) ([]*powers.Stand, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	all := make([]*powers.Stand, 0, len(f.stands))
+	for _, stand := range f.stands {
+		all = append(all, stand)
+	}
+	if len(all) > limit {
+		return all[:limit], true, nil
+	}
+	return all, false, nil
+}
+
+func (f *fakeStandRepository) Count(_ context.Context, _ ports.StandFilters, _ enums.Locale) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.stands), nil
+}
+
 func (f *fakeStandRepository) Options(_ context.Context) ([]ports.StandOption, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

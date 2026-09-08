@@ -122,6 +122,16 @@ func NewStandResponses(ctx context.Context, stands []*powers.Stand, resolve Pict
 	return responses, nil
 }
 
+// StandPageResponse is GET /stands's response body when the request opts
+// into pagination (?limit= or ?cursor= present) - PageInfo embeds/flattens
+// per encoding/json's usual anonymous-struct rules (see
+// dto.LobbyPreviewResponse for the existing precedent), so the wire shape is
+// `{items, nextCursor?, total?}`, never a nested "pageInfo" object.
+type StandPageResponse struct {
+	PageInfo
+	Items []StandResponse `json:"items"`
+}
+
 // StandOptionResponse is the id/name pair the evolvesFrom picker needs - no
 // picture, no stats, no translations.
 type StandOptionResponse struct {
