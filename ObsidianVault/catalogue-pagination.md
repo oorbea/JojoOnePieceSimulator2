@@ -190,17 +190,34 @@ for this pass. Guarded on `typeof el.focus === 'function'` so native is a
 silent no-op rather than a crash - not a regression (native never had this
 before), but a known gap.
 
-Adopted only in the public Stand catalogue (`CatalogStandsContainer`) as the
-reference implementation - same incremental-rollout pattern as `LazyImage`
-landing in `stand-card.tsx` first. DevilFruit/Stage catalogue screens and
-the admin screens are unchanged.
+Adopted first in the public Stand catalogue, then rolled out to
+DevilFruit/Stage the same session (2026-09-08) - `DevilFruitCard`/`StageCard`
+both gained the same `forwardRef`, `catalog-devil-fruits-container.tsx`/
+`catalog-stages-container.tsx` both wired to
+`getDevilFruitsPage`/`getStagesPage` + `usePaginatedCatalogue`. Admin
+screens (all three) are unchanged - still the full unpaginated fetch, by
+design (see T1.4's note on why the admin container needs the full set).
+
+**Two real bugs this rollout caught, both fixed in the same commit:**
+- `stages-screen.tsx` imports the Lucide `Map` icon
+  (`@tamagui/lucide-icons-2`), which shadowed the global `Map` constructor -
+  `new Map<string, View | null>()` for the card-ref tracking was silently
+  constructing the icon component instead, so every `.set(...)` call threw
+  `cardRefs.current.set is not a function`. Caught immediately by the new
+  "Cargar más" tests (only 2 of 4 failed - the ones that actually appended a
+  page and exercised the focus effect). Fixed by aliasing the icon import to
+  `MapIcon`.
+- `use-paginated-catalogue.ts`'s `queryKey` didn't include `limit` -
+  `@tanstack/eslint-plugin-query`'s `exhaustive-deps` rule flagged it as a
+  real bug (the queryFn closes over `limit`, but a different page size for
+  the same filters needs its own cache entry, or a caller changing `limit`
+  mid-session would silently keep serving the old size from cache). Also
+  switched the hook's return from `{...query, items, total}` to explicit
+  fields - spreading a TanStack Query result subscribes the caller to every
+  internal field's changes (`no-rest-destructuring`).
 
 ## Still open
 
-- Frontend: DevilFruit/Stage catalogue screens still use the full
-  unpaginated fetch - `use-paginated-catalogue.ts` is generic and ready, but
-  `catalog-devil-fruits-container.tsx`/`catalog-stages-container.tsx` and
-  their screens haven't been wired the way Stand's was.
 - Native accessibility focus after "Cargar más" (see above) - currently a
   no-op on native, not a crash, but not the real fix either.
 - The `Canonical()` anti-drift refactor mentioned above.
