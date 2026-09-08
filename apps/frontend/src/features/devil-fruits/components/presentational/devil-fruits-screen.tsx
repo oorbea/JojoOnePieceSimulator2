@@ -1,6 +1,8 @@
 import { Apple, Plus, TriangleAlert } from '@tamagui/lucide-icons-2'
+import { useEffect, useRef } from 'react'
 import type { Control, FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import type { View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
@@ -65,6 +67,13 @@ type BaseProps = {
   detailFruit: DevilFruitResponse | null
   onOpenDetail: (devilFruit: DevilFruitResponse) => void
   onCloseDetail: () => void
+  // Pagination is opt-in - see StandsScreen's identical props for the full
+  // doc (admin screen omits all of these and renders no "Cargar más").
+  hasNextPage?: boolean
+  isFetchingNextPage?: boolean
+  isLoadMoreError?: boolean
+  onLoadMore?: () => void
+  total?: number
 }
 
 type WritableProps = {
@@ -105,8 +114,32 @@ export function DevilFruitsScreen(props: Props) {
     detailFruit,
     onOpenDetail,
     onCloseDetail,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoadMoreError,
+    onLoadMore,
+    total,
   } = props
   const { t } = useTranslation()
+
+  // Focus management for "Cargar más" - see StandsScreen's identical effect
+  // for the full doc.
+  const cardRefs = useRef(new Map<string, View | null>())
+  const prevLengthRef = useRef(devilFruits.length)
+  const wasFetchingRef = useRef(isFetchingNextPage ?? false)
+  useEffect(() => {
+    const wasFetching = wasFetchingRef.current
+    wasFetchingRef.current = isFetchingNextPage ?? false
+    if (wasFetching && !isFetchingNextPage && devilFruits.length > prevLengthRef.current) {
+      const firstNew = devilFruits[prevLengthRef.current]
+      const el = firstNew ? cardRefs.current.get(firstNew.id) : null
+      if (el && typeof (el as unknown as { focus?: () => void }).focus === 'function') {
+        ;(el as unknown as { focus: () => void }).focus()
+      }
+    }
+    prevLengthRef.current = devilFruits.length
+  }, [devilFruits, isFetchingNextPage])
+
   return (
     <YStack flex={1} position="relative">
       <PageShell align="top" scroll maxWidth={960}>
@@ -193,27 +226,66 @@ export function DevilFruitsScreen(props: Props) {
             )}
           </GlassPanel>
         ) : (
-          <XStack flexWrap="wrap" gap="$4" justify="center">
-            {devilFruits.map((devilFruit) =>
-              props.readOnly ? (
-                <DevilFruitCard
-                  key={devilFruit.id}
-                  devilFruit={devilFruit}
-                  onOpenDetail={() => onOpenDetail(devilFruit)}
-                  readOnly
-                />
-              ) : (
-                <DevilFruitCard
-                  key={devilFruit.id}
-                  devilFruit={devilFruit}
-                  onOpenDetail={() => onOpenDetail(devilFruit)}
-                  onEdit={() => props.onEdit(devilFruit)}
-                  onDelete={() => props.onDelete(devilFruit)}
-                  isEditBusy={props.openingEditId === devilFruit.id}
-                />
-              )
-            )}
-          </XStack>
+          <>
+            <XStack flexWrap="wrap" gap="$4" justify="center">
+              {devilFruits.map((devilFruit) =>
+                props.readOnly ? (
+                  <DevilFruitCard
+                    key={devilFruit.id}
+                    ref={(el) => {
+                      cardRefs.current.set(devilFruit.id, el)
+                    }}
+                    devilFruit={devilFruit}
+                    onOpenDetail={() => onOpenDetail(devilFruit)}
+                    readOnly
+                  />
+                ) : (
+                  <DevilFruitCard
+                    key={devilFruit.id}
+                    ref={(el) => {
+                      cardRefs.current.set(devilFruit.id, el)
+                    }}
+                    devilFruit={devilFruit}
+                    onOpenDetail={() => onOpenDetail(devilFruit)}
+                    onEdit={() => props.onEdit(devilFruit)}
+                    onDelete={() => props.onDelete(devilFruit)}
+                    isEditBusy={props.openingEditId === devilFruit.id}
+                  />
+                )
+              )}
+            </XStack>
+
+            {onLoadMore ? (
+              <YStack width="100%" items="center" gap="$2" py="$4">
+                {hasNextPage ? (
+                  <>
+                    <GlossButton
+                      tone={isLoadMoreError ? 'orange' : 'blue'}
+                      btnSize="md"
+                      onPress={onLoadMore}
+                      disabled={isFetchingNextPage}
+                      accessibilityLabel={t(isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore')}
+                    >
+                      {isFetchingNextPage ? (
+                        <Spinner size="small" color="white" />
+                      ) : (
+                        t(isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore')
+                      )}
+                    </GlossButton>
+                    {typeof total === 'number' ? (
+                      <GlowText level="label" tone="soft">
+                        {t('common.itemsLoadedOfTotal', { loaded: devilFruits.length, total })}
+                      </GlowText>
+                    ) : null}
+                  </>
+                ) : typeof total === 'number' ? (
+                  <GlowText level="label" tone="soft">
+                    {t('common.allItemsLoaded', { total })}
+                  </GlowText>
+                ) : null}
+              </YStack>
+            ) : null}
+          </>
         )}
       </PageShell>
 

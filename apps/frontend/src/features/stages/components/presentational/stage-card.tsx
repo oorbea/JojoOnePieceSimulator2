@@ -1,7 +1,7 @@
 import { Map, Pencil, Trash2 } from '@tamagui/lucide-icons-2'
-import { useState } from 'react'
+import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image, Pressable } from 'react-native'
+import { Image, Pressable, type View } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -25,7 +25,12 @@ type Props = {
 // Same grid-card recipe as StandCard - thumb well, name + badges, actions -
 // swapping the stat grid (Stands have none here) for the stage's
 // description, since that's the field an admin actually wants to preview.
-export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props) {
+// forwardRef targets the detail Pressable (the card's main tab stop) - see
+// StandCard's identical doc for why "Cargar más" needs it.
+export const StageCard = forwardRef<View, Props>(function StageCard(
+  { stage, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
+  ref
+) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   return (
@@ -55,7 +60,11 @@ export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isE
       </Pressable>
       <ImageLightbox visible={isPreviewOpen} uri={fullSource(stage)} onClose={() => setIsPreviewOpen(false)} />
 
-      <Pressable onPress={onOpenDetail} {...a11yProps(t('stages.detailA11y', { name: stage.name }), 'button')}>
+      <Pressable
+        ref={ref}
+        onPress={onOpenDetail}
+        {...a11yProps(t('stages.detailA11y', { name: stage.name }), 'button')}
+      >
         <YStack gap="$3">
           <YStack gap="$1">
             <GlowText level="heading" numberOfLines={1}>
@@ -102,4 +111,4 @@ export function StageCard({ stage, onOpenDetail, readOnly, onEdit, onDelete, isE
       )}
     </WiiCard>
   )
-}
+})

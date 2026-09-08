@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { getStagesPage } from '@/features/stages/api/stages.api'
+import { stageKeys } from '@/features/stages/api/stages.keys'
 import { StagesScreen } from '@/features/stages/components/presentational/stages-screen'
-import { useStages } from '@/features/stages/hooks/use-stages'
 import type { StageInput, StageResponse } from '@/features/stages/types/stages.types'
-import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import { mangaSchema } from '@/shared/contracts/enums'
+import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
+import { usePaginatedCatalogue } from '@/shared/hooks/use-paginated-catalogue'
 
 // Read-only counterpart to StagesContainer - see
 // CatalogStandsContainer's doc comment for what this deliberately drops.
@@ -24,17 +26,28 @@ export function CatalogStagesContainer() {
   }, [mangaFilter, debouncedSearch])
   const hasStageFilters = Object.keys(stageFilters).length > 0
 
+  const appliedFilters = hasStageFilters ? stageFilters : undefined
   const {
-    data: stages,
+    items: stages,
     isLoading,
     isError,
+    isFetchNextPageError,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    total,
     refetch,
-  } = useStages(hasStageFilters ? stageFilters : undefined)
+  } = usePaginatedCatalogue(
+    stageKeys.page(appliedFilters),
+    (cursor, limit) => getStagesPage(appliedFilters, cursor, limit),
+    { hasPendingPicture: (s) => s.pictureStatus === 'PENDING' }
+  )
 
   // Same defensive client-side ordering as StagesContainer - the backend
-  // already orders this way, this just guards against relying on it.
+  // already orders this way (and the paginated cursor depends on it, see
+  // ObsidianVault/catalogue-pagination.md's ::manga cast trap), this just
+  // guards against relying on it.
   const visibleStages = useMemo(() => {
-    if (!stages) return []
     return [...stages].sort((a, b) =>
       a.manga === b.manga ? a.order - b.order : a.manga.localeCompare(b.manga)
     )
@@ -61,6 +74,11 @@ export function CatalogStagesContainer() {
       detailStage={detailStage}
       onOpenDetail={setDetailStage}
       onCloseDetail={() => setDetailStage(null)}
+      hasNextPage={hasNextPage}
+      isFetchingNextPage={isFetchingNextPage}
+      isLoadMoreError={isFetchNextPageError}
+      onLoadMore={() => void fetchNextPage()}
+      total={total}
     />
   )
 }
