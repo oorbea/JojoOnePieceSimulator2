@@ -32,7 +32,7 @@ func noopResolve(_ context.Context, key string) (string, error) {
 func TestNewUserResponse_NoOwnAvatar_UsesGooglePictureForBothMainAndThumb(t *testing.T) {
 	u := newTestUser(t, "https://google.test/photo.jpg")
 
-	resp, err := NewUserResponse(context.Background(), u, noopResolve)
+	resp, err := NewUserResponse(context.Background(), u, noopResolve, MediaURLBuilder{})
 	if err != nil {
 		t.Fatalf("NewUserResponse: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestNewUserResponse_OwnAvatar_ResolvesBothRenditionsThroughStorage(t *testi
 	u := newTestUser(t, "https://google.test/photo.jpg")
 	u.SetAvatarRenditions("users/x/main.webp", "users/x/thumb.webp", "users/x/card.webp", "", enums.PictureReady)
 
-	resp, err := NewUserResponse(context.Background(), u, noopResolve)
+	resp, err := NewUserResponse(context.Background(), u, noopResolve, MediaURLBuilder{})
 	if err != nil {
 		t.Fatalf("NewUserResponse: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestNewUserResponse_OwnAvatar_ResolvesBothRenditionsThroughStorage(t *testi
 func TestNewPublicUserResponse_NoOwnAvatar_UsesGooglePictureForBothMainAndThumb(t *testing.T) {
 	u := newTestUser(t, "https://google.test/photo.jpg")
 
-	resp, err := NewPublicUserResponse(context.Background(), u, noopResolve)
+	resp, err := NewPublicUserResponse(context.Background(), u, noopResolve, MediaURLBuilder{})
 	if err != nil {
 		t.Fatalf("NewPublicUserResponse: %v", err)
 	}

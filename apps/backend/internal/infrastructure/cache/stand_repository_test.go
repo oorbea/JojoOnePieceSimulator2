@@ -138,6 +138,17 @@ func (r *countingStandRepository) UpdatePicture(_ context.Context, id powers.Pow
 	return nil
 }
 
+func (r *countingStandRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s, ok := r.stands[id]
+	if !ok {
+		return ports.ErrStandNotFound
+	}
+	s.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IStandRepository = (*countingStandRepository)(nil)
 
 func newTestStand(t *testing.T, name string) *powers.Stand {
@@ -271,8 +282,8 @@ func TestStandRepository_Save_ErrorDoesNotInvalidate(t *testing.T) {
 	if err := repo.Save(ctx, stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}}); err == nil {
 		t.Fatal("Save over a failing repository: err = nil, want an error")
 	}
-	if c.gen["stands"] != 0 {
-		t.Errorf("stands generation = %d, want 0 (a failed Save must not invalidate)", c.gen["stands"])
+	if c.gen["stands:v2"] != 0 {
+		t.Errorf("stands generation = %d, want 0 (a failed Save must not invalidate)", c.gen["stands:v2"])
 	}
 }
 

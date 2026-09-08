@@ -33,6 +33,9 @@ type IDevilFruitRepository interface {
 	// UpdatePicture updates only a devil fruit's picture renditions and
 	// pipeline status. A nil main/thumb/card/lqip leaves that column untouched.
 	UpdatePicture(ctx context.Context, id powers.PowerID, main, thumb, card, lqip *string, status enums.PictureStatus) error
+	// SetMediaID updates only the content-addressed media group id - see
+	// IStandRepository.SetMediaID.
+	SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error
 	// Translations returns every locale's content for id, for admin edit
 	// forms that need all locales at once instead of one resolved locale.
 	Translations(ctx context.Context, id powers.PowerID) (PowerTranslations, error)

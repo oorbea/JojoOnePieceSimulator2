@@ -27,6 +27,10 @@ func (b *fakeReconcilerBackend) Put(context.Context, string, io.Reader, string, 
 	return nil
 }
 
+func (b *fakeReconcilerBackend) Get(context.Context, string) (io.ReadCloser, ports.ObjectInfo, error) {
+	return nil, ports.ObjectInfo{}, ports.ErrObjectNotFound
+}
+
 func (b *fakeReconcilerBackend) PresignGet(context.Context, string) (string, error) { return "", nil }
 
 func (b *fakeReconcilerBackend) Del(context.Context, string) error { return nil }

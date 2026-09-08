@@ -63,11 +63,21 @@ func isAVIF(head []byte) bool {
 
 // StandEndpoints wires the Stand HTTP surface to the application service.
 type StandEndpoints struct {
-	svc *services.StandService
+	svc   *services.StandService
+	media dto.MediaURLBuilder
 }
 
 func NewStandEndpoints(svc *services.StandService) *StandEndpoints {
 	return &StandEndpoints{svc: svc}
+}
+
+// SetMediaURLBuilder wires the content-addressed media URL builder after
+// construction (see PictureWorker.SetMediaRepository's doc for why - every
+// existing caller/test keeps compiling unchanged). The zero value is safe:
+// resolveCatalogPictures/resolveAvatar never call into it while a subject's
+// PictureMediaID/AvatarMediaID is still empty (not backfilled yet).
+func (e *StandEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /stands sub-router: GET/POST on the collection,
@@ -137,7 +147,7 @@ func (e *StandEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStandResponses(r.Context(), stands, e.svc.PictureURL)
+	resp, err := dto.NewStandResponses(r.Context(), stands, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -199,7 +209,7 @@ func (e *StandEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -235,7 +245,7 @@ func (e *StandEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -281,7 +291,7 @@ func (e *StandEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -367,7 +377,7 @@ func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
-	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL)
+	resp, err := dto.NewStandResponse(r.Context(), stand, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}

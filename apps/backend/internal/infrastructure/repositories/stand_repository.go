@@ -138,6 +138,17 @@ func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, 
 	return nil
 }
 
+// SetMediaID implements ports.IStandRepository.
+func (r *StandRepository) SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error {
+	if err := r.queries.UpdatePowerMediaID(ctx, db.UpdatePowerMediaIDParams{
+		ID:             pgtype.UUID{Bytes: id, Valid: true},
+		PictureMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting media id for stand %s: %w", id, err)
+	}
+	return nil
+}
+
 // Delete removes the stand (and its power/translations rows) with the given
 // id. Any descendant stand's evolves_from is cleared automatically by the
 // schema's ON DELETE SET NULL.

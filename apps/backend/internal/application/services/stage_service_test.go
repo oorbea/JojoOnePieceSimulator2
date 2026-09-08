@@ -124,6 +124,17 @@ func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, 
 	return nil
 }
 
+func (f *fakeStageRepository) SetMediaID(_ context.Context, id game.StageID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.stages[id]
+	if !ok {
+		return ports.ErrStageNotFound
+	}
+	s.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IStageRepository = (*fakeStageRepository)(nil)
 
 // fakeStageIDGenerator returns deterministic, incrementing ids.

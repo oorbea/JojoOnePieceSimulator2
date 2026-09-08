@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"io"
 	"strings"
 	"sync"
 	"testing"
@@ -135,6 +136,17 @@ func (f *fakeStandRepository) UpdatePicture(_ context.Context, id powers.PowerID
 	return nil
 }
 
+func (f *fakeStandRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	stand, ok := f.stands[id]
+	if !ok {
+		return ports.ErrStandNotFound
+	}
+	stand.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IStandRepository = (*fakeStandRepository)(nil)
 
 type fakeStandIDGenerator struct {
@@ -187,6 +199,16 @@ func (f *fakePictureStorage) Delete(_ context.Context, key string) error {
 	f.deleted = append(f.deleted, key)
 	delete(f.objects, key)
 	return f.deleteErr
+}
+
+func (f *fakePictureStorage) Download(_ context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	data, ok := f.objects[key]
+	if !ok {
+		return nil, ports.ObjectInfo{}, ports.ErrObjectNotFound
+	}
+	return io.NopCloser(bytes.NewReader(data)), ports.ObjectInfo{ContentType: "image/webp", Size: int64(len(data))}, nil
 }
 
 var _ ports.IPictureStorage = (*fakePictureStorage)(nil)
@@ -547,6 +569,10 @@ func (f *flakyPublisher) UpdatePicture(ctx context.Context, id string, main, thu
 	return f.inner.UpdatePicture(ctx, id, main, thumb, card, lqip, status)
 }
 
+func (f *flakyPublisher) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	return f.inner.SetMediaID(ctx, id, mediaID)
+}
+
 var _ PicturePublisher = (*flakyPublisher)(nil)
 
 func TestProcess_PictureKeysFailure_MarksFailedAndPublishes(t *testing.T) {
@@ -737,6 +763,17 @@ func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.Po
 	return nil
 }
 
+func (f *fakeDevilFruitRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	fruit, ok := f.fruits[id]
+	if !ok {
+		return ports.ErrDevilFruitNotFound
+	}
+	fruit.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IDevilFruitRepository = (*fakeDevilFruitRepository)(nil)
 
 func newWorkerTestDevilFruit(t *testing.T, repo *fakeDevilFruitRepository, idGen *fakeStandIDGenerator, main, thumb string, status enums.PictureStatus) *powers.DevilFruit {
@@ -920,6 +957,17 @@ func (f *fakeStageRepository) UpdatePicture(_ context.Context, id game.StageID, 
 		newLqip = *lqip
 	}
 	s.SetPictureRenditions(newMain, newThumb, newCard, newLqip, status)
+	return nil
+}
+
+func (f *fakeStageRepository) SetMediaID(_ context.Context, id game.StageID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	s, ok := f.stages[id]
+	if !ok {
+		return ports.ErrStageNotFound
+	}
+	s.SetMediaID(mediaID)
 	return nil
 }
 

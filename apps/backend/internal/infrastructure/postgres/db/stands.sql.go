@@ -48,6 +48,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 p.picture_card,
                                 p.picture_status,
                                 p.picture_lqip,
+                                p.picture_media_id,
                                 s.attack_power,
                                 s.speed,
                                 s.attack_range,
@@ -84,7 +85,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                            AND ($10::text IS NULL
                                 OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
                                 OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')),
-     chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
+     chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
                FROM base
                UNION
                SELECT p2.id,
@@ -95,6 +96,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                       p2.picture_card,
                       p2.picture_status,
                       p2.picture_lqip,
+                      p2.picture_media_id,
                       s2.attack_power,
                       s2.speed,
                       s2.attack_range,
@@ -114,6 +116,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                       picture_card,
                       picture_status,
                       picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -123,7 +126,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
                         attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
@@ -134,6 +137,7 @@ SELECT d.id,
        d.picture_card,
        d.picture_status,
        d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -168,24 +172,25 @@ type FilterStandRowsParams struct {
 }
 
 type FilterStandRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Returns every stand matching the (all-optional) filters, marked
@@ -222,6 +227,7 @@ func (q *Queries) FilterStandRows(ctx context.Context, arg FilterStandRowsParams
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -298,6 +304,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.picture_card,
                                  p.picture_status,
                                  p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -318,6 +325,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.picture_card,
                                  p2.picture_status,
                                  p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -337,6 +345,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       picture_card,
                       picture_status,
                       picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -346,7 +355,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
                         attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
@@ -357,6 +366,7 @@ SELECT d.id,
        d.picture_card,
        d.picture_status,
        d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -383,24 +393,25 @@ type GetStandRowsByIDParams struct {
 }
 
 type GetStandRowsByIDRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Same shape as GetStandRowsByName, keyed by id instead of name.
@@ -423,6 +434,7 @@ func (q *Queries) GetStandRowsByID(ctx context.Context, arg GetStandRowsByIDPara
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -452,6 +464,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p.picture_card,
                                  p.picture_status,
                                  p.picture_lqip,
+                                 p.picture_media_id,
                                  s.attack_power,
                                  s.speed,
                                  s.attack_range,
@@ -472,6 +485,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                                  p2.picture_card,
                                  p2.picture_status,
                                  p2.picture_lqip,
+                                 p2.picture_media_id,
                                  s2.attack_power,
                                  s2.speed,
                                  s2.attack_range,
@@ -491,6 +505,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       picture_card,
                       picture_status,
                       picture_lqip,
+                      picture_media_id,
                       attack_power,
                       speed,
                       attack_range,
@@ -500,7 +515,7 @@ WITH RECURSIVE chain AS (SELECT p.id,
                       evolves_from_id,
                       bool_or(matched) AS matched
                FROM chain
-               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip,
+               GROUP BY id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id,
                         attack_power, speed, attack_range, endurance, "precision", potential, evolves_from_id)
 SELECT d.id,
        d.name,
@@ -511,6 +526,7 @@ SELECT d.id,
        d.picture_card,
        d.picture_status,
        d.picture_lqip,
+       d.picture_media_id,
        d.attack_power,
        d.speed,
        d.attack_range,
@@ -537,24 +553,25 @@ type GetStandRowsByNameParams struct {
 }
 
 type GetStandRowsByNameRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Returns the stand matching `name` (matched = true) plus its full ancestor
@@ -583,6 +600,7 @@ func (q *Queries) GetStandRowsByName(ctx context.Context, arg GetStandRowsByName
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -650,6 +668,7 @@ SELECT p.id,
        p.picture_card,
        p.picture_status,
        p.picture_lqip,
+       p.picture_media_id,
        s.attack_power,
        s.speed,
        s.attack_range,
@@ -672,24 +691,25 @@ ORDER BY p.name
 `
 
 type ListStandRowsRow struct {
-	ID            pgtype.UUID
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	EvolvesFromID pgtype.UUID
-	Matched       bool
-	Skills        []string
+	ID             pgtype.UUID
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
+	Skills         []string
 }
 
 // Returns every stand (matched = true always, no filter applied). Kept in
@@ -714,6 +734,7 @@ func (q *Queries) ListStandRows(ctx context.Context, locales []string) ([]ListSt
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.AttackPower,
 			&i.Speed,
 			&i.AttackRange,
@@ -734,32 +755,53 @@ func (q *Queries) ListStandRows(ctx context.Context, locales []string) ([]ListSt
 	return items, nil
 }
 
+const updatePowerMediaID = `-- name: UpdatePowerMediaID :exec
+UPDATE powers SET picture_media_id = $1 WHERE id = $2
+`
+
+type UpdatePowerMediaIDParams struct {
+	PictureMediaID string
+	ID             pgtype.UUID
+}
+
+// Sets only a Power's content-addressed media group id, once the worker has
+// both transcoded the image and persisted its media_objects rows - see
+// powers.Power.SetMediaID's doc for why this is separate from
+// UpdatePowerPicture.
+func (q *Queries) UpdatePowerMediaID(ctx context.Context, arg UpdatePowerMediaIDParams) error {
+	_, err := q.db.Exec(ctx, updatePowerMediaID, arg.PictureMediaID, arg.ID)
+	return err
+}
+
 const updatePowerPicture = `-- name: UpdatePowerPicture :exec
 UPDATE powers
-SET picture        = COALESCE($1::text, picture),
-    picture_thumb  = COALESCE($2::text, picture_thumb),
-    picture_card   = COALESCE($3::text, picture_card),
-    picture_status = $4::picture_status,
-    picture_lqip   = COALESCE($5::text, picture_lqip),
-    updated_at     = now()
-WHERE id = $6
+SET picture          = COALESCE($1::text, picture),
+    picture_thumb    = COALESCE($2::text, picture_thumb),
+    picture_card     = COALESCE($3::text, picture_card),
+    picture_status   = $4::picture_status,
+    picture_lqip     = COALESCE($5::text, picture_lqip),
+    picture_media_id = COALESCE($6::text, picture_media_id),
+    updated_at       = now()
+WHERE id = $7
 `
 
 type UpdatePowerPictureParams struct {
-	Picture       *string
-	PictureThumb  *string
-	PictureCard   *string
-	PictureStatus string
-	PictureLqip   *string
-	ID            pgtype.UUID
+	Picture        *string
+	PictureThumb   *string
+	PictureCard    *string
+	PictureStatus  string
+	PictureLqip    *string
+	PictureMediaID *string
+	ID             pgtype.UUID
 }
 
 // Updates only a Power's picture renditions and pipeline status, without
 // touching name/description/skills/stats - used by the PATCH .../picture
 // handler (status -> PENDING) and by the background compression worker
-// (status -> READY/FAILED). picture/picture_thumb/picture_card/picture_lqip
-// are left untouched when NULL is passed, so the handler can move a row to
-// PENDING without clobbering the renditions currently being served.
+// (status -> READY/FAILED). picture/picture_thumb/picture_card/picture_lqip/
+// picture_media_id are left untouched when NULL is passed, so the handler
+// can move a row to PENDING without clobbering the renditions currently
+// being served.
 func (q *Queries) UpdatePowerPicture(ctx context.Context, arg UpdatePowerPictureParams) error {
 	_, err := q.db.Exec(ctx, updatePowerPicture,
 		arg.Picture,
@@ -767,6 +809,7 @@ func (q *Queries) UpdatePowerPicture(ctx context.Context, arg UpdatePowerPicture
 		arg.PictureCard,
 		arg.PictureStatus,
 		arg.PictureLqip,
+		arg.PictureMediaID,
 		arg.ID,
 	)
 	return err

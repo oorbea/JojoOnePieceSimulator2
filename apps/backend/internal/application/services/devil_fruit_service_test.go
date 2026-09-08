@@ -122,6 +122,17 @@ func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.Po
 	return nil
 }
 
+func (f *fakeDevilFruitRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	fruit, ok := f.fruits[id]
+	if !ok {
+		return ports.ErrDevilFruitNotFound
+	}
+	fruit.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IDevilFruitRepository = (*fakeDevilFruitRepository)(nil)
 
 func newTestDevilFruit(t *testing.T, repo *fakeDevilFruitRepository, idGen *fakeStandIDGenerator, name string) *powers.DevilFruit {

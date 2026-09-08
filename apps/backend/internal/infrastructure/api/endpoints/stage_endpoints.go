@@ -20,11 +20,17 @@ import (
 // Reuses stand_endpoints.go's maxMultipartMemory/sniffLen/sniffContentType
 // constants/helpers - the picture pipeline is identical.
 type StageEndpoints struct {
-	svc *services.StageService
+	svc   *services.StageService
+	media dto.MediaURLBuilder
 }
 
 func NewStageEndpoints(svc *services.StageService) *StageEndpoints {
 	return &StageEndpoints{svc: svc}
+}
+
+// SetMediaURLBuilder - see StandEndpoints.SetMediaURLBuilder's doc.
+func (e *StageEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
+	e.media = media
 }
 
 // Routes returns the /stages sub-router.
@@ -77,7 +83,7 @@ func (e *StageEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponses(r.Context(), stages, e.svc.PictureURL)
+	resp, err := dto.NewStageResponses(r.Context(), stages, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -114,7 +120,7 @@ func (e *StageEndpoints) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -146,7 +152,7 @@ func (e *StageEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -189,7 +195,7 @@ func (e *StageEndpoints) update(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}
@@ -266,7 +272,7 @@ func (e *StageEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 		return err
 	}
 
-	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL)
+	resp, err := dto.NewStageResponse(r.Context(), st, e.svc.PictureURL, e.media)
 	if err != nil {
 		return err
 	}

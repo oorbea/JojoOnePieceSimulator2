@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
@@ -44,6 +45,12 @@ func (s *PictureStorage) PresignGetURL(ctx context.Context, key string) (string,
 
 	s.cache.Set(ctx, presignNamespace, key, []byte(url), s.presignTTL)
 	return url, nil
+}
+
+// Download passes through untouched - the media proxy handler caches bytes
+// on disk itself (MediaCacheDir), not through this Redis-backed decorator.
+func (s *PictureStorage) Download(ctx context.Context, key string) (io.ReadCloser, ports.ObjectInfo, error) {
+	return s.next.Download(ctx, key)
 }
 
 // Delete removes the object, then evicts any cached presigned URL for it -

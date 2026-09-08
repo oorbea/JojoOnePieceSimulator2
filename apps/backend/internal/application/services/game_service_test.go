@@ -1324,6 +1324,7 @@ func TestCastVote_Tie_DTOStateCarriesTiedVotes(t *testing.T) {
 	// STATE frame after TIEBREAK_OPENED.
 	resp, err := dto.NewGameStateResponse(context.Background(), g, code, g.HostID(),
 		noResponsePictures, noResponsePictures, noResponsePictures, noResponsePictures,
+		dto.MediaURLBuilder{},
 		noResponseStageText, noResponsePowerText, noResponsePowerText, dto.GameStateDeadlines{})
 	if err != nil {
 		t.Fatalf("NewGameStateResponse: %v", err)

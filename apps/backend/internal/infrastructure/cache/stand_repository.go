@@ -197,6 +197,16 @@ func (r *StandRepository) UpdatePicture(ctx context.Context, id powers.PowerID, 
 	return nil
 }
 
+// SetMediaID delegates, then invalidates the whole stands namespace on
+// success - same reasoning as UpdatePicture.
+func (r *StandRepository) SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error {
+	if err := r.next.SetMediaID(ctx, id, mediaID); err != nil {
+		return err
+	}
+	r.invalidate(ctx)
+	return nil
+}
+
 // invalidate drops the whole stands namespace, logging (never failing the
 // already-committed write) if the cache backend can't be reached - the
 // entries left behind are bounded by standTTL/notFoundTTL either way.

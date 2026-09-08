@@ -191,6 +191,17 @@ func (f *fakeUserRepo) CountAdmins(_ context.Context) (int64, error) {
 	return count, nil
 }
 
+func (f *fakeUserRepo) SetAvatarMediaID(_ context.Context, id user.UserID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	u.SetAvatarMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IUserRepository = (*fakeUserRepo)(nil)
 
 // seedUser saves a ready-made user with userIDForToken's id for tok (only
@@ -239,7 +250,7 @@ func newUserTestServer(repo *fakeUserRepo) http.Handler {
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
 	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints,
-		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
+		nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 }
 
 // doRequestAs is like doRequest but with an explicit bearer token instead of

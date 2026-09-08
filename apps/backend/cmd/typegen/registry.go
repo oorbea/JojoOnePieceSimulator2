@@ -112,4 +112,5 @@ var nonWireTypeNames = map[string]bool{
 	"ServerFrame":        true,
 	"FrameSpec":          true,
 	"CommandSpec":        true,
+	"MediaURLBuilder":    true,
 }

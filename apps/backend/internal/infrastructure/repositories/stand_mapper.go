@@ -15,24 +15,25 @@ import (
 // ListStandRowsRow and FilterStandRowsRow, so all three can be hydrated by
 // the same builder below.
 type standRow struct {
-	Name          string
-	Description   string
-	Rarity        string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	AttackPower   string
-	Speed         string
-	AttackRange   string
-	Endurance     string
-	Precision     string
-	Potential     string
-	Skills        []string
-	ID            pgtype.UUID
-	EvolvesFromID pgtype.UUID
-	Matched       bool
+	Name           string
+	Description    string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	AttackPower    string
+	Speed          string
+	AttackRange    string
+	Endurance      string
+	Precision      string
+	Potential      string
+	Skills         []string
+	ID             pgtype.UUID
+	EvolvesFromID  pgtype.UUID
+	Matched        bool
 }
 
 func standRowsFromGetByName(rs []db.GetStandRowsByNameRow) []standRow {
@@ -40,7 +41,7 @@ func standRowsFromGetByName(rs []db.GetStandRowsByNameRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -54,7 +55,7 @@ func standRowsFromGetByID(rs []db.GetStandRowsByIDRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -68,7 +69,7 @@ func standRowsFromList(rs []db.ListStandRowsRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -82,7 +83,7 @@ func standRowsFromFilter(rs []db.FilterStandRowsRow) []standRow {
 	for i, r := range rs {
 		rows[i] = standRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
-			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip,
+			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
 			AttackPower: r.AttackPower, Speed: r.Speed, AttackRange: r.AttackRange, Endurance: r.Endurance,
 			Precision: r.Precision, Potential: r.Potential, EvolvesFromID: r.EvolvesFromID,
 			Matched: r.Matched, Skills: r.Skills,
@@ -167,6 +168,7 @@ func buildStandsCollect(rows []standRow, strict bool) ([]*powers.Stand, error) {
 			return nil, fmt.Errorf("stand %q: picture_status: %w", row.Name, err)
 		}
 		power.SetPictureRenditions(row.Picture, row.PictureThumb, row.PictureCard, row.PictureLqip, pictureStatus)
+		power.SetMediaID(row.PictureMediaID)
 
 		attackPower, err := enums.ParseStandStat(row.AttackPower)
 		if err != nil {

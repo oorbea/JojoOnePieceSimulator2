@@ -43,6 +43,7 @@ func (q *Queries) DeleteStageTranslations(ctx context.Context, arg DeleteStageTr
 const filterStageRows = `-- name: FilterStageRows :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -66,16 +67,17 @@ type FilterStageRowsParams struct {
 }
 
 type FilterStageRowsRow struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	Description   string
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
 }
 
 // Returns every stage matching the (all-optional) filters, description
@@ -100,6 +102,7 @@ func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -115,6 +118,7 @@ func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams
 const getStageByID = `-- name: GetStageByID :one
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -133,16 +137,17 @@ type GetStageByIDParams struct {
 }
 
 type GetStageByIDRow struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	Description   string
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
 }
 
 func (q *Queries) GetStageByID(ctx context.Context, arg GetStageByIDParams) (GetStageByIDRow, error) {
@@ -158,6 +163,7 @@ func (q *Queries) GetStageByID(ctx context.Context, arg GetStageByIDParams) (Get
 		&i.PictureCard,
 		&i.PictureStatus,
 		&i.PictureLqip,
+		&i.PictureMediaID,
 		&i.Description,
 	)
 	return i, err
@@ -194,6 +200,7 @@ func (q *Queries) GetStageTranslations(ctx context.Context, stageID pgtype.UUID)
 const listStages = `-- name: ListStages :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
+       s.picture_media_id,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -207,16 +214,17 @@ ORDER BY s.manga, s.position, s.name
 `
 
 type ListStagesRow struct {
-	ID            pgtype.UUID
-	Manga         string
-	Position      int32
-	Name          string
-	Picture       string
-	PictureThumb  string
-	PictureCard   string
-	PictureStatus string
-	PictureLqip   string
-	Description   string
+	ID             pgtype.UUID
+	Manga          string
+	Position       int32
+	Name           string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureStatus  string
+	PictureLqip    string
+	PictureMediaID string
+	Description    string
 }
 
 // Returns every stage, description resolved for locale via the same
@@ -240,6 +248,7 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 			&i.PictureCard,
 			&i.PictureStatus,
 			&i.PictureLqip,
+			&i.PictureMediaID,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -252,24 +261,42 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 	return items, nil
 }
 
+const updateStageMediaID = `-- name: UpdateStageMediaID :exec
+UPDATE stages SET picture_media_id = $1 WHERE id = $2
+`
+
+type UpdateStageMediaIDParams struct {
+	PictureMediaID string
+	ID             pgtype.UUID
+}
+
+// Sets only a Stage's content-addressed media group id - see
+// UpdatePowerMediaID (stands.sql).
+func (q *Queries) UpdateStageMediaID(ctx context.Context, arg UpdateStageMediaIDParams) error {
+	_, err := q.db.Exec(ctx, updateStageMediaID, arg.PictureMediaID, arg.ID)
+	return err
+}
+
 const updateStagePicture = `-- name: UpdateStagePicture :exec
 UPDATE stages
-SET picture        = COALESCE($1::text, picture),
-    picture_thumb  = COALESCE($2::text, picture_thumb),
-    picture_card   = COALESCE($3::text, picture_card),
-    picture_status = $4::picture_status,
-    picture_lqip   = COALESCE($5::text, picture_lqip),
-    updated_at     = now()
-WHERE id = $6
+SET picture          = COALESCE($1::text, picture),
+    picture_thumb    = COALESCE($2::text, picture_thumb),
+    picture_card     = COALESCE($3::text, picture_card),
+    picture_status   = $4::picture_status,
+    picture_lqip     = COALESCE($5::text, picture_lqip),
+    picture_media_id = COALESCE($6::text, picture_media_id),
+    updated_at       = now()
+WHERE id = $7
 `
 
 type UpdateStagePictureParams struct {
-	Picture       *string
-	PictureThumb  *string
-	PictureCard   *string
-	PictureStatus string
-	PictureLqip   *string
-	ID            pgtype.UUID
+	Picture        *string
+	PictureThumb   *string
+	PictureCard    *string
+	PictureStatus  string
+	PictureLqip    *string
+	PictureMediaID *string
+	ID             pgtype.UUID
 }
 
 // Updates only a Stage's picture renditions and pipeline status, without
@@ -282,6 +309,7 @@ func (q *Queries) UpdateStagePicture(ctx context.Context, arg UpdateStagePicture
 		arg.PictureCard,
 		arg.PictureStatus,
 		arg.PictureLqip,
+		arg.PictureMediaID,
 		arg.ID,
 	)
 	return err

@@ -181,6 +181,16 @@ func (r *StageRepository) UpdatePicture(ctx context.Context, id game.StageID, ma
 	return nil
 }
 
+// SetMediaID delegates, then invalidates the whole stages namespace on
+// success - same reasoning as UpdatePicture.
+func (r *StageRepository) SetMediaID(ctx context.Context, id game.StageID, mediaID string) error {
+	if err := r.next.SetMediaID(ctx, id, mediaID); err != nil {
+		return err
+	}
+	r.invalidate(ctx)
+	return nil
+}
+
 // invalidate drops the whole stages namespace, logging (never failing the
 // already-committed write) if the cache backend can't be reached - the
 // entries left behind are bounded by stageTTL/notFoundTTL either way.

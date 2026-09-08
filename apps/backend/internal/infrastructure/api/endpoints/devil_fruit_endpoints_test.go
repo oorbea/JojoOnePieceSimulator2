@@ -146,6 +146,17 @@ func (f *fakeDevilFruitRepository) UpdatePicture(_ context.Context, id powers.Po
 	return nil
 }
 
+func (f *fakeDevilFruitRepository) SetMediaID(_ context.Context, id powers.PowerID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	fruit, ok := f.fruits[id]
+	if !ok {
+		return ports.ErrDevilFruitNotFound
+	}
+	fruit.SetMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IDevilFruitRepository = (*fakeDevilFruitRepository)(nil)
 
 func validDevilFruitBody(name string) map[string]any {
@@ -188,7 +199,7 @@ func newDevilFruitTestServer() (http.Handler, *fakeDevilFruitRepository, *fakePi
 	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background(), endpoints.GameWSConfig{})
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
-	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, fakeTokenIssuer{},
+	h := endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, nil, fakeTokenIssuer{},
 		endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 	return h, repo, pictures
 }

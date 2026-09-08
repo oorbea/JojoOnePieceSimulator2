@@ -196,6 +196,17 @@ func (f *fakeGameUserRepository) CountAdmins(_ context.Context) (int64, error) {
 	return count, nil
 }
 
+func (f *fakeGameUserRepository) SetAvatarMediaID(_ context.Context, id user.UserID, mediaID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	u.SetAvatarMediaID(mediaID)
+	return nil
+}
+
 var _ ports.IUserRepository = (*fakeGameUserRepository)(nil)
 
 // fakeGameStageRepository is a minimal in-memory ports.IStageRepository -
@@ -229,6 +240,8 @@ func (fakeGameStageRepository) Translations(context.Context, game.StageID) (port
 func (fakeGameStageRepository) UpdatePicture(context.Context, game.StageID, *string, *string, *string, *string, enums.PictureStatus) error {
 	return nil
 }
+
+func (fakeGameStageRepository) SetMediaID(context.Context, game.StageID, string) error { return nil }
 
 var _ ports.IStageRepository = fakeGameStageRepository{}
 
@@ -277,6 +290,8 @@ func (f fakeGameStandRepository) Translations(_ context.Context, id powers.Power
 	return f.translations[id], nil
 }
 
+func (fakeGameStandRepository) SetMediaID(context.Context, powers.PowerID, string) error { return nil }
+
 var _ ports.IStandRepository = fakeGameStandRepository{}
 
 type fakeGameDevilFruitRepository struct {
@@ -311,6 +326,10 @@ func (fakeGameDevilFruitRepository) UpdatePicture(context.Context, powers.PowerI
 
 func (f fakeGameDevilFruitRepository) Translations(_ context.Context, id powers.PowerID) (ports.PowerTranslations, error) {
 	return f.translations[id], nil
+}
+
+func (fakeGameDevilFruitRepository) SetMediaID(context.Context, powers.PowerID, string) error {
+	return nil
 }
 
 var _ ports.IDevilFruitRepository = fakeGameDevilFruitRepository{}
@@ -489,7 +508,7 @@ func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 		users, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{})
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
+	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 
 	return h, &gameEndpointsTestDeps{users: users, svc: svc, tickets: tickets}
 }

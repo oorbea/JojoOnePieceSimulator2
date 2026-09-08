@@ -22,8 +22,8 @@ type PublicUserResponse struct {
 
 // NewPublicUserResponse builds a PublicUserResponse from a domain User,
 // resolving its avatar the same way NewUserResponse does.
-func NewPublicUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver) (PublicUserResponse, error) {
-	avatar, avatarThumb, avatarCard, avatarLqip, err := resolveAvatar(ctx, u, resolve)
+func NewPublicUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolver, media MediaURLBuilder) (PublicUserResponse, error) {
+	avatar, avatarThumb, avatarCard, avatarLqip, err := resolveAvatar(ctx, u, resolve, media)
 	if err != nil {
 		return PublicUserResponse{}, err
 	}

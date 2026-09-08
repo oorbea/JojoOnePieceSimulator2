@@ -164,6 +164,16 @@ func (r *DevilFruitRepository) UpdatePicture(ctx context.Context, id powers.Powe
 	return nil
 }
 
+// SetMediaID delegates, then invalidates the whole devil fruits namespace
+// on success - same reasoning as UpdatePicture.
+func (r *DevilFruitRepository) SetMediaID(ctx context.Context, id powers.PowerID, mediaID string) error {
+	if err := r.next.SetMediaID(ctx, id, mediaID); err != nil {
+		return err
+	}
+	r.invalidate(ctx)
+	return nil
+}
+
 // invalidate drops the whole devil fruits namespace, logging (never failing
 // the already-committed write) if the cache backend can't be reached.
 func (r *DevilFruitRepository) invalidate(ctx context.Context) {

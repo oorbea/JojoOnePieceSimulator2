@@ -145,6 +145,17 @@ func (r *UserRepository) AvatarKeys(ctx context.Context, id user.UserID) (string
 	return row.AvatarKey, row.AvatarThumbKey, row.AvatarCardKey, nil
 }
 
+// SetAvatarMediaID implements ports.IUserRepository.
+func (r *UserRepository) SetAvatarMediaID(ctx context.Context, id user.UserID, mediaID string) error {
+	if err := r.queries.UpdateUserAvatarMediaID(ctx, db.UpdateUserAvatarMediaIDParams{
+		ID:            pgtype.UUID{Bytes: id, Valid: true},
+		AvatarMediaID: mediaID,
+	}); err != nil {
+		return fmt.Errorf("setting avatar media id for user %s: %w", id, err)
+	}
+	return nil
+}
+
 // UpdateRole changes only id's role.
 func (r *UserRepository) UpdateRole(ctx context.Context, id user.UserID, role enums.UserRole) error {
 	err := r.queries.UpdateUserRole(ctx, db.UpdateUserRoleParams{

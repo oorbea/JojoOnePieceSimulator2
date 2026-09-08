@@ -15,30 +15,32 @@ import (
 // than exported from game or bolted onto infrastructure/powersnap, which
 // is strictly about powers.
 type stageSnapshot struct {
-	ID            [16]byte `json:"id"`
-	Manga         string   `json:"manga"`
-	Order         int      `json:"order"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Picture       string   `json:"picture"`
-	PictureThumb  string   `json:"pictureThumb"`
-	PictureCard   string   `json:"pictureCard"`
-	PictureStatus string   `json:"pictureStatus"`
-	PictureLqip   string   `json:"pictureLqip"`
+	ID             [16]byte `json:"id"`
+	Manga          string   `json:"manga"`
+	Order          int      `json:"order"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
+	Picture        string   `json:"picture"`
+	PictureThumb   string   `json:"pictureThumb"`
+	PictureCard    string   `json:"pictureCard"`
+	PictureStatus  string   `json:"pictureStatus"`
+	PictureLqip    string   `json:"pictureLqip"`
+	PictureMediaID string   `json:"pictureMediaId"`
 }
 
 func ofStage(st game.Stage) stageSnapshot {
 	return stageSnapshot{
-		ID:            st.ID(),
-		Manga:         st.Manga().String(),
-		Order:         st.Order(),
-		Name:          st.Name(),
-		Description:   st.Description(),
-		Picture:       st.Picture(),
-		PictureThumb:  st.PictureThumb(),
-		PictureCard:   st.PictureCard(),
-		PictureStatus: st.PictureStatus().String(),
-		PictureLqip:   st.PictureLqip(),
+		ID:             st.ID(),
+		Manga:          st.Manga().String(),
+		Order:          st.Order(),
+		Name:           st.Name(),
+		Description:    st.Description(),
+		Picture:        st.Picture(),
+		PictureThumb:   st.PictureThumb(),
+		PictureCard:    st.PictureCard(),
+		PictureStatus:  st.PictureStatus().String(),
+		PictureLqip:    st.PictureLqip(),
+		PictureMediaID: st.PictureMediaID(),
 	}
 }
 
@@ -61,6 +63,7 @@ func (s stageSnapshot) hydrate() (game.Stage, error) {
 		return game.Stage{}, fmt.Errorf("stage %q: picture_status: %w", s.Name, err)
 	}
 	st.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, status)
+	st.SetMediaID(s.PictureMediaID)
 	return st, nil
 }
 

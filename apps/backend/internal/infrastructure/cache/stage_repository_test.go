@@ -139,6 +139,18 @@ func (r *countingStageRepository) UpdatePicture(_ context.Context, id game.Stage
 	return nil
 }
 
+func (r *countingStageRepository) SetMediaID(_ context.Context, id game.StageID, mediaID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	s, ok := r.stages[id]
+	if !ok {
+		return ports.ErrStageNotFound
+	}
+	s.SetMediaID(mediaID)
+	r.stages[id] = s
+	return nil
+}
+
 var _ infracache.StageStore = (*countingStageRepository)(nil)
 
 func newTestStage(t *testing.T, name string, manga enums.Manga, order int) game.Stage {

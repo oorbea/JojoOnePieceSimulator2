@@ -3,7 +3,9 @@ package services
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"sync"
@@ -13,6 +15,19 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
+
+// mediaScopeFor reports the media_objects scope a job.Kind's renditions get:
+// "private" for user avatars (a durable handle to a real person's face,
+// requiring a signed URL - see dto.MediaURLBuilder), "public" for every
+// catalogue subject (Stand/DevilFruit/Stage - identical for every viewer,
+// already readable by any logged-in user via the existing catalogue
+// endpoints).
+func mediaScopeFor(kind enums.PictureSubjectKind) string {
+	if kind == enums.UserSubject {
+		return "private"
+	}
+	return "public"
+}
 
 // variantCard/variantThumb/variantMain/variantLqip name the entries of the
 // map ports.IImageProcessor.Transcode returns - card/thumb/main are uploaded
@@ -43,6 +58,11 @@ type WorkerConfig struct {
 	LqipDimension int
 	LqipQuality   int
 	LqipMaxBytes  int
+	// MediaIDSalt is mixed into the group id hash (see (*PictureWorker).groupID)
+	// so a group id is not reproducible from a source file alone by someone
+	// who doesn't know the salt, and differs across environments seeded with
+	// the same fixtures.
+	MediaIDSalt string
 }
 
 // variantLadder builds the ports.VariantSpec list Transcode is asked to
@@ -65,6 +85,7 @@ func (cfg WorkerConfig) variantLadder() []ports.VariantSpec {
 type PictureWorker struct {
 	processor ports.IImageProcessor
 	pictures  ports.IPictureStorage
+	media     ports.IMediaRepository
 	targets   map[enums.PictureSubjectKind]PictureTarget
 	idGen     ports.IIdGenerator[powers.PowerID]
 	cfg       WorkerConfig
@@ -92,6 +113,16 @@ func NewPictureWorker(
 		jobs:      make(chan ports.PictureJob, cfg.QueueSize),
 		hub:       hub,
 	}
+}
+
+// SetMediaRepository wires the content-addressed media index (see
+// ports.IMediaRepository) after construction, rather than as a constructor
+// parameter, so every existing caller/test keeps compiling unchanged. A
+// worker never given one (nil) simply never writes media_objects rows -
+// served pictures fall back to the presign path forever, same as an
+// unbackfilled row would.
+func (w *PictureWorker) SetMediaRepository(media ports.IMediaRepository) {
+	w.media = media
 }
 
 // Start launches the worker pool. It must be called once, before any
@@ -226,6 +257,64 @@ func (w *PictureWorker) process(job ports.PictureJob) {
 			w.deleteQuietly(ctx, old)
 		}
 	}
+
+	// Best-effort: a failure here leaves picture_media_id empty, which the
+	// DTO layer already treats as "not backfilled yet" and falls back to
+	// the presign path for - never worth failing an otherwise-successful
+	// job over.
+	w.indexMedia(ctx, target, job.Kind, job.SubjectID, renditions, uploaded)
+}
+
+// indexMedia computes the content-addressed group id for this transcode
+// (a hash of the main rendition's bytes, so re-uploading identical content
+// always resolves to the same group - see dto.MediaURLBuilder's doc),
+// persists one media_objects row per uploaded variant, and records the
+// group id on the subject. Silently does nothing if this worker has no
+// ports.IMediaRepository wired (SetMediaRepository never called).
+func (w *PictureWorker) indexMedia(
+	ctx context.Context,
+	target PictureTarget,
+	kind enums.PictureSubjectKind,
+	subjectID string,
+	renditions map[string]ports.EncodedImage,
+	uploaded map[string]string,
+) {
+	if w.media == nil {
+		return
+	}
+	main, ok := renditions[variantMain]
+	if !ok || len(main.Bytes) == 0 {
+		return
+	}
+
+	group := w.groupID(main.Bytes)
+	scope := mediaScopeFor(kind)
+	objects := make([]ports.MediaObject, 0, len(uploaded))
+	for variant, key := range uploaded {
+		img := renditions[variant]
+		objects = append(objects, ports.MediaObject{
+			GroupID: group, Variant: variant, StorageKey: key,
+			ContentType: img.ContentType, Bytes: int64(len(img.Bytes)), Scope: scope,
+		})
+	}
+
+	cctx, cancel := w.cleanupContext(ctx)
+	defer cancel()
+	if err := w.media.PutMediaObjects(cctx, objects); err != nil {
+		log.Printf("indexing media objects for %s %s: %v", kind, subjectID, err)
+		return
+	}
+	if err := target.Publisher.SetMediaID(cctx, subjectID, group); err != nil {
+		log.Printf("setting media id for %s %s: %v", kind, subjectID, err)
+	}
+}
+
+// groupID hashes salt+mainBytes and hex-encodes the first 16 bytes (32 hex
+// chars) - short enough for a clean URL path segment, long enough that
+// guessing a valid group id is infeasible.
+func (w *PictureWorker) groupID(mainBytes []byte) string {
+	sum := sha256.Sum256(append([]byte(w.cfg.MediaIDSalt), mainBytes...))
+	return hex.EncodeToString(sum[:16])
 }
 
 // encodeLqip turns img into a complete "data:image/webp;base64,..." URI,

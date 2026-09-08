@@ -15,17 +15,25 @@ import (
 // nested in the EvolvesFrom chain of any descendant, so enumerating the
 // affected keys is not tractable; flush-all is both correct and cheap for an
 // admin-write catalogue.
-const standsNamespace = "stands"
+// Bumped to v2 when PictureCard/PictureLqip/PictureMediaID were added to
+// the snapshot: Redis is appendonly on a persistent volume, so entries
+// written by the pre-v2 binary would otherwise survive the deploy and
+// deserialize with the new fields zeroed - silently serving stale/empty
+// media ids until standTTL expired. The version bump forces a cold cache
+// instead, which is cheap for a write-by-admin-only catalogue.
+const standsNamespace = "stands:v2"
 
 // devilFruitsNamespace holds every cached DevilFruit read (FindByID,
 // FindByName, GetAll, Filter) and is invalidated as a whole on any write -
 // same reasoning as standsNamespace.
-const devilFruitsNamespace = "devil_fruits"
+// Bumped to v2 - see standsNamespace's doc.
+const devilFruitsNamespace = "devil_fruits:v2"
 
 // stagesNamespace holds every cached Stage read (Stages, List, Filter,
 // FindByID) and is invalidated as a whole on any write - same reasoning as
 // standsNamespace.
-const stagesNamespace = "stages"
+// Bumped to v2 - see standsNamespace's doc.
+const stagesNamespace = "stages:v2"
 
 // presignNamespace holds cached presigned picture URLs, keyed by object
 // storage key. Never invalidated wholesale - entries are evicted

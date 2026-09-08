@@ -21,6 +21,9 @@ type IUserRepository interface {
 	// nil main/thumb/card/lqip leaves that column untouched, mirroring
 	// IStandRepository.UpdatePicture.
 	UpdateAvatar(ctx context.Context, id user.UserID, main, thumb, card, lqip *string, status enums.PictureStatus) error
+	// SetAvatarMediaID updates only the content-addressed avatar media group
+	// id - see IStandRepository.SetMediaID.
+	SetAvatarMediaID(ctx context.Context, id user.UserID, mediaID string) error
 	// AvatarKeys returns the main, thumbnail and card object-storage keys
 	// currently stored for id's avatar.
 	AvatarKeys(ctx context.Context, id user.UserID) (main, thumb, card string, err error)

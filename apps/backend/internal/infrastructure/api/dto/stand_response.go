@@ -31,15 +31,44 @@ type StandResponse struct {
 }
 
 // PictureURLResolver turns a Stand's stored picture key into a URL a client
-// can GET, returning "" for a Stand with no picture.
+// can GET, returning "" for a Stand with no picture. Only used as a fallback
+// while PictureMediaID is empty (not backfilled yet) - see
+// resolveCatalogPictures.
 type PictureURLResolver func(ctx context.Context, key string) (string, error)
 
+// resolveCatalogPictures resolves a public catalogue subject's three
+// renditions: pure string building through media (no I/O, no error) when
+// mediaID is set, falling back to resolve (a presign, hitting Redis/S3) when
+// it's still empty - the two-path branch every NewXResponse in this package
+// shares. Shared by Stand/DevilFruit/Stage; User avatars use the private
+// (signed) counterpart instead - see resolveAvatar in user_response.go.
+func resolveCatalogPictures(ctx context.Context, main, thumb, card, mediaID string, resolve PictureURLResolver, media MediaURLBuilder) (mainURL, thumbURL, cardURL string, err error) {
+	if mediaID != "" {
+		return media.Public(mediaID, "main"), media.Public(mediaID, "thumb"), media.Public(mediaID, "card"), nil
+	}
+	mainURL, err = resolve(ctx, main)
+	if err != nil {
+		return "", "", "", err
+	}
+	thumbURL, err = resolve(ctx, thumb)
+	if err != nil {
+		return "", "", "", err
+	}
+	cardURL, err = resolve(ctx, card)
+	if err != nil {
+		return "", "", "", err
+	}
+	return mainURL, thumbURL, cardURL, nil
+}
+
 // NewStandResponse builds a StandResponse from a domain Stand, resolving its
-// picture key (and, recursively, its evolves_from chain's) through resolve.
-func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureURLResolver) (StandResponse, error) {
+// picture key (and, recursively, its evolves_from chain's) through resolve,
+// or through media once PictureMediaID is backfilled - see
+// resolveCatalogPictures.
+func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureURLResolver, media MediaURLBuilder) (StandResponse, error) {
 	var evolvesFrom *StandResponse
 	if parent := stand.EvolvesFrom(); parent != nil {
-		resp, err := NewStandResponse(ctx, parent, resolve)
+		resp, err := NewStandResponse(ctx, parent, resolve, media)
 		if err != nil {
 			return StandResponse{}, err
 		}
@@ -51,15 +80,9 @@ func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureU
 		skills = []string{}
 	}
 
-	pictureURL, err := resolve(ctx, stand.Picture())
-	if err != nil {
-		return StandResponse{}, err
-	}
-	pictureThumbURL, err := resolve(ctx, stand.PictureThumb())
-	if err != nil {
-		return StandResponse{}, err
-	}
-	pictureCardURL, err := resolve(ctx, stand.PictureCard())
+	pictureURL, pictureThumbURL, pictureCardURL, err := resolveCatalogPictures(
+		ctx, stand.Picture(), stand.PictureThumb(), stand.PictureCard(), stand.PictureMediaID(), resolve, media,
+	)
 	if err != nil {
 		return StandResponse{}, err
 	}
@@ -87,10 +110,10 @@ func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureU
 
 // NewStandResponses builds a StandResponse slice, never nil, from a list of
 // domain Stands.
-func NewStandResponses(ctx context.Context, stands []*powers.Stand, resolve PictureURLResolver) ([]StandResponse, error) {
+func NewStandResponses(ctx context.Context, stands []*powers.Stand, resolve PictureURLResolver, media MediaURLBuilder) ([]StandResponse, error) {
 	responses := make([]StandResponse, 0, len(stands))
 	for _, stand := range stands {
-		resp, err := NewStandResponse(ctx, stand, resolve)
+		resp, err := NewStandResponse(ctx, stand, resolve, media)
 		if err != nil {
 			return nil, err
 		}
