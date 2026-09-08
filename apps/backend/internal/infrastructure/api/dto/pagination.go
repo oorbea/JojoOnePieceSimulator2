@@ -112,140 +112,37 @@ func FilterFingerprint(canonical string) string {
 	return hex.EncodeToString(sum[:8])
 }
 
-// standFiltersCanonical renders a ports.StandFilters in the same fixed field
-// order cache/keys.go's standFilterKey uses. Deliberately duplicated rather
-// than importing cache from dto (no cycle either way today, but dto is the
-// lower-level package) - see ObsidianVault/catalogue-pagination.md for the
-// anti-drift follow-up (a shared Canonical() method on StandFilters itself)
-// this duplication should eventually become.
-func standFiltersCanonical(f ports.StandFilters) string {
-	str := func(v *string) string {
-		if v == nil {
-			return ""
-		}
-		return *v
-	}
-	parts := []string{
-		str(f.EvolvesFrom),
-		str(f.Search),
-	}
-	if f.Rarity != nil {
-		parts = append(parts, f.Rarity.String())
-	} else {
-		parts = append(parts, "")
-	}
-	if f.AttackPower != nil {
-		parts = append(parts, f.AttackPower.String())
-	} else {
-		parts = append(parts, "")
-	}
-	if f.Speed != nil {
-		parts = append(parts, f.Speed.String())
-	} else {
-		parts = append(parts, "")
-	}
-	if f.AttackRange != nil {
-		parts = append(parts, f.AttackRange.String())
-	} else {
-		parts = append(parts, "")
-	}
-	if f.Endurance != nil {
-		parts = append(parts, f.Endurance.String())
-	} else {
-		parts = append(parts, "")
-	}
-	if f.Precision != nil {
-		parts = append(parts, f.Precision.String())
-	} else {
-		parts = append(parts, "")
-	}
-	if f.Potential != nil {
-		parts = append(parts, f.Potential.String())
-	} else {
-		parts = append(parts, "")
-	}
-	out := ""
-	for i, p := range parts {
-		if i > 0 {
-			out += "|"
-		}
-		out += p
-	}
-	return out
+// canonicalFilters is the shape every *Filters struct in ports satisfies via
+// its own Canonical() method - see ports.StandFilters.Canonical's doc for
+// why that method (not a duplicated rendering here) is the single source of
+// truth for a filter set's canonical string.
+type canonicalFilters interface {
+	Canonical() string
+}
+
+// filtersFingerprint binds a page cursor to the exact filter+locale
+// combination it was issued under, via whichever *Filters.Canonical()
+// implementation the caller passes.
+func filtersFingerprint(filters canonicalFilters, locale fmt.Stringer) string {
+	return FilterFingerprint(filters.Canonical() + "|" + locale.String())
 }
 
 // StandFiltersFingerprint is the fingerprint a Stand page cursor is bound
 // to, given the request's current filters and locale.
 func StandFiltersFingerprint(filters ports.StandFilters, locale fmt.Stringer) string {
-	return FilterFingerprint(standFiltersCanonical(filters) + "|" + locale.String())
-}
-
-// devilFruitFiltersCanonical mirrors standFiltersCanonical for
-// ports.DevilFruitFilters - see that function's doc for the anti-drift
-// follow-up this duplication should eventually become.
-func devilFruitFiltersCanonical(f ports.DevilFruitFilters) string {
-	str := func(v *string) string {
-		if v == nil {
-			return ""
-		}
-		return *v
-	}
-	parts := []string{str(f.Search)}
-	if f.Rarity != nil {
-		parts = append(parts, f.Rarity.String())
-	} else {
-		parts = append(parts, "")
-	}
-	if f.FruitType != nil {
-		parts = append(parts, f.FruitType.String())
-	} else {
-		parts = append(parts, "")
-	}
-	out := ""
-	for i, p := range parts {
-		if i > 0 {
-			out += "|"
-		}
-		out += p
-	}
-	return out
+	return filtersFingerprint(filters, locale)
 }
 
 // DevilFruitFiltersFingerprint is the fingerprint a DevilFruit page cursor
 // is bound to, given the request's current filters and locale.
 func DevilFruitFiltersFingerprint(filters ports.DevilFruitFilters, locale fmt.Stringer) string {
-	return FilterFingerprint(devilFruitFiltersCanonical(filters) + "|" + locale.String())
-}
-
-// stageFiltersCanonical mirrors standFiltersCanonical for
-// ports.StageFilters.
-func stageFiltersCanonical(f ports.StageFilters) string {
-	str := func(v *string) string {
-		if v == nil {
-			return ""
-		}
-		return *v
-	}
-	parts := []string{str(f.Search)}
-	if f.Manga != nil {
-		parts = append(parts, f.Manga.String())
-	} else {
-		parts = append(parts, "")
-	}
-	out := ""
-	for i, p := range parts {
-		if i > 0 {
-			out += "|"
-		}
-		out += p
-	}
-	return out
+	return filtersFingerprint(filters, locale)
 }
 
 // StageFiltersFingerprint is the fingerprint a Stage page cursor is bound
 // to, given the request's current filters and locale.
 func StageFiltersFingerprint(filters ports.StageFilters, locale fmt.Stringer) string {
-	return FilterFingerprint(stageFiltersCanonical(filters) + "|" + locale.String())
+	return filtersFingerprint(filters, locale)
 }
 
 // PageParams is the parsed, validated ?limit=&cursor=&total= query params

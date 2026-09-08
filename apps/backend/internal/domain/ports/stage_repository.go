@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"strings"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -15,6 +16,15 @@ type StageFilters struct {
 	// locale-resolved description. Unescaped - callers must escape any
 	// LIKE metacharacter (%, _, \) before this reaches SQL.
 	Search *string
+}
+
+// Canonical - see StandFilters.Canonical's doc for why this exists and what
+// it's the single source of truth for.
+func (f StageFilters) Canonical() string {
+	return strings.Join([]string{
+		optStringer(f.Manga),
+		optString(f.Search),
+	}, "|")
 }
 
 // StagePageCursor is the decoded (manga, position, name) key a Stage page
