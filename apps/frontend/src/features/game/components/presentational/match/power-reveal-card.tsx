@@ -1,19 +1,21 @@
 import { useTranslation } from 'react-i18next'
-import { Modal } from 'react-native'
+import { Modal, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { XStack, YStack } from 'tamagui'
+import { ScrollView, XStack, YStack } from 'tamagui'
 
 import {
   STAND_STAT_KEYS,
   STAND_STAT_LABELS,
 } from '@/features/game/components/presentational/match/loadout-card'
 import { PowerBlock } from '@/features/game/components/presentational/match/power-block'
+import { revealLayout } from '@/features/game/lib/reveal-layout'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 import type { StandResponse } from '@/features/stands/types/stands.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { cardSource, fullSource } from '@/shared/lib/picture-source'
+import { notifyScroll } from '@/shared/lib/scroll-bus'
 
 type Props = {
   visible: boolean
@@ -39,9 +41,12 @@ type Props = {
 export function PowerRevealCard({ visible, kind, stand, devilFruit, participantName, onSkip }: Props) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
+  const { width, height } = useWindowDimensions()
+  const layout = revealLayout({ width, height }, insets)
 
   const isStand = kind === 'stand'
   const power = isStand ? stand : devilFruit
+  const statFlexBasis = layout.statColumns === 3 ? '30%' : 72
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
@@ -54,45 +59,70 @@ export function PowerRevealCard({ visible, kind, stand, devilFruit, participantN
         pb={insets.bottom + 12}
         bg="rgba(10,12,20,0.72)"
       >
-        <GlassPanel tone="strong" radiusSize="panel" elevate={3} width="100%" maxW={560} p="$4" gap="$3">
+        <GlassPanel
+          tone="strong"
+          radiusSize="panel"
+          elevate={3}
+          width="100%"
+          maxW={560}
+          $md={{ maxW: 640 }}
+          $lg={{ maxW: 720 }}
+          p="$3"
+          $sm={{ p: '$4' }}
+          gap="$2.5"
+        >
           <XStack items="center" justify="center">
             <GlowText level="label" tone="soft">
               {participantName}
             </GlowText>
           </XStack>
-          <PowerBlock
-            picture={power ? cardSource(power) : undefined}
-            fullPicture={power ? fullSource(power) : undefined}
-            name={power?.name}
-            rarityLabel={
-              isStand
-                ? stand
-                  ? t(`enums.rarity.${stand.rarity}`)
-                  : undefined
-                : devilFruit
-                  ? t(`enums.fruitType.${devilFruit.fruitType}`)
-                  : undefined
-            }
-            description={power?.description}
-            skills={power?.skills}
-            fallbackLabel={isStand ? t('game.match.noStand') : t('game.match.noFruit')}
-            artHeight={220}
+          <ScrollView
+            maxH={layout.scrollMaxHeight}
+            onScroll={notifyScroll}
+            scrollEventThrottle={16}
           >
-            {isStand && stand ? (
-              <XStack flexWrap="wrap" gap="$2" mt="$1">
-                {STAND_STAT_KEYS.map((key) => (
-                  <YStack key={key} flexBasis={72} grow={1} minW={72} items="center" gap="$0.5">
-                    <GlowText level="label" tone="soft" fontSize="$1">
-                      {STAND_STAT_LABELS[key]}
-                    </GlowText>
-                    <GlowText level="heading" fontSize="$5">
-                      {t(`enums.standStat.${stand[key]}`)}
-                    </GlowText>
-                  </YStack>
-                ))}
-              </XStack>
-            ) : null}
-          </PowerBlock>
+            <PowerBlock
+              picture={power ? cardSource(power) : undefined}
+              fullPicture={power ? fullSource(power) : undefined}
+              name={power?.name}
+              rarityLabel={
+                isStand
+                  ? stand
+                    ? t(`enums.rarity.${stand.rarity}`)
+                    : undefined
+                  : devilFruit
+                    ? t(`enums.fruitType.${devilFruit.fruitType}`)
+                    : undefined
+              }
+              description={power?.description}
+              skills={power?.skills}
+              fallbackLabel={isStand ? t('game.match.noStand') : t('game.match.noFruit')}
+              artHeight={layout.artHeight}
+            >
+              {isStand && stand ? (
+                <XStack flexWrap="wrap" gap="$1.5" mt="$1" $md={{ gap: '$2' }}>
+                  {STAND_STAT_KEYS.map((key) => (
+                    <YStack
+                      key={key}
+                      flexBasis={statFlexBasis}
+                      grow={1}
+                      minW={64}
+                      $sm={{ flexBasis: 88, minW: 88 }}
+                      items="center"
+                      gap="$0.5"
+                    >
+                      <GlowText level="label" tone="soft" fontSize="$3">
+                        {STAND_STAT_LABELS[key]}
+                      </GlowText>
+                      <GlowText level="heading" fontSize="$5" $md={{ fontSize: '$7' }}>
+                        {t(`enums.standStat.${stand[key]}`)}
+                      </GlowText>
+                    </YStack>
+                  ))}
+                </XStack>
+              ) : null}
+            </PowerBlock>
+          </ScrollView>
           <XStack justify="center">
             <GlossButton
               tone="glass"
