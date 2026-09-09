@@ -94,6 +94,19 @@ originally intended rather than less; lowering it is a separate call, left alone
 > `/etc/nginx/conf.d/*.conf` at `http` level, so an envsubst-rendered snippet there would apply
 > twice globally.
 
+## Follow-up: missing `blob:` in connect-src (2026-09-09)
+
+Exactly the flagged gap above bit in prod: owner tried an admin catalogue-image upload
+(Magician's Red) and got two CSP violations in the console — `connect-src` blocked a
+`fetch()` against a `blob:` object URL. `img-src` already had `blob:` (for `<img>` preview
+rendering) but `connect-src` didn't — Chrome enforces `connect-src` separately for
+`fetch()`/XHR against `blob:` URLs even though the resource never leaves the page.
+
+Fix: added `blob:` to `connect-src` in all four repeated header blocks in
+`nginx.frontend.conf.template`. Verified with a real `docker compose build frontend` +
+`up` + `curl -sI` showing `connect-src 'self' blob: ...` in the rendered header. Not yet
+verified against prod (needs a real rebuild+redeploy + the owner retrying the upload).
+
 ## Verification
 
 Real Docker build (`docker compose build frontend`) confirmed the no-inline-script fact above.
