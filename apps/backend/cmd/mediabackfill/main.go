@@ -18,9 +18,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
@@ -154,8 +152,7 @@ func (b *backfiller) backfillOne(mainKey, thumbKey, keyPrefix, scope string) (gr
 		return "", "", "", fmt.Errorf("transcoding card/lqip from %q: %w", mainKey, err)
 	}
 
-	sum := sha256.Sum256(append([]byte(b.salt), mainBytes...))
-	groupID = hex.EncodeToString(sum[:16])
+	groupID = ports.MediaGroupID(b.salt, mainBytes)
 
 	if lqipImg, ok := renditions["lqip"]; ok && len(lqipImg.Bytes) > 0 {
 		uri := "data:" + lqipImg.ContentType + ";base64," + base64.StdEncoding.EncodeToString(lqipImg.Bytes)
