@@ -127,6 +127,56 @@ generic 500.
   all three variants (two pointing at their existing storage keys, one
   newly uploaded) under the freshly computed group id.
 
+## Blur regression: card was too small, and URLs being immutable bit back (2026-09-09)
+
+Every image uploaded after T1/T2 shipped rendered blurry in the grid cards
+(and the admin panel, which shares the same card/detail components) - old
+rows looked fine. Root cause: `PICTURE_CARD_DIMENSION` shipped at `128`,
+sized for what `entrega-imagenes-red-lenta-2026-09-07.md`'s T1 section
+called "~100-140px" grid cells - but the actual wells (`stand-card.tsx` and
+its DevilFruit/Stage siblings, `height={140}` inside a 280px-wide card,
+`contentFit="cover"`) are ~248×140 CSS px, upscaled further on any DPR>1
+device. `LazyImage` applies no DPR correction. Old rows never hit this
+because `picture_card` defaulted to `''` (migration `00013`), so
+`cardSource()` fell back to the 256px thumb, which happened to look sharp
+enough - the "only new uploads are blurry" symptom was really "only new
+uploads actually have a `card` rendition at all."
+
+Fix: `PICTURE_CARD_DIMENSION` default raised to `512` (still below
+`main`'s 1024, comfortably above the largest well that reads `cardSource`
+- the power-reveal card and loadout modal, up to 560px, moved off `thumb`
+onto `cardSource` too since they were needlessly settling for 256px).
+
+The harder part: **T2's URLs are immutable forever** (`Cache-Control:
+public, max-age=31536000, immutable`, cached by the browser, the service
+worker, and the backend's own on-disk LRU). The group id
+(`sha256(salt || mainBytes)[:16]`, `ports.MediaGroupID` now) only ever
+depended on the main rendition's bytes - so simply changing
+`PICTURE_CARD_DIMENSION` and re-uploading the *same* source file would
+resolve to the *same* group id, and every cache layer would keep serving
+the stale 128px `card.webp` forever. Fixed by folding a
+`MediaRenditionProfile` version string into the hash
+(`ports.MediaGroupID`, `internal/domain/ports/media_group.go`) alongside
+salt and bytes. **Any future change to a rendition's dimensions/quality (or
+the set of variants) must bump `MediaRenditionProfile`**, or the immutable-
+cache design silently defeats the fix. `picture_worker.go` and
+`cmd/mediabackfill` both call the same `ports.MediaGroupID` now (previously
+duplicated the hash inline in each place - flagged as a drift risk when T2
+shipped, and it would have quietly reintroduced this exact bug the next
+time only one of the two got updated).
+
+Also fixed in passing: `media_endpoints.go`'s per-variant fallback ladder
+assumed `card ≤ thumb ≤ main` in size (`card` fell back to `thumb` before
+`main`). That's no longer true with `card` at 512 > `thumb`'s 256, so a
+partially-backfilled group missing its `card` now falls to `main` (large
+but sharp) rather than `thumb` (which would silently reintroduce the same
+blur). Owner's call: existing PR #42-era uploads are fixed by re-uploading
+by hand, not by adding a `--force` re-transcode flag to `mediabackfill`.
+
+**Still needed in prod**: `PICTURE_CARD_DIMENSION` is a GitHub Variable
+there - if it's pinned to the old `128`, the new default never applies.
+Owner needs to update it (or unset it to pick up the new default).
+
 ## Still open
 
 - Backfill hasn't run in prod - every existing row still resolves through

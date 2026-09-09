@@ -16,7 +16,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { fullSource, thumbSource } from '@/shared/lib/picture-source'
+import { cardSource, fullSource } from '@/shared/lib/picture-source'
 import type { Manga } from '@/shared/contracts/enums'
 
 type Props = {
@@ -94,7 +94,7 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
               {hasStandSlot ? (
                 <YStack flex={1} minW={280} gap="$2">
                   <PowerBlock
-                    picture={stand ? thumbSource(stand) : undefined}
+                    picture={stand ? cardSource(stand) : undefined}
                     fullPicture={stand ? fullSource(stand) : undefined}
                     name={stand?.name}
                     rarityLabel={stand ? t(`enums.rarity.${stand.rarity}`) : undefined}
@@ -130,7 +130,7 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
               {hasFruitSlot ? (
                 <YStack flex={1} minW={280} gap="$2">
                   <PowerBlock
-                    picture={fruit ? thumbSource(fruit) : undefined}
+                    picture={fruit ? cardSource(fruit) : undefined}
                     fullPicture={fruit ? fullSource(fruit) : undefined}
                     name={fruit?.name}
                     rarityLabel={fruit ? t(`enums.fruitType.${fruit.fruitType}`) : undefined}

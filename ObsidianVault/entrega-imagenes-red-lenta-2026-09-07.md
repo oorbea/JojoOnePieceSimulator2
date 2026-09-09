@@ -43,7 +43,11 @@ retest on the original poor-coverage connection would still likely fail.
   error paths (`PictureKeys`/`UpdatePicture` failure) that left a subject
   stuck at PENDING now call `markFailed` + publish a FAILED SSE event.
 - **T1.2/T1.3** (migration `00013_picture_card_and_lqip.sql`): added a third
-  `card` rendition (128px) to the pipeline, plus an embedded LQIP data: URI
+  `card` rendition (shipped at 128px, **wrong** - the actual grid wells are
+  ~248×140 CSS px, not ~140px; caused a real blur regression, fixed
+  2026-09-09 by raising the default to 512px, see
+  [[media-proxy-content-addressed]]) to the pipeline, plus an embedded LQIP
+  data: URI
   placeholder (`data:image/webp;base64,...`, dropped/stored as `""` if it
   exceeds `MEDIA_LQIP_MAX_BYTES`). `ports.IImageProcessor.Transcode` changed
   from a fixed two-return-value signature to a `VariantSpec`/

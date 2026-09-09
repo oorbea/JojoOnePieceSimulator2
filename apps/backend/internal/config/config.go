@@ -99,7 +99,7 @@ var defaultPictureAllowedTypes = []string{"image/webp", "image/avif", "image/jpe
 // alongside it.
 const defaultPictureMaxDimension = 1024
 const defaultPictureThumbDimension = 256
-const defaultPictureCardDimension = 128
+const defaultPictureCardDimension = 512
 const defaultPictureWebPQuality = 80
 const defaultPictureLqipDimension = 16
 const defaultPictureLqipQuality = 30

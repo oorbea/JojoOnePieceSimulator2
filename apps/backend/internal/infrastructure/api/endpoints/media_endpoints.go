@@ -29,9 +29,13 @@ var groupIDPattern = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 // mediaVariants is the fixed allowlist of servable variants, in
 // most-specific-first fallback order per requested variant - see
-// variantLadder.
+// variantLadder. Falling back doesn't mean "next smallest": card (~512px)
+// falls to main (~1024px) rather than thumb (~256px), because the card
+// well is large enough that a 256px fallback would look as blurry as the
+// bug this ladder exists to avoid - an oversized-but-sharp main beats an
+// undersized thumb here.
 var mediaVariants = map[string][]string{
-	"card":  {"card", "thumb", "main"},
+	"card":  {"card", "main", "thumb"},
 	"thumb": {"thumb", "main"},
 	"main":  {"main"},
 }

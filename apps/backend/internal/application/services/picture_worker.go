@@ -3,9 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"sync"
@@ -309,12 +307,10 @@ func (w *PictureWorker) indexMedia(
 	}
 }
 
-// groupID hashes salt+mainBytes and hex-encodes the first 16 bytes (32 hex
-// chars) - short enough for a clean URL path segment, long enough that
-// guessing a valid group id is infeasible.
+// groupID delegates to ports.MediaGroupID - see that doc for why the
+// rendition profile (not just salt+bytes) is part of the hash.
 func (w *PictureWorker) groupID(mainBytes []byte) string {
-	sum := sha256.Sum256(append([]byte(w.cfg.MediaIDSalt), mainBytes...))
-	return hex.EncodeToString(sum[:16])
+	return ports.MediaGroupID(w.cfg.MediaIDSalt, mainBytes)
 }
 
 // encodeLqip turns img into a complete "data:image/webp;base64,..." URI,
