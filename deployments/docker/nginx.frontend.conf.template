@@ -107,6 +107,33 @@ server {
         add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
     }
 
+    # Dev-only same-origin proxy for the content-addressed media proxy
+    # (GET /api/v1/media/**). Inert in prod: NPM routes /api straight to
+    # backend:8080 before this container ever sees the request
+    # (docker-compose.prod.yml), so this location never matches there. It
+    # exists so MEDIA_BASE_URL can be same-origin in local dev too - same
+    # origin as the frontend is what lets the service worker's
+    # cacheFirstImage (public/sw.js) actually reach this path (it bails on
+    # any cross-origin request) and what makes the request satisfy the CSP
+    # img-src above ('self', not an arbitrary http: origin). See
+    # ObsidianVault/sw-cache-media-scope-privado-2026-09-09.md.
+    #
+    # `resolver` + a variable, NOT a literal `proxy_pass http://backend:8080`:
+    # a literal upstream is resolved once at nginx startup, and this
+    # container can start before the backend's DNS name is registered -
+    # that would crash-loop the frontend. Routing through a variable defers
+    # resolution to request time via Docker's embedded DNS.
+    #
+    # No add_header here on purpose: the IMPORTANT note above still applies
+    # (a location's own add_header replaces every inherited one) - the fix
+    # here is simply not adding any, so the server block's headers apply
+    # unmodified instead of needing to be repeated.
+    location /api/v1/media/ {
+        resolver 127.0.0.11 valid=10s;
+        set $media_upstream http://backend:8080;
+        proxy_pass $media_upstream$request_uri;
+    }
+
     # SPA fallback so client-side routes (Expo Router) resolve on refresh.
     location / {
         try_files $uri $uri.html /index.html;
