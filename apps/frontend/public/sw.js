@@ -7,6 +7,15 @@
 // network on every load, it just never learns about the new deploy from its
 // own cache the way the old cache-first-everything strategy did.
 //
+// Deliberate exception to "bump on every logic change": excluding the
+// `/p/...` private-media scope from isImmutableImage below (2026-09-09)
+// does NOT bump CACHE_NAME. A bump exists to stop stale caches serving
+// obsolete content; this change can never do that - it only *stops*
+// caching a scope it shouldn't have, and does not touch CACHE_NAME's own
+// cache. Any already-cached `/p/...` entries in IMG_CACHE_NAME are simply
+// never matched again and get evicted by trimImageCache's normal
+// insertion-order cap - no active purge needed.
+//
 // History: the previous version cached every same-origin GET (including
 // index.html and the JS bundle) cache-first with no revalidation, so once a
 // browser had visited the site it kept being served whatever index.html/
@@ -60,13 +69,24 @@ function isImmutableStaticAsset(url) {
   return url.origin === self.location.origin && url.pathname.startsWith('/_expo/static/')
 }
 
-// The content-addressed media proxy (only same-origin in prod, where NPM
-// serves both `/` and `/api` off one host - see
-// media-proxy-content-addressed.md's MEDIA_BASE_URL note). Local dev's
-// absolute cross-origin MEDIA_BASE_URL never reaches here: the fetch
-// handler below already returns early for any cross-origin request.
+// The content-addressed media proxy (only same-origin where NPM/nginx routes
+// `/api` and `/` off one host - see media-proxy-content-addressed.md's
+// "MEDIA_BASE_URL / orígenes" section). The `/p/...` private/signed scope
+// (user avatars) is deliberately excluded: its `exp` is quantized to
+// MEDIA_PRIVATE_URL_TTL/2 windows (12h by default), so the same avatar's
+// bytes get a brand-new URL twice a day - every rotation orphans the
+// previous entry, and trimImageCache's insertion-order eviction then
+// preferentially evicts the *public* (truly-forever-valid) entries that
+// were inserted earlier, not the churning private ones. Avatars still get
+// browser HTTP caching (the backend already sends
+// `private, max-age, immutable` for them), just not Cache Storage. See
+// ObsidianVault/sw-cache-media-scope-privado-2026-09-09.md.
 function isImmutableImage(url) {
-  return url.origin === self.location.origin && url.pathname.startsWith('/api/v1/media/')
+  return (
+    url.origin === self.location.origin &&
+    url.pathname.startsWith('/api/v1/media/') &&
+    !url.pathname.startsWith('/api/v1/media/p/')
+  )
 }
 
 // Cache-first: instant/offline, correct because the URL is content-hashed.
