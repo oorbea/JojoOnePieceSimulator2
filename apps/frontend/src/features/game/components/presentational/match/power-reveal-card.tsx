@@ -13,7 +13,7 @@ import type { StandResponse } from '@/features/stands/types/stands.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { fullSource, thumbSource } from '@/shared/lib/picture-source'
+import { cardSource, fullSource } from '@/shared/lib/picture-source'
 
 type Props = {
   visible: boolean
@@ -61,7 +61,7 @@ export function PowerRevealCard({ visible, kind, stand, devilFruit, participantN
             </GlowText>
           </XStack>
           <PowerBlock
-            picture={power ? thumbSource(power) : undefined}
+            picture={power ? cardSource(power) : undefined}
             fullPicture={power ? fullSource(power) : undefined}
             name={power?.name}
             rarityLabel={

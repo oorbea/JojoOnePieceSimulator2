@@ -22,12 +22,15 @@ export function fullSource(entity: PictureFields): string | null {
   return entity.picture || null
 }
 
-// cardSource: the ~128px rendition T1 added, for catalogue grid cells
-// (~140px wells) - smaller than pictureThumb's 256px, so it's what LazyImage
-// should actually fetch there. Falls down the same ladder as thumbSource
-// (thumb, then main) for entities/backends that haven't backfilled a card
-// rendition yet - `pictureCard` is optional because avatar-bearing DTOs
-// (PublicUserResponse etc.) don't carry it.
+// cardSource: the ~512px rendition T1 added (bumped from an original 128px -
+// see ObsidianVault/media-proxy-content-addressed.md - 128 was too small for
+// the ~250-560px wells it actually renders into and looked blurry), for
+// catalogue grid cells and other medium (~150-560px) wells: bigger than
+// pictureThumb's 256px, smaller than the full ~1024px main rendition. Falls
+// down the same ladder as thumbSource (thumb, then main) for entities/
+// backends that haven't backfilled a card rendition yet - `pictureCard` is
+// optional because avatar-bearing DTOs (PublicUserResponse etc.) don't carry
+// it.
 export function cardSource(entity: CardPictureFields): string | null {
   return entity.pictureCard || entity.pictureThumb || entity.picture || null
 }
