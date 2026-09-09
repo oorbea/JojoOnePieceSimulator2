@@ -11,8 +11,8 @@ import { LazyImage, type LazyImageState } from '@/shared/components/presentation
 import { a11yProps } from '@/shared/lib/a11y'
 
 export type PowerBlockProps = {
-  /** Small rendition shown in the art well - callers should pass
-   * thumbSource(power), not the full-size picture. */
+  /** Medium rendition shown in the art well - callers should pass
+   * cardSource(power), not the full-size picture. */
   picture?: string | null
   /** Full-size rendition opened by tapping the well; falls back to
    * `picture` when the caller doesn't have one (e.g. already passed the
