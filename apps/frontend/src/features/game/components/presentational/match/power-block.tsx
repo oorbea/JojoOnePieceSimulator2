@@ -96,37 +96,56 @@ export function PowerBlock({
       {name ? (
         <>
           <XStack items="center" justify="space-between" gap="$2">
-            <GlowText level="heading" numberOfLines={1} flex={1}>
+            <GlowText
+              level="heading"
+              fontSize="$6"
+              $md={{ fontSize: '$8' }}
+              numberOfLines={2}
+              flex={1}
+            >
               {name}
             </GlowText>
             {rarityLabel ? (
-              <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
-                <GlowText level="label">{rarityLabel}</GlowText>
+              <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0} shrink={0}>
+                <GlowText level="label" fontSize="$4" $md={{ fontSize: '$5' }}>
+                  {rarityLabel}
+                </GlowText>
               </GlassPanel>
             ) : null}
           </XStack>
-          {description ? <GlowText level="label">{description}</GlowText> : null}
+          {description ? (
+            <GlowText level="label" fontSize="$5" $md={{ fontSize: '$6' }} $lg={{ fontSize: '$7' }}>
+              {description}
+            </GlowText>
+          ) : null}
           {skills && skills.length > 0 ? (
-            <YStack gap="$1">
-              <GlowText level="label" tone="soft" fontSize="$1">
+            <YStack gap="$1.5">
+              <GlowText level="label" tone="soft" fontSize="$3">
                 {t('stands.skills')}
               </GlowText>
-              <XStack flexWrap="wrap" gap="$1.5">
+              <YStack gap="$1.5">
                 {skills.map((skill) => (
                   <GlassPanel
                     key={skill}
                     tone="plastic"
-                    px="$2"
-                    py="$0.5"
-                    rounded="$pill"
+                    px="$2.5"
+                    py="$1.5"
+                    rounded="$card"
                     elevate={0}
+                    width="100%"
                   >
-                    <GlowText level="label" fontSize="$1">
+                    <GlowText
+                      level="label"
+                      fontSize="$4"
+                      $md={{ fontSize: '$5' }}
+                      $lg={{ fontSize: '$6' }}
+                      flex={1}
+                    >
                       {skill}
                     </GlowText>
                   </GlassPanel>
                 ))}
-              </XStack>
+              </YStack>
             </YStack>
           ) : null}
           {children}
