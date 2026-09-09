@@ -42,6 +42,10 @@ tamagui-web.css
 # typescript
 *.tsbuildinfo
 
+# jest --cacheDirectory (norma-verificacion-docker.md's Docker cache flag,
+# also produced when run on the host)
+.jest-cache/
+
 # generated native folders
 /ios
 /android
