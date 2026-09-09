@@ -23,8 +23,12 @@ import (
 // Stand/DevilFruit/Stage (identical for every viewer, already readable by
 // any logged-in user). Private URLs (User avatars) are quantized to a fixed
 // window so repeated calls within that window return the byte-identical
-// URL - the property the whole story's cacheability (browser cache, the
-// response ETag over a list containing many avatar URLs) depends on.
+// URL - the property the browser HTTP cache and the response ETag over a
+// list containing many avatar URLs depend on. The frontend service worker
+// deliberately does NOT cache this scope (see
+// ObsidianVault/sw-cache-media-scope-privado-2026-09-09.md): a rotating URL
+// under Cache Storage's no-TTL, insertion-order eviction would churn out
+// the truly-forever-valid public entries instead.
 type MediaURLBuilder struct {
 	BaseURL    string
 	Secret     []byte
@@ -61,9 +65,8 @@ func (b MediaURLBuilder) privateWindow() time.Duration {
 // Private builds a signed URL for a private-scope group (User avatars),
 // quantizing exp to the current privateWindow boundary: every call within
 // the same window returns the byte-identical URL, which is what lets the
-// browser cache, a service worker, and the response ETag over a list
-// containing many avatar URLs all actually hit. Returns "" if groupID is
-// empty.
+// browser HTTP cache and the response ETag over a list containing many
+// avatar URLs actually hit. Returns "" if groupID is empty.
 func (b MediaURLBuilder) Private(groupID, variant string, now time.Time) string {
 	if groupID == "" {
 		return ""

@@ -57,9 +57,12 @@ exp|group|variant))[:22]`, verified with `subtle.ConstantTimeCompare`.
 `exp` is **quantized** to `MEDIA_PRIVATE_URL_TTL/2` windows
 (`dto.MediaURLBuilder.privateWindow`/`quantizeExp`): every call within the
 same window returns the byte-identical URL, which is the property browser
-caching, a future service worker, and the response ETag over a user list
-(many avatar URLs in one body) all depend on. Authority lives in the URL,
-never in a header - deliberately **no** `Vary: Authorization`.
+HTTP caching and the response ETag over a user list (many avatar URLs in
+one body) depend on. Authority lives in the URL, never in a header -
+deliberately **no** `Vary: Authorization`. The frontend service worker
+deliberately does **not** cache this scope - see
+[[sw-cache-media-scope-privado-2026-09-09]] for why a rotating URL is a bad
+fit for Cache Storage's no-TTL, insertion-order eviction.
 
 **Security tradeoff, stated plainly**: a private URL is a valid bearer
 capability for anyone who obtains it (a shared HAR, a screenshot, an access
@@ -69,6 +72,39 @@ rotation revokes every live URL at once; the TTL is configurable to shorten
 it; and avatars are already visible to every logged-in user via
 `PublicUserResponse` today, so the actual delta is "logged-in users" →
 "URL holders," not "private" → "public."
+
+## MEDIA_BASE_URL / orígenes
+
+`MediaURLBuilder.BaseURL` (`config.MediaBaseURL`) is prepended verbatim to
+every media URL, so whether the frontend and the media proxy end up
+same-origin or cross-origin is entirely a config choice, not something the
+handler itself decides.
+
+- **Prod**: relative (`/api/v1/media`, unset env var). NPM routes `/` to the
+  frontend and `/api` to the backend on one public host, so this is
+  same-origin by construction.
+- **Local dev** (2026-09-09): absolute, but pointed at the **frontend's own
+  origin** - `http://localhost:3000/api/v1/media`, not the backend's
+  `http://localhost:8080`. `nginx.frontend.conf.template` proxies that path
+  back to `backend:8080` (via a `resolver` + variable, not a literal
+  `proxy_pass`, so the frontend container doesn't crash-loop if it starts
+  before the backend's DNS name resolves), so the browser still sees one
+  origin end to end. Same-origin matters for two independent reasons, not
+  one: it's what lets the frontend service worker's `cacheFirstImage`
+  (`public/sw.js`) reach the path at all (it bails out early on any
+  cross-origin request, `sw.js:139-141`), and it's what satisfies the CSP's
+  `img-src 'self'` rule. Before this, `MEDIA_BASE_URL` pointed straight at
+  `:8080` - cross-origin, so `cacheFirstImage` was dead code in dev and only
+  ever ran in prod, and strictly speaking the request also didn't match any
+  `img-src` source (`'self' data: blob: https:`), though it kept working in
+  practice because most local rows still fell back to R2's presigned
+  `https:` URLs (backfill never run - see "Still open" below).
+- **Native** (dev or prod): needs an absolute URL regardless (a mobile
+  client has no notion of "relative to the page"), so this only ever
+  matters for the web target.
+
+See [[sw-cache-media-scope-privado-2026-09-09]] for the full writeup of the
+service-worker side of this.
 
 ## Rejected: AVIF renditions
 
