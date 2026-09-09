@@ -113,10 +113,10 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
                             items="center"
                             gap="$0.5"
                           >
-                            <GlowText level="label" tone="soft" fontSize="$1">
+                            <GlowText level="label" tone="soft" fontSize="$3">
                               {STAND_STAT_LABELS[key]}
                             </GlowText>
-                            <GlowText level="heading" fontSize="$5">
+                            <GlowText level="heading" fontSize="$5" $md={{ fontSize: '$7' }}>
                               {t(`enums.standStat.${stand[key]}`)}
                             </GlowText>
                           </YStack>
