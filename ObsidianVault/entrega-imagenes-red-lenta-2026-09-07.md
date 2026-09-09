@@ -132,7 +132,6 @@ RNW in the meantime; native testing needs that build later.
   **Closed 2026-09-08** — `use-paginated-catalogue.ts` + a "Cargar más"
   button now live in all three public catalogues (Stand, DevilFruit, Stage),
   see [[catalogue-pagination]].
-- Service worker media caching (`jops-img-v1`).
 
 So retesting the original poor-coverage scenario today would show real
 progress (images load progressively, capped concurrency, no more
