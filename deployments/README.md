@@ -90,7 +90,7 @@ out here too — they are ordinary `.env.example` entries, not extra secrets:
 | `MEDIA_CACHE_DIR` | `[CONFIG]` | On-disk cache for the media proxy's own reads from object storage (default `/tmp/media`). |
 | `MEDIA_CACHE_MAX_BYTES` | `[CONFIG]` | LRU cap for `MEDIA_CACHE_DIR` (default `268435456`, 256 MiB). |
 | `RATE_LIMIT_MEDIA_PER_IP` | `[CONFIG]` | Per-IP rate limit on `GET /api/v1/media/**`, separate from the global tier since a cold catalogue load is ~100 image requests (default `1200`). |
-| `PICTURE_CARD_DIMENSION` | `[CONFIG]` | Grid-thumbnail rendition size in px, the smallest of the three (default `128`). |
+| `PICTURE_CARD_DIMENSION` | `[CONFIG]` | Grid/medium rendition size in px, between `thumb` (256) and `main` (1024) — used for catalogue cards, the sorteo power-reveal, and the loadout modal (default `512`). |
 | `PICTURE_LQIP_DIMENSION` | `[CONFIG]` | Inline blurred-placeholder rendition size in px (default `16`). |
 | `PICTURE_LQIP_QUALITY` | `[CONFIG]` | WebP quality for the LQIP rendition (default `30`). |
 | `MEDIA_LQIP_MAX_BYTES` | `[CONFIG]` | Rejects (and logs) an LQIP data URI above this size instead of bloating every list response (default `512`). |
