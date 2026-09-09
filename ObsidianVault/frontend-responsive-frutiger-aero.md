@@ -126,3 +126,25 @@ porque la reserva crece con ella. `layout.ts`'s `topClearance`/`bottomClearance`
 También: la fila de links y el dock pasaron de dos `display`/`$md` independientes a un solo booleano
 (`showTopLinks = media.md`) en `AppShell` — estructuralmente imposible que coexistan o que falten los
 dos a la vez.
+
+## Suelo tipográfico responsive: 13px, nunca escalar hacia abajo (2026-09-09)
+
+Decisión del propietario al arreglar el desbordamiento de `PowerRevealCard` (ver
+[[game-match-assignment-frontend]]): cuando el texto no cabe, la escala **solo sube** en breakpoints
+más anchos — nunca baja de 13px (`$3` en la escala `body` de `tamagui.config.ts`) para hacer caber
+más contenido. Lo que se comprime en su lugar es el elemento no-textual más prescindible (aquí, el
+alto del arte) y/o se activa scroll. Tabla usada en `power-block.tsx`/`power-reveal-card.tsx`
+(tokens body: `$3`=13 `$4`=14 `$5`=15 `$6`=16 `$7`=18; heading `$6`=20 `$7`=23 `$8`=26):
+
+| Rol | Base | `$md` (≥900) | `$lg` (≥1200) |
+|---|---|---|---|
+| Nombre (heading) | `$6` 20 | `$8` 26 | - |
+| Etiqueta/rareza | `$4` 14 | `$5` 15 | - |
+| Descripción | `$5` 15 | `$6` 16 | `$7` 18 |
+| Etiqueta "Skills" | `$3` 13 | - | - |
+| Texto de skill | `$4` 14 | `$5` 15 | `$6` 16 |
+
+Motivo del suelo: bajar de 13px para que quepa texto es tratar la legibilidad como la variable de
+ajuste, cuando normalmente hay otra variable (tamaño del arte, densidad de la rejilla, scroll) que
+cede primero sin dañar la lectura. Aplíquese este mismo suelo a cualquier otro texto de UI que se
+toque con lógica responsive, salvo decisión explícita en contra.

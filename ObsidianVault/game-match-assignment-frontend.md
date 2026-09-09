@@ -373,7 +373,24 @@ power's description - that gap is now closed).
 - **Deliberately not done, documented instead**: per-power special visual effects (Gomu Gomu no Mi
   bounce, Holy's Stand greyscale+brambles, The World's time-stop, etc.) - see [[gameplay-power-fx]],
   a planned-only note the owner explicitly asked to have written up rather than built yet.
+- **Responsive pass (2026-09-09)**: `PowerRevealCard` had no `maxH`/`ScrollView` and its skills were
+  single-line `rounded="$pill"` chips at `fontSize="$1"` (11px) - real skill text is a full sentence,
+  backend-resolved per locale, unbounded length, so long skills clipped, worst on short/narrow
+  viewports. Fixed in `power-block.tsx` (shared with `LoadoutModal`, so both benefit): skills are now
+  vertically-stacked rectangular chips (`rounded="$card"`, `flex={1}`, wraps to multiple lines - same
+  fix as [[admin-panel-crud-ux-fixes]] §4's skill-chip clipping), and the whole type scale moved up
+  (never below 13px - see [[frontend-responsive-frutiger-aero]] for the table). New pure helper
+  `features/game/lib/reveal-layout.ts` (`revealLayout(viewport, insets)`) computes `artHeight`
+  (shrinks 220→120-260 by viewport, prioritizing description/skills over the art well - owner
+  decision), `scrollMaxHeight` (caps a new `ScrollView` wrapping `PowerBlock` inside the panel, name
+  and Skip pinned outside it so Skip can never scroll off-screen again), and `statColumns` (3 on
+  narrow, 6 once there's room) - unit-tested in `reveal-layout.test.ts` since RNTL doesn't render
+  real layout. Live-verified via two-account walkthrough (both a Stand and a Devil Fruit reveal, two
+  window sizes) - nothing clipped, Skip stayed reachable. `resize_window`/`window.resizeTo` don't work
+  in the claude-in-chrome sandbox (Chrome blocks resizing a non-popup window), so narrow-viewport
+  coverage rests on the unit tests plus one incidentally-short real window (1280x575), not a forced
+  390-wide screenshot - worth knowing before trusting "verified on mobile" claims from this tool.
 
 Related: [[game-lobby-todo]], [[game-lobby-frontend]], [[gameplay-application-layer]],
 [[game-realtime-transport]], [[docker-setup]], [[frontend-stack]], [[i18n-multi-language]],
-[[gameplay-power-fx]].
+[[gameplay-power-fx]], [[frontend-responsive-frutiger-aero]], [[admin-panel-crud-ux-fixes]].
