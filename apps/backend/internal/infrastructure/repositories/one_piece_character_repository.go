@@ -201,7 +201,10 @@ func (r *OnePieceCharacterRepository) SetMediaID(ctx context.Context, id charact
 }
 
 func (r *OnePieceCharacterRepository) Delete(ctx context.Context, id characters.CharacterID) error {
-	rowsAffected, err := r.queries.DeleteCharacterByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	rowsAffected, err := r.queries.DeleteCharacterByID(ctx, db.DeleteCharacterByIDParams{
+		ID:    pgtype.UUID{Bytes: id, Valid: true},
+		Manga: enums.OnePiece.String(),
+	})
 	if err != nil {
 		return fmt.Errorf("deleting one piece character %s: %w", id, err)
 	}
