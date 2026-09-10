@@ -60,6 +60,19 @@ type StageCursor struct {
 	Name     string `json:"name"`
 }
 
+// JojoCharacterCursor is the decoded shape of a JojoCharacter page cursor's
+// `k` field - same shape as StandCursor/DevilFruitCursor (a Character sorts
+// by name alone too).
+type JojoCharacterCursor struct {
+	Name string `json:"name"`
+}
+
+// OnePieceCharacterCursor mirrors JojoCharacterCursor for the One Piece
+// side.
+type OnePieceCharacterCursor struct {
+	Name string `json:"name"`
+}
+
 type cursorEnvelope[K any] struct {
 	V int    `json:"v"`
 	F string `json:"f"`
@@ -142,6 +155,19 @@ func DevilFruitFiltersFingerprint(filters ports.DevilFruitFilters, locale fmt.St
 // StageFiltersFingerprint is the fingerprint a Stage page cursor is bound
 // to, given the request's current filters and locale.
 func StageFiltersFingerprint(filters ports.StageFilters, locale fmt.Stringer) string {
+	return filtersFingerprint(filters, locale)
+}
+
+// JojoCharacterFiltersFingerprint is the fingerprint a JojoCharacter page
+// cursor is bound to, given the request's current filters and locale.
+func JojoCharacterFiltersFingerprint(filters ports.JojoCharacterFilters, locale fmt.Stringer) string {
+	return filtersFingerprint(filters, locale)
+}
+
+// OnePieceCharacterFiltersFingerprint is the fingerprint an
+// OnePieceCharacter page cursor is bound to, given the request's current
+// filters and locale.
+func OnePieceCharacterFiltersFingerprint(filters ports.OnePieceCharacterFilters, locale fmt.Stringer) string {
 	return filtersFingerprint(filters, locale)
 }
 

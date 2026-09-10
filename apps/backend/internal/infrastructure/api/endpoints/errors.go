@@ -27,13 +27,15 @@ func handleError(w http.ResponseWriter, err error) {
 	var validationErr *dto.ValidationError
 	switch {
 	case errors.Is(err, ports.ErrStandNotFound), errors.Is(err, ports.ErrUserNotFound), errors.Is(err, ports.ErrDevilFruitNotFound),
-		errors.Is(err, ports.ErrGameNotFound), errors.Is(err, ports.ErrStageNotFound), errors.Is(err, ports.ErrObjectNotFound):
+		errors.Is(err, ports.ErrGameNotFound), errors.Is(err, ports.ErrStageNotFound), errors.Is(err, ports.ErrObjectNotFound),
+		errors.Is(err, ports.ErrJojoCharacterNotFound), errors.Is(err, ports.ErrOnePieceCharacterNotFound):
 		writeError(w, http.StatusNotFound, code, err.Error())
 	case errors.Is(err, ports.ErrStandAlreadyExists), errors.Is(err, ports.ErrUserAlreadyExists), errors.Is(err, ports.ErrDevilFruitAlreadyExists),
 		errors.Is(err, services.ErrLastAdmin),
 		errors.Is(err, game.ErrGameFull), errors.Is(err, game.ErrTeamFull), errors.Is(err, game.ErrDuplicateParticipant),
 		errors.Is(err, services.ErrAlreadyInGame), errors.Is(err, ports.ErrGameCodeTaken), errors.Is(err, ports.ErrStageAlreadyExists),
-		errors.Is(err, game.ErrLobbyLocked), errors.Is(err, game.ErrConfigWouldEvictPlayers):
+		errors.Is(err, game.ErrLobbyLocked), errors.Is(err, game.ErrConfigWouldEvictPlayers),
+		errors.Is(err, ports.ErrJojoCharacterAlreadyExists), errors.Is(err, ports.ErrOnePieceCharacterAlreadyExists):
 		writeError(w, http.StatusConflict, code, err.Error())
 	case errors.As(err, &validationErr):
 		writeError(w, http.StatusBadRequest, code, "validation failed", validationErr.Errors...)

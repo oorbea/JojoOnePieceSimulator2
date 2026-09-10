@@ -106,7 +106,7 @@ func chiTestRouter(authEndpoints *endpoints.AuthEndpoints, standEndpoints *endpo
 	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil),
 		endpoints.NewEventsEndpoints(nil, fakeTokenIssuer{}, nil, context.Background()),
 		endpoints.NewGameEndpoints(nil, nil, nil, nil, nil, nil, fakeTokenIssuer{}, nil, context.Background(), endpoints.GameWSConfig{}),
-		endpoints.NewStageEndpoints(nil), mediaEndpoints, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
+		endpoints.NewStageEndpoints(nil), mediaEndpoints, endpoints.NewJojoCharacterEndpoints(nil), endpoints.NewOnePieceCharacterEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 }
 
 func TestMedia_Public_UnknownGroup_Returns404(t *testing.T) {

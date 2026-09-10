@@ -25,7 +25,7 @@ func newCORSTestServer(corsCfg endpoints.CORSConfig) *httptest.Server {
 	stageSvc := services.NewStageService(stageRepo, &fakeStageIDGenerator{}, newFakePictureStorage(), &fakeImageProcessor{}, fullQueueEnqueuer{},
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/webp", "image/avif", "image/jpeg", "image/png", "image/gif"}})
 	stageEndpoints := endpoints.NewStageEndpoints(stageSvc)
-	handler := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, nil, fakeTokenIssuer{}, corsCfg, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
+	handler := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, stageEndpoints, nil, endpoints.NewJojoCharacterEndpoints(nil), endpoints.NewOnePieceCharacterEndpoints(nil), fakeTokenIssuer{}, corsCfg, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 	return httptest.NewServer(handler)
 }
 
@@ -40,7 +40,7 @@ func newCompressTestServer(compressLevel int) *httptest.Server {
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
 	gameEndpoints := endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{})
-	handler := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, compressLevel)
+	handler := endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), nil, endpoints.NewJojoCharacterEndpoints(nil), endpoints.NewOnePieceCharacterEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, compressLevel)
 	return httptest.NewServer(handler)
 }
 

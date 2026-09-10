@@ -88,6 +88,8 @@ func newAuthTestServer(repo *fakeUserRepo, verifier ports.IGoogleTokenVerifier, 
 		endpoints.NewGameEndpoints(nil, services.NewGameEventHub(), nil, nil, nil, nil, fakeTokenIssuer{}, streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second}), context.Background(), endpoints.GameWSConfig{}),
 		endpoints.NewStageEndpoints(nil),
 		nil,
+		endpoints.NewJojoCharacterEndpoints(nil),
+		endpoints.NewOnePieceCharacterEndpoints(nil),
 		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 }
 

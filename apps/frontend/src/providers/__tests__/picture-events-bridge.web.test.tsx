@@ -171,6 +171,30 @@ describe('PictureEventsBridge', () => {
     }
   })
 
+  it('routes JOJO_CHARACTER/ONE_PIECE_CHARACTER picture events to their own query key', async () => {
+    useSessionStore.setState({ session: adminSession(), isHydrated: true })
+    render(createElement(PictureEventsBridge))
+    await flush()
+
+    const source = FakeEventSource.instances[0]
+    mockInvalidateQueries.mockClear()
+
+    source.listeners.picture[0]({
+      data: JSON.stringify({ kind: 'JOJO_CHARACTER', subjectId: 'c1', status: 'READY' }),
+    })
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['jops', 'jojo-characters'],
+    })
+
+    mockInvalidateQueries.mockClear()
+    source.listeners.picture[0]({
+      data: JSON.stringify({ kind: 'ONE_PIECE_CHARACTER', subjectId: 'c2', status: 'READY' }),
+    })
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['jops', 'one-piece-characters'],
+    })
+  })
+
   it('a reconnect after a prior successful connection invalidates all three query keys', async () => {
     jest.useFakeTimers()
     try {

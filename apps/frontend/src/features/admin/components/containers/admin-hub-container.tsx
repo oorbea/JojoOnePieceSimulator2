@@ -10,6 +10,7 @@ export function AdminHubContainer() {
       onOpenStands={() => router.navigate('/admin/stands' as never)}
       onOpenDevilFruits={() => router.navigate('/admin/devil-fruits' as never)}
       onOpenStages={() => router.navigate('/admin/stages' as never)}
+      onOpenCharacters={() => router.navigate('/admin/characters' as never)}
     />
   )
 }

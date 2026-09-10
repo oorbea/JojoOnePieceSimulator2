@@ -1291,6 +1291,1006 @@ const docTemplate = `{
                 }
             }
         },
+        "/jojo-characters": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists every JojoCharacter, or filters them if any query param is set.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jojo-characters"
+                ],
+                "summary": "List or filter JoJo characters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "COMMON, RARE, EPIC, LEGENDARY, MYTHICAL",
+                        "name": "rarity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "NONE, BASIC, ADVANCED, PERFECT",
+                        "name": "hamon",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "NONE, BASIC, GOLDEN, INFINITE",
+                        "name": "spin",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "0-255",
+                        "name": "battleIq",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "free-text search over name and description",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.JojoCharacterResponse"
+                            }
+                        }
+                    },
+                    "304": {
+                        "description": "Not Modified"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jojo-characters"
+                ],
+                "summary": "Create a JoJo character",
+                "parameters": [
+                    {
+                        "description": "Character to create",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.JojoCharacterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.JojoCharacterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/jojo-characters/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jojo-characters"
+                ],
+                "summary": "Get a JoJo character by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.JojoCharacterResponse"
+                        }
+                    },
+                    "304": {
+                        "description": "Not Modified"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Keeps the original id.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jojo-characters"
+                ],
+                "summary": "Replace a JoJo character",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Replacement character",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.JojoCharacterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.JojoCharacterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only.",
+                "tags": [
+                    "jojo-characters"
+                ],
+                "summary": "Delete a JoJo character",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/jojo-characters/{id}/picture": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Uploads the image to object storage and stores its key; the response's ` + "`" + `picture` + "`" + ` is a presigned URL.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jojo-characters"
+                ],
+                "summary": "Set a JoJo character's picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Image file (WebP, AVIF, JPEG, PNG or GIF)",
+                        "name": "picture",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/dto.JojoCharacterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/jojo-characters/{id}/translations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Always returns every locale's description at once, for an edit form.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jojo-characters"
+                ],
+                "summary": "Get every locale's translation for a JoJo character",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CharacterTranslationsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/one-piece-characters": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists every OnePieceCharacter, or filters them if any query param is set.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "one-piece-characters"
+                ],
+                "summary": "List or filter One Piece characters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "COMMON, RARE, EPIC, LEGENDARY, MYTHICAL",
+                        "name": "rarity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "PRIVATE, STRONG_FISHMAN, MARINE_CAPTAIN, VICE_ADMIRAL, YONKO_COMMANDER, YONKO_PLUS",
+                        "name": "physicalForm",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "NONE, PRIVATE, VICE_ADMIRAL, YONKO_COMMANDER, YONKO_PLUS",
+                        "name": "armamentHaki",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "NONE, PRIVATE, VICE_ADMIRAL, YONKO_COMMANDER, YONKO_PLUS",
+                        "name": "observationHaki",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "NONE, PRIVATE, VICE_ADMIRAL, YONKO_COMMANDER, YONKO_PLUS",
+                        "name": "conquerorHaki",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "NONE, REGULAR, ADVANCED, AWAKENED",
+                        "name": "fruitMastery",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "free-text search over name and description",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.OnePieceCharacterResponse"
+                            }
+                        }
+                    },
+                    "304": {
+                        "description": "Not Modified"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "one-piece-characters"
+                ],
+                "summary": "Create a One Piece character",
+                "parameters": [
+                    {
+                        "description": "Character to create",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.OnePieceCharacterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OnePieceCharacterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/one-piece-characters/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "one-piece-characters"
+                ],
+                "summary": "Get a One Piece character by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OnePieceCharacterResponse"
+                        }
+                    },
+                    "304": {
+                        "description": "Not Modified"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Keeps the original id.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "one-piece-characters"
+                ],
+                "summary": "Replace a One Piece character",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Replacement character",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.OnePieceCharacterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OnePieceCharacterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only.",
+                "tags": [
+                    "one-piece-characters"
+                ],
+                "summary": "Delete a One Piece character",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/one-piece-characters/{id}/picture": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Uploads the image to object storage and stores its key; the response's ` + "`" + `picture` + "`" + ` is a presigned URL.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "one-piece-characters"
+                ],
+                "summary": "Set a One Piece character's picture",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Image file (WebP, AVIF, JPEG, PNG or GIF)",
+                        "name": "picture",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OnePieceCharacterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/one-piece-characters/{id}/translations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admin only. Always returns every locale's description at once, for an edit form.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "one-piece-characters"
+                ],
+                "summary": "Get every locale's translation for a One Piece character",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Character id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CharacterTranslationsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/stages": {
             "get": {
                 "security": [
@@ -2852,6 +3852,33 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.CharacterTranslationRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CharacterTranslationResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CharacterTranslationsResponse": {
+            "type": "object",
+            "properties": {
+                "translations": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/dto.CharacterTranslationResponse"
+                    }
+                }
+            }
+        },
         "dto.CreateGameRequest": {
             "type": "object",
             "properties": {
@@ -3022,6 +4049,10 @@ const docTemplate = `{
             "properties": {
                 "armamentHaki": {
                     "type": "string"
+                },
+                "battleIQ": {
+                    "description": "BattleIQ is the raw 0-255 score, omitted entirely when absent (no\nJoJo manga in the lobby). The WAIS-IV category label is deliberately\nnot sent over the wire - the frontend derives it from the number,\nthe same way it already derives the haki set summary.",
+                    "type": "integer"
                 },
                 "conquerorHaki": {
                     "type": "string"
@@ -3313,6 +4344,73 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.JojoCharacterRequest": {
+            "type": "object",
+            "properties": {
+                "battleIq": {
+                    "type": "integer"
+                },
+                "hamon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rarity": {
+                    "type": "string"
+                },
+                "spin": {
+                    "type": "string"
+                },
+                "translations": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/dto.CharacterTranslationRequest"
+                    }
+                }
+            }
+        },
+        "dto.JojoCharacterResponse": {
+            "type": "object",
+            "properties": {
+                "battleIq": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "hamon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "picture": {
+                    "type": "string"
+                },
+                "pictureCard": {
+                    "type": "string"
+                },
+                "pictureLqip": {
+                    "type": "string"
+                },
+                "pictureStatus": {
+                    "type": "string"
+                },
+                "pictureThumb": {
+                    "type": "string"
+                },
+                "rarity": {
+                    "type": "string"
+                },
+                "spin": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.LobbyPreviewResponse": {
             "type": "object",
             "properties": {
@@ -3375,6 +4473,85 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/dto.UserResponse"
+                }
+            }
+        },
+        "dto.OnePieceCharacterRequest": {
+            "type": "object",
+            "properties": {
+                "armamentHaki": {
+                    "type": "string"
+                },
+                "conquerorHaki": {
+                    "type": "string"
+                },
+                "fruitMastery": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "observationHaki": {
+                    "type": "string"
+                },
+                "physicalForm": {
+                    "type": "string"
+                },
+                "rarity": {
+                    "type": "string"
+                },
+                "translations": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/dto.CharacterTranslationRequest"
+                    }
+                }
+            }
+        },
+        "dto.OnePieceCharacterResponse": {
+            "type": "object",
+            "properties": {
+                "armamentHaki": {
+                    "type": "string"
+                },
+                "conquerorHaki": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "fruitMastery": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "observationHaki": {
+                    "type": "string"
+                },
+                "physicalForm": {
+                    "type": "string"
+                },
+                "picture": {
+                    "type": "string"
+                },
+                "pictureCard": {
+                    "type": "string"
+                },
+                "pictureLqip": {
+                    "type": "string"
+                },
+                "pictureStatus": {
+                    "type": "string"
+                },
+                "pictureThumb": {
+                    "type": "string"
+                },
+                "rarity": {
+                    "type": "string"
                 }
             }
         },
