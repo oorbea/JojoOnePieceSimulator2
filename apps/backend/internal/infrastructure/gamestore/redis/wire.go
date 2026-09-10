@@ -176,6 +176,11 @@ type wireLoadout struct {
 	ObservationHaki string                        `json:"observationHaki"`
 	ConquerorHaki   string                        `json:"conquerorHaki"`
 	PhysicalForm    string                        `json:"physicalForm"`
+	// BattleIQ is a *byte: nil means absent, a non-nil zero means a
+	// present, legitimate score of 0 - never collapse the two. omitempty
+	// here only omits a nil pointer, never a present 0. See
+	// game.BattleIQ's doc comment.
+	BattleIQ *byte `json:"battleIQ,omitempty"`
 }
 
 // toWire converts a domain Snapshot to its wire form.
@@ -324,6 +329,10 @@ func toWireLoadout(l game.LoadoutSnapshot) wireLoadout {
 		f := powersnap.OfDevilFruit(l.DevilFruit)
 		wl.DevilFruit = &f
 	}
+	if l.BattleIQ != nil {
+		v := *l.BattleIQ
+		wl.BattleIQ = &v
+	}
 	return wl
 }
 
@@ -452,6 +461,10 @@ func fromWireLoadout(w wireLoadout) game.LoadoutSnapshot {
 		if f, err := w.DevilFruit.Hydrate(); err == nil {
 			ls.DevilFruit = f
 		}
+	}
+	if w.BattleIQ != nil {
+		v := *w.BattleIQ
+		ls.BattleIQ = &v
 	}
 	return ls
 }
