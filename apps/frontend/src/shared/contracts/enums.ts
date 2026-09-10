@@ -74,7 +74,14 @@ export type PhysicalForm = z.infer<typeof physicalFormSchema>
 export const pictureStatusSchema = z.enum(['NONE', 'PENDING', 'READY', 'FAILED'])
 export type PictureStatus = z.infer<typeof pictureStatusSchema>
 
-export const pictureSubjectKindSchema = z.enum(['STAND', 'DEVIL_FRUIT', 'USER', 'STAGE'])
+export const pictureSubjectKindSchema = z.enum([
+  'STAND',
+  'DEVIL_FRUIT',
+  'USER',
+  'STAGE',
+  'JOJO_CHARACTER',
+  'ONE_PIECE_CHARACTER',
+])
 export type PictureSubjectKind = z.infer<typeof pictureSubjectKindSchema>
 
 export const powerKindSchema = z.enum(['STAND', 'DEVIL_FRUIT'])
