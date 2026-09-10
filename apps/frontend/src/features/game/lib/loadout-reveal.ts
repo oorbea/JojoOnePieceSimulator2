@@ -95,10 +95,13 @@ export type RevealPlayer = {
 // SLOT_ORDINAL mirrors the backend's RevealSlot enum ordinals exactly
 // (reveal.go's iota block: PhysicalForm=0, Stand=1, DevilFruit=2,
 // FruitMastery=3, Hamon=4, HakiSet=5, ArmamentHaki=6, ObservationHaki=7,
-// ConquerorHaki=8, Spin=9) - revealSpinCycles must hash the SAME slot
-// identity backend and frontend agree on, which is this fixed ordinal, not
-// a position within whichever subset of slots a given participant's own
-// roll happens to include (that position varies per participant - see
+// ConquerorHaki=8, Spin=9, BattleIQ=10 - appended last, not inserted among
+// the JoJo slots, because revealSpinCycles hashes this ordinal: inserting
+// would renumber every later slot and desync spin-cycle counts that
+// already shipped) - revealSpinCycles must hash the SAME slot identity
+// backend and frontend agree on, which is this fixed ordinal, not a
+// position within whichever subset of slots a given participant's own roll
+// happens to include (that position varies per participant - see
 // playerSlots below - and always agreeing on it without exchanging
 // anything is exactly the point RevealSpinCycles exists for).
 export const REVEAL_SLOT_ORDINAL: Record<LoadoutSlotKind, number> = {
@@ -112,6 +115,7 @@ export const REVEAL_SLOT_ORDINAL: Record<LoadoutSlotKind, number> = {
   observationHaki: 7,
   conquerorHaki: 8,
   spin: 9,
+  battleIQ: 10,
 }
 
 // playerSlots mirrors the backend's game.PlayerSlots exactly: the three

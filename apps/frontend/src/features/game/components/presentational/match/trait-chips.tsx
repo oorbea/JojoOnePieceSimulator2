@@ -14,14 +14,18 @@ type Props = { slot: LoadoutSlot }
 // 'stand'/'devilFruit', which render their own dedicated block instead).
 export function TraitChip({ slot }: Props) {
   const { t } = useTranslation()
-  if (!slot.i18nKey || slot.value === undefined) return null
+  if (!slot.i18nKey) return null
+  if (slot.value === undefined && slot.numeric === undefined) return null
 
   const isNone = slot.value === 'NONE'
+  const label = slot.numeric
+    ? `${slot.numeric.score} · ${t(slot.numeric.categoryKey)}`
+    : t(`enums.${enumNamespace(slot.key)}.${slot.value}`)
 
   return (
     <GlassPanel tone="plastic" px="$2" py="$1" rounded="$pill" elevate={0} opacity={isNone ? 0.55 : 1}>
       <GlowText level="label" fontSize="$1" tone={isNone ? 'soft' : undefined}>
-        {t(slot.i18nKey)}: {t(`enums.${enumNamespace(slot.key)}.${slot.value}`)}
+        {t(slot.i18nKey)}: {label}
       </GlowText>
     </GlassPanel>
   )

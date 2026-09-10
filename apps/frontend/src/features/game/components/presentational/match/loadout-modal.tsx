@@ -155,7 +155,9 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
                     >
                       <GlowText level="label">{slot.i18nKey ? t(slot.i18nKey) : slot.key}</GlowText>
                       <GlowText level="label" tone={slot.value === 'NONE' ? 'soft' : undefined}>
-                        {t(`enums.${enumNamespace(slot.key)}.${slot.value}`)}
+                        {slot.numeric
+                          ? `${slot.numeric.score} · ${t(slot.numeric.categoryKey)}`
+                          : t(`enums.${enumNamespace(slot.key)}.${slot.value}`)}
                       </GlowText>
                     </XStack>
                   ))}

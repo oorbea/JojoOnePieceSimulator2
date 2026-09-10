@@ -7,6 +7,7 @@ import {
   REVEAL_INTRO_MS,
   REVEAL_OUTRO_MS,
   REVEAL_PLAYER_INTRO_MS,
+  REVEAL_SLOT_ORDINAL,
   revealDurationMs,
   revealSpinCycles,
   revealTimeline,
@@ -191,8 +192,31 @@ describe('playerSlots', () => {
   })
 })
 
+describe('REVEAL_SLOT_ORDINAL', () => {
+  // Pins the exact ordinals reveal.go's RevealSlot iota assigns
+  // (apps/backend/.../game/reveal.go). battleIQ=10 must stay last -
+  // reveal.go appends it rather than inserting it precisely so no earlier
+  // slot's ordinal ever moves; a mismatch here means revealSpinCycles would
+  // silently disagree between backend and frontend for the affected slots.
+  it('matches the backend RevealSlot ordinals exactly', () => {
+    expect(REVEAL_SLOT_ORDINAL).toEqual({
+      physicalForm: 0,
+      stand: 1,
+      devilFruit: 2,
+      fruitMastery: 3,
+      hamon: 4,
+      hakiSet: 5,
+      armamentHaki: 6,
+      observationHaki: 7,
+      conquerorHaki: 8,
+      spin: 9,
+      battleIQ: 10,
+    })
+  })
+})
+
 describe('revealTimeline', () => {
-  it('one player with every power/haki type, both mangas: intro, playerIntro, 10x(narrator+spin+land), playerOutro, outro', () => {
+  it('one player with every power/haki type, both mangas: intro, playerIntro, 11x(narrator+spin+land), playerOutro, outro', () => {
     const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [{ ...ALL_HAKI, hasStand: true, hasDevilFruit: true }], 'SWIFT')
     expect(timeline[0].phase).toEqual({ kind: 'intro' })
     expect(timeline[0].durationMs).toBe(REVEAL_INTRO_MS)
@@ -201,14 +225,15 @@ describe('revealTimeline', () => {
     const last = timeline[timeline.length - 1]
     expect(last.phase).toEqual({ kind: 'outro' })
     expect(last.durationMs).toBe(REVEAL_OUTRO_MS)
-    // intro + playerIntro + 10 * (narrator, spin, land) + playerOutro + outro
-    expect(timeline).toHaveLength(1 + 1 + 10 * 3 + 1 + 1)
+    // intro + playerIntro + 11 * (narrator, spin, land) + playerOutro + outro
+    // (10 slots + battleIQ, both mangas selected)
+    expect(timeline).toHaveLength(1 + 1 + 11 * 3 + 1 + 1)
   })
 
-  it('a player with no haki at all skips all three haki-level slots (7, not 10, for both mangas)', () => {
+  it('a player with no haki at all skips all three haki-level slots (8, not 11, for both mangas)', () => {
     const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [NO_POWERS], 'SWIFT')
-    // intro + playerIntro + 7 * (narrator, spin, land) + playerOutro + outro
-    expect(timeline).toHaveLength(1 + 1 + 7 * 3 + 1 + 1)
+    // intro + playerIntro + 8 * (narrator, spin, land) + playerOutro + outro
+    expect(timeline).toHaveLength(1 + 1 + 8 * 3 + 1 + 1)
   })
 
   it('stand/devilFruit hold longer when they actually land a power than when they land NONE', () => {
