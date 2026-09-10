@@ -1,7 +1,14 @@
 import { z } from 'zod'
 
 import { characterTranslationsFormSchema } from '@/shared/lib/character-translations'
-import { powerRaritySchema } from '@/shared/contracts/enums'
+import {
+  fruitMasterySchema,
+  hakiLevelSchema,
+  hamonLevelSchema,
+  physicalFormSchema,
+  powerRaritySchema,
+  spinLevelSchema,
+} from '@/shared/contracts/enums'
 
 // JojoCharacterResponse/Request and OnePieceCharacterResponse/Request are
 // generated (dto.JojoCharacterResponse/Request, ...) - Go decides the
@@ -25,8 +32,8 @@ export type CharacterKind = 'JOJO' | 'ONE_PIECE'
 export const jojoCharacterFormSchema = z.object({
   name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
   rarity: powerRaritySchema,
-  hamon: z.enum(['NONE', 'BASIC', 'ADVANCED', 'PERFECT']),
-  spin: z.enum(['NONE', 'BASIC', 'GOLDEN', 'INFINITE']),
+  hamon: hamonLevelSchema,
+  spin: spinLevelSchema,
   battleIq: z
     .number()
     .int()
@@ -39,18 +46,11 @@ export type JojoCharacterFormValues = z.infer<typeof jojoCharacterFormSchema>
 export const onePieceCharacterFormSchema = z.object({
   name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
   rarity: powerRaritySchema,
-  physicalForm: z.enum([
-    'PRIVATE',
-    'STRONG_FISHMAN',
-    'MARINE_CAPTAIN',
-    'VICE_ADMIRAL',
-    'YONKO_COMMANDER',
-    'YONKO_PLUS',
-  ]),
-  armamentHaki: z.enum(['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS']),
-  observationHaki: z.enum(['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS']),
-  conquerorHaki: z.enum(['NONE', 'PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS']),
-  fruitMastery: z.enum(['NONE', 'REGULAR', 'ADVANCED', 'AWAKENED']),
+  physicalForm: physicalFormSchema,
+  armamentHaki: hakiLevelSchema,
+  observationHaki: hakiLevelSchema,
+  conquerorHaki: hakiLevelSchema,
+  fruitMastery: fruitMasterySchema,
   translations: characterTranslationsFormSchema,
 })
 export type OnePieceCharacterFormValues = z.infer<typeof onePieceCharacterFormSchema>
