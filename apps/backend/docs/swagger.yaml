@@ -5,6 +5,23 @@ definitions:
       username:
         type: string
     type: object
+  dto.CharacterTranslationRequest:
+    properties:
+      description:
+        type: string
+    type: object
+  dto.CharacterTranslationResponse:
+    properties:
+      description:
+        type: string
+    type: object
+  dto.CharacterTranslationsResponse:
+    properties:
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.CharacterTranslationResponse'
+        type: object
+    type: object
   dto.CreateGameRequest:
     properties:
       abilitySource:
@@ -122,6 +139,13 @@ definitions:
     properties:
       armamentHaki:
         type: string
+      battleIQ:
+        description: |-
+          BattleIQ is the raw 0-255 score, omitted entirely when absent (no
+          JoJo manga in the lobby). The WAIS-IV category label is deliberately
+          not sent over the wire - the frontend derives it from the number,
+          the same way it already derives the haki set summary.
+        type: integer
       conquerorHaki:
         type: string
       devilFruit:
@@ -328,6 +352,50 @@ definitions:
       code:
         type: string
     type: object
+  dto.JojoCharacterRequest:
+    properties:
+      battleIq:
+        type: integer
+      hamon:
+        type: string
+      name:
+        type: string
+      rarity:
+        type: string
+      spin:
+        type: string
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.CharacterTranslationRequest'
+        type: object
+    type: object
+  dto.JojoCharacterResponse:
+    properties:
+      battleIq:
+        type: integer
+      description:
+        type: string
+      hamon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      picture:
+        type: string
+      pictureCard:
+        type: string
+      pictureLqip:
+        type: string
+      pictureStatus:
+        type: string
+      pictureThumb:
+        type: string
+      rarity:
+        type: string
+      spin:
+        type: string
+    type: object
   dto.LobbyPreviewResponse:
     properties:
       abilitySource:
@@ -372,6 +440,58 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.OnePieceCharacterRequest:
+    properties:
+      armamentHaki:
+        type: string
+      conquerorHaki:
+        type: string
+      fruitMastery:
+        type: string
+      name:
+        type: string
+      observationHaki:
+        type: string
+      physicalForm:
+        type: string
+      rarity:
+        type: string
+      translations:
+        additionalProperties:
+          $ref: '#/definitions/dto.CharacterTranslationRequest'
+        type: object
+    type: object
+  dto.OnePieceCharacterResponse:
+    properties:
+      armamentHaki:
+        type: string
+      conquerorHaki:
+        type: string
+      description:
+        type: string
+      fruitMastery:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      observationHaki:
+        type: string
+      physicalForm:
+        type: string
+      picture:
+        type: string
+      pictureCard:
+        type: string
+      pictureLqip:
+        type: string
+      pictureStatus:
+        type: string
+      pictureThumb:
+        type: string
+      rarity:
+        type: string
     type: object
   dto.ParticipantOutcomeResponse:
     properties:
@@ -1557,6 +1677,657 @@ paths:
       summary: Browse public lobbies
       tags:
       - games
+  /jojo-characters:
+    get:
+      description: Lists every JojoCharacter, or filters them if any query param is
+        set.
+      parameters:
+      - description: COMMON, RARE, EPIC, LEGENDARY, MYTHICAL
+        in: query
+        name: rarity
+        type: string
+      - description: NONE, BASIC, ADVANCED, PERFECT
+        in: query
+        name: hamon
+        type: string
+      - description: NONE, BASIC, GOLDEN, INFINITE
+        in: query
+        name: spin
+        type: string
+      - description: 0-255
+        in: query
+        name: battleIq
+        type: integer
+      - description: free-text search over name and description
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.JojoCharacterResponse'
+            type: array
+        "304":
+          description: Not Modified
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List or filter JoJo characters
+      tags:
+      - jojo-characters
+    post:
+      consumes:
+      - application/json
+      description: Admin only.
+      parameters:
+      - description: Character to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.JojoCharacterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.JojoCharacterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a JoJo character
+      tags:
+      - jojo-characters
+  /jojo-characters/{id}:
+    delete:
+      description: Admin only.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a JoJo character
+      tags:
+      - jojo-characters
+    get:
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.JojoCharacterResponse'
+        "304":
+          description: Not Modified
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a JoJo character by id
+      tags:
+      - jojo-characters
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Keeps the original id.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Replacement character
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.JojoCharacterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.JojoCharacterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a JoJo character
+      tags:
+      - jojo-characters
+  /jojo-characters/{id}/picture:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Admin only. Uploads the image to object storage and stores its
+        key; the response's `picture` is a presigned URL.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file (WebP, AVIF, JPEG, PNG or GIF)
+        in: formData
+        name: picture
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/dto.JojoCharacterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a JoJo character's picture
+      tags:
+      - jojo-characters
+  /jojo-characters/{id}/translations:
+    get:
+      description: Admin only. Always returns every locale's description at once,
+        for an edit form.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CharacterTranslationsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get every locale's translation for a JoJo character
+      tags:
+      - jojo-characters
+  /one-piece-characters:
+    get:
+      description: Lists every OnePieceCharacter, or filters them if any query param
+        is set.
+      parameters:
+      - description: COMMON, RARE, EPIC, LEGENDARY, MYTHICAL
+        in: query
+        name: rarity
+        type: string
+      - description: PRIVATE, STRONG_FISHMAN, MARINE_CAPTAIN, VICE_ADMIRAL, YONKO_COMMANDER,
+          YONKO_PLUS
+        in: query
+        name: physicalForm
+        type: string
+      - description: NONE, PRIVATE, VICE_ADMIRAL, YONKO_COMMANDER, YONKO_PLUS
+        in: query
+        name: armamentHaki
+        type: string
+      - description: NONE, PRIVATE, VICE_ADMIRAL, YONKO_COMMANDER, YONKO_PLUS
+        in: query
+        name: observationHaki
+        type: string
+      - description: NONE, PRIVATE, VICE_ADMIRAL, YONKO_COMMANDER, YONKO_PLUS
+        in: query
+        name: conquerorHaki
+        type: string
+      - description: NONE, REGULAR, ADVANCED, AWAKENED
+        in: query
+        name: fruitMastery
+        type: string
+      - description: free-text search over name and description
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.OnePieceCharacterResponse'
+            type: array
+        "304":
+          description: Not Modified
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List or filter One Piece characters
+      tags:
+      - one-piece-characters
+    post:
+      consumes:
+      - application/json
+      description: Admin only.
+      parameters:
+      - description: Character to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.OnePieceCharacterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.OnePieceCharacterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a One Piece character
+      tags:
+      - one-piece-characters
+  /one-piece-characters/{id}:
+    delete:
+      description: Admin only.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a One Piece character
+      tags:
+      - one-piece-characters
+    get:
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OnePieceCharacterResponse'
+        "304":
+          description: Not Modified
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a One Piece character by id
+      tags:
+      - one-piece-characters
+    put:
+      consumes:
+      - application/json
+      description: Admin only. Keeps the original id.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Replacement character
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.OnePieceCharacterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OnePieceCharacterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace a One Piece character
+      tags:
+      - one-piece-characters
+  /one-piece-characters/{id}/picture:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Admin only. Uploads the image to object storage and stores its
+        key; the response's `picture` is a presigned URL.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file (WebP, AVIF, JPEG, PNG or GIF)
+        in: formData
+        name: picture
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/dto.OnePieceCharacterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a One Piece character's picture
+      tags:
+      - one-piece-characters
+  /one-piece-characters/{id}/translations:
+    get:
+      description: Admin only. Always returns every locale's description at once,
+        for an edit form.
+      parameters:
+      - description: Character id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CharacterTranslationsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get every locale's translation for a One Piece character
+      tags:
+      - one-piece-characters
   /stages:
     get:
       description: Lists every Stage, or filters them if any query param is set. Description

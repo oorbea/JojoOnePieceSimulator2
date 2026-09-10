@@ -45,7 +45,7 @@ var WireEnums = []WireEnum{
 	{"ParticipantKind", []wireMember{Human, Bot}},
 	{"PhysicalForm", []wireMember{PhysicalFormPrivate, PhysicalFormStrongFishman, PhysicalFormMarineCaptain, PhysicalFormViceAdmiral, PhysicalFormYonkoCommander, PhysicalFormYonkoPlus}},
 	{"PictureStatus", []wireMember{PictureNone, PicturePending, PictureReady, PictureFailed}},
-	{"PictureSubjectKind", []wireMember{StandSubject, DevilFruitSubject, UserSubject, StageSubject}},
+	{"PictureSubjectKind", []wireMember{StandSubject, DevilFruitSubject, UserSubject, StageSubject, JojoCharacterSubject, OnePieceCharacterSubject}},
 	{"PowerKind", []wireMember{StandKind, DevilFruitKind}},
 	{"PowerRarity", []wireMember{Common, Rare, Epic, Legendary, Mythical}},
 	{"PowerTrait", []wireMember{RequiresSpin4}},

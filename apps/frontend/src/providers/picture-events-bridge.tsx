@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { Platform } from 'react-native'
 
+import { characterKeys } from '@/features/characters/api/characters.keys'
 import { devilFruitKeys } from '@/features/devil-fruits/api/devil-fruits.keys'
 import { profileKeys } from '@/features/profile/api/profile.keys'
 import { stageKeys } from '@/features/stages/api/stages.keys'
@@ -11,6 +12,7 @@ import { env } from '@/shared/config/env'
 import { useSessionStore } from '@/shared/stores/session.store'
 import { mintEventsTicket } from '@/shared/api/stream-tickets'
 import { toAppError } from '@/shared/api/errors'
+import type { PictureSubjectKind } from '@/shared/contracts/enums'
 
 // Backs off the same shape as the polling this replaces (2s -> 4s -> 8s ...
 // capped at 30s), but never gives up permanently - this is now the only
@@ -19,7 +21,7 @@ const BASE_RECONNECT_MS = 2_000
 const MAX_RECONNECT_MS = 30_000
 
 type PictureEventDTO = {
-  kind: 'STAND' | 'DEVIL_FRUIT' | 'USER' | 'STAGE'
+  kind: PictureSubjectKind
   subjectId: string
   status: 'NONE' | 'PENDING' | 'READY' | 'FAILED'
 }
@@ -76,6 +78,8 @@ export function PictureEventsBridge() {
       void queryClient.invalidateQueries({ queryKey: standKeys.allLocales })
       void queryClient.invalidateQueries({ queryKey: devilFruitKeys.allLocales })
       void queryClient.invalidateQueries({ queryKey: stageKeys.allLocales })
+      void queryClient.invalidateQueries({ queryKey: characterKeys.jojo.allLocales })
+      void queryClient.invalidateQueries({ queryKey: characterKeys.onePiece.allLocales })
       void queryClient.invalidateQueries({ queryKey: profileKeys.me })
     }
 
@@ -96,6 +100,12 @@ export function PictureEventsBridge() {
           break
         case 'STAGE':
           void queryClient.invalidateQueries({ queryKey: stageKeys.allLocales })
+          break
+        case 'JOJO_CHARACTER':
+          void queryClient.invalidateQueries({ queryKey: characterKeys.jojo.allLocales })
+          break
+        case 'ONE_PIECE_CHARACTER':
+          void queryClient.invalidateQueries({ queryKey: characterKeys.onePiece.allLocales })
           break
         case 'USER':
           void queryClient.invalidateQueries({ queryKey: profileKeys.me })
@@ -139,7 +149,9 @@ export function PictureEventsBridge() {
       }
       if (cancelledRef.current) return
 
-      const source = new EventSource(`${env.EXPO_PUBLIC_API_URL}/events?ticket=${encodeURIComponent(ticket)}`)
+      const source = new EventSource(
+        `${env.EXPO_PUBLIC_API_URL}/events?ticket=${encodeURIComponent(ticket)}`
+      )
       sourceRef.current = source
 
       source.addEventListener('picture', handlePictureEvent)
