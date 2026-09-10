@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/characters"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
@@ -193,4 +194,71 @@ func (p *stagePicturePublisher) SetMediaID(ctx context.Context, id string, media
 		return err
 	}
 	return p.repo.SetMediaID(ctx, stageID, mediaID)
+}
+
+// characterEntity is the slice of a Character subtype's public surface
+// characterPicturePublisher needs. Both characters.JojoCharacter and
+// characters.OnePieceCharacter embed characters.Character, which declares
+// all three methods, so both satisfy this.
+type characterEntity interface {
+	Picture() string
+	PictureThumb() string
+	PictureCard() string
+}
+
+// characterRepo is the slice of a Character repository
+// characterPicturePublisher needs, satisfied structurally by both
+// ports.IJojoCharacterRepository and ports.IOnePieceCharacterRepository -
+// unlike Stand/DevilFruit (routed by enums.PowerKind through two entirely
+// separate publisher types), the two Character kinds share one CharacterID
+// space, so one generic publisher covers both.
+type characterRepo[T characterEntity] interface {
+	FindByID(ctx context.Context, id characters.CharacterID, locale enums.Locale) (T, error)
+	UpdatePicture(ctx context.Context, id characters.CharacterID, main, thumb, card, lqip *string, status enums.PictureStatus) error
+	SetMediaID(ctx context.Context, id characters.CharacterID, mediaID string) error
+}
+
+// characterPicturePublisher adapts a characterRepo[T] to PicturePublisher.
+type characterPicturePublisher[T characterEntity] struct {
+	repo characterRepo[T]
+}
+
+// NewJojoCharacterPicturePublisher wraps repo so the picture worker can
+// publish transcoded renditions onto JojoCharacters.
+func NewJojoCharacterPicturePublisher(repo ports.IJojoCharacterRepository) PicturePublisher {
+	return &characterPicturePublisher[*characters.JojoCharacter]{repo: repo}
+}
+
+// NewOnePieceCharacterPicturePublisher wraps repo so the picture worker can
+// publish transcoded renditions onto OnePieceCharacters.
+func NewOnePieceCharacterPicturePublisher(repo ports.IOnePieceCharacterRepository) PicturePublisher {
+	return &characterPicturePublisher[*characters.OnePieceCharacter]{repo: repo}
+}
+
+func (p *characterPicturePublisher[T]) PictureKeys(ctx context.Context, id string) (string, string, string, error) {
+	characterID, err := characters.ParseCharacterID(id)
+	if err != nil {
+		return "", "", "", err
+	}
+	c, err := p.repo.FindByID(ctx, characterID, enums.EnGB)
+	if err != nil {
+		return "", "", "", err
+	}
+	return c.Picture(), c.PictureThumb(), c.PictureCard(), nil
+}
+
+func (p *characterPicturePublisher[T]) UpdatePicture(ctx context.Context, id string, main, thumb, card, lqip *string, status enums.PictureStatus) error {
+	characterID, err := characters.ParseCharacterID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.UpdatePicture(ctx, characterID, main, thumb, card, lqip, status)
+}
+
+func (p *characterPicturePublisher[T]) SetMediaID(ctx context.Context, id string, mediaID string) error {
+	characterID, err := characters.ParseCharacterID(id)
+	if err != nil {
+		return err
+	}
+	return p.repo.SetMediaID(ctx, characterID, mediaID)
 }
