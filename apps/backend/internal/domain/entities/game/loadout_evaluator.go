@@ -25,7 +25,7 @@ func (DefaultLoadoutEvaluator) Score(l *Loadout) int {
 	}
 	score := int(l.Spin()) + int(l.Hamon()) + int(l.FruitMastery()) +
 		int(l.ArmamentHaki()) + int(l.ObservationHaki()) + int(l.ConquerorHaki()) +
-		int(l.PhysicalForm())
+		int(l.PhysicalForm()) + battleIQScore(l.BattleIQ())
 
 	if s := l.Stand(); s != nil {
 		score += standStatScore(s.AttackPower()) + standStatScore(s.Speed()) +
@@ -58,6 +58,36 @@ func standStatScore(stat enums.StandStat) int {
 		return 6
 	default:
 		return 0
+	}
+}
+
+// battleIQScore maps a BattleIQ's WAIS-IV band to a magnitude 0..6, the
+// same 1..6 scale standStatScore uses - a moderate, sublinear contribution
+// deliberately not proportional to the raw 0-255 value, so a 255 doesn't
+// dominate the rest of the score (see BattleIQVerySuperior's own internal
+// spread in loadout_builder.go, which this collapses to a single point).
+// Absent (no JoJo manga in the lobby) contributes 0, same as every other
+// participant in that lobby, so relative BotVoter comparisons are
+// unaffected.
+func battleIQScore(b BattleIQ) int {
+	if !b.Present() {
+		return 0
+	}
+	switch b.Band() {
+	case BattleIQExtremelyLow:
+		return 0
+	case BattleIQBorderline:
+		return 1
+	case BattleIQLowAverage:
+		return 2
+	case BattleIQAverage:
+		return 3
+	case BattleIQHighAverage:
+		return 4
+	case BattleIQSuperior:
+		return 5
+	default: // BattleIQVerySuperior
+		return 6
 	}
 }
 
