@@ -1,6 +1,7 @@
 import type {
   JojoCharacterResponse,
   OnePieceCharacterResponse,
+  TaggedCharacter,
 } from '@/features/characters/types/characters.types'
 
 // One row of a character's stat block: an i18n key for the label plus how
@@ -66,3 +67,15 @@ export const ONE_PIECE_STAT_ROWS: CharacterStatRow<OnePieceCharacterResponse>[] 
     value: (c) => c.fruitMastery,
   },
 ]
+
+// Picks the right descriptor for a `.kind`-tagged item - the only place
+// that needs to know both descriptors at once when the manga filter is
+// 'ALL' and a single grid mixes both kinds. Cast through `unknown`: each
+// row's `value` closes over its own concrete response type, which is sound
+// per-branch (a JOJO-tagged item really is a JojoCharacterResponse) but not
+// expressible as a single `CharacterStatRow<TaggedCharacter>[]` without it.
+export function rowsForCharacter(character: TaggedCharacter): CharacterStatRow<TaggedCharacter>[] {
+  return (character.kind === 'JOJO'
+    ? JOJO_STAT_ROWS
+    : ONE_PIECE_STAT_ROWS) as unknown as CharacterStatRow<TaggedCharacter>[]
+}

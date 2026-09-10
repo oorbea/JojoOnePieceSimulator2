@@ -197,6 +197,7 @@
     "description": "Description",
     "searchPlaceholder": "Search by name or description…",
     "filterManga": "Filter by manga",
+    "filterMangaAll": "All mangas",
     "pickMangaFirst": "Pick a manga to choose which stats this Character has.",
     "battleIqHint": "Battle IQ is a JoJo-only stat (0-255) rated on the same scale as a real-world IQ test - most characters cluster around 100, with only a rare few far above or below it.",
     "previewA11y": "View {{name}} picture full screen",

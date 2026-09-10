@@ -25,17 +25,17 @@ import {
   useJojoCharacters,
   useOnePieceCharacters,
 } from '@/features/characters/hooks/use-characters'
-import { JOJO_STAT_ROWS, ONE_PIECE_STAT_ROWS } from '@/features/characters/lib/character-stats'
+import { rowsForCharacter } from '@/features/characters/lib/character-stats'
 import {
   jojoCharacterFormSchema,
   onePieceCharacterFormSchema,
   type CharacterKind,
+  type CharacterMangaFilter,
   type JojoCharacterFormValues,
   type JojoCharacterInput,
-  type JojoCharacterResponse,
   type OnePieceCharacterFormValues,
   type OnePieceCharacterInput,
-  type OnePieceCharacterResponse,
+  type TaggedCharacter,
 } from '@/features/characters/types/characters.types'
 import { useDebouncedValue } from '@/shared/hooks/use-debounced-value'
 import type { PickedPicture } from '@/shared/hooks/use-picture-picker'
@@ -82,15 +82,18 @@ function toOnePieceInput(values: OnePieceCharacterFormValues): OnePieceCharacter
   return { ...rest, translations: toCharacterTranslationsPayload(translations) }
 }
 
-// Admin CRUD for both character kinds behind one manga-exclusive toggle -
-// see CharactersScreen's doc for why the filter has no "all" option. Both
-// list queries and both react-hook-form instances are always mounted
-// (hooks can't be called conditionally); only the active kind's query is
-// `enabled` and only its form is rendered/submitted - see useJojoCharacters'
-// doc on the `enabled` param.
+// Admin CRUD for both character kinds behind one manga toggle - JoJo, One
+// Piece, or 'ALL' to mix both kinds' cards in one grid (see CharactersScreen's
+// doc for why 'ALL' means merging two client-side lists rather than a mixed
+// backend page). Both list queries and both react-hook-form instances are
+// always mounted (hooks can't be called conditionally); `enabled` on each
+// query tracks whether its kind is currently wanted, and only the kind
+// picked in the create/edit modal's own selector (`modalState.kind`, not
+// the grid's `mangaFilter`) has its form rendered/submitted - see
+// useJojoCharacters' doc on the `enabled` param.
 export function CharactersContainer() {
   const { t } = useTranslation()
-  const [mangaFilter, setMangaFilter] = useState<CharacterKind>('JOJO')
+  const [mangaFilter, setMangaFilter] = useState<CharacterMangaFilter>('JOJO')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const queryClient = useQueryClient()
@@ -104,8 +107,10 @@ export function CharactersContainer() {
   const hasActiveFilters = Object.keys(filters).length > 0
   const appliedFilters = hasActiveFilters ? filters : undefined
 
-  const jojoQuery = useJojoCharacters(appliedFilters, mangaFilter === 'JOJO')
-  const onePieceQuery = useOnePieceCharacters(appliedFilters, mangaFilter === 'ONE_PIECE')
+  const wantJojo = mangaFilter !== 'ONE_PIECE'
+  const wantOnePiece = mangaFilter !== 'JOJO'
+  const jojoQuery = useJojoCharacters(appliedFilters, wantJojo)
+  const onePieceQuery = useOnePieceCharacters(appliedFilters, wantOnePiece)
 
   const createJojo = useCreateJojoCharacter()
   const updateJojo = useUpdateJojoCharacter()
@@ -142,16 +147,27 @@ export function CharactersContainer() {
     name: string
   } | null>(null)
 
-  const activeQuery = mangaFilter === 'JOJO' ? jojoQuery : onePieceQuery
-  const activeCharacters = useMemo(
-    () => (activeQuery.data ?? []) as (JojoCharacterResponse | OnePieceCharacterResponse)[],
-    [activeQuery.data]
-  )
-  const activeRows = mangaFilter === 'JOJO' ? JOJO_STAT_ROWS : ONE_PIECE_STAT_ROWS
+  const activeCharacters = useMemo<TaggedCharacter[]>(() => {
+    const jojoTagged = wantJojo
+      ? (jojoQuery.data ?? []).map((c) => ({ ...c, kind: 'JOJO' as const }))
+      : []
+    const onePieceTagged = wantOnePiece
+      ? (onePieceQuery.data ?? []).map((c) => ({ ...c, kind: 'ONE_PIECE' as const }))
+      : []
+    return [...jojoTagged, ...onePieceTagged]
+  }, [wantJojo, wantOnePiece, jojoQuery.data, onePieceQuery.data])
 
-  const [detailCharacter, setDetailCharacter] = useState<
-    JojoCharacterResponse | OnePieceCharacterResponse | null
-  >(null)
+  // isLoading/isError: OR'd across whichever kind(s) are currently wanted -
+  // a disabled query's isLoading/isError are always false, so this collapses
+  // to "the one active query's state" outside 'ALL' mode.
+  const isLoading = (wantJojo && jojoQuery.isLoading) || (wantOnePiece && onePieceQuery.isLoading)
+  const isError = (wantJojo && jojoQuery.isError) || (wantOnePiece && onePieceQuery.isError)
+  const onRetry = () => {
+    if (wantJojo) void jojoQuery.refetch()
+    if (wantOnePiece) void onePieceQuery.refetch()
+  }
+
+  const [detailCharacter, setDetailCharacter] = useState<TaggedCharacter | null>(null)
 
   const openCreate = () => {
     jojoForm.reset(createDefaultJojoValues())
@@ -161,11 +177,11 @@ export function CharactersContainer() {
     setModalState({ visible: true, mode: 'create', kind: null, editingId: null })
   }
 
-  const openEdit = async (character: JojoCharacterResponse | OnePieceCharacterResponse) => {
+  const openEdit = async (character: TaggedCharacter) => {
     setOpeningEditId(character.id)
     try {
-      if (mangaFilter === 'JOJO') {
-        const jc = character as JojoCharacterResponse
+      if (character.kind === 'JOJO') {
+        const jc = character
         const translations = await queryClient.fetchQuery({
           queryKey: characterKeys.jojo.translations(jc.id),
           queryFn: () => getJojoCharacterTranslations(jc.id),
@@ -179,7 +195,7 @@ export function CharactersContainer() {
           translations: fromCharacterTranslationsResponse(translations),
         })
       } else {
-        const oc = character as OnePieceCharacterResponse
+        const oc = character
         const translations = await queryClient.fetchQuery({
           queryKey: characterKeys.onePiece.translations(oc.id),
           queryFn: () => getOnePieceCharacterTranslations(oc.id),
@@ -197,7 +213,7 @@ export function CharactersContainer() {
       }
       setPendingPicture(null)
       setActiveLocale(DEFAULT_LOCALE)
-      setModalState({ visible: true, mode: 'edit', kind: mangaFilter, editingId: character.id })
+      setModalState({ visible: true, mode: 'edit', kind: character.kind, editingId: character.id })
     } finally {
       setOpeningEditId(null)
     }
@@ -314,14 +330,14 @@ export function CharactersContainer() {
   return (
     <CharactersScreen
       characters={activeCharacters}
-      rows={activeRows as never}
-      isLoading={activeQuery.isLoading}
-      isError={activeQuery.isError}
-      onRetry={() => void activeQuery.refetch()}
+      rows={rowsForCharacter}
+      isLoading={isLoading}
+      isError={isError}
+      onRetry={onRetry}
       onCreateNew={openCreate}
       onEdit={(character) => void openEdit(character)}
       onDelete={(character) =>
-        setCharacterToDelete({ kind: mangaFilter, id: character.id, name: character.name })
+        setCharacterToDelete({ kind: character.kind, id: character.id, name: character.name })
       }
       openingEditId={openingEditId}
       search={search}
