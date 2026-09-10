@@ -58,7 +58,8 @@
       "profile": "Profile",
       "stands": "Stands",
       "devilFruits": "Devil Fruits",
-      "stages": "Stages"
+      "stages": "Stages",
+      "characters": "Characters"
     }
   },
   "admin": {
@@ -66,7 +67,8 @@
     "pickChannel": "Pick a channel to manage",
     "stands": "Stands",
     "devilFruits": "Devil Fruits",
-    "stages": "Stages"
+    "stages": "Stages",
+    "characters": "Characters"
   },
   "profile": {
     "avatarProcessing": "Processing your new picture…",
@@ -179,6 +181,42 @@
     "deleteConfirmTitle": "Delete Stage?",
     "deleteConfirmButton": "Delete Stage",
     "deleteConfirmMessage": "\"{{name}}\" will be permanently deleted. This can't be undone."
+  },
+  "characters": {
+    "title": "Characters",
+    "newCharacter": "New Character",
+    "emptyTitle": "No Characters yet. Create the first one.",
+    "emptyFilteredTitle": "No Characters match. Try a different search or filter.",
+    "errorTitle": "Couldn't load Characters.",
+    "retry": "Retry",
+    "editTitle": "Edit Character",
+    "changePicture": "Change Character picture",
+    "name": "Name",
+    "manga": "Manga",
+    "rarity": "Rarity",
+    "description": "Description",
+    "searchPlaceholder": "Search by name or description…",
+    "filterManga": "Filter by manga",
+    "pickMangaFirst": "Pick a manga to choose which stats this Character has.",
+    "battleIqHint": "Battle IQ is a JoJo-only stat (0-255) rated on the same scale as a real-world IQ test - most characters cluster around 100, with only a rare few far above or below it.",
+    "previewA11y": "View {{name}} picture full screen",
+    "detailA11y": "View {{name}} details",
+    "editA11y": "Edit {{name}}",
+    "deleteA11y": "Delete {{name}}",
+    "saveA11y": "Save Character",
+    "deleteConfirmTitle": "Delete Character?",
+    "deleteConfirmButton": "Delete Character",
+    "deleteConfirmMessage": "\"{{name}}\" will be permanently deleted. This can't be undone.",
+    "stats": {
+      "hamon": "Hamon",
+      "spin": "Spin",
+      "battleIq": "Battle IQ",
+      "physicalForm": "Physical Form",
+      "armamentHaki": "Armament Haki",
+      "observationHaki": "Observation Haki",
+      "conquerorHaki": "Conqueror's Haki",
+      "fruitMastery": "Fruit Mastery"
+    }
   },
   "game": {
     "hub": {
@@ -526,6 +564,7 @@
     "skillsRequired": "At least one skill is required",
     "translationIncomplete": "Fill in both description and skills for this language, or leave it blank",
     "orderNonNegative": "Order must be zero or greater",
+    "battleIqRange": "Battle IQ must be between 0 and 255",
     "usernameMinLength": "Username must be at least 3 characters",
     "usernameMaxLength": "Username must be at most 32 characters",
     "usernameFormat": "Only lowercase letters, numbers, and underscores"
@@ -549,7 +588,12 @@
     "stageUpdated": "Stage updated",
     "stageDeleted": "Stage deleted",
     "stagePictureUploading": "Uploading picture. This takes a moment.",
-    "stagePictureFailed": "Couldn't process the Stage's picture. Please try again."
+    "stagePictureFailed": "Couldn't process the Stage's picture. Please try again.",
+    "characterCreated": "Character created",
+    "characterUpdated": "Character updated",
+    "characterDeleted": "Character deleted",
+    "characterPictureUploading": "Uploading picture. This takes a moment.",
+    "characterPictureFailed": "Couldn't process the Character's picture. Please try again."
   },
   "notFound": {
     "title": "This screen doesn't exist.",

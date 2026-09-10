@@ -58,7 +58,8 @@
       "profile": "Perfil",
       "stands": "Stands",
       "devilFruits": "Frutas del Diablo",
-      "stages": "Etapas"
+      "stages": "Etapas",
+      "characters": "Personajes"
     }
   },
   "admin": {
@@ -66,7 +67,8 @@
     "pickChannel": "Elige un canal para gestionar",
     "stands": "Stands",
     "devilFruits": "Frutas del Diablo",
-    "stages": "Etapas"
+    "stages": "Etapas",
+    "characters": "Personajes"
   },
   "profile": {
     "avatarProcessing": "Procesando tu nueva foto…",
@@ -179,6 +181,42 @@
     "deleteConfirmTitle": "¿Eliminar Etapa?",
     "deleteConfirmButton": "Eliminar Etapa",
     "deleteConfirmMessage": "\"{{name}}\" se eliminará de forma permanente. No se puede deshacer."
+  },
+  "characters": {
+    "title": "Personajes",
+    "newCharacter": "Nuevo personaje",
+    "emptyTitle": "Todavía no hay personajes. Crea el primero.",
+    "emptyFilteredTitle": "Ningún personaje coincide. Prueba otra búsqueda o filtro.",
+    "errorTitle": "No se han podido cargar los personajes.",
+    "retry": "Reintentar",
+    "editTitle": "Editar personaje",
+    "changePicture": "Cambiar foto del personaje",
+    "name": "Nombre",
+    "manga": "Manga",
+    "rarity": "Rareza",
+    "description": "Descripción",
+    "searchPlaceholder": "Busca por nombre o descripción…",
+    "filterManga": "Filtrar por manga",
+    "pickMangaFirst": "Elige un manga para saber qué estadísticas tiene este personaje.",
+    "battleIqHint": "Battle IQ es una estadística exclusiva de JoJo (0-255), medida en la misma escala que un test de CI real - la mayoría de personajes se agrupan en torno a 100, y solo unos pocos están muy por encima o por debajo.",
+    "previewA11y": "Ver la foto de {{name}} a pantalla completa",
+    "detailA11y": "Ver los detalles de {{name}}",
+    "editA11y": "Editar {{name}}",
+    "deleteA11y": "Eliminar {{name}}",
+    "saveA11y": "Guardar personaje",
+    "deleteConfirmTitle": "¿Eliminar personaje?",
+    "deleteConfirmButton": "Eliminar personaje",
+    "deleteConfirmMessage": "\"{{name}}\" se eliminará de forma permanente. No se puede deshacer.",
+    "stats": {
+      "hamon": "Hamon",
+      "spin": "Spin",
+      "battleIq": "Battle IQ",
+      "physicalForm": "Forma física",
+      "armamentHaki": "Haki del Armamento",
+      "observationHaki": "Haki de la Observación",
+      "conquerorHaki": "Haki de los Reyes",
+      "fruitMastery": "Dominio de la fruta"
+    }
   },
   "game": {
     "hub": {
@@ -526,6 +564,7 @@
     "skillsRequired": "Se necesita al menos una habilidad",
     "translationIncomplete": "Rellena la descripción y las habilidades para este idioma, o déjalo en blanco",
     "orderNonNegative": "El orden debe ser cero o mayor",
+    "battleIqRange": "Battle IQ debe estar entre 0 y 255",
     "usernameMinLength": "El nombre de usuario debe tener al menos 3 caracteres",
     "usernameMaxLength": "El nombre de usuario debe tener como máximo 32 caracteres",
     "usernameFormat": "Solo letras minúsculas, números y guiones bajos"
@@ -549,7 +588,12 @@
     "stageUpdated": "Etapa actualizada",
     "stageDeleted": "Etapa eliminada",
     "stagePictureUploading": "Subiendo la foto. Esto tarda un momento.",
-    "stagePictureFailed": "No se ha podido procesar la foto de la Etapa. Inténtalo de nuevo."
+    "stagePictureFailed": "No se ha podido procesar la foto de la Etapa. Inténtalo de nuevo.",
+    "characterCreated": "Personaje creado",
+    "characterUpdated": "Personaje actualizado",
+    "characterDeleted": "Personaje eliminado",
+    "characterPictureUploading": "Subiendo la foto. Esto tarda un momento.",
+    "characterPictureFailed": "No se ha podido procesar la foto del personaje. Inténtalo de nuevo."
   },
   "notFound": {
     "title": "Esta pantalla no existe.",
