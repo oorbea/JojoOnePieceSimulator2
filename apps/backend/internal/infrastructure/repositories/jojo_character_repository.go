@@ -198,7 +198,10 @@ func (r *JojoCharacterRepository) SetMediaID(ctx context.Context, id characters.
 }
 
 func (r *JojoCharacterRepository) Delete(ctx context.Context, id characters.CharacterID) error {
-	rowsAffected, err := r.queries.DeleteCharacterByID(ctx, pgtype.UUID{Bytes: id, Valid: true})
+	rowsAffected, err := r.queries.DeleteCharacterByID(ctx, db.DeleteCharacterByIDParams{
+		ID:    pgtype.UUID{Bytes: id, Valid: true},
+		Manga: enums.Jojo.String(),
+	})
 	if err != nil {
 		return fmt.Errorf("deleting jojo character %s: %w", id, err)
 	}

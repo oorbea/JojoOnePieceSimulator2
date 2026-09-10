@@ -52,8 +52,13 @@ WHERE id = sqlc.arg('id');
 -- name: UpdateCharacterMediaID :exec
 UPDATE characters SET picture_media_id = $1 WHERE id = $2;
 
+-- manga is part of the WHERE, not just an identity check on id: without it
+-- a JojoCharacterRepository.Delete could remove a One Piece character's
+-- base row (ids are UUIDs from independent kind repositories, but nothing
+-- stops a caller mixing them up) - same cross-kind guard
+-- DeleteStandByID/DeleteDevilFruitByID enforce via power_kind.
 -- name: DeleteCharacterByID :execrows
-DELETE FROM characters WHERE id = $1;
+DELETE FROM characters WHERE id = $1 AND manga = $2;
 
 -- name: UpsertJojoCharacter :exec
 INSERT INTO jojo_characters (id, hamon, spin, battle_iq)

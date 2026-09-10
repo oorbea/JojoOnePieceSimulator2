@@ -104,11 +104,21 @@ func (q *Queries) CountOnePieceCharacterRows(ctx context.Context, arg CountOnePi
 }
 
 const deleteCharacterByID = `-- name: DeleteCharacterByID :execrows
-DELETE FROM characters WHERE id = $1
+DELETE FROM characters WHERE id = $1 AND manga = $2
 `
 
-func (q *Queries) DeleteCharacterByID(ctx context.Context, id pgtype.UUID) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteCharacterByID, id)
+type DeleteCharacterByIDParams struct {
+	ID    pgtype.UUID
+	Manga string
+}
+
+// manga is part of the WHERE, not just an identity check on id: without it
+// a JojoCharacterRepository.Delete could remove a One Piece character's
+// base row (ids are UUIDs from independent kind repositories, but nothing
+// stops a caller mixing them up) - same cross-kind guard
+// DeleteStandByID/DeleteDevilFruitByID enforce via power_kind.
+func (q *Queries) DeleteCharacterByID(ctx context.Context, arg DeleteCharacterByIDParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteCharacterByID, arg.ID, arg.Manga)
 	if err != nil {
 		return 0, err
 	}
