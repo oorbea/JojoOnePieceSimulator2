@@ -40,6 +40,16 @@ const stagesNamespace = "stages:v2"
 // individually (on Delete) or simply expire.
 const presignNamespace = "presign"
 
+// jojoCharactersNamespace holds every cached JojoCharacter read, invalidated
+// as a whole on any write - same reasoning as standsNamespace. Characters
+// are a separate CTI from powers, so this is deliberately its own
+// namespace, not folded into standsNamespace.
+const jojoCharactersNamespace = "jojo_characters:v1"
+
+// onePieceCharactersNamespace mirrors jojoCharactersNamespace for the One
+// Piece side.
+const onePieceCharactersNamespace = "one_piece_characters:v1"
+
 // Every key below is prefixed with locale so a write's whole-namespace
 // Invalidate still clears every locale's entries together, while reads for
 // different locales never collide - a stand fetched in es-ES must never
@@ -94,6 +104,17 @@ func stageFilterKey(filters ports.StageFilters, locale enums.Locale) string {
 // resolution) and may diverge without one silently answering the other.
 func stageCatalogKey(manga enums.Manga) string {
 	return "catalog:" + enums.EnGB.String() + ":" + manga.String()
+}
+
+// jojoCharacterFilterKey mirrors standFilterKey for ports.JojoCharacterFilters.
+func jojoCharacterFilterKey(filters ports.JojoCharacterFilters, locale enums.Locale) string {
+	return "filter:" + locale.String() + ":" + hashString(filters.Canonical())
+}
+
+// onePieceCharacterFilterKey mirrors standFilterKey for
+// ports.OnePieceCharacterFilters.
+func onePieceCharacterFilterKey(filters ports.OnePieceCharacterFilters, locale enums.Locale) string {
+	return "filter:" + locale.String() + ":" + hashString(filters.Canonical())
 }
 
 func hashString(s string) string {
