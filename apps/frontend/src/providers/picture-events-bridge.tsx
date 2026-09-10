@@ -149,7 +149,9 @@ export function PictureEventsBridge() {
       }
       if (cancelledRef.current) return
 
-      const source = new EventSource(`${env.EXPO_PUBLIC_API_URL}/events?ticket=${encodeURIComponent(ticket)}`)
+      const source = new EventSource(
+        `${env.EXPO_PUBLIC_API_URL}/events?ticket=${encodeURIComponent(ticket)}`
+      )
       sourceRef.current = source
 
       source.addEventListener('picture', handlePictureEvent)
