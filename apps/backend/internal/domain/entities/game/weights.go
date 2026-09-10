@@ -42,6 +42,14 @@ type AssignmentWeights struct {
 	HakiMasteryWeights map[enums.HakiLevel]int
 
 	PhysicalFormWeights map[enums.PhysicalForm]int
+
+	// BattleIQBandWeights weighs which WAIS-IV band a JoJo character's
+	// battleIQ falls into. Only consulted when the lobby includes the JoJo
+	// manga - see LoadoutBuilder.drawBattleIQ. The value drawn within a
+	// band is uniform, except BattleIQVerySuperior, whose own internal
+	// decay is fixed (not owner-configurable here) - see
+	// battleIQVerySuperiorWeights in loadout_builder.go.
+	BattleIQBandWeights map[BattleIQBand]int
 }
 
 // HakiSet names one of the eight combinations of Armament/Observation/
@@ -106,6 +114,20 @@ var hakiSets = []HakiSet{
 	HakiSetConqueror,
 }
 
+// battleIQBands is every BattleIQBand value, in the fixed order
+// weightedPick indexes into - must stay in sync with
+// DefaultAssignmentWeights.BattleIQBandWeights and with drawBattleIQ in
+// loadout_builder.go.
+var battleIQBands = []BattleIQBand{
+	BattleIQExtremelyLow,
+	BattleIQBorderline,
+	BattleIQLowAverage,
+	BattleIQAverage,
+	BattleIQHighAverage,
+	BattleIQSuperior,
+	BattleIQVerySuperior,
+}
+
 // DefaultAssignmentWeights ports JoJoOnePiece_Simulator V1's probability
 // tables 1:1 (github.com/oorbea/JoJoOnePiece_Simulator, powers.cc):
 // generateStand/generateFruit are uniform over the pool (handled outside
@@ -159,6 +181,20 @@ func DefaultAssignmentWeights() AssignmentWeights {
 			enums.PhysicalFormViceAdmiral:    1,
 			enums.PhysicalFormYonkoCommander: 1,
 			enums.PhysicalFormYonkoPlus:      1,
+		},
+		// BattleIQ has no V1 equivalent (V1 predates it, like Hamon) - these
+		// weights were chosen by the owner directly: the WAIS-IV normative
+		// band frequencies for a N(100,15) distribution
+		// (2.2/6.7/16.1/50/16.1/6.7/2.2%), rounded to integer percent, the
+		// same style as HakiSetWeights' 4/20/20/20/15/10/10/1 table.
+		BattleIQBandWeights: map[BattleIQBand]int{
+			BattleIQExtremelyLow: 2,
+			BattleIQBorderline:   7,
+			BattleIQLowAverage:   16,
+			BattleIQAverage:      50,
+			BattleIQHighAverage:  16,
+			BattleIQSuperior:     7,
+			BattleIQVerySuperior: 2,
 		},
 	}
 }

@@ -25,6 +25,9 @@ func TestLoadoutBuilder_JojoOnlyDrawsNoOnePieceAbilities(t *testing.T) {
 		loadout.ConquerorHaki() != enums.HakiNone || loadout.PhysicalForm() != enums.PhysicalFormPrivate {
 		t.Fatalf("expected zero-value one piece stats, got %+v", loadout)
 	}
+	if !loadout.BattleIQ().Present() {
+		t.Fatalf("expected battleIQ to be present in a JoJo lobby")
+	}
 }
 
 func TestLoadoutBuilder_OnePieceOnlyDrawsNoJojoAbilities(t *testing.T) {
@@ -38,6 +41,9 @@ func TestLoadoutBuilder_OnePieceOnlyDrawsNoJojoAbilities(t *testing.T) {
 	}
 	if loadout.Stand() != nil || loadout.Spin() != enums.SpinNone || loadout.Hamon() != enums.HamonNone {
 		t.Fatalf("expected no jojo abilities, got %+v", loadout)
+	}
+	if loadout.BattleIQ().Present() {
+		t.Fatalf("expected battleIQ to be absent without the JoJo manga, got %+v", loadout.BattleIQ())
 	}
 }
 
@@ -115,8 +121,11 @@ func (r *recordingRandom) IntN(n int) int {
 
 // TestLoadoutBuilder_DrawOrder pins the owner-mandated step order: Physical
 // Form -> Stand -> Devil Fruit -> Fruit Mastery -> Hamon -> Haki Set ->
-// Haki Mastery (once per haki the set draw landed on) -> Spin
+// Haki Mastery (once per haki the set draw landed on) -> Spin -> BattleIQ
 // (RequiresSpin4 is a post-pass, not a draw, so it never shows up here).
+// BattleIQ's band draw lands on the last bucket (recordingRandom's rule),
+// which is BattleIQVerySuperior - triggering a second draw into
+// battleIQVerySuperiorWeights for the value within the band.
 // Pool sizes (2 stands, 3 fruits) are chosen so stand's IntN and
 // devilFruit's IntN can't be confused with each other.
 //
@@ -147,8 +156,13 @@ func TestLoadoutBuilder_DrawOrder(t *testing.T) {
 	// DevilFruit(no-fruit + 3, total 4) -> FruitMastery(3 levels, total 3)
 	// -> Hamon(total 25+35+35+5=100) -> HakiSet(total
 	// 4+20+20+20+15+10+10+1=100, lands on Conqueror-only) ->
-	// ConquerorMastery(4 levels, total 4) -> Spin(total 15+30+30+25=100).
-	want := []int{6, 3, 4, 3, 100, 100, 4, 100}
+	// ConquerorMastery(4 levels, total 4) -> Spin(total 15+30+30+25=100) ->
+	// BattleIQBand(total 2+7+16+50+16+7+2=100, lands on VerySuperior) ->
+	// BattleIQVerySuperior value (total = sum of the exponential-decay
+	// weight table over the band's 126 values, 130-255 - 414009 pins that
+	// table's shape; a change to its decay rate or scale is expected to
+	// move this number).
+	want := []int{6, 3, 4, 3, 100, 100, 4, 100, 100, 414009}
 	if len(rng.ns) != len(want) {
 		t.Fatalf("expected %d draws, got %d: %v", len(want), len(rng.ns), rng.ns)
 	}

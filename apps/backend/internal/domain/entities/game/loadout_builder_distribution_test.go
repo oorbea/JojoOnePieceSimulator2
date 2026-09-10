@@ -45,6 +45,9 @@ func TestLoadoutBuilder_MatchesV1Distributions(t *testing.T) {
 	hamonCounts := map[enums.HamonLevel]int{}
 	physicalFormCounts := map[enums.PhysicalForm]int{}
 	hakiPresence := map[string]int{"armament": 0, "observation": 0, "conqueror": 0}
+	battleIQBandCounts := map[game.BattleIQBand]int{}
+	verySuperiorBelow160 := 0
+	verySuperiorTotal := 0
 
 	for i := 0; i < n; i++ {
 		pool := game.NewAvailablePowers(append([]*powers.Stand(nil), stands...), nil)
@@ -68,6 +71,16 @@ func TestLoadoutBuilder_MatchesV1Distributions(t *testing.T) {
 		}
 		if l.ConquerorHaki() != enums.HakiNone {
 			hakiPresence["conqueror"]++
+		}
+		if l.BattleIQ().Present() {
+			band := l.BattleIQ().Band()
+			battleIQBandCounts[band]++
+			if band == game.BattleIQVerySuperior {
+				verySuperiorTotal++
+				if l.BattleIQ().Value() < 160 {
+					verySuperiorBelow160++
+				}
+			}
 		}
 	}
 
@@ -105,6 +118,27 @@ func TestLoadoutBuilder_MatchesV1Distributions(t *testing.T) {
 	assertProb(t, "armament present", hakiPresence["armament"], n, 0.65, tolerance)
 	assertProb(t, "observation present", hakiPresence["observation"], n, 0.65, tolerance)
 	assertProb(t, "conqueror present", hakiPresence["conqueror"], n, 0.36, tolerance)
+
+	// BattleIQ band: owner-chosen WAIS-IV normative frequencies
+	// 2/7/16/50/16/7/2 (%). Every loadout here is JoJo, so BattleIQ is
+	// present for all n draws.
+	assertProb(t, "battleIQ EXTREMELY_LOW", battleIQBandCounts[game.BattleIQExtremelyLow], n, 0.02, tolerance)
+	assertProb(t, "battleIQ BORDERLINE", battleIQBandCounts[game.BattleIQBorderline], n, 0.07, tolerance)
+	assertProb(t, "battleIQ LOW_AVERAGE", battleIQBandCounts[game.BattleIQLowAverage], n, 0.16, tolerance)
+	assertProb(t, "battleIQ AVERAGE", battleIQBandCounts[game.BattleIQAverage], n, 0.50, tolerance)
+	assertProb(t, "battleIQ HIGH_AVERAGE", battleIQBandCounts[game.BattleIQHighAverage], n, 0.16, tolerance)
+	assertProb(t, "battleIQ SUPERIOR", battleIQBandCounts[game.BattleIQSuperior], n, 0.07, tolerance)
+	assertProb(t, "battleIQ VERY_SUPERIOR", battleIQBandCounts[game.BattleIQVerySuperior], n, 0.02, tolerance)
+
+	// Within VERY_SUPERIOR (130-255), the 30-point half-life decay means
+	// roughly half the draws land in its bottom half (130-159) rather than
+	// spreading uniformly across the full 126-value range.
+	if verySuperiorTotal > 0 {
+		got := float64(verySuperiorBelow160) / float64(verySuperiorTotal)
+		if diff := got - 0.52; diff < -0.08 || diff > 0.08 {
+			t.Errorf("battleIQ VERY_SUPERIOR values below 160: got p=%.4f, want ~0.52", got)
+		}
+	}
 }
 
 func assertProb(t *testing.T, label string, count, n int, want, tolerance float64) {
