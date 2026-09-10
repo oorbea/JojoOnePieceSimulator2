@@ -36,7 +36,7 @@ import (
 
 func main() {
 	dryRun := flag.Bool("dry-run", false, "log what would change without writing anything")
-	kind := flag.String("kind", "all", "stand, devilfruit, stage, user, or all")
+	kind := flag.String("kind", "all", "stand, devilfruit, stage, user, jojocharacter, onepiececharacter, or all")
 	limit := flag.Int("limit", 0, "stop after this many rows per kind (0 = unlimited)")
 	flag.Parse()
 
@@ -82,6 +82,8 @@ func main() {
 	devilFruitRepo := repositories.NewDevilFruitRepository(pool)
 	stageRepo := repositories.NewStageRepository(pool)
 	userRepo := repositories.NewUserRepository(pool)
+	jojoCharacterRepo := repositories.NewJojoCharacterRepository(pool)
+	onePieceCharacterRepo := repositories.NewOnePieceCharacterRepository(pool)
 
 	if *kind == "all" || *kind == "stand" {
 		if err := backfillStands(b, standRepo); err != nil {
@@ -101,6 +103,16 @@ func main() {
 	if *kind == "all" || *kind == "user" {
 		if err := backfillUsers(b, userRepo); err != nil {
 			log.Fatalf("backfilling users: %v", err)
+		}
+	}
+	if *kind == "all" || *kind == "jojocharacter" {
+		if err := backfillJojoCharacters(b, jojoCharacterRepo); err != nil {
+			log.Fatalf("backfilling jojo characters: %v", err)
+		}
+	}
+	if *kind == "all" || *kind == "onepiececharacter" {
+		if err := backfillOnePieceCharacters(b, onePieceCharacterRepo); err != nil {
+			log.Fatalf("backfilling one piece characters: %v", err)
 		}
 	}
 
@@ -310,6 +322,92 @@ func backfillStages(b *backfiller, repo *repositories.StageRepository) error {
 		}
 		if err := repo.SetMediaID(b.ctx, s.ID(), groupID); err != nil {
 			log.Printf("stage %s: setting media id: %v", s.ID(), err)
+			b.failed++
+		}
+	}
+	return nil
+}
+
+func backfillJojoCharacters(b *backfiller, repo *repositories.JojoCharacterRepository) error {
+	list, err := repo.GetAll(b.ctx, enums.EnGB)
+	if err != nil {
+		return err
+	}
+	for _, c := range list {
+		if b.limit > 0 && b.processed >= b.limit {
+			break
+		}
+		if c.PictureStatus() != enums.PictureReady || c.PictureMediaID() != "" || c.Picture() == "" {
+			b.skipped++
+			continue
+		}
+		groupID, lqip, cardKey, err := b.backfillOne(c.Picture(), c.PictureThumb(), fmt.Sprintf("jojo-characters/%s", c.ID()), "public")
+		if err != nil {
+			log.Printf("jojo character %s: %v", c.ID(), err)
+			b.failed++
+			continue
+		}
+		b.processed++
+		if b.dryRun {
+			continue
+		}
+		var cardPtr, lqipPtr *string
+		if cardKey != "" {
+			cardPtr = &cardKey
+		}
+		if lqip != "" {
+			lqipPtr = &lqip
+		}
+		if err := repo.UpdatePicture(b.ctx, c.ID(), nil, nil, cardPtr, lqipPtr, c.PictureStatus()); err != nil {
+			log.Printf("jojo character %s: updating picture: %v", c.ID(), err)
+			b.failed++
+			continue
+		}
+		if err := repo.SetMediaID(b.ctx, c.ID(), groupID); err != nil {
+			log.Printf("jojo character %s: setting media id: %v", c.ID(), err)
+			b.failed++
+		}
+	}
+	return nil
+}
+
+func backfillOnePieceCharacters(b *backfiller, repo *repositories.OnePieceCharacterRepository) error {
+	list, err := repo.GetAll(b.ctx, enums.EnGB)
+	if err != nil {
+		return err
+	}
+	for _, c := range list {
+		if b.limit > 0 && b.processed >= b.limit {
+			break
+		}
+		if c.PictureStatus() != enums.PictureReady || c.PictureMediaID() != "" || c.Picture() == "" {
+			b.skipped++
+			continue
+		}
+		groupID, lqip, cardKey, err := b.backfillOne(c.Picture(), c.PictureThumb(), fmt.Sprintf("one-piece-characters/%s", c.ID()), "public")
+		if err != nil {
+			log.Printf("one piece character %s: %v", c.ID(), err)
+			b.failed++
+			continue
+		}
+		b.processed++
+		if b.dryRun {
+			continue
+		}
+		var cardPtr, lqipPtr *string
+		if cardKey != "" {
+			cardPtr = &cardKey
+		}
+		if lqip != "" {
+			lqipPtr = &lqip
+		}
+		if err := repo.UpdatePicture(b.ctx, c.ID(), nil, nil, cardPtr, lqipPtr, c.PictureStatus()); err != nil {
+			log.Printf("one piece character %s: updating picture: %v", c.ID(), err)
+			b.failed++
+			continue
+		}
+		if err := repo.SetMediaID(b.ctx, c.ID(), groupID); err != nil {
+			log.Printf("one piece character %s: setting media id: %v", c.ID(), err)
 			b.failed++
 		}
 	}
