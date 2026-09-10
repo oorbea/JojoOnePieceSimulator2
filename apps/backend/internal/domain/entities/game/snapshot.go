@@ -628,10 +628,15 @@ func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewLoadout(
-		ls.Stand, ls.DevilFruit,
-		spin, hamon, fruitMastery,
-		armamentHaki, observationHaki, conquerorHaki,
-		physicalForm,
-	)
+	return NewLoadoutFromSpec(LoadoutSpec{
+		Stand:           ls.Stand,
+		DevilFruit:      ls.DevilFruit,
+		Spin:            spin,
+		Hamon:           hamon,
+		FruitMastery:    fruitMastery,
+		ArmamentHaki:    armamentHaki,
+		ObservationHaki: observationHaki,
+		ConquerorHaki:   conquerorHaki,
+		PhysicalForm:    physicalForm,
+	})
 }

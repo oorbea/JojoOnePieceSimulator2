@@ -107,7 +107,17 @@ func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 		spin = enums.SpinInfinite
 	}
 
-	return NewLoadout(stand, devilFruit, spin, hamon, fruitMastery, armamentHaki, observationHaki, conquerorHaki, physicalForm)
+	return NewLoadoutFromSpec(LoadoutSpec{
+		Stand:           stand,
+		DevilFruit:      devilFruit,
+		Spin:            spin,
+		Hamon:           hamon,
+		FruitMastery:    fruitMastery,
+		ArmamentHaki:    armamentHaki,
+		ObservationHaki: observationHaki,
+		ConquerorHaki:   conquerorHaki,
+		PhysicalForm:    physicalForm,
+	})
 }
 
 // drawStand picks uniformly among "no stand" and every Stand in the pool -
