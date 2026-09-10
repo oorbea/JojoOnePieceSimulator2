@@ -8,6 +8,7 @@ function renderScreen(overrides: Partial<Parameters<typeof AdminHubScreen>[0]> =
       onOpenStands={jest.fn()}
       onOpenDevilFruits={jest.fn()}
       onOpenStages={jest.fn()}
+      onOpenCharacters={jest.fn()}
       {...overrides}
     />
   )
@@ -20,6 +21,7 @@ describe('AdminHubScreen', () => {
     expect(screen.getByText('Stands')).toBeTruthy()
     expect(screen.getByText('Devil Fruits')).toBeTruthy()
     expect(screen.getByText('Stages')).toBeTruthy()
+    expect(screen.getByText('Characters')).toBeTruthy()
   })
 
   it('fires onOpenStands when the Stands tile is pressed', async () => {
@@ -47,5 +49,14 @@ describe('AdminHubScreen', () => {
     fireEvent.press(screen.getByLabelText('Stages'))
 
     expect(onOpenStages).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires onOpenCharacters when the Characters tile is pressed', async () => {
+    const onOpenCharacters = jest.fn()
+    await renderScreen({ onOpenCharacters })
+
+    fireEvent.press(screen.getByLabelText('Characters'))
+
+    expect(onOpenCharacters).toHaveBeenCalledTimes(1)
   })
 })

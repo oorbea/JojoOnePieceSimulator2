@@ -1,4 +1,4 @@
-import { Apple, Gamepad2, Landmark, Sparkles, User } from '@tamagui/lucide-icons-2'
+import { Apple, Gamepad2, Landmark, Sparkles, User, Users } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { Paragraph, XStack, YStack } from 'tamagui'
 
@@ -21,9 +21,27 @@ type Props = {
 // Labels come from useTranslation() in the component below - this only
 // pins the i18n key.
 const CHANNELS = [
-  { key: 'play', labelKey: 'home.channels.play', tone: 'green' as const, icon: Gamepad2, href: '/play' },
-  { key: 'profile', labelKey: 'home.channels.profile', tone: 'blue' as const, icon: User, href: '/profile' },
-  { key: 'stands', labelKey: 'home.channels.stands', tone: 'grape' as const, icon: Sparkles, href: '/catalog/stands' },
+  {
+    key: 'play',
+    labelKey: 'home.channels.play',
+    tone: 'green' as const,
+    icon: Gamepad2,
+    href: '/play',
+  },
+  {
+    key: 'profile',
+    labelKey: 'home.channels.profile',
+    tone: 'blue' as const,
+    icon: User,
+    href: '/profile',
+  },
+  {
+    key: 'stands',
+    labelKey: 'home.channels.stands',
+    tone: 'grape' as const,
+    icon: Sparkles,
+    href: '/catalog/stands',
+  },
   {
     key: 'fruits',
     labelKey: 'home.channels.devilFruits',
@@ -37,6 +55,13 @@ const CHANNELS = [
     tone: 'yellow' as const,
     icon: Landmark,
     href: '/catalog/stages',
+  },
+  {
+    key: 'characters',
+    labelKey: 'home.channels.characters',
+    tone: 'pink' as const,
+    icon: Users,
+    href: '/catalog/characters',
   },
 ]
 
