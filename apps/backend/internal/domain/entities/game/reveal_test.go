@@ -16,7 +16,7 @@ func TestRevealSlots_GatedByManga(t *testing.T) {
 		{
 			name:   "jojo only",
 			mangas: []enums.Manga{enums.Jojo},
-			want:   []RevealSlot{RevealStand, RevealHamon, RevealSpin},
+			want:   []RevealSlot{RevealStand, RevealHamon, RevealSpin, RevealBattleIQ},
 		},
 		{
 			name:   "one piece only",
@@ -32,7 +32,7 @@ func TestRevealSlots_GatedByManga(t *testing.T) {
 			want: []RevealSlot{
 				RevealPhysicalForm, RevealStand, RevealDevilFruit, RevealFruitMastery,
 				RevealHamon, RevealHakiSet, RevealArmamentHaki, RevealObservationHaki, RevealConquerorHaki,
-				RevealSpin,
+				RevealSpin, RevealBattleIQ,
 			},
 		},
 	}
@@ -95,6 +95,33 @@ func TestPlayerSlots_OnlyIncludesHakiTypesActuallyHeld(t *testing.T) {
 	}
 }
 
+// TestPlayerSlots_BattleIQAlwaysPresentForJojo pins the structural
+// guarantee RevealSlots' own doc relies on: every slot RevealSlots/
+// PlayerSlots returns must have a value to show, so a JoJo lobby's
+// battleIQ slot is never conditionally dropped per-participant the way
+// the three haki level slots are - LoadoutBuilder.drawBattleIQ always
+// produces a present BattleIQ whenever the JoJo manga is selected.
+func TestPlayerSlots_BattleIQAlwaysPresentForJojo(t *testing.T) {
+	mangas := []enums.Manga{enums.Jojo}
+	slots := PlayerSlots(mangas, RevealPlayer{HasStand: true})
+	found := false
+	for _, s := range slots {
+		if s == RevealBattleIQ {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("PlayerSlots(%v) = %v, want RevealBattleIQ present", mangas, slots)
+	}
+
+	noJojo := PlayerSlots([]enums.Manga{enums.OnePiece}, RevealPlayer{})
+	for _, s := range noJojo {
+		if s == RevealBattleIQ {
+			t.Fatalf("PlayerSlots without JoJo manga includes RevealBattleIQ: got %v", noJojo)
+		}
+	}
+}
+
 // TestRevealDuration_FewerHakiTypesTakeShorter checks PlayerSlots' effect
 // actually reaches RevealDuration: a participant with only one haki type
 // must take strictly less time than one with all three, since two whole
@@ -118,7 +145,7 @@ func TestRevealDuration_FewerHakiTypesTakeShorter(t *testing.T) {
 // inputs, so it can never actually be random.
 func TestRevealSpinCycles_DeterministicAndBounded(t *testing.T) {
 	id := GameID{1, 2, 3}
-	for slot := RevealSlot(0); slot < 10; slot++ {
+	for slot := RevealSlot(0); slot <= RevealBattleIQ; slot++ {
 		for pi := 0; pi < 5; pi++ {
 			got := RevealSpinCycles(id, 0, pi, slot)
 			if got != 1 && got != 2 {

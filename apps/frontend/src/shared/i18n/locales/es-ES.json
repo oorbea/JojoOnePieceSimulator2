@@ -357,7 +357,8 @@
         "conquerorHaki": "Haki del Rey",
         "physicalForm": "Forma física",
         "stand": "Stand",
-        "devilFruit": "Fruta del Diablo"
+        "devilFruit": "Fruta del Diablo",
+        "battleIQ": "Coeficiente de batalla"
       },
       "hakiType": {
         "armament": "Armadura",
@@ -412,6 +413,10 @@
           "hakiMastery": {
             "before": "Y tu maestría de {{type}} es:",
             "after": "{{name}}, tu maestría de {{type}} es {{value}}"
+          },
+          "battleIQ": {
+            "before": "Una última cosa: ¿cuán agudo eres?",
+            "after": "{{name}}, tu coeficiente de batalla es {{value}}"
           }
         }
       },

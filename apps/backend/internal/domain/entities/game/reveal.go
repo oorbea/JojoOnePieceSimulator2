@@ -15,6 +15,8 @@ import (
 // ends up with (see game.HakiSet), inserted right before the three
 // individual level slots - the reveal tells its story as "which haki you
 // have" before "how much of each", per the owner's request (2026-08-27).
+// RevealBattleIQ is the one slot NOT in draw order - see its own comment
+// on the const block below.
 type RevealSlot byte
 
 const (
@@ -28,6 +30,12 @@ const (
 	RevealObservationHaki
 	RevealConquerorHaki
 	RevealSpin
+	// RevealBattleIQ is appended last, not inserted among the JoJo slots
+	// above, because RevealSpinCycles hashes byte(slot) - inserting would
+	// renumber every later slot's ordinal and desync the frontend's
+	// spin-cycle counts for slots that already shipped. See
+	// ObsidianVault/gameplay-versus-inventory-characters.md.
+	RevealBattleIQ
 )
 
 // revealSlotOrder is RevealSlots' backbone - every slot in draw order, each
@@ -49,6 +57,7 @@ var revealSlotOrder = []struct {
 	{RevealObservationHaki, enums.OnePiece, false},
 	{RevealConquerorHaki, enums.OnePiece, false},
 	{RevealSpin, enums.Jojo, false},
+	{RevealBattleIQ, enums.Jojo, false},
 }
 
 // RevealSlots lists the slots a reveal shows for a lobby playing mangas, in

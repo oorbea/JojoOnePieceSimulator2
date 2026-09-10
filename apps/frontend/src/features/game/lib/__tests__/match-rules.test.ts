@@ -229,10 +229,27 @@ describe('loadoutSlots', () => {
       'conquerorHaki',
     ])
   })
+
+  it('a JOJO lobby with a present battleIQ carries a numeric slot, never a stringified value', () => {
+    const slots = loadoutSlots(loadout({ battleIQ: 147 }), ['JOJO'])
+    const battleIQ = slots.find((s) => s.key === 'battleIQ')
+    expect(battleIQ?.value).toBeUndefined()
+    expect(battleIQ?.numeric).toEqual({ score: 147, categoryKey: 'enums.battleIQCategory.VERY_SUPERIOR' })
+  })
+
+  it('a JOJO lobby without a present battleIQ omits the slot entirely, never a fake 0', () => {
+    const slots = loadoutSlots(loadout(), ['JOJO'])
+    expect(slots.find((s) => s.key === 'battleIQ')).toBeUndefined()
+  })
+
+  it('a ONE_PIECE-only lobby never gets a battleIQ slot even when present', () => {
+    const slots = loadoutSlots(loadout({ battleIQ: 100 }), ['ONE_PIECE'])
+    expect(slots.find((s) => s.key === 'battleIQ')).toBeUndefined()
+  })
 })
 
 describe('revealSlotKinds', () => {
-  it('both mangas: all 10 slots in draw order, haki-set before the individual levels', () => {
+  it('both mangas: all 11 slots in draw order, haki-set before the individual levels', () => {
     expect(revealSlotKinds(['JOJO', 'ONE_PIECE'])).toEqual([
       'physicalForm',
       'stand',
@@ -244,11 +261,12 @@ describe('revealSlotKinds', () => {
       'observationHaki',
       'conquerorHaki',
       'spin',
+      'battleIQ',
     ])
   })
 
-  it('jojo only: stand, hamon, spin', () => {
-    expect(revealSlotKinds(['JOJO'])).toEqual(['stand', 'hamon', 'spin'])
+  it('jojo only: stand, hamon, spin, battleIQ', () => {
+    expect(revealSlotKinds(['JOJO'])).toEqual(['stand', 'hamon', 'spin', 'battleIQ'])
   })
 
   it('one piece only: physicalForm, devilFruit, fruitMastery, haki-set, the three hakis', () => {
