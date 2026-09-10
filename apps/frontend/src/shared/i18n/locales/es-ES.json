@@ -197,6 +197,7 @@
     "description": "Descripción",
     "searchPlaceholder": "Busca por nombre o descripción…",
     "filterManga": "Filtrar por manga",
+    "filterMangaAll": "Todos los mangas",
     "pickMangaFirst": "Elige un manga para saber qué estadísticas tiene este personaje.",
     "battleIqHint": "Battle IQ es una estadística exclusiva de JoJo (0-255), medida en la misma escala que un test de CI real - la mayoría de personajes se agrupan en torno a 100, y solo unos pocos están muy por encima o por debajo.",
     "previewA11y": "Ver la foto de {{name}} a pantalla completa",

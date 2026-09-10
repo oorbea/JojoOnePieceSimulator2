@@ -24,6 +24,11 @@ type Options<T> = {
   // pending picture on *any* loaded page keeps the whole infinite query
   // polling until it resolves.
   hasPendingPicture: (item: T) => boolean
+  // Lets a caller mount several of these side by side and only have the
+  // active one(s) actually hit the network - same purpose as use-stands.ts
+  // -style hooks' own `enabled` param. Defaults to true (every existing
+  // caller keeps fetching unconditionally).
+  enabled?: boolean
 }
 
 // Generic `useInfiniteQuery` wrapper over a cursor-paginated catalogue
@@ -37,7 +42,7 @@ type Options<T> = {
 export function usePaginatedCatalogue<T>(
   queryKey: readonly unknown[],
   fetchPage: (cursor: string | undefined, limit: number) => Promise<CataloguePage<T>>,
-  { hasPendingPicture }: Options<T>,
+  { hasPendingPicture, enabled = true }: Options<T>,
   limit = 24
 ) {
   const pollAttempts = useRef(0)
@@ -51,6 +56,7 @@ export function usePaginatedCatalogue<T>(
     queryFn: ({ pageParam }) => fetchPage(pageParam, limit),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+    enabled,
     refetchInterval:
       Platform.OS === 'web'
         ? undefined

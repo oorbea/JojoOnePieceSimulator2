@@ -20,6 +20,7 @@ import type { PictureStatus, PowerRarity, Locale } from '@/shared/contracts/enum
 import { focusElement } from '@/shared/lib/a11y'
 import type {
   CharacterKind,
+  CharacterMangaFilter,
   JojoCharacterFormValues,
   OnePieceCharacterFormValues,
 } from '@/features/characters/types/characters.types'
@@ -71,14 +72,17 @@ type FormState = {
 
 type BaseProps<T extends CharacterLike> = {
   characters: T[]
-  rows: CharacterStatRow<T>[]
+  // Either a fixed descriptor (single-kind screens) or one resolved per
+  // item - the latter is what lets the 'ALL' filter mix both kinds' cards
+  // in one grid without CharacterCard/CharacterDetail knowing about kinds.
+  rows: CharacterStatRow<T>[] | ((character: T) => CharacterStatRow<T>[])
   isLoading: boolean
   isError: boolean
   onRetry: () => void
   search: string
   onSearchChange: (search: string) => void
-  mangaFilter: CharacterKind
-  onMangaFilterChange: (manga: CharacterKind) => void
+  mangaFilter: CharacterMangaFilter
+  onMangaFilterChange: (manga: CharacterMangaFilter) => void
   hasActiveFilters: boolean
   detailCharacter: T | null
   onOpenDetail: (character: T) => void
@@ -108,19 +112,23 @@ type ReadOnlyProps = {
 
 type Props<T extends CharacterLike> = BaseProps<T> & (WritableProps<T> | ReadOnlyProps)
 
-const KIND_OPTIONS: GlassSelectOption[] = [
+const MANGA_FILTER_OPTIONS: GlassSelectOption[] = [
+  { value: 'ALL', label: 'characters.filterMangaAll' },
   { value: 'JOJO', label: 'enums.manga.JOJO' },
   { value: 'ONE_PIECE', label: 'enums.manga.ONE_PIECE' },
 ]
 
-// Pure UI - a card grid of Characters of ONE manga (the filter is
-// exclusive, no "all" option - JojoCharacter and OnePieceCharacter are two
-// separate backend endpoints with independent keyset pagination, so mixing
-// them into one list would mean merging two cursors) plus the create/edit
-// modal, delete confirmation, and read-only detail modal. Kind-agnostic:
-// CharactersContainer/CatalogCharactersContainer decide which kind's data
-// and `rows` descriptor (character-stats.ts) to pass in. Same shape as
-// StagesScreen otherwise.
+// Pure UI - a card grid of Characters plus the create/edit modal, delete
+// confirmation, and read-only detail modal. The manga filter has three
+// values: JoJo, One Piece, or 'ALL' to mix both kinds in one grid.
+// JojoCharacter and OnePieceCharacter are two separate backend endpoints
+// with independent keyset pagination, so 'ALL' means the container fetches
+// both and merges the results client-side rather than the backend ever
+// returning a mixed page - see CatalogCharactersContainer/
+// CharactersContainer for that merge. Kind-agnostic itself:
+// CharactersContainer/CatalogCharactersContainer decide which kind(s)'
+// data and `rows` descriptor (character-stats.ts) to pass in. Same shape
+// as StagesScreen otherwise.
 export function CharactersScreen<T extends CharacterLike>(props: Props<T>) {
   const {
     characters,
@@ -144,7 +152,9 @@ export function CharactersScreen<T extends CharacterLike>(props: Props<T>) {
   } = props
   const { t } = useTranslation()
 
-  const mangaFilterOptions = KIND_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))
+  const mangaFilterOptions = MANGA_FILTER_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))
+  const rowsFor = (character: T): CharacterStatRow<T>[] =>
+    typeof rows === 'function' ? rows(character) : rows
 
   // Focus management for "Cargar más" - see StagesScreen's identical effect.
   const cardRefs = useRef(new Map<string, View | null>())
@@ -191,7 +201,7 @@ export function CharactersScreen<T extends CharacterLike>(props: Props<T>) {
               label={t('characters.filterManga')}
               options={mangaFilterOptions}
               value={mangaFilter}
-              onChange={(v) => onMangaFilterChange((v ?? 'JOJO') as CharacterKind)}
+              onChange={(v) => onMangaFilterChange((v ?? 'JOJO') as CharacterMangaFilter)}
             />
           </YStack>
         </XStack>
@@ -243,7 +253,7 @@ export function CharactersScreen<T extends CharacterLike>(props: Props<T>) {
                       cardRefs.current.set(character.id, el)
                     }}
                     character={character}
-                    rows={rows}
+                    rows={rowsFor(character)}
                     onOpenDetail={() => onOpenDetail(character)}
                     readOnly
                   />
@@ -254,7 +264,7 @@ export function CharactersScreen<T extends CharacterLike>(props: Props<T>) {
                       cardRefs.current.set(character.id, el)
                     }}
                     character={character}
-                    rows={rows}
+                    rows={rowsFor(character)}
                     onOpenDetail={() => onOpenDetail(character)}
                     onEdit={() => props.onEdit(character)}
                     onDelete={() => props.onDelete(character)}
@@ -321,7 +331,9 @@ export function CharactersScreen<T extends CharacterLike>(props: Props<T>) {
           ) : undefined
         }
       >
-        {detailCharacter ? <CharacterDetail character={detailCharacter} rows={rows} /> : null}
+        {detailCharacter ? (
+          <CharacterDetail character={detailCharacter} rows={rowsFor(detailCharacter)} />
+        ) : null}
       </DetailModal>
 
       {props.readOnly ? null : (

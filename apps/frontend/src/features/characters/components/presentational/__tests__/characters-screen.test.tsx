@@ -6,6 +6,7 @@ import { act, fireEvent, renderWithProviders, screen } from '@/test/render'
 import { createEmptyCharacterTranslationsForm } from '@/shared/lib/character-translations'
 import {
   jojoCharacterFormSchema,
+  type CharacterMangaFilter,
   type JojoCharacterFormValues,
   type JojoCharacterResponse,
 } from '@/features/characters/types/characters.types'
@@ -36,8 +37,8 @@ type HarnessProps = {
   characters?: JojoCharacterResponse[]
   search?: string
   onSearchChange?: (search: string) => void
-  mangaFilter?: 'JOJO' | 'ONE_PIECE'
-  onMangaFilterChange?: (manga: 'JOJO' | 'ONE_PIECE') => void
+  mangaFilter?: CharacterMangaFilter
+  onMangaFilterChange?: (manga: CharacterMangaFilter) => void
   hasActiveFilters?: boolean
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
