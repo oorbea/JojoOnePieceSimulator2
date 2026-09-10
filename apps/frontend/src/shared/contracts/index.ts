@@ -35,6 +35,9 @@ export type {
 export type { ErrorCode, ErrorResponse } from './errors'
 export type {
   AdminUpdateUserRequest,
+  CharacterTranslationRequest,
+  CharacterTranslationResponse,
+  CharacterTranslationsResponse,
   DevilFruitResponse,
   DevilFruitPageResponse,
   GameRoundResultResponse,
@@ -44,7 +47,13 @@ export type {
   GameViewerResponse,
   GoogleLoginRequest,
   JoinGameRequest,
+  JojoCharacterRequest,
+  JojoCharacterResponse,
+  JojoCharacterPageResponse,
   LobbyPreviewResponse,
+  OnePieceCharacterRequest,
+  OnePieceCharacterResponse,
+  OnePieceCharacterPageResponse,
   ParticipantOutcomeResponse,
   GameResultResponse,
   PictureEventPayload,
