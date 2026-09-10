@@ -101,4 +101,23 @@ var (
 	// family must be treated as compromised; the HTTP response must not
 	// leak the distinction, only server-side logs should.
 	ErrRefreshReuse = errors.New("refresh token reuse detected")
+
+	// ErrJojoCharacterNotFound is returned when an IJojoCharacterRepository
+	// lookup by id or name finds no matching row.
+	ErrJojoCharacterNotFound = errors.New("jojo character not found")
+
+	// ErrJojoCharacterAlreadyExists is returned when saving a JojoCharacter
+	// would violate the unique (manga, name) constraint against a
+	// different, already-existing character.
+	ErrJojoCharacterAlreadyExists = errors.New("jojo character already exists")
+
+	// ErrOnePieceCharacterNotFound is returned when an
+	// IOnePieceCharacterRepository lookup by id or name finds no matching
+	// row.
+	ErrOnePieceCharacterNotFound = errors.New("one piece character not found")
+
+	// ErrOnePieceCharacterAlreadyExists is returned when saving an
+	// OnePieceCharacter would violate the unique (manga, name) constraint
+	// against a different, already-existing character.
+	ErrOnePieceCharacterAlreadyExists = errors.New("one piece character already exists")
 )

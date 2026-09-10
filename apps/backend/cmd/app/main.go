@@ -12,6 +12,7 @@ import (
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/config"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/characters"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
@@ -89,6 +90,8 @@ func main() {
 	// further down with the rest of the game feature) so it can be decorated
 	// alongside the other two catalogues below.
 	stageRepository := repositories.NewStageRepository(pool)
+	jojoCharacterRepository := repositories.NewJojoCharacterRepository(pool)
+	onePieceCharacterRepository := repositories.NewOnePieceCharacterRepository(pool)
 
 	// standRepo/devilFruitRepo/stageRepo/stageCatalog/pictures start as the
 	// undecorated adapters; all get wrapped with a Redis-backed cache below
@@ -102,6 +105,8 @@ func main() {
 	var devilFruitRepo ports.IDevilFruitRepository = devilFruitRepository
 	var stageRepo ports.IStageRepository = stageRepository
 	var stageCatalog ports.IStageCatalog = stageRepository
+	var jojoCharacterRepo ports.IJojoCharacterRepository = jojoCharacterRepository
+	var onePieceCharacterRepo ports.IOnePieceCharacterRepository = onePieceCharacterRepository
 	var pictures ports.IPictureStorage = pictureStorage
 
 	if cfg.CacheEnabled && cfg.RedisURL != "" {
@@ -128,16 +133,23 @@ func main() {
 		cachedStages := cache.NewStageRepository(stageRepository, redisCache, cfg.CacheStageTTL, cfg.CacheNotFoundTTL)
 		stageRepo = cachedStages
 		stageCatalog = cachedStages
+		// Characters reuse CacheStandTTL rather than a dedicated env var -
+		// same default freshness bound as every other admin-write catalogue,
+		// with no operational reason yet to tune it separately.
+		jojoCharacterRepo = cache.NewJojoCharacterRepository(jojoCharacterRepo, redisCache, cfg.CacheStandTTL, cfg.CacheNotFoundTTL)
+		onePieceCharacterRepo = cache.NewOnePieceCharacterRepository(onePieceCharacterRepo, redisCache, cfg.CacheStandTTL, cfg.CacheNotFoundTTL)
 	}
 
 	userRepository := repositories.NewUserRepository(pool)
 	var userRepo ports.IUserRepository = userRepository
 
 	pictureTargets := map[enums.PictureSubjectKind]services.PictureTarget{
-		enums.StandSubject:      {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
-		enums.DevilFruitSubject: {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
-		enums.UserSubject:       {Publisher: services.NewUserPicturePublisher(userRepo), KeyPrefix: "users"},
-		enums.StageSubject:      {Publisher: services.NewStagePicturePublisher(stageRepo), KeyPrefix: "stages"},
+		enums.StandSubject:             {Publisher: services.NewStandPicturePublisher(standRepo), KeyPrefix: "stands"},
+		enums.DevilFruitSubject:        {Publisher: services.NewDevilFruitPicturePublisher(devilFruitRepo), KeyPrefix: "devil-fruits"},
+		enums.UserSubject:              {Publisher: services.NewUserPicturePublisher(userRepo), KeyPrefix: "users"},
+		enums.StageSubject:             {Publisher: services.NewStagePicturePublisher(stageRepo), KeyPrefix: "stages"},
+		enums.JojoCharacterSubject:     {Publisher: services.NewJojoCharacterPicturePublisher(jojoCharacterRepo), KeyPrefix: "jojo-characters"},
+		enums.OnePieceCharacterSubject: {Publisher: services.NewOnePieceCharacterPicturePublisher(onePieceCharacterRepo), KeyPrefix: "one-piece-characters"},
 	}
 
 	// pictureHub fans out PENDING->READY/FAILED transitions to connected SSE
@@ -190,6 +202,16 @@ func main() {
 		imageProcessor, pictureWorker, picturePolicy)
 	devilFruitEndpoints := endpoints.NewDevilFruitEndpoints(devilFruitService)
 	devilFruitEndpoints.SetMediaURLBuilder(mediaURLs)
+
+	jojoCharacterService := services.NewJojoCharacterService(jojoCharacterRepo, idgen.UUIDGenerator[characters.CharacterID]{}, pictures,
+		imageProcessor, pictureWorker, picturePolicy)
+	jojoCharacterEndpoints := endpoints.NewJojoCharacterEndpoints(jojoCharacterService)
+	jojoCharacterEndpoints.SetMediaURLBuilder(mediaURLs)
+
+	onePieceCharacterService := services.NewOnePieceCharacterService(onePieceCharacterRepo, idgen.UUIDGenerator[characters.CharacterID]{}, pictures,
+		imageProcessor, pictureWorker, picturePolicy)
+	onePieceCharacterEndpoints := endpoints.NewOnePieceCharacterEndpoints(onePieceCharacterService)
+	onePieceCharacterEndpoints.SetMediaURLBuilder(mediaURLs)
 
 	googleVerifier := auth.NewGoogleVerifier(cfg.GoogleClientID)
 	tokenIssuer := auth.NewJWTIssuer([]byte(cfg.JWTSecret), cfg.JWTIssuer, cfg.JWTTTL)
@@ -379,7 +401,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, mediaEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg, cfg.HTTPCompressLevel),
+		Handler:           endpoints.NewRouter(authEndpoints, standEndpoints, devilFruitEndpoints, userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints, mediaEndpoints, jojoCharacterEndpoints, onePieceCharacterEndpoints, tokenIssuer, corsCfg, rateCfg, cacheCfg, cfg.HTTPCompressLevel),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -174,6 +174,14 @@ func errorCode(err error) string {
 		return apierr.ObjectNotFound
 	case errors.Is(err, errMediaSignatureInvalid):
 		return apierr.MediaSignatureInvalid
+	case errors.Is(err, ports.ErrJojoCharacterNotFound):
+		return apierr.JojoCharacterNotFound
+	case errors.Is(err, ports.ErrJojoCharacterAlreadyExists):
+		return apierr.JojoCharacterAlreadyExists
+	case errors.Is(err, ports.ErrOnePieceCharacterNotFound):
+		return apierr.OnePieceCharacterNotFound
+	case errors.Is(err, ports.ErrOnePieceCharacterAlreadyExists):
+		return apierr.OnePieceCharacterAlreadyExists
 	default:
 		return apierr.Internal
 	}

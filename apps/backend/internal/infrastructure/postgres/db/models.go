@@ -11,6 +11,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type FruitMastery string
+
+const (
+	FruitMasteryNONE     FruitMastery = "NONE"
+	FruitMasteryREGULAR  FruitMastery = "REGULAR"
+	FruitMasteryADVANCED FruitMastery = "ADVANCED"
+	FruitMasteryAWAKENED FruitMastery = "AWAKENED"
+)
+
+func (e *FruitMastery) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FruitMastery(s)
+	case string:
+		*e = FruitMastery(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FruitMastery: %T", src)
+	}
+	return nil
+}
+
+type NullFruitMastery struct {
+	FruitMastery FruitMastery
+	Valid        bool // Valid is true if FruitMastery is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFruitMastery) Scan(value interface{}) error {
+	if value == nil {
+		ns.FruitMastery, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FruitMastery.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFruitMastery) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FruitMastery), nil
+}
+
 type FruitType string
 
 const (
@@ -99,6 +143,95 @@ func (ns NullGameMode) Value() (driver.Value, error) {
 	return string(ns.GameMode), nil
 }
 
+type HakiLevel string
+
+const (
+	HakiLevelNONE           HakiLevel = "NONE"
+	HakiLevelPRIVATE        HakiLevel = "PRIVATE"
+	HakiLevelVICEADMIRAL    HakiLevel = "VICE_ADMIRAL"
+	HakiLevelYONKOCOMMANDER HakiLevel = "YONKO_COMMANDER"
+	HakiLevelYONKOPLUS      HakiLevel = "YONKO_PLUS"
+)
+
+func (e *HakiLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = HakiLevel(s)
+	case string:
+		*e = HakiLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for HakiLevel: %T", src)
+	}
+	return nil
+}
+
+type NullHakiLevel struct {
+	HakiLevel HakiLevel
+	Valid     bool // Valid is true if HakiLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullHakiLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.HakiLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.HakiLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullHakiLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.HakiLevel), nil
+}
+
+type HamonLevel string
+
+const (
+	HamonLevelNONE     HamonLevel = "NONE"
+	HamonLevelBASIC    HamonLevel = "BASIC"
+	HamonLevelADVANCED HamonLevel = "ADVANCED"
+	HamonLevelPERFECT  HamonLevel = "PERFECT"
+)
+
+func (e *HamonLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = HamonLevel(s)
+	case string:
+		*e = HamonLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for HamonLevel: %T", src)
+	}
+	return nil
+}
+
+type NullHamonLevel struct {
+	HamonLevel HamonLevel
+	Valid      bool // Valid is true if HamonLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullHamonLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.HamonLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.HamonLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullHamonLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.HamonLevel), nil
+}
+
 type Locale string
 
 const (
@@ -182,6 +315,52 @@ func (ns NullManga) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.Manga), nil
+}
+
+type PhysicalForm string
+
+const (
+	PhysicalFormPRIVATE        PhysicalForm = "PRIVATE"
+	PhysicalFormSTRONGFISHMAN  PhysicalForm = "STRONG_FISHMAN"
+	PhysicalFormMARINECAPTAIN  PhysicalForm = "MARINE_CAPTAIN"
+	PhysicalFormVICEADMIRAL    PhysicalForm = "VICE_ADMIRAL"
+	PhysicalFormYONKOCOMMANDER PhysicalForm = "YONKO_COMMANDER"
+	PhysicalFormYONKOPLUS      PhysicalForm = "YONKO_PLUS"
+)
+
+func (e *PhysicalForm) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PhysicalForm(s)
+	case string:
+		*e = PhysicalForm(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PhysicalForm: %T", src)
+	}
+	return nil
+}
+
+type NullPhysicalForm struct {
+	PhysicalForm PhysicalForm
+	Valid        bool // Valid is true if PhysicalForm is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPhysicalForm) Scan(value interface{}) error {
+	if value == nil {
+		ns.PhysicalForm, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PhysicalForm.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPhysicalForm) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PhysicalForm), nil
 }
 
 type PictureStatus string
@@ -315,6 +494,50 @@ func (ns NullPowerRarity) Value() (driver.Value, error) {
 	return string(ns.PowerRarity), nil
 }
 
+type SpinLevel string
+
+const (
+	SpinLevelNONE     SpinLevel = "NONE"
+	SpinLevelBASIC    SpinLevel = "BASIC"
+	SpinLevelGOLDEN   SpinLevel = "GOLDEN"
+	SpinLevelINFINITE SpinLevel = "INFINITE"
+)
+
+func (e *SpinLevel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SpinLevel(s)
+	case string:
+		*e = SpinLevel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SpinLevel: %T", src)
+	}
+	return nil
+}
+
+type NullSpinLevel struct {
+	SpinLevel SpinLevel
+	Valid     bool // Valid is true if SpinLevel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSpinLevel) Scan(value interface{}) error {
+	if value == nil {
+		ns.SpinLevel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SpinLevel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSpinLevel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SpinLevel), nil
+}
+
 type StandStat string
 
 const (
@@ -404,6 +627,27 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type Character struct {
+	ID             pgtype.UUID
+	Manga          string
+	Name           string
+	Rarity         string
+	Picture        string
+	PictureThumb   string
+	PictureCard    string
+	PictureLqip    string
+	PictureStatus  string
+	PictureMediaID string
+	CreatedAt      pgtype.Timestamptz
+	UpdatedAt      pgtype.Timestamptz
+}
+
+type CharacterTranslation struct {
+	CharacterID pgtype.UUID
+	Locale      string
+	Description string
+}
+
 type DevilFruit struct {
 	ID        pgtype.UUID
 	Kind      string
@@ -428,6 +672,14 @@ type GameResultParticipant struct {
 	IsBot         bool
 }
 
+type JojoCharacter struct {
+	ID       pgtype.UUID
+	Manga    string
+	Hamon    string
+	Spin     string
+	BattleIq int16
+}
+
 type MediaObject struct {
 	GroupID     string
 	Variant     string
@@ -436,6 +688,16 @@ type MediaObject struct {
 	Bytes       int64
 	Scope       string
 	CreatedAt   pgtype.Timestamptz
+}
+
+type OnePieceCharacter struct {
+	ID              pgtype.UUID
+	Manga           string
+	PhysicalForm    string
+	ArmamentHaki    string
+	ObservationHaki string
+	ConquerorHaki   string
+	FruitMastery    string
 }
 
 type Power struct {

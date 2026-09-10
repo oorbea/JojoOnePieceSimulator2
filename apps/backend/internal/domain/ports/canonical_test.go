@@ -22,6 +22,12 @@ func TestCanonical_FieldCount(t *testing.T) {
 	search := "star"
 	fruitType := enums.Paramecia
 	manga := enums.Jojo
+	hamon := enums.HamonBasic
+	spin := enums.SpinBasic
+	battleIQ := byte(130)
+	physicalForm := enums.PhysicalFormPrivate
+	hakiLevel := enums.HakiPrivate
+	fruitMastery := enums.FruitMasteryRegular
 
 	cases := []struct {
 		name      string
@@ -46,6 +52,21 @@ func TestCanonical_FieldCount(t *testing.T) {
 			name:      "StageFilters",
 			filters:   StageFilters{Manga: &manga, Search: &search},
 			numFields: reflect.TypeOf(StageFilters{}).NumField(),
+		},
+		{
+			name: "JojoCharacterFilters",
+			filters: JojoCharacterFilters{
+				Rarity: &rarity, Hamon: &hamon, Spin: &spin, BattleIQ: &battleIQ, Search: &search,
+			},
+			numFields: reflect.TypeOf(JojoCharacterFilters{}).NumField(),
+		},
+		{
+			name: "OnePieceCharacterFilters",
+			filters: OnePieceCharacterFilters{
+				Rarity: &rarity, PhysicalForm: &physicalForm, ArmamentHaki: &hakiLevel,
+				ObservationHaki: &hakiLevel, ConquerorHaki: &hakiLevel, FruitMastery: &fruitMastery, Search: &search,
+			},
+			numFields: reflect.TypeOf(OnePieceCharacterFilters{}).NumField(),
 		},
 	}
 
@@ -88,5 +109,21 @@ func TestCanonical_DiffersPerField(t *testing.T) {
 	changedStage := StageFilters{Manga: &mangaB}
 	if baseStage.Canonical() == changedStage.Canonical() {
 		t.Error("StageFilters.Canonical() unchanged after changing Manga")
+	}
+
+	iqA := byte(130)
+	iqB := byte(200)
+	baseJojo := JojoCharacterFilters{BattleIQ: &iqA}
+	changedJojo := JojoCharacterFilters{BattleIQ: &iqB}
+	if baseJojo.Canonical() == changedJojo.Canonical() {
+		t.Error("JojoCharacterFilters.Canonical() unchanged after changing BattleIQ")
+	}
+
+	formA := enums.PhysicalFormPrivate
+	formB := enums.PhysicalFormYonkoPlus
+	baseOnePiece := OnePieceCharacterFilters{PhysicalForm: &formA}
+	changedOnePiece := OnePieceCharacterFilters{PhysicalForm: &formB}
+	if baseOnePiece.Canonical() == changedOnePiece.Canonical() {
+		t.Error("OnePieceCharacterFilters.Canonical() unchanged after changing PhysicalForm")
 	}
 }
