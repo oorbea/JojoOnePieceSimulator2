@@ -12,6 +12,21 @@ export const adminUpdateUserRequestSchema = z.object({
 })
 export type AdminUpdateUserRequest = z.infer<typeof adminUpdateUserRequestSchema>
 
+export const characterTranslationRequestSchema = z.object({
+  description: z.string(),
+})
+export type CharacterTranslationRequest = z.infer<typeof characterTranslationRequestSchema>
+
+export const characterTranslationResponseSchema = z.object({
+  description: z.string(),
+})
+export type CharacterTranslationResponse = z.infer<typeof characterTranslationResponseSchema>
+
+export const characterTranslationsResponseSchema = z.object({
+  translations: z.partialRecord(localeSchema, characterTranslationResponseSchema),
+})
+export type CharacterTranslationsResponse = z.infer<typeof characterTranslationsResponseSchema>
+
 export const devilFruitResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -91,6 +106,39 @@ export const joinGameRequestSchema = z.object({
 })
 export type JoinGameRequest = z.infer<typeof joinGameRequestSchema>
 
+export const jojoCharacterRequestSchema = z.object({
+  name: z.string(),
+  translations: z.partialRecord(localeSchema, characterTranslationRequestSchema),
+  rarity: powerRaritySchema,
+  hamon: hamonLevelSchema,
+  spin: spinLevelSchema,
+  battleIq: z.number().int(),
+})
+export type JojoCharacterRequest = z.infer<typeof jojoCharacterRequestSchema>
+
+export const jojoCharacterResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  rarity: powerRaritySchema,
+  picture: z.string(),
+  pictureThumb: z.string(),
+  pictureCard: z.string(),
+  pictureStatus: pictureStatusSchema,
+  pictureLqip: z.string(),
+  hamon: hamonLevelSchema,
+  spin: spinLevelSchema,
+  battleIq: z.number().int(),
+})
+export type JojoCharacterResponse = z.infer<typeof jojoCharacterResponseSchema>
+
+export const jojoCharacterPageResponseSchema = z.object({
+  nextCursor: z.string().optional(),
+  total: z.number().int().optional(),
+  items: z.array(jojoCharacterResponseSchema),
+})
+export type JojoCharacterPageResponse = z.infer<typeof jojoCharacterPageResponseSchema>
+
 export const lobbyPreviewResponseSchema = z.object({
   gameId: z.string(),
   mode: gameModeKindSchema,
@@ -106,6 +154,43 @@ export const lobbyPreviewResponseSchema = z.object({
   visibility: lobbyVisibilitySchema,
 })
 export type LobbyPreviewResponse = z.infer<typeof lobbyPreviewResponseSchema>
+
+export const onePieceCharacterRequestSchema = z.object({
+  name: z.string(),
+  translations: z.partialRecord(localeSchema, characterTranslationRequestSchema),
+  rarity: powerRaritySchema,
+  physicalForm: physicalFormSchema,
+  armamentHaki: hakiLevelSchema,
+  observationHaki: hakiLevelSchema,
+  conquerorHaki: hakiLevelSchema,
+  fruitMastery: fruitMasterySchema,
+})
+export type OnePieceCharacterRequest = z.infer<typeof onePieceCharacterRequestSchema>
+
+export const onePieceCharacterResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  rarity: powerRaritySchema,
+  picture: z.string(),
+  pictureThumb: z.string(),
+  pictureCard: z.string(),
+  pictureStatus: pictureStatusSchema,
+  pictureLqip: z.string(),
+  physicalForm: physicalFormSchema,
+  armamentHaki: hakiLevelSchema,
+  observationHaki: hakiLevelSchema,
+  conquerorHaki: hakiLevelSchema,
+  fruitMastery: fruitMasterySchema,
+})
+export type OnePieceCharacterResponse = z.infer<typeof onePieceCharacterResponseSchema>
+
+export const onePieceCharacterPageResponseSchema = z.object({
+  nextCursor: z.string().optional(),
+  total: z.number().int().optional(),
+  items: z.array(onePieceCharacterResponseSchema),
+})
+export type OnePieceCharacterPageResponse = z.infer<typeof onePieceCharacterPageResponseSchema>
 
 export const participantOutcomeResponseSchema = z.object({
   participantId: z.string(),

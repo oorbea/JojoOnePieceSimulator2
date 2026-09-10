@@ -29,12 +29,21 @@ var restTypes = []any{
 	dto.StageRequest{},
 	dto.StageResponse{},
 	dto.StagePageResponse{},
+	dto.JojoCharacterRequest{},
+	dto.JojoCharacterResponse{},
+	dto.JojoCharacterPageResponse{},
+	dto.OnePieceCharacterRequest{},
+	dto.OnePieceCharacterResponse{},
+	dto.OnePieceCharacterPageResponse{},
 	dto.TranslationRequest{},
 	dto.StageTranslationRequest{},
+	dto.CharacterTranslationRequest{},
 	dto.TranslationResponse{},
 	dto.PowerTranslationsResponse{},
 	dto.StageTranslationResponse{},
 	dto.StageTranslationsResponse{},
+	dto.CharacterTranslationResponse{},
+	dto.CharacterTranslationsResponse{},
 	dto.CreateGameRequest{},
 	dto.JoinGameRequest{},
 	dto.GameConfigResponse{},
@@ -121,10 +130,12 @@ var nonWireTypeNames = map[string]bool{
 	// object - see StandPageResponse's doc. StandCursor is never a wire
 	// type either: it only ever exists opaque, base64-encoded inside a
 	// cursor string (dto.EncodeCursor/DecodeCursor), never as JSON.
-	"PageInfo":         true,
-	"StandCursor":      true,
-	"DevilFruitCursor": true,
-	"StageCursor":      true,
+	"PageInfo":                true,
+	"StandCursor":             true,
+	"DevilFruitCursor":        true,
+	"StageCursor":             true,
+	"JojoCharacterCursor":     true,
+	"OnePieceCharacterCursor": true,
 	// PageParams is a server-side query-param parse result
 	// (dto.PageParamsFromQuery), never serialized in either direction.
 	"PageParams": true,

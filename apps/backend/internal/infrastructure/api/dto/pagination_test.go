@@ -130,3 +130,48 @@ func TestStandFiltersFingerprint_SameFiltersDifferentOrder_SameFingerprint(t *te
 		t.Error("fingerprint must not depend on the order filter fields were set in Go, only their values")
 	}
 }
+
+// TestJojoCharacterFiltersFingerprint_DiffersAcrossFilterSets - see
+// TestStandFiltersFingerprint_DiffersAcrossFilterSets's doc.
+func TestJojoCharacterFiltersFingerprint_DiffersAcrossFilterSets(t *testing.T) {
+	hamon := enums.HamonAdvanced
+	unfiltered := JojoCharacterFiltersFingerprint(ports.JojoCharacterFilters{}, enums.EnGB)
+	filtered := JojoCharacterFiltersFingerprint(ports.JojoCharacterFilters{Hamon: &hamon}, enums.EnGB)
+	if unfiltered == filtered {
+		t.Error("fingerprint must differ between an unfiltered and a filtered request")
+	}
+
+	encoded := EncodeCursor(JojoCharacterCursor{Name: "A"}, unfiltered)
+	if _, err := DecodeCursor[JojoCharacterCursor](encoded, filtered); err == nil {
+		t.Error("a cursor issued unfiltered must be rejected when replayed against a filtered request")
+	}
+}
+
+// TestOnePieceCharacterFiltersFingerprint_DiffersAcrossFilterSets - see
+// TestStandFiltersFingerprint_DiffersAcrossFilterSets's doc.
+func TestOnePieceCharacterFiltersFingerprint_DiffersAcrossFilterSets(t *testing.T) {
+	mastery := enums.FruitMasteryAdvanced
+	unfiltered := OnePieceCharacterFiltersFingerprint(ports.OnePieceCharacterFilters{}, enums.EnGB)
+	filtered := OnePieceCharacterFiltersFingerprint(ports.OnePieceCharacterFilters{FruitMastery: &mastery}, enums.EnGB)
+	if unfiltered == filtered {
+		t.Error("fingerprint must differ between an unfiltered and a filtered request")
+	}
+
+	encoded := EncodeCursor(OnePieceCharacterCursor{Name: "A"}, unfiltered)
+	if _, err := DecodeCursor[OnePieceCharacterCursor](encoded, filtered); err == nil {
+		t.Error("a cursor issued unfiltered must be rejected when replayed against a filtered request")
+	}
+}
+
+// TestCharacterFiltersFingerprint_DifferentKindsDoNotCollide proves the two
+// kinds' fingerprints are namespaced separately: a JoJo cursor must never
+// decode successfully against a One Piece fingerprint even when both sides
+// happen to have no filters set (the only field distinguishing the two
+// FiltersFingerprint funcs then would otherwise be silent).
+func TestCharacterFiltersFingerprint_DifferentKindsDoNotCollide(t *testing.T) {
+	jojoFp := JojoCharacterFiltersFingerprint(ports.JojoCharacterFilters{}, enums.EnGB)
+	opFp := OnePieceCharacterFiltersFingerprint(ports.OnePieceCharacterFilters{}, enums.EnGB)
+	if jojoFp == opFp {
+		t.Error("JojoCharacterFiltersFingerprint and OnePieceCharacterFiltersFingerprint must not collide when both are unfiltered")
+	}
+}

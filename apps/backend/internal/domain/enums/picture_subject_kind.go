@@ -15,6 +15,12 @@ const (
 	DevilFruitSubject
 	UserSubject
 	StageSubject
+	// JojoCharacterSubject/OnePieceCharacterSubject are appended here, not
+	// inserted among the existing members - see registry.go's
+	// WireEnums doc on why member order must never change once wired
+	// through a contract.
+	JojoCharacterSubject
+	OnePieceCharacterSubject
 )
 
 func (k PictureSubjectKind) String() string {
@@ -27,6 +33,10 @@ func (k PictureSubjectKind) String() string {
 		return "USER"
 	case StageSubject:
 		return "STAGE"
+	case JojoCharacterSubject:
+		return "JOJO_CHARACTER"
+	case OnePieceCharacterSubject:
+		return "ONE_PIECE_CHARACTER"
 	default:
 		return "UNKNOWN"
 	}
@@ -36,7 +46,7 @@ var ErrInvalidPictureSubjectKind = errors.New("invalid picture subject kind")
 
 func (k PictureSubjectKind) IsValid() bool {
 	switch k {
-	case StandSubject, DevilFruitSubject, UserSubject, StageSubject:
+	case StandSubject, DevilFruitSubject, UserSubject, StageSubject, JojoCharacterSubject, OnePieceCharacterSubject:
 		return true
 	default:
 		return false

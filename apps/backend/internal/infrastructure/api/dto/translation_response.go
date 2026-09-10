@@ -48,3 +48,26 @@ func NewStageTranslationsResponse(t ports.StageTranslations) StageTranslationsRe
 	}
 	return StageTranslationsResponse{Translations: out}
 }
+
+// CharacterTranslationResponse mirrors CharacterTranslationRequest, for
+// reading back every locale's description in an admin edit form - same
+// shape as StageTranslationResponse.
+type CharacterTranslationResponse struct {
+	Description string `json:"description"`
+}
+
+// CharacterTranslationsResponse is the body of the admin-only
+// GET /jojo-characters/{id}/translations and
+// GET /one-piece-characters/{id}/translations routes: every locale's
+// description for one Character, keyed by locale string.
+type CharacterTranslationsResponse struct {
+	Translations map[string]CharacterTranslationResponse `json:"translations" ts:"map[Locale]"`
+}
+
+func NewCharacterTranslationsResponse(t ports.CharacterTranslations) CharacterTranslationsResponse {
+	out := make(map[string]CharacterTranslationResponse, len(t))
+	for locale, description := range t {
+		out[locale.String()] = CharacterTranslationResponse{Description: description}
+	}
+	return CharacterTranslationsResponse{Translations: out}
+}
