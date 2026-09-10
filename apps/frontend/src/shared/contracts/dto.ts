@@ -305,6 +305,7 @@ export const gameLoadoutResponseSchema = z.object({
   observationHaki: hakiLevelSchema,
   conquerorHaki: hakiLevelSchema,
   physicalForm: physicalFormSchema,
+  battleIQ: z.number().int().optional(),
 })
 export type GameLoadoutResponse = z.infer<typeof gameLoadoutResponseSchema>
 
