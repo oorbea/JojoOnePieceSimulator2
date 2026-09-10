@@ -53,10 +53,14 @@ func buildLoadoutTestGame(t *testing.T) (*game.Game, *powers.Stand) {
 	if err != nil {
 		t.Fatalf("NewStand: %v", err)
 	}
-	loadout, err := game.NewLoadout(stand, nil, enums.SpinInfinite, enums.HamonPerfect, enums.FruitMasteryNone,
-		enums.HakiPrivate, enums.HakiPrivate, enums.HakiPrivate, enums.PhysicalFormPrivate)
+	loadout, err := game.NewLoadoutFromSpec(game.LoadoutSpec{
+		Stand: stand, Spin: enums.SpinInfinite, Hamon: enums.HamonPerfect, FruitMastery: enums.FruitMasteryNone,
+		ArmamentHaki: enums.HakiPrivate, ObservationHaki: enums.HakiPrivate, ConquerorHaki: enums.HakiPrivate,
+		PhysicalForm: enums.PhysicalFormPrivate,
+		BattleIQ:     game.NewBattleIQ(147),
+	})
 	if err != nil {
-		t.Fatalf("NewLoadout: %v", err)
+		t.Fatalf("NewLoadoutFromSpec: %v", err)
 	}
 	host.AssignLoadout(loadout)
 
@@ -310,6 +314,33 @@ func TestNewGameStateResponse_LoadoutStandText_PerViewerLocale(t *testing.T) {
 	// the domain Stand (frozen at draw time) already carries.
 	if esStand.Name != "Star Platinum" || caStand.Name != "Star Platinum" {
 		t.Errorf("Stand name changed across locales: es=%q ca=%q", esStand.Name, caStand.Name)
+	}
+}
+
+// TestNewGameLoadoutResponse_BattleIQ pins that a present BattleIQ is
+// exposed as a plain *int (only the number, never a WAIS-IV category label
+// - the frontend derives that itself), and that an absent BattleIQ leaves
+// the field nil entirely rather than surfacing a misleading 0.
+func TestNewGameLoadoutResponse_BattleIQ(t *testing.T) {
+	g, _ := buildLoadoutTestGame(t)
+	host := g.Participants()[0]
+	noFruitText := func(_ context.Context, _ powers.PowerID) (ports.PowerContent, error) {
+		return ports.PowerContent{}, nil
+	}
+
+	resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
+		noPictures, noPictures, noPictures, noPictures,
+		dto.MediaURLBuilder{},
+		noStageText, noFruitText, noFruitText, dto.GameStateDeadlines{})
+	if err != nil {
+		t.Fatalf("NewGameStateResponse: %v", err)
+	}
+	loadout := resp.Game.Participants[0].Loadout
+	if loadout == nil || loadout.BattleIQ == nil {
+		t.Fatal("expected a present battleIQ")
+	}
+	if *loadout.BattleIQ != 147 {
+		t.Errorf("battleIQ = %d, want 147", *loadout.BattleIQ)
 	}
 }
 

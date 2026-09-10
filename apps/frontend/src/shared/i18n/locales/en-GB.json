@@ -357,7 +357,8 @@
         "conquerorHaki": "Conqueror's Haki",
         "physicalForm": "Physical Form",
         "stand": "Stand",
-        "devilFruit": "Devil Fruit"
+        "devilFruit": "Devil Fruit",
+        "battleIQ": "Battle IQ"
       },
       "hakiType": {
         "armament": "Armament",
@@ -412,6 +413,10 @@
           "hakiMastery": {
             "before": "And your mastery of {{type}} is:",
             "after": "{{name}}, your mastery of {{type}} is {{value}}"
+          },
+          "battleIQ": {
+            "before": "One last thing - just how sharp are you?",
+            "after": "{{name}}, your battle IQ is {{value}}"
           }
         }
       },
@@ -633,6 +638,15 @@
     "abilitySource": {
       "RANDOM": "Random",
       "INVENTORY": "Inventory"
+    },
+    "battleIQCategory": {
+      "EXTREMELY_LOW": "Extremely low",
+      "BORDERLINE": "Borderline",
+      "LOW_AVERAGE": "Low average",
+      "AVERAGE": "Average",
+      "HIGH_AVERAGE": "High average",
+      "SUPERIOR": "Superior",
+      "VERY_SUPERIOR": "Very superior"
     },
     "participantKind": {
       "HUMAN": "Player",

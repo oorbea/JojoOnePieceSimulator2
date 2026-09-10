@@ -66,10 +66,17 @@ func buildTestGame(t *testing.T) *game.Game {
 		t.Fatalf("NewStand(child): %v", err)
 	}
 
-	loadout, err := game.NewLoadout(stand, nil, enums.SpinInfinite, enums.HamonPerfect, enums.FruitMasteryNone,
-		enums.HakiPrivate, enums.HakiPrivate, enums.HakiPrivate, enums.PhysicalFormPrivate)
+	// BattleIQ=0 deliberately, not some other value: 0 is the value most at
+	// risk of being conflated with "absent" by an accidental omitempty on
+	// a non-pointer field - see wireLoadout.BattleIQ's doc comment.
+	loadout, err := game.NewLoadoutFromSpec(game.LoadoutSpec{
+		Stand: stand, Spin: enums.SpinInfinite, Hamon: enums.HamonPerfect, FruitMastery: enums.FruitMasteryNone,
+		ArmamentHaki: enums.HakiPrivate, ObservationHaki: enums.HakiPrivate, ConquerorHaki: enums.HakiPrivate,
+		PhysicalForm: enums.PhysicalFormPrivate,
+		BattleIQ:     game.NewBattleIQ(0),
+	})
 	if err != nil {
-		t.Fatalf("NewLoadout: %v", err)
+		t.Fatalf("NewLoadoutFromSpec: %v", err)
 	}
 	host.AssignLoadout(loadout)
 
@@ -122,6 +129,16 @@ func TestEncodeDecodeRoundTrip(t *testing.T) {
 	}
 	if restored.Config().SummaryDurationSeconds() != 90 {
 		t.Errorf("summaryDurationSeconds lost across decode: got %v, want 90", restored.Config().SummaryDurationSeconds())
+	}
+	// Regression guard for the exact TiedVotes-class bug (see
+	// TestEncodeDecodeRoundTrip_TiedVotes's doc comment): battleIQ must
+	// survive the wire round trip, and a present 0 must come back
+	// present, not absent.
+	if !loadout.BattleIQ().Present() {
+		t.Fatalf("battleIQ lost across decode: got absent, want present with value 0")
+	}
+	if loadout.BattleIQ().Value() != 0 {
+		t.Errorf("battleIQ value mismatch: got %d, want 0", loadout.BattleIQ().Value())
 	}
 }
 

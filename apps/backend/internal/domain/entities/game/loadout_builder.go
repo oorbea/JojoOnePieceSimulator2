@@ -1,6 +1,8 @@
 package game
 
 import (
+	"math"
+
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 )
@@ -16,18 +18,19 @@ var physicalFormLevels = []enums.PhysicalForm{
 
 // LoadoutBuilder is the Template Method that assembles a Loadout for one
 // participant. Which abilities get drawn at all is fixed by the mangas in
-// play (JoJo draws Stand/Spin/Hamon, One Piece draws PhysicalForm/DevilFruit/
-// FruitMastery/the three Hakis), always in this fixed step order regardless
-// of manga - each step is simply skipped when its manga isn't selected:
-// PhysicalForm -> Stand -> DevilFruit -> FruitMastery -> Hamon -> Haki (set,
-// then a mastery per haki present) -> Spin. DevilFruit is drawn before its
-// FruitMastery, since the latter depends on the former; the RequiresSpin4
-// override runs after Spin is drawn, last of all. The concrete draws are
-// weighted random picks (RandomSource + AssignmentWeights) except Stand and
-// DevilFruit, which are uniform over the pool - see AssignmentWeights' doc
-// comment for why. The hard invariants (fruit<->mastery coupling,
-// RequiresSpin4) are re-checked by NewLoadout at the very end regardless of
-// what the weighted draws produced.
+// play (JoJo draws Stand/Spin/Hamon/BattleIQ, One Piece draws PhysicalForm/
+// DevilFruit/FruitMastery/the three Hakis), always in this fixed step order
+// regardless of manga - each step is simply skipped when its manga isn't
+// selected: PhysicalForm -> Stand -> DevilFruit -> FruitMastery -> Hamon ->
+// Haki (set, then a mastery per haki present) -> Spin -> BattleIQ. DevilFruit
+// is drawn before its FruitMastery, since the latter depends on the former;
+// the RequiresSpin4 override runs after Spin is drawn, before BattleIQ,
+// which is always the last draw. The concrete draws are weighted random
+// picks (RandomSource + AssignmentWeights) except Stand and DevilFruit,
+// which are uniform over the pool - see AssignmentWeights' doc comment for
+// why. The hard invariants (fruit<->mastery coupling, RequiresSpin4) are
+// re-checked by NewLoadout at the very end regardless of what the weighted
+// draws produced.
 type LoadoutBuilder struct {
 	mangas  map[enums.Manga]struct{}
 	weights AssignmentWeights
@@ -107,7 +110,23 @@ func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 		spin = enums.SpinInfinite
 	}
 
-	return NewLoadout(stand, devilFruit, spin, hamon, fruitMastery, armamentHaki, observationHaki, conquerorHaki, physicalForm)
+	battleIQ := NoBattleIQ()
+	if b.hasManga(enums.Jojo) {
+		battleIQ = b.drawBattleIQ()
+	}
+
+	return NewLoadoutFromSpec(LoadoutSpec{
+		Stand:           stand,
+		DevilFruit:      devilFruit,
+		Spin:            spin,
+		Hamon:           hamon,
+		FruitMastery:    fruitMastery,
+		ArmamentHaki:    armamentHaki,
+		ObservationHaki: observationHaki,
+		ConquerorHaki:   conquerorHaki,
+		PhysicalForm:    physicalForm,
+		BattleIQ:        battleIQ,
+	})
 }
 
 // drawStand picks uniformly among "no stand" and every Stand in the pool -
@@ -201,4 +220,48 @@ func (b *LoadoutBuilder) drawPhysicalForm() enums.PhysicalForm {
 		weights[i] = b.weights.PhysicalFormWeights[l]
 	}
 	return physicalFormLevels[weightedPick(b.rng, weights)]
+}
+
+// battleIQVerySuperiorWeights holds one weight per value in
+// BattleIQVerySuperior's range (130-255), following an exponential decay
+// with a 30-point half-life: weight(x) = 0.5^((x-130)/30). A 255 is
+// therefore ~1/25th as likely as a 130 within this band, so a random
+// "very superior" score clusters around 155-165 rather than averaging out
+// near the middle of the 130-255 range - see
+// ObsidianVault/gameplay-versus-inventory-characters.md for why a uniform
+// pick over the full band would produce implausibly high average scores.
+// Computed once at package init; every other band's internal draw is
+// uniform (they are narrow enough that a decay curve isn't warranted).
+var battleIQVerySuperiorWeights = computeBattleIQVerySuperiorWeights()
+
+func computeBattleIQVerySuperiorWeights() []int {
+	const scale = 10000.0
+	lo, hi := BattleIQVerySuperior.Range()
+	weights := make([]int, int(hi-lo)+1)
+	for i := range weights {
+		w := int(math.Round(scale * math.Pow(0.5, float64(i)/30)))
+		if w < 1 {
+			w = 1
+		}
+		weights[i] = w
+	}
+	return weights
+}
+
+// drawBattleIQ picks a WAIS-IV band by weight, then a value within that
+// band. Every band except BattleIQVerySuperior draws uniformly across its
+// (narrow) range; BattleIQVerySuperior instead consults
+// battleIQVerySuperiorWeights so very high rolls stay rare within the band
+// too, not just relative to the other six bands.
+func (b *LoadoutBuilder) drawBattleIQ() BattleIQ {
+	weights := make([]int, len(battleIQBands))
+	for i, band := range battleIQBands {
+		weights[i] = b.weights.BattleIQBandWeights[band]
+	}
+	band := battleIQBands[weightedPick(b.rng, weights)]
+	lo, hi := band.Range()
+	if band == BattleIQVerySuperior {
+		return NewBattleIQ(lo + byte(weightedPick(b.rng, battleIQVerySuperiorWeights)))
+	}
+	return NewBattleIQ(lo + byte(b.rng.IntN(int(hi-lo)+1)))
 }
