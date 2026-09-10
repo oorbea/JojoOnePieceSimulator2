@@ -634,6 +634,15 @@
       "RANDOM": "Aleatorio",
       "INVENTORY": "Inventario"
     },
+    "battleIQCategory": {
+      "EXTREMELY_LOW": "Extremadamente bajo",
+      "BORDERLINE": "Límite",
+      "LOW_AVERAGE": "Medio bajo",
+      "AVERAGE": "Medio",
+      "HIGH_AVERAGE": "Medio alto",
+      "SUPERIOR": "Superior",
+      "VERY_SUPERIOR": "Muy superior"
+    },
     "participantKind": {
       "HUMAN": "Jugador",
       "BOT": "Bot"
