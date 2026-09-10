@@ -73,3 +73,25 @@ func (b BattleIQ) Band() BattleIQBand {
 		return BattleIQVerySuperior
 	}
 }
+
+// Range returns the inclusive [lo, hi] byte range this band covers,
+// mirroring Band()'s thresholds exactly - the one place LoadoutBuilder
+// consults to know which values a drawn band may produce.
+func (band BattleIQBand) Range() (lo, hi byte) {
+	switch band {
+	case BattleIQExtremelyLow:
+		return 0, 69
+	case BattleIQBorderline:
+		return 70, 79
+	case BattleIQLowAverage:
+		return 80, 89
+	case BattleIQAverage:
+		return 90, 109
+	case BattleIQHighAverage:
+		return 110, 119
+	case BattleIQSuperior:
+		return 120, 129
+	default: // BattleIQVerySuperior
+		return 130, 255
+	}
+}
