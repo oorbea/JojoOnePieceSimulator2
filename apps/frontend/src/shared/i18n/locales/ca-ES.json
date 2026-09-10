@@ -197,6 +197,7 @@
     "description": "Descripció",
     "searchPlaceholder": "Cerca per nom o descripció…",
     "filterManga": "Filtra per manga",
+    "filterMangaAll": "Tots els mangues",
     "pickMangaFirst": "Tria un manga per saber quines estadístiques té aquest personatge.",
     "battleIqHint": "Battle IQ és una estadística exclusiva de JoJo (0-255), mesurada amb la mateixa escala que un test de QI real - la majoria de personatges s'agrupen al voltant de 100, i només uns quants queden molt per sobre o per sota.",
     "previewA11y": "Veure la foto de {{name}} a pantalla completa",
@@ -212,9 +213,9 @@
       "spin": "Spin",
       "battleIq": "Battle IQ",
       "physicalForm": "Forma física",
-      "armamentHaki": "Haki de l'Armament",
-      "observationHaki": "Haki de l'Observació",
-      "conquerorHaki": "Haki dels Reis",
+      "armamentHaki": "Haki d'Armadura",
+      "observationHaki": "Haki d'Observació",
+      "conquerorHaki": "Haki del Rei",
       "fruitMastery": "Domini de la fruita"
     }
   },
