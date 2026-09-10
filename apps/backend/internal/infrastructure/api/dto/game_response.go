@@ -84,6 +84,11 @@ type GameLoadoutResponse struct {
 	ObservationHaki string              `json:"observationHaki" ts:"HakiLevel"`
 	ConquerorHaki   string              `json:"conquerorHaki" ts:"HakiLevel"`
 	PhysicalForm    string              `json:"physicalForm" ts:"PhysicalForm"`
+	// BattleIQ is the raw 0-255 score, omitted entirely when absent (no
+	// JoJo manga in the lobby). The WAIS-IV category label is deliberately
+	// not sent over the wire - the frontend derives it from the number,
+	// the same way it already derives the haki set summary.
+	BattleIQ *int `json:"battleIQ,omitempty"`
 }
 
 // GameParticipantResponse mirrors game.Participant. AvatarThumb is resolved
@@ -532,6 +537,10 @@ func newGameLoadoutResponse(
 		fr.Description = content.Description
 		fr.Skills = nonNilSkills(content.Skills)
 		lr.DevilFruit = &fr
+	}
+	if b := l.BattleIQ(); b.Present() {
+		v := int(b.Value())
+		lr.BattleIQ = &v
 	}
 	return lr, nil
 }

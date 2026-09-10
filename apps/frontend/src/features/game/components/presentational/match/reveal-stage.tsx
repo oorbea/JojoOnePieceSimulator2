@@ -22,6 +22,12 @@ import { useStands } from '@/features/stands'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { formatBattleIQ } from '@/shared/lib/battle-iq'
+
+// One representative score per WAIS-IV band, purely cosmetic decoys for the
+// battleIQ roulette to spin through before landing on the real score -
+// mirrors SCALAR_VALUES' role for the enum-backed scalar slots above.
+const BATTLE_IQ_CANDIDATE_SCORES = [55, 75, 85, 100, 115, 125, 150]
 
 type Props = {
   snapshot: GameSnapshot
@@ -333,6 +339,14 @@ function slotFor(
     const present = HAKI_TYPES.filter((h) => (loadout as unknown as Record<string, string>)[h.field] !== 'NONE')
     const finalLabel = present.length === 0 ? t('game.match.hakiType.none') : present.map((h) => t(h.i18nKey)).join(', ')
     return { candidates: hakiSetCombos(t), finalLabel }
+  }
+
+  if (slotKind === 'battleIQ') {
+    const score = loadout.battleIQ
+    return {
+      candidates: BATTLE_IQ_CANDIDATE_SCORES.map((s) => formatBattleIQ(t, s) ?? ''),
+      finalLabel: formatBattleIQ(t, score) ?? '',
+    }
   }
 
   const namespace = SCALAR_NAMESPACE[slotKind]

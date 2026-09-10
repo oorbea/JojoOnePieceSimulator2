@@ -155,6 +155,10 @@ type LoadoutSnapshot struct {
 	ObservationHaki string
 	ConquerorHaki   string
 	PhysicalForm    string
+	// BattleIQ is nil when absent (no JoJo manga in the lobby). A present
+	// score of 0 is legitimate, so this must never collapse nil and 0 -
+	// see BattleIQ's own doc comment.
+	BattleIQ *byte
 }
 
 // Snapshot captures g's complete state for out-of-process persistence. See
@@ -266,7 +270,7 @@ func snapshotBallot(b *Ballot) BallotSnapshot {
 }
 
 func snapshotLoadout(l *Loadout) LoadoutSnapshot {
-	return LoadoutSnapshot{
+	ls := LoadoutSnapshot{
 		Stand:           l.stand,
 		DevilFruit:      l.devilFruit,
 		Spin:            l.spin.String(),
@@ -277,6 +281,11 @@ func snapshotLoadout(l *Loadout) LoadoutSnapshot {
 		ConquerorHaki:   l.conquerorHaki.String(),
 		PhysicalForm:    l.physicalForm.String(),
 	}
+	if l.battleIQ.Present() {
+		v := l.battleIQ.Value()
+		ls.BattleIQ = &v
+	}
+	return ls
 }
 
 func mangaStrings(mangas []enums.Manga) []string {
@@ -628,10 +637,20 @@ func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewLoadout(
-		ls.Stand, ls.DevilFruit,
-		spin, hamon, fruitMastery,
-		armamentHaki, observationHaki, conquerorHaki,
-		physicalForm,
-	)
+	battleIQ := NoBattleIQ()
+	if ls.BattleIQ != nil {
+		battleIQ = NewBattleIQ(*ls.BattleIQ)
+	}
+	return NewLoadoutFromSpec(LoadoutSpec{
+		Stand:           ls.Stand,
+		DevilFruit:      ls.DevilFruit,
+		Spin:            spin,
+		Hamon:           hamon,
+		FruitMastery:    fruitMastery,
+		ArmamentHaki:    armamentHaki,
+		ObservationHaki: observationHaki,
+		ConquerorHaki:   conquerorHaki,
+		PhysicalForm:    physicalForm,
+		BattleIQ:        battleIQ,
+	})
 }

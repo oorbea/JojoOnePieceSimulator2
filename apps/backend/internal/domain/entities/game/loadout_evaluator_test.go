@@ -41,3 +41,47 @@ func TestDefaultLoadoutEvaluator_RarityBonus(t *testing.T) {
 		}
 	}
 }
+
+// TestDefaultLoadoutEvaluator_BattleIQScore pins the WAIS-IV band -> 0..6
+// score mapping - moderate and sublinear, never the raw 0-255 value (a 255
+// would otherwise be ~5x the rest of the score combined).
+func TestDefaultLoadoutEvaluator_BattleIQScore(t *testing.T) {
+	eval := game.DefaultLoadoutEvaluator{}
+
+	baseline, err := game.NewLoadout(nil, nil, enums.SpinNone, enums.HamonNone, enums.FruitMasteryNone, enums.HakiPrivate, enums.HakiPrivate, enums.HakiPrivate, enums.PhysicalFormPrivate)
+	if err != nil {
+		t.Fatalf("NewLoadout(baseline): %v", err)
+	}
+	if baseline.BattleIQ().Present() {
+		t.Fatalf("NewLoadout should leave BattleIQ absent")
+	}
+	baseScore := eval.Score(baseline)
+
+	cases := []struct {
+		value byte
+		want  int
+	}{
+		{0, 0},   // ExtremelyLow
+		{75, 1},  // Borderline
+		{85, 2},  // LowAverage
+		{100, 3}, // Average
+		{115, 4}, // HighAverage
+		{125, 5}, // Superior
+		{255, 6}, // VerySuperior - the extreme, still capped at 6
+	}
+	for _, tc := range cases {
+		l, err := game.NewLoadoutFromSpec(game.LoadoutSpec{
+			Spin: enums.SpinNone, Hamon: enums.HamonNone, FruitMastery: enums.FruitMasteryNone,
+			ArmamentHaki: enums.HakiPrivate, ObservationHaki: enums.HakiPrivate, ConquerorHaki: enums.HakiPrivate,
+			PhysicalForm: enums.PhysicalFormPrivate,
+			BattleIQ:     game.NewBattleIQ(tc.value),
+		})
+		if err != nil {
+			t.Fatalf("NewLoadoutFromSpec(battleIQ=%d): %v", tc.value, err)
+		}
+		got := eval.Score(l) - baseScore
+		if got != tc.want {
+			t.Fatalf("battleIQ %d: expected score contribution %d, got %d", tc.value, tc.want, got)
+		}
+	}
+}

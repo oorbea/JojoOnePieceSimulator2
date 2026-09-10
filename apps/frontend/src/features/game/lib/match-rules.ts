@@ -1,6 +1,7 @@
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameLoadout, GameRound, GameSnapshot } from '@/features/game/types/game.types'
 import type { Manga } from '@/shared/contracts/enums'
+import { battleIQCategoryKey } from '@/shared/lib/battle-iq'
 
 // currentRound mirrors "the round a client should be looking at right now" -
 // the backend never sends a round index explicitly for this, it's simply
@@ -24,18 +25,19 @@ export function hasAllLoadouts(snapshot: GameSnapshot): boolean {
 
 // LoadoutSlotKind is every distinct thing a loadout card can reveal, in the
 // exact order the owner asked for (2026-08-14, haki-set slot added
-// 2026-08-27): PhysicalForm -> Stand -> DevilFruit -> FruitMastery -> Hamon
-// -> HakiSet -> ArmamentHaki -> ObservationHaki -> ConquerorHaki -> Spin -
-// the same order LoadoutBuilder.Build draws them in
-// (apps/backend/.../loadout_builder.go), plus one synthetic slot: 'hakiSet'
-// isn't a draw step at all, it's a summary of which of the three haki
-// types the loadout ends up with, revealed once before the three
-// individual level slots so the reveal tells its story in the right
-// order - "here's WHICH haki you have" before "here's HOW MUCH of each".
-// 'stand'/'devilFruit' are the two big art blocks (rendered specially by
-// LoadoutCard); every other slot is a scalar chip ('hakiSet' has no
-// i18nKey/value of its own - see RevealLane, which renders it specially,
-// same as stand/devilFruit).
+// 2026-08-27, battleIQ added after spin): PhysicalForm -> Stand ->
+// DevilFruit -> FruitMastery -> Hamon -> HakiSet -> ArmamentHaki ->
+// ObservationHaki -> ConquerorHaki -> Spin -> BattleIQ - the same order
+// LoadoutBuilder.Build draws them in (apps/backend/.../loadout_builder.go),
+// plus one synthetic slot: 'hakiSet' isn't a draw step at all, it's a
+// summary of which of the three haki types the loadout ends up with,
+// revealed once before the three individual level slots so the reveal
+// tells its story in the right order - "here's WHICH haki you have" before
+// "here's HOW MUCH of each". 'stand'/'devilFruit' are the two big art
+// blocks (rendered specially by LoadoutCard); every other slot is a scalar
+// chip ('hakiSet' has no i18nKey/value of its own - see RevealLane, which
+// renders it specially, same as stand/devilFruit; 'battleIQ' carries
+// `numeric` instead of `value` - see LoadoutSlot's own doc comment).
 export type LoadoutSlotKind =
   | 'physicalForm'
   | 'stand'
@@ -47,8 +49,20 @@ export type LoadoutSlotKind =
   | 'observationHaki'
   | 'conquerorHaki'
   | 'spin'
+  | 'battleIQ'
 
-export type LoadoutSlot = { key: LoadoutSlotKind; i18nKey?: string; value?: string }
+// numeric carries a raw stat plus its pre-resolved i18n category key,
+// kept separate from `value` (always an enum member string) rather than
+// stuffed into it - value is used as `t('enums.<namespace>.<value>')`
+// (see trait-chips.tsx/loadout-modal.tsx/reveal-stage.tsx), and a raw
+// number there would silently render a missing-key string instead of a
+// battleIQ score.
+export type LoadoutSlot = {
+  key: LoadoutSlotKind
+  i18nKey?: string
+  value?: string
+  numeric?: { score: number; categoryKey: string }
+}
 
 const SLOT_ORDER: LoadoutSlotKind[] = [
   'physicalForm',
@@ -61,6 +75,7 @@ const SLOT_ORDER: LoadoutSlotKind[] = [
   'observationHaki',
   'conquerorHaki',
   'spin',
+  'battleIQ',
 ]
 
 function hasSlotManga(key: LoadoutSlotKind, jojo: boolean, onePiece: boolean): boolean {
@@ -68,6 +83,7 @@ function hasSlotManga(key: LoadoutSlotKind, jojo: boolean, onePiece: boolean): b
     case 'stand':
     case 'hamon':
     case 'spin':
+    case 'battleIQ':
       return jojo
     default:
       return onePiece
@@ -142,6 +158,19 @@ export function loadoutSlots(loadout: GameLoadout, mangas: Manga[]): LoadoutSlot
         break
       case 'spin':
         slots.push({ key, i18nKey: 'game.match.trait.spin', value: loadout.spin })
+        break
+      case 'battleIQ':
+        // Absent inside a JoJo lobby should not happen (LoadoutBuilder
+        // always draws one there - see reveal.go's PlayerSlots guarantee),
+        // but the check stays defensive: a missing score renders no chip
+        // rather than a fake 0.
+        if (loadout.battleIQ !== undefined) {
+          slots.push({
+            key,
+            i18nKey: 'game.match.trait.battleIQ',
+            numeric: { score: loadout.battleIQ, categoryKey: battleIQCategoryKey(loadout.battleIQ) },
+          })
+        }
         break
     }
   }

@@ -357,7 +357,8 @@
         "conquerorHaki": "Haki del Rei",
         "physicalForm": "Forma física",
         "stand": "Stand",
-        "devilFruit": "Fruita del Diable"
+        "devilFruit": "Fruita del Diable",
+        "battleIQ": "Coeficient de batalla"
       },
       "hakiType": {
         "armament": "Armadura",
@@ -412,6 +413,10 @@
           "hakiMastery": {
             "before": "I la teva mestria de {{type}} és:",
             "after": "{{name}}, la teva mestria de {{type}} és {{value}}"
+          },
+          "battleIQ": {
+            "before": "Una última cosa: com d'espavilat ets?",
+            "after": "{{name}}, el teu coeficient de batalla és {{value}}"
           }
         }
       },
@@ -633,6 +638,15 @@
     "abilitySource": {
       "RANDOM": "Aleatori",
       "INVENTORY": "Inventari"
+    },
+    "battleIQCategory": {
+      "EXTREMELY_LOW": "Extremadament baix",
+      "BORDERLINE": "Límit",
+      "LOW_AVERAGE": "Mitjà baix",
+      "AVERAGE": "Mitjà",
+      "HIGH_AVERAGE": "Mitjà alt",
+      "SUPERIOR": "Superior",
+      "VERY_SUPERIOR": "Molt superior"
     },
     "participantKind": {
       "HUMAN": "Jugador",
