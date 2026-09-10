@@ -58,7 +58,8 @@
       "profile": "Perfil",
       "stands": "Stands",
       "devilFruits": "Fruites del Diable",
-      "stages": "Etapes"
+      "stages": "Etapes",
+      "characters": "Personatges"
     }
   },
   "admin": {
@@ -66,7 +67,8 @@
     "pickChannel": "Tria un canal per gestionar",
     "stands": "Stands",
     "devilFruits": "Fruites del Diable",
-    "stages": "Etapes"
+    "stages": "Etapes",
+    "characters": "Personatges"
   },
   "profile": {
     "avatarProcessing": "Processant la teva nova foto…",
@@ -179,6 +181,42 @@
     "deleteConfirmTitle": "Vols eliminar l'Etapa?",
     "deleteConfirmButton": "Elimina l'Etapa",
     "deleteConfirmMessage": "\"{{name}}\" s'eliminarà de manera permanent. No es pot desfer."
+  },
+  "characters": {
+    "title": "Personatges",
+    "newCharacter": "Nou personatge",
+    "emptyTitle": "Encara no hi ha personatges. Crea'n el primer.",
+    "emptyFilteredTitle": "Cap personatge coincideix. Prova una altra cerca o filtre.",
+    "errorTitle": "No s'han pogut carregar els personatges.",
+    "retry": "Torna-ho a provar",
+    "editTitle": "Edita el personatge",
+    "changePicture": "Canvia la foto del personatge",
+    "name": "Nom",
+    "manga": "Manga",
+    "rarity": "Raresa",
+    "description": "Descripció",
+    "searchPlaceholder": "Cerca per nom o descripció…",
+    "filterManga": "Filtra per manga",
+    "pickMangaFirst": "Tria un manga per saber quines estadístiques té aquest personatge.",
+    "battleIqHint": "Battle IQ és una estadística exclusiva de JoJo (0-255), mesurada amb la mateixa escala que un test de QI real - la majoria de personatges s'agrupen al voltant de 100, i només uns quants queden molt per sobre o per sota.",
+    "previewA11y": "Veure la foto de {{name}} a pantalla completa",
+    "detailA11y": "Veure els detalls de {{name}}",
+    "editA11y": "Edita {{name}}",
+    "deleteA11y": "Elimina {{name}}",
+    "saveA11y": "Desa el personatge",
+    "deleteConfirmTitle": "Vols eliminar el personatge?",
+    "deleteConfirmButton": "Elimina el personatge",
+    "deleteConfirmMessage": "\"{{name}}\" s'eliminarà de manera permanent. No es pot desfer.",
+    "stats": {
+      "hamon": "Hamon",
+      "spin": "Spin",
+      "battleIq": "Battle IQ",
+      "physicalForm": "Forma física",
+      "armamentHaki": "Haki de l'Armament",
+      "observationHaki": "Haki de l'Observació",
+      "conquerorHaki": "Haki dels Reis",
+      "fruitMastery": "Domini de la fruita"
+    }
   },
   "game": {
     "hub": {
@@ -526,6 +564,7 @@
     "skillsRequired": "Cal com a mínim una habilitat",
     "translationIncomplete": "Omple la descripció i les habilitats per a aquest idioma, o deixa-ho en blanc",
     "orderNonNegative": "L'ordre ha de ser zero o més",
+    "battleIqRange": "Battle IQ ha d'estar entre 0 i 255",
     "usernameMinLength": "El nom d'usuari ha de tenir com a mínim 3 caràcters",
     "usernameMaxLength": "El nom d'usuari ha de tenir com a màxim 32 caràcters",
     "usernameFormat": "Només lletres minúscules, números i guions baixos"
@@ -549,7 +588,12 @@
     "stageUpdated": "Etapa actualitzada",
     "stageDeleted": "Etapa eliminada",
     "stagePictureUploading": "Pujant la foto. Això triga una mica.",
-    "stagePictureFailed": "No s'ha pogut processar la foto de l'Etapa. Torna-ho a provar."
+    "stagePictureFailed": "No s'ha pogut processar la foto de l'Etapa. Torna-ho a provar.",
+    "characterCreated": "Personatge creat",
+    "characterUpdated": "Personatge actualitzat",
+    "characterDeleted": "Personatge eliminat",
+    "characterPictureUploading": "Pujant la foto. Això triga una mica.",
+    "characterPictureFailed": "No s'ha pogut processar la foto del personatge. Torna-ho a provar."
   },
   "notFound": {
     "title": "Aquesta pantalla no existeix.",
