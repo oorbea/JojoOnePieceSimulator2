@@ -43,7 +43,7 @@ type CORSConfig struct {
 // its own REST sub-group internally (chi can't mount two handlers on the
 // same pattern with different middleware), so /games is mounted here
 // alongside /events, outside this file's own Timeout group.
-func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, gameEndpoints *GameEndpoints, stageEndpoints *StageEndpoints, mediaEndpoints *MediaEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig, compressLevel int) http.Handler {
+func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, devilFruitEndpoints *DevilFruitEndpoints, userEndpoints *UserEndpoints, eventsEndpoints *EventsEndpoints, gameEndpoints *GameEndpoints, stageEndpoints *StageEndpoints, mediaEndpoints *MediaEndpoints, jojoCharacterEndpoints *JojoCharacterEndpoints, onePieceCharacterEndpoints *OnePieceCharacterEndpoints, issuer ports.ITokenIssuer, corsCfg CORSConfig, rateCfg RateLimitConfig, cacheCfg CacheConfig, compressLevel int) http.Handler {
 	r := chi.NewRouter()
 
 	if len(corsCfg.AllowedOrigins) > 0 {
@@ -106,6 +106,8 @@ func NewRouter(authEndpoints *AuthEndpoints, standEndpoints *StandEndpoints, dev
 				r.Mount("/devil-fruits", devilFruitEndpoints.Routes(rateCfg, cacheCfg))
 				r.Mount("/users", userEndpoints.Routes(rateCfg))
 				r.Mount("/stages", stageEndpoints.Routes(rateCfg, cacheCfg))
+				r.Mount("/jojo-characters", jojoCharacterEndpoints.Routes(rateCfg, cacheCfg))
+				r.Mount("/one-piece-characters", onePieceCharacterEndpoints.Routes(rateCfg, cacheCfg))
 			})
 		})
 

@@ -250,7 +250,7 @@ func newUserTestServer(repo *fakeUserRepo) http.Handler {
 	stageEndpoints := endpoints.NewStageEndpoints(nil)
 
 	return endpoints.NewRouter(authEndpoints, standEndpoints, endpoints.NewDevilFruitEndpoints(nil), userEndpoints, eventsEndpoints, gameEndpoints, stageEndpoints,
-		nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
+		nil, endpoints.NewJojoCharacterEndpoints(nil), endpoints.NewOnePieceCharacterEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 }
 
 // doRequestAs is like doRequest but with an explicit bearer token instead of

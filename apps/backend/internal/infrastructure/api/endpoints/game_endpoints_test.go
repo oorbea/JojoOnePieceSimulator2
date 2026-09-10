@@ -532,7 +532,7 @@ func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 		users, fakeTokenIssuer{}, tickets, context.Background(), endpoints.GameWSConfig{})
 	authEndpoints := endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{})
 	eventsEndpoints := endpoints.NewEventsEndpoints(services.NewPictureEventHub(), fakeTokenIssuer{}, tickets, context.Background())
-	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), nil, fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
+	h := endpoints.NewRouter(authEndpoints, endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil), endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil), nil, endpoints.NewJojoCharacterEndpoints(nil), endpoints.NewOnePieceCharacterEndpoints(nil), fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0)
 
 	return h, &gameEndpointsTestDeps{users: users, svc: svc, tickets: tickets}
 }

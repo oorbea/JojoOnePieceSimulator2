@@ -28,6 +28,7 @@ func newEventsTestServer(t *testing.T, ttl time.Duration) (http.Handler, *stream
 		endpoints.NewAuthEndpoints(nil, endpoints.CookieConfig{}), endpoints.NewStandEndpoints(nil), endpoints.NewDevilFruitEndpoints(nil),
 		endpoints.NewUserEndpoints(nil), eventsEndpoints, gameEndpoints, endpoints.NewStageEndpoints(nil),
 		nil,
+		endpoints.NewJojoCharacterEndpoints(nil), endpoints.NewOnePieceCharacterEndpoints(nil),
 		fakeTokenIssuer{}, endpoints.CORSConfig{}, endpoints.RateLimitConfig{}, endpoints.CacheConfig{}, 0,
 	)
 	return h, tickets
