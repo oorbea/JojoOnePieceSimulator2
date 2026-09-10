@@ -1,5 +1,5 @@
 ---
-title: "Feature (planned): Versus by inventory + characters (not implemented)"
+title: "Feature: Versus by inventory + characters (Phase 1 shipped, rest still planned)"
 tags:
   - project
   - jojo-onepiece-simulator
@@ -10,12 +10,40 @@ tags:
   - planned
 ---
 
-# Versus by inventory + characters (planned, not implemented, 2026-08-27)
+# Versus by inventory + characters (Phase 1 shipped 2026-09-10; rest still planning-only)
 
-**Status: planning only.** Nothing in this note is built. This is a detailed brief so that when
-implementation starts, the team only needs to settle concrete technicalities, not re-derive intent.
-See [[gameplay-game-modes]] ("Versus ability sources") and [[gameplay-domain-design]] (known debt on
-`ports.IInventory`) for the current state of the seam this feature fills.
+**Status: Phase 1 shipped 2026-09-10.** Phase 1 was deliberately scoped down to *content +
+stat only* — see [[characters-content-shipped-2026-09-10]] for what actually landed (JoJo/One
+Piece character admin CRUD + public catalogue, `battleIQ` end-to-end in `Loadout`, assigned in
+Gauntlet and Versus-random). Everything else in this note — the 4-slot per-round selection
+window, gachapon, uniqueness rules, insufficient-inventory lobby gating — is **still planning
+only, nothing built**. `enums.AbilitySource.Inventory` is still rejected outright by
+`game.NewConfig`; that rejection was explicitly NOT touched in Phase 1. See [[gameplay-game-modes]]
+("Versus ability sources") and [[gameplay-domain-design]] (known debt on `ports.IInventory`) for
+the current state of the seam the rest of this feature will eventually fill.
+
+## Decisions locked in for when the selection window ships (recorded 2026-09-10, not implemented)
+
+These were settled with the owner ahead of time specifically so the future selection-window work
+doesn't have to re-litigate them:
+
+- **Timeout fill rule**: whatever a participant picked stands; any slot they didn't fill in time
+  gets auto-assigned by the server from their inventory, preferring the **worst rarity available**
+  first (common → rare → epic → …), not a random rarity.
+- **Visibility during the selection window**: teammates see each other's picks live as they're
+  made (so a collision is visually avoidable before it happens); opponents see nothing until the
+  window closes.
+- **Simultaneous-pick collisions**: first command to reach the per-game lock wins the item; the
+  loser gets an explicit rejection error and does **not** lose their turn — they just have to pick
+  something else. This is a fallback path, not the primary UX (the live-visible picks above are
+  meant to make collisions rare in practice).
+- **Redis-backed distributed lock: mandatory from day one of this feature, non-negotiable.** The
+  project's current per-round-timer lock (`game_service.go`'s `armPhaseTimer`, see its own comment
+  around multi-instance safety) is process-local; running more than one backend replica means two
+  picks handled by different replicas could both "win" the same item and lost-update each other in
+  `gamestore/redis`. The owner was explicit: build the Redis lock *before* shipping the selection
+  window, specifically to be ready to scale horizontally — the selection window is not considered
+  done without it, even though nothing here is implemented yet.
 
 ## Premise
 
@@ -99,6 +127,13 @@ repetition isn't possible. If a player doesn't meet that bar, they **cannot join
 the UI must say exactly what's missing (e.g. "needs 1 more Devil Fruit").
 
 ## Character model — Class Table Inheritance
+
+**Built as described below in Phase 1** — see [[characters-content-shipped-2026-09-10]] for the
+final schema/entity file list. Two corrections vs. this original brief, made during
+implementation: **no `skills` list** on a Character (decision: content only, unlike Stands/Devil
+Fruits); and `rarity` is stored/shown but **not yet wired to anything** — Phase 1 has no gachapon
+and its own random draws (Gauntlet/Versus-random `battleIQ`) are deliberately uniform, so `rarity`
+is dead weight until gachapon (below) actually ships.
 
 Not a single `manga`-discriminated table (unlike `stages`, which *is* single-table). Decision: real
 class table inheritance —
