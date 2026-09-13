@@ -23,37 +23,37 @@ type OnePieceCharacterRequest struct {
 // Validate converts the request into a services.OnePieceCharacterInput,
 // collecting all field errors before returning.
 func (r OnePieceCharacterRequest) Validate() (services.OnePieceCharacterInput, error) {
-	var errs []string
+	var errs []FieldError
 
 	if r.Name == "" {
-		errs = append(errs, "name is required")
+		errs = append(errs, FieldError{Field: "name", Code: ValNameRequired, Message: "name is required"})
 	}
 	translations, translationErrs := validateCharacterTranslations(r.Translations)
 	errs = append(errs, translationErrs...)
 
 	rarity, err := enums.ParsePowerRarity(r.Rarity)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("rarity: %v", err))
+		errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 	}
 	physicalForm, err := enums.ParsePhysicalForm(r.PhysicalForm)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("physicalForm: %v", err))
+		errs = append(errs, FieldError{Field: "physicalForm", Code: ValInvalidValue, Message: fmt.Sprintf("physicalForm: %v", err)})
 	}
 	armamentHaki, err := enums.ParseHakiLevel(r.ArmamentHaki)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("armamentHaki: %v", err))
+		errs = append(errs, FieldError{Field: "armamentHaki", Code: ValInvalidValue, Message: fmt.Sprintf("armamentHaki: %v", err)})
 	}
 	observationHaki, err := enums.ParseHakiLevel(r.ObservationHaki)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("observationHaki: %v", err))
+		errs = append(errs, FieldError{Field: "observationHaki", Code: ValInvalidValue, Message: fmt.Sprintf("observationHaki: %v", err)})
 	}
 	conquerorHaki, err := enums.ParseHakiLevel(r.ConquerorHaki)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("conquerorHaki: %v", err))
+		errs = append(errs, FieldError{Field: "conquerorHaki", Code: ValInvalidValue, Message: fmt.Sprintf("conquerorHaki: %v", err)})
 	}
 	fruitMastery, err := enums.ParseFruitMastery(r.FruitMastery)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("fruitMastery: %v", err))
+		errs = append(errs, FieldError{Field: "fruitMastery", Code: ValInvalidValue, Message: fmt.Sprintf("fruitMastery: %v", err)})
 	}
 
 	if len(errs) > 0 {

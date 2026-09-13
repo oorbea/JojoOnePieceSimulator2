@@ -23,28 +23,28 @@ type JojoCharacterRequest struct {
 // Validate converts the request into a services.JojoCharacterInput,
 // collecting all field errors before returning.
 func (r JojoCharacterRequest) Validate() (services.JojoCharacterInput, error) {
-	var errs []string
+	var errs []FieldError
 
 	if r.Name == "" {
-		errs = append(errs, "name is required")
+		errs = append(errs, FieldError{Field: "name", Code: ValNameRequired, Message: "name is required"})
 	}
 	translations, translationErrs := validateCharacterTranslations(r.Translations)
 	errs = append(errs, translationErrs...)
 
 	rarity, err := enums.ParsePowerRarity(r.Rarity)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("rarity: %v", err))
+		errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 	}
 	hamon, err := enums.ParseHamonLevel(r.Hamon)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("hamon: %v", err))
+		errs = append(errs, FieldError{Field: "hamon", Code: ValInvalidValue, Message: fmt.Sprintf("hamon: %v", err)})
 	}
 	spin, err := enums.ParseSpinLevel(r.Spin)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("spin: %v", err))
+		errs = append(errs, FieldError{Field: "spin", Code: ValInvalidValue, Message: fmt.Sprintf("spin: %v", err)})
 	}
 	if r.BattleIQ < 0 || r.BattleIQ > 255 {
-		errs = append(errs, "battleIq: must be between 0 and 255")
+		errs = append(errs, FieldError{Field: "battleIq", Code: ValBattleIqRange, Message: "battleIq: must be between 0 and 255"})
 	}
 
 	if len(errs) > 0 {

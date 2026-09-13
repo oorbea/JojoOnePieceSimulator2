@@ -24,15 +24,15 @@ type UpdateProfileRequest struct {
 // present at all - the zero enums.Locale (en-GB) is a valid choice, so the
 // caller can't tell "unset" from "set to en-GB" any other way.
 func (r UpdateProfileRequest) Validate() (language enums.Locale, hasLanguage bool, err error) {
-	var errs []string
+	var errs []FieldError
 	if err := user.ValidateUsername(r.Username); err != nil {
-		errs = append(errs, fmt.Sprintf("username: %v", err))
+		errs = append(errs, FieldError{Field: "username", Code: ValInvalidValue, Message: fmt.Sprintf("username: %v", err)})
 	}
 	if r.Language != nil {
 		hasLanguage = true
 		parsed, err := enums.ParseLocale(*r.Language)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("language: %v", err))
+			errs = append(errs, FieldError{Field: "language", Code: ValInvalidValue, Message: fmt.Sprintf("language: %v", err)})
 		} else {
 			language = parsed
 		}
@@ -51,7 +51,7 @@ type AdminUpdateUserRequest struct {
 
 func (r AdminUpdateUserRequest) Validate() error {
 	if err := user.ValidateUsername(r.Username); err != nil {
-		return &ValidationError{Errors: []string{fmt.Sprintf("username: %v", err)}}
+		return &ValidationError{Errors: []FieldError{{Field: "username", Code: ValInvalidValue, Message: fmt.Sprintf("username: %v", err)}}}
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ type UpdateRoleRequest struct {
 func (r UpdateRoleRequest) Validate() (enums.UserRole, error) {
 	role, err := enums.ParseUserRole(r.Role)
 	if err != nil {
-		return 0, &ValidationError{Errors: []string{fmt.Sprintf("role: %v", err)}}
+		return 0, &ValidationError{Errors: []FieldError{{Field: "role", Code: ValInvalidValue, Message: fmt.Sprintf("role: %v", err)}}}
 	}
 	return role, nil
 }
