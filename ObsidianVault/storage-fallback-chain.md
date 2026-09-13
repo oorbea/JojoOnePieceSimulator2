@@ -181,4 +181,65 @@ foto" toast for *any* picture failure — transcode error, quota exhausted,
 or (this incident) every storage tier unreachable. The real reason always
 lives in the backend log, not the UI.
 
+Root cause on the *network* side, found afterward via `mtr`/`ping.pe`:
+the ISP (Jazztel) had a broken route specifically to the Cloudflare
+anycast prefix R2's S3 API endpoint sits on (`172.64.64.0/18`) — packets
+died inside the ISP's own backbone, two hops past the home gateway, while
+every other Cloudflare-fronted domain (`imagedelivery.net`, R2's own
+`.eu.` jurisdiction endpoint) resolved to a *different* anycast IP and
+worked fine. `ping.pe` confirmed 0% loss globally (Madrid/Barcelona
+included), so it was this one ISP's peering, not Cloudflare/R2 itself.
+ISP ticket opened; router reboot pending. `STORAGE_PUT_TIMEOUT` made this
+survivable but didn't fix reads of pictures already stored on R2.
+
+## Belt-and-suspenders: apps/r2-worker-proxy (2026-09-13)
+
+Since a *read* (not just upload) can hit the same broken prefix in
+`MEDIA_MODE=proxy` (prod's setting — the backend streams bytes itself,
+never redirects to a presigned URL), a second, independent layer was
+added: `apps/r2-worker-proxy`, a small Cloudflare Worker with a **native
+R2 binding** (`env.BUCKET.put/get/delete/list`, no AWS credentials or
+SigV4 inside the Worker) living on the generic `*.workers.dev` pool.
+`internal/infrastructure/storage/workerproxy.Backend` implements
+`ports.IStorageBackend` by talking plain HTTP to it (`PUT/GET/DELETE
+/objects/<key>`, `GET /objects?cursor=` for `Walk`, a self-signed
+`?exp=&sig=` query pair for `PresignGet` instead of a real S3 presign).
+
+Key decisions:
+- **Opt-in, not a replacement**: `cmd/app/main.go`'s `buildStorageTiers`
+  (and its `cmd/mediabackfill` duplicate — Go can't share code between two
+  `main` packages, same pattern as everything else there) only builds the
+  Worker-backed R2 tier when both `R2_WORKER_URL`/`R2_WORKER_SECRET` are
+  set; otherwise the direct `s3store` path is untouched. Local dev needs
+  no Worker deployed at all.
+- **`*.workers.dev`, no custom domain**: that shared subdomain sits on the
+  same generic Cloudflare edge pool that stayed reachable during the
+  incident — no need to move a domain's DNS into Cloudflare for this.
+- Auth is a **shared-secret bearer token**, constant-time compared on both
+  sides — no mTLS/Access service tokens, deliberately simple for a
+  hobby-project blast radius.
+- **R2 custom domains don't cover this**: they're public-GET-only (a CDN
+  in front of a bucket), never the S3 API operations (`PutObject` etc.)
+  that were actually failing — ruled out early, worth remembering before
+  reaching for that feature again.
+- Deploy is its own independent CD job (`deploy-r2-worker-proxy` in
+  `cd.yml`, `cloudflare/wrangler-action`) — doesn't block or depend on the
+  backend/frontend deploy.
+- Tests: `@cloudflare/vitest-plugin` (the current, Vitest-4-era successor
+  to `@cloudflare/vitest-pool-workers` — that package's `defineWorkersConfig`
+  export is gone as of the version this pulled in; `cloudflareTest(...)` as
+  a Vite plugin is the replacement, and `env` now imports from
+  `"cloudflare:workers"` instead of `"cloudflare:test"`). `wrangler types`
+  generates `worker-configuration.d.ts` (gitignored, regenerated via
+  `pretest`/`pretypecheck` npm scripts) — it can't see `R2_PROXY_SECRET`
+  since that's a Worker *secret*, not a `[vars]` entry, so a small
+  `src/env.d.ts` merges it into the `Cloudflare.Env` namespace by hand.
+  `wrangler types` itself now supersedes `@cloudflare/workers-types`
+  entirely (embeds the full runtime types, R2Bucket included) — installing
+  both is redundant as of this version.
+
+See `apps/r2-worker-proxy/README.md` for the wire protocol and
+`deployments/README.md`'s "R2 via Cloudflare Worker" section for the
+one-time GitHub-secrets setup.
+
 Related: [[ADR]], [[docker-setup]], [[cicd-deployment]].
