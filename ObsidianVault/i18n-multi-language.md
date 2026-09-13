@@ -12,11 +12,10 @@ tags:
 ## Status
 
 Implemented 2026-08-06, follow-ups closed 2026-08-06. Backend + frontend
-infra, admin multi-locale form, full UI copy migration, and stable backend
-error codes are all done and verified (unit + integration tests, real
-Postgres, full frontend suite). Only remaining gap: validation `details`
-(field-level messages on a 400) stay English-only — see Deliberately not
-done below.
+infra, admin multi-locale form, full UI copy migration, stable backend
+error codes, and structured/localized per-field validation `details` are
+all done and verified (unit + integration tests, real Postgres, full
+frontend suite). No known gaps left.
 
 ## Scope
 
@@ -156,10 +155,43 @@ translated:
     client-side, in the user's own language, before any request carrying
     those details ever leaves the client.
 
-## Deliberately not done (follow-up)
+## Follow-up: validation `details` structured and localized (2026-09-13)
 
-- Validation `details` (see above) — needs a structured per-field DTO on
-  the backend, not just a code on the top-level error.
+Closed the last remaining gap noted above. `dto.ErrorResponse.Details` was `[]string` of raw
+English messages (`"rarity: invalid value X"`); every request DTO's `ValidationError.Errors` is
+now `[]FieldError{Field, Code, Message}` (`internal/infrastructure/api/dto/error_response.go`).
+`Code` is an i18n key the frontend translates via `translateFieldError` (`shared/lib/toast.ts`,
+`i18n.t(code, {defaultValue: message})` — same degrade-to-English pattern `showErrorToast` already
+used for the top-level error code). Kept the code taxonomy small on purpose: fields the frontend's
+own zod schemas already validate reuse the exact same catalog keys (`validation.nameRequired`,
+`descriptionRequired`, `skillsRequired`, `orderNonNegative`, `battleIqRange`) instead of duplicating
+messages per field+rule; everything backend-only (enum parsing, malformed cursors, locale rules)
+got four new generic keys instead of ~50 field-specific ones: `validation.required`,
+`validation.invalidValue`, `validation.localeUnsupported`, `validation.localeDefaultRequired`.
+
+`cmd/typegen`: registered `dto.FieldError` in `registry.go`'s `restTypes`; `errors.ts` (where
+`ErrorResponse` lives) needed a new cross-file import from `dto.ts` since `Details` now references
+`FieldError` — added `errorsImportLine` in `emit.go`, generic over `ErrorResponse`'s `refs` rather
+than hardcoding the one name, so a future field referencing another `dto.ts` struct doesn't need
+this touched again.
+
+**Real bug caught by the frontend test suite, not by inspection**: the first pass imported the
+`i18next` singleton (`@/shared/i18n`) directly into `shared/api/errors.ts` to add a
+`translateFieldError` helper there. `shared/api/errors.ts` is transitively imported by a lot of
+low-level code (any hook that calls `toAppError`), and importing `shared/i18n` executes its
+module-level `i18n.use(initReactI18next).init(...)` side effect - broke
+`use-google-auth.web.test.ts` ("You are passing an undefined module!") because that test's mocks
+never expected `errors.ts` to drag in real i18next init. Moved `translateFieldError` to
+`shared/lib/toast.ts` instead, which already carries the same `i18n` import (used by
+`showErrorToast`) and is never imported from `errors.ts`-adjacent low-level code - no behavior
+change, just kept the side-effecting import out of a module that previously had none. Lesson:
+adding an i18n import to a widely-imported low-level module is not free even if the code path using
+it is never called in a given test - the import itself executes.
+
+Verified: backend `go build`/`go vet`/`go test ./...` clean (including `cmd/typegen`'s
+determinism/registry-coverage tests), contracts regenerated with no manual edits, frontend
+`tsc --noEmit` clean, `pnpm jest` 69/69 suites - 1331/1331 tests (up from 69/69 - 1312/1312, the
+`i18n-keys.test.ts` catalog-parity test covers the 4 new keys across all three locales).
 
 ## Follow-up: game loadout power text closed the last per-request gap (2026-08-17)
 
