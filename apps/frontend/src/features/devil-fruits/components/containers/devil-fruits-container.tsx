@@ -41,6 +41,8 @@ function createDefaultValues(): DevilFruitFormValues {
     translations: createEmptyTranslationsForm(),
     rarity: 'COMMON',
     fruitType: 'PARAMECIA',
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 
@@ -103,6 +105,7 @@ export function DevilFruitsContainer() {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<DevilFruitFormValues>({
     resolver: zodResolver(devilFruitFormSchema),
@@ -130,6 +133,8 @@ export function DevilFruitsContainer() {
         translations: fromTranslationsResponse(translations),
         rarity: devilFruit.rarity,
         fruitType: devilFruit.fruitType,
+        focalX: devilFruit.focalX,
+        focalY: devilFruit.focalY,
       })
       setPendingPicture(null)
       setActiveLocale(DEFAULT_LOCALE)
@@ -143,7 +148,11 @@ export function DevilFruitsContainer() {
 
   const onPickPicture = async () => {
     const asset = await pickPicture()
-    if (asset) setPendingPicture(asset)
+    if (asset) {
+      setPendingPicture(asset)
+      setValue('focalX', 0.5)
+      setValue('focalY', 0.5)
+    }
   }
 
   const onSubmit = handleSubmit((values) => {

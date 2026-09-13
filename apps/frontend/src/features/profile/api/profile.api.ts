@@ -25,6 +25,19 @@ export async function updateLanguage(username: string, language: Locale): Promis
   return response.data
 }
 
+// Same PATCH /users/me the username/language updates use - focalX/focalY
+// are two more optional fields on dto.UpdateProfileRequest (nil means
+// "leave unchanged" server-side), not a dedicated endpoint. username is
+// still mandatory in the body, same reasoning as updateLanguage above.
+export async function updateAvatarFocalPoint(
+  username: string,
+  focalX: number,
+  focalY: number
+): Promise<ProfileUser> {
+  const response = await apiClient.patch<ProfileUser>('/users/me', { username, focalX, focalY })
+  return response.data
+}
+
 // Picked image asset, platform-agnostic enough to build a FormData part from
 // either an expo-image-picker native asset or a web File.
 export type PickedAvatar = {

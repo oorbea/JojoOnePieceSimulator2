@@ -64,6 +64,8 @@ function createDefaultValues(): StandFormValues {
     precision: 'NULL',
     potential: 'NULL',
     evolvesFromId: null,
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 
@@ -167,6 +169,7 @@ export function StandsContainer() {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<StandFormValues>({
     resolver: zodResolver(standFormSchema),
@@ -240,6 +243,8 @@ export function StandsContainer() {
         precision: stand.precision,
         potential: stand.potential,
         evolvesFromId: stand.evolvesFrom?.id ?? null,
+        focalX: stand.focalX,
+        focalY: stand.focalY,
       })
       setPendingPicture(null)
       setActiveLocale(DEFAULT_LOCALE)
@@ -253,7 +258,14 @@ export function StandsContainer() {
 
   const onPickPicture = async () => {
     const asset = await pickPicture()
-    if (asset) setPendingPicture(asset)
+    if (asset) {
+      setPendingPicture(asset)
+      // A newly picked image has no meaningful relationship to whatever
+      // focal point the previous image had - reset to center rather than
+      // carry over a now-arbitrary crop (owner decision).
+      setValue('focalX', 0.5)
+      setValue('focalY', 0.5)
+    }
   }
 
   const onSubmit = handleSubmit((values) => {

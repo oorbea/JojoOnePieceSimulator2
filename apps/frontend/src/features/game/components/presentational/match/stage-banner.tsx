@@ -6,6 +6,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
+import { focalPosition } from '@/shared/lib/picture-source'
 import type { GameStage } from '@/features/game/types/game.types'
 
 type Props = {
@@ -24,6 +25,7 @@ export function StageBanner({ stage, roundIndex }: Props) {
       <LazyImage
         uri={stage.picture || null}
         aspectRatio={16 / 9}
+        contentPosition={focalPosition(stage)}
         pictureStatus={stage.pictureStatus}
         priorityHint="high"
         fallback={<Map size={40} color="$wiiBlue" />}

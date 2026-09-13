@@ -11,7 +11,7 @@ import { ImageLightbox } from '@/shared/components/presentational/image-lightbox
 import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import { cardSource, fullSource, lqipSource } from '@/shared/lib/picture-source'
+import { cardSource, focalPosition, fullSource, lqipSource } from '@/shared/lib/picture-source'
 import type { PictureStatus, PowerRarity } from '@/shared/contracts/enums'
 import { CharacterStatBlock } from '@/features/characters/components/presentational/character-stat-block'
 import type { CharacterStatRow } from '@/features/characters/lib/character-stats'
@@ -24,6 +24,8 @@ type CharacterLike = {
   pictureThumb: string
   pictureCard?: string
   pictureLqip?: string
+  focalX?: number
+  focalY?: number
   pictureStatus: PictureStatus
 }
 
@@ -68,6 +70,7 @@ function CharacterCardInner<T extends CharacterLike>(
           uri={uri}
           lqip={lqipSource(character)}
           height={140}
+          contentPosition={focalPosition(character)}
           pictureStatus={character.pictureStatus}
           retryToken={retryToken}
           onStateChange={setImageState}

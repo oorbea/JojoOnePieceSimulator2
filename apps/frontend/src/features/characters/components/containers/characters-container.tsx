@@ -56,6 +56,8 @@ function createDefaultJojoValues(): JojoCharacterFormValues {
     spin: 'NONE',
     battleIq: 100,
     translations: createEmptyCharacterTranslationsForm(),
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 
@@ -69,6 +71,8 @@ function createDefaultOnePieceValues(): OnePieceCharacterFormValues {
     conquerorHaki: 'NONE',
     fruitMastery: 'NONE',
     translations: createEmptyCharacterTranslationsForm(),
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 
@@ -193,6 +197,8 @@ export function CharactersContainer() {
           spin: jc.spin,
           battleIq: jc.battleIq,
           translations: fromCharacterTranslationsResponse(translations),
+          focalX: jc.focalX,
+          focalY: jc.focalY,
         })
       } else {
         const oc = character
@@ -209,6 +215,8 @@ export function CharactersContainer() {
           conquerorHaki: oc.conquerorHaki,
           fruitMastery: oc.fruitMastery,
           translations: fromCharacterTranslationsResponse(translations),
+          focalX: oc.focalX,
+          focalY: oc.focalY,
         })
       }
       setPendingPicture(null)
@@ -223,7 +231,15 @@ export function CharactersContainer() {
 
   const onPickPicture = async () => {
     const asset = await pickPicture()
-    if (asset) setPendingPicture(asset)
+    if (asset) {
+      setPendingPicture(asset)
+      // Reset both forms - only the active kind's is submitted, but a fresh
+      // image resets the focal point regardless of which one that is.
+      jojoForm.setValue('focalX', 0.5)
+      jojoForm.setValue('focalY', 0.5)
+      onePieceForm.setValue('focalX', 0.5)
+      onePieceForm.setValue('focalY', 0.5)
+    }
   }
 
   const jumpToFirstErroredLocale = (

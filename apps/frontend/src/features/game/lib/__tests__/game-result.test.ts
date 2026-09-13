@@ -46,6 +46,8 @@ function round(overrides: Partial<GameRound> = {}): GameRound {
       picture: '',
       pictureThumb: '',
       pictureStatus: 'READY',
+      focalX: 0.5,
+      focalY: 0.5,
     },
     options: ['SURVIVE', 'FALL'],
     tiebreakUsed: false,

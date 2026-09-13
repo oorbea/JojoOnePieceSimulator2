@@ -1,4 +1,4 @@
-import { cardSource, fullSource, lqipSource, thumbSource } from '@/shared/lib/picture-source'
+import { cardSource, focalPosition, fullSource, lqipSource, thumbSource } from '@/shared/lib/picture-source'
 
 describe('thumbSource', () => {
   it('prefers the thumb rendition when present', () => {
@@ -70,5 +70,21 @@ describe('lqipSource', () => {
 
   it('normalizes a missing field to null', () => {
     expect(lqipSource({})).toBeNull()
+  })
+})
+
+describe('focalPosition', () => {
+  it('returns null for the default center (0.5, 0.5)', () => {
+    expect(focalPosition({ focalX: 0.5, focalY: 0.5 })).toBeNull()
+  })
+
+  it('returns null when the entity carries no focal fields at all', () => {
+    expect(focalPosition({})).toBeNull()
+    expect(focalPosition(null)).toBeNull()
+    expect(focalPosition(undefined)).toBeNull()
+  })
+
+  it('converts a non-center focal point to percentage top/left', () => {
+    expect(focalPosition({ focalX: 0.25, focalY: 0.75 })).toEqual({ top: '75%', left: '25%' })
   })
 })

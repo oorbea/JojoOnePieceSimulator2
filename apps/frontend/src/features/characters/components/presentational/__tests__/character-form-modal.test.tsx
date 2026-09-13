@@ -23,6 +23,8 @@ function createJojoDefaultValues(): JojoCharacterFormValues {
     spin: 'NONE',
     battleIq: 100,
     translations: createEmptyCharacterTranslationsForm(),
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 
@@ -36,6 +38,8 @@ function createOnePieceDefaultValues(): OnePieceCharacterFormValues {
     conquerorHaki: 'NONE',
     fruitMastery: 'NONE',
     translations: createEmptyCharacterTranslationsForm(),
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 

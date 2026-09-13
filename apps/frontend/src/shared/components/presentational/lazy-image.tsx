@@ -1,4 +1,4 @@
-import { Image as ExpoImage, type ImageContentFit } from 'expo-image'
+import { Image as ExpoImage, type ImageContentFit, type ImageContentPosition } from 'expo-image'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { View } from 'react-native'
@@ -25,6 +25,10 @@ type Props = {
   height?: number | string
   aspectRatio?: number
   contentFit?: ImageContentFit
+  // The admin-chosen focal point (picture-source.ts's focalPosition), for a
+  // 'cover' well that shouldn't crop to the image's own center. null/
+  // undefined behave exactly like today - centered.
+  contentPosition?: ImageContentPosition | null
   rounded?: string
   fallback?: React.ReactNode
   // Position within the grid, used for priority (lower loads first).
@@ -56,6 +60,7 @@ export function LazyImage({
   height,
   aspectRatio,
   contentFit = 'cover',
+  contentPosition,
   rounded = '$card',
   fallback,
   order = 0,
@@ -100,6 +105,7 @@ export function LazyImage({
           placeholder={lqip ? { uri: lqip } : undefined}
           style={{ width: '100%', height: '100%' }}
           contentFit={contentFit}
+          contentPosition={contentPosition ?? undefined}
           transition={200}
           recyclingKey={recyclingKey}
           onLoad={onLoad}

@@ -16,6 +16,8 @@ function baseFruit(overrides: Partial<DevilFruitResponse> = {}): DevilFruitRespo
     pictureCard: '',
     pictureStatus: 'NONE',
     pictureLqip: '',
+    focalX: 0.5,
+    focalY: 0.5,
     fruitType: 'PARAMECIA',
     ...overrides,
   }
