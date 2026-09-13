@@ -147,9 +147,17 @@ function Harness({
         pictureUri: null,
         onPickPicture: jest.fn(),
         isPictureBusy: false,
+        onAdjustFocal: jest.fn(),
         activeLocale: 'en-GB',
         onLocaleChange: jest.fn(),
         erroredLocales: [],
+      }}
+      focalModal={{
+        visible: false,
+        uri: null,
+        x: 0.5,
+        y: 0.5,
+        onConfirm: jest.fn(),
       }}
       deleteConfirm={{
         visible: false,
