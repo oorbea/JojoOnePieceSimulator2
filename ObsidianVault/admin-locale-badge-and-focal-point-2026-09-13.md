@@ -68,12 +68,18 @@ Wired into all four admin form modals (nested nulls, but wired) via the containe
 resetting both fields to 0.5 whenever a new image is picked (owner decision: a new image has no
 relationship to the previous crop).
 
-**Deliberately out of scope:** game participant avatars (`participant-avatar.tsx`/
-`voter-avatar.tsx`). `GameParticipantResponse` only carries a resolved `avatarThumb` URL string, not
-the user's focal point — `game.Participant` itself would need to snapshot `avatarFocalX/Y` at
-join/serialization time, a materially bigger change than everything else in this pass (touches the
-live-game domain state machine and its Redis snapshot, not just a DTO). Flagged to the owner rather
-than silently expanded into.
+**Update (same day): game participant avatars closed too.** `game.Participant` gained
+`avatarFocalX/avatarFocalY float64` (default 0.5/0.5) + a `SetAvatar` signature that now also takes
+the focal pair, set at all four call sites in `game_service.go` (`CreateGame`, join, host reassign,
+reseat) straight from `user.User.AvatarFocalX()/AvatarFocalY()`. `ParticipantSnapshot` carries the
+same two fields so a live game's Redis snapshot survives a restart with the right crop.
+`GameParticipantResponse` passes them through as plain fields (same pattern as `GameStageResponse`).
+Frontend: `ParticipantAvatar` (used by both the roster tile and `VoterAvatar`) now passes
+`contentPosition={focalPosition({ focalX: participant.avatarFocalX, focalY: participant.avatarFocalY })}`
+into its `LazyImage`. No new endpoint, no cache-namespace bump needed — gamestore's Redis snapshot
+isn't behind the versioned `cache/keys.go` scheme the catalogue reads use, it's ephemeral per-game
+state with its own TTL, so a stale in-flight game restored mid-deploy just shows a centered avatar
+until someone rejoins/reconnects, not worth guarding against.
 
 **Gotcha for anyone touching `focal-point-picker.tsx`:** a new ESLint rule (`react-hooks/refs`,
 React Compiler-oriented) flags *any* `.current` read or write outside an effect/handler, including
