@@ -109,6 +109,14 @@ const defaultPictureWorkers = 2
 const defaultPictureQueueSize = 32
 const defaultPictureJobTimeout = 30 * time.Second
 
+// defaultStoragePutTimeout bounds each fallback tier's Put attempt (see
+// fallback.PictureStorage.SetPutTimeout) - without it, one stalled tier
+// (a TCP connection stuck on a dead endpoint, rather than a clean error)
+// burns the whole PictureJobTimeout, leaving every later tier's attempt an
+// already-expired ctx to fail against instantly. 3 tiers x 8s = 24s, still
+// inside the default 30s job budget so the last tier gets a live ctx.
+const defaultStoragePutTimeout = 8 * time.Second
+
 // defaultCache*/defaultRedis* configure the read cache in front of the Stand
 // repository and picture presign URLs. Caching is entirely off when
 // REDIS_URL is unset, regardless of CACHE_ENABLED - see Load.
@@ -217,6 +225,10 @@ type Config struct {
 	// StorageReconcileInterval is how often the storage reconciler re-walks
 	// every configured bucket to correct ledger drift. 0 disables it.
 	StorageReconcileInterval time.Duration
+	// StoragePutTimeout bounds each fallback tier's Put attempt - see
+	// fallback.PictureStorage.SetPutTimeout. 0 disables it (each Put then
+	// runs under the picture job's own ctx, unwrapped).
+	StoragePutTimeout time.Duration
 	// B2* configure the optional Backblaze B2 tier.
 	B2Endpoint        string
 	B2Region          string
@@ -669,6 +681,18 @@ func Load() (*Config, error) {
 		storageReconcileInterval = parsed
 	}
 
+	storagePutTimeout := defaultStoragePutTimeout
+	if raw := os.Getenv("STORAGE_PUT_TIMEOUT"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing STORAGE_PUT_TIMEOUT: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("STORAGE_PUT_TIMEOUT must not be negative")
+		}
+		storagePutTimeout = parsed
+	}
+
 	var b2Endpoint, b2Region, b2AccessKeyID, b2SecretAccessKey, b2Bucket string
 	var b2QuotaBytes int64
 	if seenProvider["b2"] {
@@ -1071,6 +1095,7 @@ func Load() (*Config, error) {
 		StorageProviders:         storageProviders,
 		StorageQuotaThresholdPct: storageQuotaThresholdPct,
 		StorageReconcileInterval: storageReconcileInterval,
+		StoragePutTimeout:        storagePutTimeout,
 
 		B2Endpoint:        b2Endpoint,
 		B2Region:          b2Region,
