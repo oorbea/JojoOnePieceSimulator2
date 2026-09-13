@@ -26,7 +26,7 @@ import { usePaginatedCatalogue } from '@/shared/hooks/use-paginated-catalogue'
 // anyway, so the merge happens here instead of pushing kind-mixing into the
 // backend's keyset pagination.
 export function CatalogCharactersContainer() {
-  const [mangaFilter, setMangaFilter] = useState<CharacterMangaFilter>('JOJO')
+  const [mangaFilter, setMangaFilter] = useState<CharacterMangaFilter>('ALL')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [detailCharacter, setDetailCharacter] = useState<TaggedCharacter | null>(null)

@@ -150,13 +150,30 @@ export function FocalPointPicker({ uri, x, y, onChange }: Props) {
             {...a11yProps(percentLabel, 'adjustable')}
           >
             <RNImage
+              testID="focal-point-image"
               key={uri ?? undefined}
               source={{ uri }}
               resizeMode="cover"
               style={{ width: '100%', height: '100%' }}
               onLoad={(e) => {
-                const { width, height } = e.nativeEvent.source
-                setNaturalSize({ width, height })
+                // On native, RN's Image onLoad carries `nativeEvent.source.
+                // {width,height}`. react-native-web does NOT - its
+                // ImageLoader wraps the raw DOM `load` event as `nativeEvent`
+                // (see node_modules/react-native-web's ImageLoader.load:
+                // `onLoad({ nativeEvent: e })` where `e` is the <img>
+                // element's own load event), so `source` is undefined there
+                // and destructuring it threw - uncaught inside the
+                // image.decode() promise chain RNW calls this from, which is
+                // exactly the "Uncaught (in promise)" shape. Width/height on
+                // web come from the event target's naturalWidth/naturalHeight
+                // instead.
+                const nativeEvent = e.nativeEvent as unknown as {
+                  source?: { width: number; height: number }
+                  target?: { naturalWidth?: number; naturalHeight?: number }
+                }
+                const width = nativeEvent.source?.width ?? nativeEvent.target?.naturalWidth
+                const height = nativeEvent.source?.height ?? nativeEvent.target?.naturalHeight
+                if (width && height) setNaturalSize({ width, height })
               }}
             />
             <YStack
