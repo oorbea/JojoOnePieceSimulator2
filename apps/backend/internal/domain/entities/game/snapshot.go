@@ -86,6 +86,8 @@ type ParticipantSnapshot struct {
 	Loadout        *LoadoutSnapshot // nil before AssignLoadouts
 	AvatarThumbKey string
 	GooglePicture  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }
 
 // TeamSnapshot mirrors Team.
@@ -203,6 +205,8 @@ func (g *Game) Snapshot() Snapshot {
 			Connected:      p.connected,
 			AvatarThumbKey: p.avatarThumbKey,
 			GooglePicture:  p.googlePicture,
+			AvatarFocalX:   p.avatarFocalX,
+			AvatarFocalY:   p.avatarFocalY,
 		}
 		if p.loadout != nil {
 			ls := snapshotLoadout(p.loadout)
@@ -522,6 +526,8 @@ func Restore(s Snapshot) (*Game, error) {
 			connected:      ps.Connected,
 			avatarThumbKey: ps.AvatarThumbKey,
 			googlePicture:  ps.GooglePicture,
+			avatarFocalX:   ps.AvatarFocalX,
+			avatarFocalY:   ps.AvatarFocalY,
 		}
 		if ps.Loadout != nil {
 			loadout, err := restoreLoadout(*ps.Loadout)

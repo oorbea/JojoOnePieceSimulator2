@@ -5,6 +5,7 @@ import { teamTone, teamToneColor } from '@/features/game/lib/lobby-rules'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LazyImage } from '@/shared/components/presentational/lazy-image'
+import { focalPosition } from '@/shared/lib/picture-source'
 
 // Deterministic (never random) tone for a participant with no picture at
 // all - the same id always gets the same colour, reusing the four tones
@@ -46,6 +47,10 @@ export function ParticipantAvatar({ participant, size, isSelf = false }: Props) 
         uri={participant.avatarThumb || null}
         height={size}
         rounded="$circle"
+        contentPosition={focalPosition({
+          focalX: participant.avatarFocalX,
+          focalY: participant.avatarFocalY,
+        })}
         fallback={
           <YStack
             flex={1}

@@ -27,6 +27,8 @@ function participant(id: string): GameParticipant {
     kind: 'HUMAN',
     connected: true,
     avatarThumb: '',
+    avatarFocalX: 0.5,
+    avatarFocalY: 0.5,
   }
 }
 
