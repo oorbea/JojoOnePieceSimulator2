@@ -94,6 +94,7 @@ out here too — they are ordinary `.env.example` entries, not extra secrets:
 | `PICTURE_LQIP_DIMENSION` | `[CONFIG]` | Inline blurred-placeholder rendition size in px (default `16`). |
 | `PICTURE_LQIP_QUALITY` | `[CONFIG]` | WebP quality for the LQIP rendition (default `30`). |
 | `MEDIA_LQIP_MAX_BYTES` | `[CONFIG]` | Rejects (and logs) an LQIP data URI above this size instead of bloating every list response (default `512`). |
+| `STORAGE_PUT_TIMEOUT` | `[CONFIG]` | Bounds each storage-tier's upload attempt in the fallback chain (default `8s`). Without it, a tier whose connection stalls instead of erroring burns the whole `PICTURE_JOB_TIMEOUT`, and every later tier inherits an already-expired context and fails instantly — the fallback to B2/Supabase never actually runs. Keep `len(STORAGE_PROVIDERS) * STORAGE_PUT_TIMEOUT` comfortably under `PICTURE_JOB_TIMEOUT`. |
 | `HTTP_COMPRESS_LEVEL` | `[CONFIG]` | gzip level for the `/api/v1` REST group, excluding SSE/WebSocket routes (default `5`, `0` disables). |
 
 ### Branch protection
