@@ -85,7 +85,9 @@ func upperFirst(s string) string {
 func emitErrors(reg map[string]*structInfo) string {
 	var b strings.Builder
 	b.WriteString(header)
-	b.WriteString("\nimport { z } from 'zod'\n\n")
+	b.WriteString("\nimport { z } from 'zod'\n")
+	b.WriteString(errorsImportLine(reg))
+	b.WriteString("\n")
 
 	codes := append([]string(nil), apierr.Codes...)
 	sort.Strings(codes)
@@ -108,6 +110,29 @@ func emitErrors(reg map[string]*structInfo) string {
 	// ObsidianVault/contratos-tipos-generados.md.
 	b.WriteString(emitStructSchema(reg["ErrorResponse"], reg))
 	return b.String()
+}
+
+// errorsImportLine mirrors dtoImportLine's cross-file-import pattern for
+// errors.ts: ErrorResponse.Details references dto.FieldError, so errors.ts
+// needs `import { fieldErrorSchema } from './dto'` - kept generic (walks
+// ErrorResponse's refs rather than hardcoding FieldError) so a future field
+// referencing another dto.ts struct doesn't need this touched again.
+func errorsImportLine(reg map[string]*structInfo) string {
+	si, ok := reg["ErrorResponse"]
+	if !ok {
+		return ""
+	}
+	var names []string
+	for _, ref := range si.refs {
+		if depSi, ok := reg[ref]; ok && depSi.file == "dto" {
+			names = append(names, schemaVarFor(ref))
+		}
+	}
+	if len(names) == 0 {
+		return ""
+	}
+	sort.Strings(names)
+	return fmt.Sprintf("import { %s } from './dto'\n", strings.Join(names, ", "))
 }
 
 // emitStructSchema renders one non-recursive struct's zod schema + inferred

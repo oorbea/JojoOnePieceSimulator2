@@ -14,14 +14,14 @@ import (
 // was set at all.
 func DevilFruitFiltersFromQuery(q url.Values) (ports.DevilFruitFilters, bool, error) {
 	var filters ports.DevilFruitFilters
-	var errs []string
+	var errs []FieldError
 	hasFilters := false
 
 	if v := q.Get("rarity"); v != "" {
 		hasFilters = true
 		rarity, err := enums.ParsePowerRarity(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("rarity: %v", err))
+			errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 		} else {
 			filters.Rarity = &rarity
 		}
@@ -30,7 +30,7 @@ func DevilFruitFiltersFromQuery(q url.Values) (ports.DevilFruitFilters, bool, er
 		hasFilters = true
 		fruitType, err := enums.ParseFruitType(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("fruitType: %v", err))
+			errs = append(errs, FieldError{Field: "fruitType", Code: ValInvalidValue, Message: fmt.Sprintf("fruitType: %v", err)})
 		} else {
 			filters.FruitType = &fruitType
 		}

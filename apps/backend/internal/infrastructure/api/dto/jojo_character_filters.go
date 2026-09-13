@@ -14,14 +14,14 @@ import (
 // convention as DevilFruitFiltersFromQuery.
 func JojoCharacterFiltersFromQuery(q url.Values) (ports.JojoCharacterFilters, bool, error) {
 	var filters ports.JojoCharacterFilters
-	var errs []string
+	var errs []FieldError
 	hasFilters := false
 
 	if v := q.Get("rarity"); v != "" {
 		hasFilters = true
 		rarity, err := enums.ParsePowerRarity(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("rarity: %v", err))
+			errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 		} else {
 			filters.Rarity = &rarity
 		}
@@ -30,7 +30,7 @@ func JojoCharacterFiltersFromQuery(q url.Values) (ports.JojoCharacterFilters, bo
 		hasFilters = true
 		hamon, err := enums.ParseHamonLevel(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("hamon: %v", err))
+			errs = append(errs, FieldError{Field: "hamon", Code: ValInvalidValue, Message: fmt.Sprintf("hamon: %v", err)})
 		} else {
 			filters.Hamon = &hamon
 		}
@@ -39,7 +39,7 @@ func JojoCharacterFiltersFromQuery(q url.Values) (ports.JojoCharacterFilters, bo
 		hasFilters = true
 		spin, err := enums.ParseSpinLevel(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("spin: %v", err))
+			errs = append(errs, FieldError{Field: "spin", Code: ValInvalidValue, Message: fmt.Sprintf("spin: %v", err)})
 		} else {
 			filters.Spin = &spin
 		}
@@ -48,7 +48,7 @@ func JojoCharacterFiltersFromQuery(q url.Values) (ports.JojoCharacterFilters, bo
 		hasFilters = true
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 0 || n > 255 {
-			errs = append(errs, "battleIq: must be between 0 and 255")
+			errs = append(errs, FieldError{Field: "battleIq", Code: ValBattleIqRange, Message: "battleIq: must be between 0 and 255"})
 		} else {
 			battleIQ := byte(n)
 			filters.BattleIQ = &battleIQ

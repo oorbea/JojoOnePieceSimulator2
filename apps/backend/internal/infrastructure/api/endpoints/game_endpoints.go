@@ -477,7 +477,7 @@ func (e *GameEndpoints) preview(w http.ResponseWriter, r *http.Request) error {
 	}
 	code := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("code")))
 	if code == "" {
-		return &dto.ValidationError{Errors: []string{"code is required"}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "code", Code: dto.ValRequired, Message: "code is required"}}}
 	}
 	listing, err := e.svc.PreviewByCode(r.Context(), code)
 	if err != nil {

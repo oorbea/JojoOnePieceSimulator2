@@ -173,7 +173,7 @@ func (e *UserEndpoints) patchMePicture(w http.ResponseWriter, r *http.Request) e
 
 	r.Body = http.MaxBytesReader(w, r.Body, e.svc.MaxPictureBytes()+maxMultipartMemory)
 	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil {
-		return &dto.ValidationError{Errors: []string{err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 	}
 	defer func() {
 		_ = r.MultipartForm.RemoveAll()
@@ -283,7 +283,7 @@ func (e *UserEndpoints) deleteMe(w http.ResponseWriter, r *http.Request) error {
 func (e *UserEndpoints) getByID(w http.ResponseWriter, r *http.Request) error {
 	id, err := user.ParseUserID(chi.URLParam(r, "id"))
 	if err != nil {
-		return &dto.ValidationError{Errors: []string{"id: " + err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "id", Code: dto.ValInvalidValue, Message: "id: " + err.Error()}}}
 	}
 	u, err := e.svc.GetByID(r.Context(), id)
 	if err != nil {
@@ -315,7 +315,7 @@ func (e *UserEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil || parsed <= 0 {
-			return &dto.ValidationError{Errors: []string{"limit: must be a positive integer"}}
+			return &dto.ValidationError{Errors: []dto.FieldError{{Field: "limit", Code: dto.ValInvalidValue, Message: "limit: must be a positive integer"}}}
 		}
 		limit = parsed
 	}
@@ -327,7 +327,7 @@ func (e *UserEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 	if raw := r.URL.Query().Get("offset"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
 		if err != nil || parsed < 0 {
-			return &dto.ValidationError{Errors: []string{"offset: must be a non-negative integer"}}
+			return &dto.ValidationError{Errors: []dto.FieldError{{Field: "offset", Code: dto.ValInvalidValue, Message: "offset: must be a non-negative integer"}}}
 		}
 		offset = parsed
 	}
@@ -368,7 +368,7 @@ func (e *UserEndpoints) list(w http.ResponseWriter, r *http.Request) error {
 func (e *UserEndpoints) adminUpdateUsername(w http.ResponseWriter, r *http.Request) error {
 	id, err := user.ParseUserID(chi.URLParam(r, "id"))
 	if err != nil {
-		return &dto.ValidationError{Errors: []string{"id: " + err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "id", Code: dto.ValInvalidValue, Message: "id: " + err.Error()}}}
 	}
 	var req dto.AdminUpdateUserRequest
 	if err := decode(w, r, &req); err != nil {
@@ -409,7 +409,7 @@ func (e *UserEndpoints) adminUpdateUsername(w http.ResponseWriter, r *http.Reque
 func (e *UserEndpoints) updateRole(w http.ResponseWriter, r *http.Request) error {
 	id, err := user.ParseUserID(chi.URLParam(r, "id"))
 	if err != nil {
-		return &dto.ValidationError{Errors: []string{"id: " + err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "id", Code: dto.ValInvalidValue, Message: "id: " + err.Error()}}}
 	}
 	me, err := callerID(r)
 	if err != nil {
@@ -455,7 +455,7 @@ func (e *UserEndpoints) updateRole(w http.ResponseWriter, r *http.Request) error
 func (e *UserEndpoints) deleteByID(w http.ResponseWriter, r *http.Request) error {
 	id, err := user.ParseUserID(chi.URLParam(r, "id"))
 	if err != nil {
-		return &dto.ValidationError{Errors: []string{"id: " + err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "id", Code: dto.ValInvalidValue, Message: "id: " + err.Error()}}}
 	}
 	me, err := callerID(r)
 	if err != nil {

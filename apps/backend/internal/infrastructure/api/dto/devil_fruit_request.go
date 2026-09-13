@@ -20,22 +20,22 @@ type DevilFruitRequest struct {
 // Validate converts the request into a services.DevilFruitInput, collecting
 // all field errors before returning.
 func (r DevilFruitRequest) Validate() (services.DevilFruitInput, error) {
-	var errs []string
+	var errs []FieldError
 
 	if r.Name == "" {
-		errs = append(errs, "name is required")
+		errs = append(errs, FieldError{Field: "name", Code: ValNameRequired, Message: "name is required"})
 	}
 	translations, translationErrs := validateTranslations(r.Translations)
 	errs = append(errs, translationErrs...)
 
 	rarity, err := enums.ParsePowerRarity(r.Rarity)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("rarity: %v", err))
+		errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 	}
 
 	fruitType, err := enums.ParseFruitType(r.FruitType)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("fruitType: %v", err))
+		errs = append(errs, FieldError{Field: "fruitType", Code: ValInvalidValue, Message: fmt.Sprintf("fruitType: %v", err)})
 	}
 
 	if len(errs) > 0 {
