@@ -11,12 +11,16 @@ type ObjectInfo struct {
 	Size        int64
 }
 
-// IStorageBackend is one S3-API-compatible object-storage provider
-// (Cloudflare R2, Backblaze B2, Supabase Storage, ...). It is deliberately
-// narrower and more mechanical than IPictureStorage: no quota/fallback
-// decisions, no Picture wrapper, just the raw operations a single bucket can
-// do. infrastructure/storage/s3store.Backend is the only implementation -
-// every provider differs only in endpoint/region, never in behavior.
+// IStorageBackend is one object-storage provider (Cloudflare R2, Backblaze
+// B2, Supabase Storage, ...). It is deliberately narrower and more
+// mechanical than IPictureStorage: no quota/fallback decisions, no Picture
+// wrapper, just the raw operations a single bucket can do.
+// infrastructure/storage/s3store.Backend is the S3-API-compatible
+// implementation every provider normally uses - only endpoint/region
+// differ, never behavior. infrastructure/storage/workerproxy.Backend is a
+// second implementation, used only for R2 when R2_WORKER_URL is set, that
+// fronts the bucket through a Cloudflare Worker instead of R2's S3 API
+// endpoint (see that package's doc comment for why).
 type IStorageBackend interface {
 	// Name identifies this backend for the ledger and config (e.g. "r2",
 	// "b2", "supabase").

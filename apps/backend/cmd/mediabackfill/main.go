@@ -32,6 +32,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/s3store"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/workerproxy"
 )
 
 func main() {
@@ -478,6 +479,22 @@ func buildStorageTiers(ctx context.Context, cfg *config.Config) ([]ports.IStorag
 
 		switch name {
 		case "r2":
+			// See cmd/app/main.go's identical branch (this function is
+			// duplicated per-binary, same as the rest of buildStorageTiers)
+			// - see the workerproxy package's doc comment for why this
+			// exists.
+			if cfg.R2WorkerURL != "" {
+				backend, err := workerproxy.New(workerproxy.Config{
+					Name: "r2", BaseURL: cfg.R2WorkerURL, Secret: cfg.R2WorkerSecret,
+					PresignTTL: cfg.R2PresignTTL,
+				})
+				if err != nil {
+					return nil, nil, fmt.Errorf("configuring r2 worker-proxy backend: %w", err)
+				}
+				backends = append(backends, backend)
+				tiers = append(tiers, fallback.Tier{Backend: backend, QuotaBytes: cfg.R2QuotaBytes})
+				continue
+			}
 			s3Cfg = s3store.Config{
 				Name: "r2", Endpoint: s3store.R2Endpoint(cfg.R2AccountID), Region: "auto",
 				AccessKeyID: cfg.R2AccessKeyID, SecretAccessKey: cfg.R2SecretAccessKey,

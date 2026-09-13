@@ -35,6 +35,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/repositories"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/s3store"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/workerproxy"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
 	redisstreamticket "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket/redis"
 )
@@ -448,6 +449,24 @@ func buildStorageTiers(ctx context.Context, cfg *config.Config) ([]ports.IStorag
 
 		switch name {
 		case "r2":
+			// If R2_WORKER_URL/R2_WORKER_SECRET are set, this tier talks to
+			// apps/r2-worker-proxy instead of R2's S3 API endpoint directly
+			// - see workerproxy's doc comment for why (an ISP can have a
+			// broken route to R2's specific Cloudflare anycast prefix while
+			// the rest of Cloudflare, including the Worker's *.workers.dev
+			// address, works fine).
+			if cfg.R2WorkerURL != "" {
+				backend, err := workerproxy.New(workerproxy.Config{
+					Name: "r2", BaseURL: cfg.R2WorkerURL, Secret: cfg.R2WorkerSecret,
+					PresignTTL: cfg.R2PresignTTL,
+				})
+				if err != nil {
+					return nil, nil, fmt.Errorf("configuring r2 worker-proxy backend: %w", err)
+				}
+				backends = append(backends, backend)
+				tiers = append(tiers, fallback.Tier{Backend: backend, QuotaBytes: cfg.R2QuotaBytes})
+				continue
+			}
 			s3Cfg = s3store.Config{
 				Name: "r2", Endpoint: s3store.R2Endpoint(cfg.R2AccountID), Region: "auto",
 				AccessKeyID: cfg.R2AccessKeyID, SecretAccessKey: cfg.R2SecretAccessKey,
