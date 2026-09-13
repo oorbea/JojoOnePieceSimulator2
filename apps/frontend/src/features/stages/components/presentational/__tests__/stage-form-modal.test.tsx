@@ -45,6 +45,7 @@ function Harness({ onSubmit, onCancel }: { onSubmit: () => void; onCancel: () =>
       pictureUri={null}
       onPickPicture={jest.fn()}
       isPictureBusy={false}
+      onAdjustFocal={jest.fn()}
       activeLocale={activeLocale}
       onLocaleChange={setActiveLocale}
       erroredLocales={[]}
