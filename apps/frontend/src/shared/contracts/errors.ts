@@ -5,6 +5,7 @@
 // apps/backend (or `make types-docker`). CI fails if this file is stale.
 
 import { z } from 'zod'
+import { fieldErrorSchema } from './dto'
 
 export const errorCodeSchema = z.enum([
   'ALREADY_IN_GAME',
@@ -92,7 +93,7 @@ export type ErrorCode = z.infer<typeof errorCodeSchema>
 export const errorResponseSchema = z.object({
   error: z.string(),
   code: z.string().optional(),
-  details: z.array(z.string()).optional(),
+  details: z.array(fieldErrorSchema).optional(),
 })
 export type ErrorResponse = z.infer<typeof errorResponseSchema>
 
