@@ -78,6 +78,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("configuring picture storage: %v", err)
 	}
+	// Bound each tier's Put attempt so a single stalled provider (a
+	// connection that hangs instead of erroring) can't burn the whole
+	// picture-job budget and leave every later tier's attempt an
+	// already-expired ctx to fail against - see SetPutTimeout's doc.
+	pictureStorage.SetPutTimeout(cfg.StoragePutTimeout)
 
 	imageProcessor, closeImaging, err := imaging.New(imaging.Config{Concurrency: 1})
 	if err != nil {

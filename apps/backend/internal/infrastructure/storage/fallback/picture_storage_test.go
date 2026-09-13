@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/storage/fallback"
@@ -86,6 +87,44 @@ func (b *fakeBackend) has(key string) bool {
 }
 
 var _ ports.IStorageBackend = (*fakeBackend)(nil)
+
+// hangingBackend simulates a provider whose Put never returns on its own -
+// exactly what a stalled TCP connection to a dead S3 endpoint looks like
+// (see the fallback package's doc comment for the ctx that must bound it).
+// It blocks until ctx is done and reports whether the ctx it saw still had
+// time left when it gave up, so a test can tell "Put got a live per-attempt
+// budget" apart from "Put inherited an already-expired job ctx".
+type hangingBackend struct {
+	name        string
+	sawDeadline chan bool // true if ctx.Err() came from this call's own deadline, not a pre-expired one
+}
+
+func newHangingBackend(name string) *hangingBackend {
+	return &hangingBackend{name: name, sawDeadline: make(chan bool, 1)}
+}
+
+func (b *hangingBackend) Name() string { return b.name }
+
+func (b *hangingBackend) Put(ctx context.Context, _ string, _ io.Reader, _ string, _ int64) error {
+	before := time.Now()
+	<-ctx.Done()
+	// A ctx that was already expired on entry reports an elapsed time near
+	// zero; one that had a real budget takes measurably longer to expire.
+	b.sawDeadline <- time.Since(before) > 10*time.Millisecond
+	return ctx.Err()
+}
+
+func (b *hangingBackend) Get(context.Context, string) (io.ReadCloser, ports.ObjectInfo, error) {
+	return nil, ports.ObjectInfo{}, ports.ErrObjectNotFound
+}
+
+func (b *hangingBackend) PresignGet(context.Context, string) (string, error) { return "", nil }
+
+func (b *hangingBackend) Del(context.Context, string) error { return nil }
+
+func (b *hangingBackend) Walk(context.Context, func(key string, bytes int64) error) error { return nil }
+
+var _ ports.IStorageBackend = (*hangingBackend)(nil)
 
 // fakeLedger is an in-memory ports.IStorageLedger.
 type fakeLedger struct {
@@ -734,5 +773,97 @@ func TestUpload_ConcurrentUploadsAreRaceFree(t *testing.T) {
 	}
 	if want := int64(n * len("hello")); total != want {
 		t.Errorf("ledger total bytes = %d, want %d (every concurrent upload should be recorded)", total, want)
+	}
+}
+
+// --- SetPutTimeout: bounding a stalled tier's attempt ---
+
+// TestUpload_PutTimeoutBoundsStalledTier reproduces the prod incident: tier
+// 1 (r2) never returns from Put (a TCP connection stuck on a dead
+// endpoint), and without a per-attempt timeout the shared job ctx is the
+// only thing that can ever unblock it - by which point every other tier's
+// attempt inherits an already-expired ctx and fails instantly too. With
+// SetPutTimeout, tier 1's hang is bounded well inside the job ctx's
+// deadline, and tier 2 gets a fresh, still-live ctx to actually try with.
+func TestUpload_PutTimeoutBoundsStalledTier(t *testing.T) {
+	r2 := newHangingBackend("r2")
+	b2 := newFakeBackend("b2")
+	chain, err := fallback.New(context.Background(), []fallback.Tier{
+		{Backend: r2, QuotaBytes: 1000},
+		{Backend: b2, QuotaBytes: 1000},
+	}, newFakeLedger(), 95)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	chain.SetPutTimeout(50 * time.Millisecond)
+
+	// The job ctx has a generous budget - if the fix works, tier 1 gives up
+	// after ~50ms (its own timeout), not after this deadline.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	stored, err := chain.Upload(ctx, "a", pic("hello"))
+	if err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+	if stored.Provider != "b2" {
+		t.Fatalf("Provider = %q, want %q (r2 should have been bounded and skipped)", stored.Provider, "b2")
+	}
+	select {
+	case sawLiveDeadline := <-r2.sawDeadline:
+		if !sawLiveDeadline {
+			t.Error("r2's Put returned immediately - it never got its own timeout, it inherited an already-expired ctx")
+		}
+	default:
+		t.Fatal("r2's Put never returned")
+	}
+	if !b2.has("a") {
+		t.Error("b2 should have the object")
+	}
+}
+
+// TestUpload_PutTimeoutStillRespectsParentCancellation ensures the
+// per-attempt timeout never masks a real caller cancellation/shutdown: if
+// the parent ctx is already done, Upload must not hang waiting out its own
+// per-attempt budget.
+func TestUpload_PutTimeoutStillRespectsParentCancellation(t *testing.T) {
+	r2 := newHangingBackend("r2")
+	chain, err := fallback.New(context.Background(), []fallback.Tier{
+		{Backend: r2, QuotaBytes: 1000},
+	}, newFakeLedger(), 95)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	chain.SetPutTimeout(5 * time.Second) // much longer than the parent's deadline below
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err = chain.Upload(ctx, "a", pic("hello"))
+	if !errors.Is(err, fallback.ErrStorageExhausted) {
+		t.Fatalf("err = %v, want ErrStorageExhausted", err)
+	}
+}
+
+// TestUpload_ZeroPutTimeoutPreservesExistingBehavior documents that a chain
+// which never calls SetPutTimeout (every existing caller) is unaffected:
+// Put still runs under the caller's own ctx, unwrapped.
+func TestUpload_ZeroPutTimeoutPreservesExistingBehavior(t *testing.T) {
+	r2, b2 := newFakeBackend("r2"), newFakeBackend("b2")
+	r2.putErr = errors.New("network blip")
+	chain, err := fallback.New(context.Background(), []fallback.Tier{
+		{Backend: r2, QuotaBytes: 1000},
+		{Backend: b2, QuotaBytes: 1000},
+	}, newFakeLedger(), 95)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	stored, err := chain.Upload(context.Background(), "a", pic("hello"))
+	if err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+	if stored.Provider != "b2" {
+		t.Errorf("Provider = %q, want %q", stored.Provider, "b2")
 	}
 }

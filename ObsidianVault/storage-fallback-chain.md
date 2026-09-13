@@ -129,5 +129,56 @@ service so its startup `goose up` applies).
 - No B2/Supabase account has actually been provisioned yet — see the setup
   guide (delivered separately, not in the vault) for how to fill in
   `B2_*`/`SUPABASE_*` once ready to activate those tiers.
+  **Update 2026-09-13: both are provisioned in prod, see the incident
+  below.**
+
+## Incident 2026-09-13: fallback chain was dead-on-arrival, not the focal-point feature
+
+Prod picture uploads (any resource) started failing right after the
+focal-point deploy, so the obvious suspect was that feature. It wasn't —
+every focal commit only touches the JSON create/update body and never
+`picture_worker.go`/the multipart handlers. Root cause, found via prod
+logs + live network probes from the server:
+
+- `PATCH .../picture` → `202` in ms, then exactly `PICTURE_JOB_TIMEOUT`
+  (30s) later: `uploading "..." to r2: PutObject, StatusCode: 0, ...,
+  canceled, context deadline exceeded`, then **b2 and supabase fail in the
+  same second** with a bare `context deadline exceeded` → `markFailed`.
+- `curl` from the same docker network to R2's endpoint hung for the full
+  15s probe (`connect=0.000000`); B2 (403) and Supabase (404) answered in
+  under 150ms. So: that server had lost egress to Cloudflare R2's S3
+  endpoint specifically (infra, not code) — but the code bug is what
+  turned "one provider is down" into "no uploads work at all."
+
+**The bug**: `Upload` (`picture_storage.go`) passed the *same job ctx* to
+every tier's `Put`. A tier that *hangs* instead of erroring cleanly
+(exactly what a stalled TCP connection to a dead endpoint does) burns the
+whole job budget, so every later tier's `Put` starts with an
+already-expired ctx and fails instantly, `errors.Join`-ed into
+`ErrStorageExhausted` without ever really trying B2/Supabase — the
+fallback chain existed for precisely this scenario and couldn't do its
+job in it.
+
+**Fix**: `PictureStorage.SetPutTimeout(d)` wraps each tier's `Put` in its
+own `context.WithTimeout(ctx, d)` instead of reusing the caller's ctx
+directly. `d <= 0` keeps the old behavior (opt-in, so every existing test/
+caller is unaffected without calling it). Wired from `main.go` via
+`cfg.StoragePutTimeout` (`STORAGE_PUT_TIMEOUT`, default `8s` — 3 tiers ×
+8s = 24s, inside the 30s job budget so the *last* tier still gets a live
+ctx). Verified by literally reproducing the incident: pointing R2's
+endpoint at an unroutable IP and re-running the real fallback chain
+against real B2 credentials in Docker reproduced the exact same log lines
+prod showed, then confirmed the fix turns a 30s failure into an ~8.5s
+success on B2.
+
+Gotcha for next time: `STORAGE_PROVIDERS[0]` must be `"r2"` (`config.go`
+enforces it — pre-ledger objects are assumed to be on the first tier), so
+reordering tiers is not a workaround for R2 being down; only the
+per-attempt timeout is.
+
+Also: the admin only ever sees a generic "no se ha podido procesar la
+foto" toast for *any* picture failure — transcode error, quota exhausted,
+or (this incident) every storage tier unreachable. The real reason always
+lives in the backend log, not the UI.
 
 Related: [[ADR]], [[docker-setup]], [[cicd-deployment]].
