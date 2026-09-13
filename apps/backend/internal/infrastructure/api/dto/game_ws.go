@@ -114,7 +114,7 @@ type PoolFilterPayload struct {
 
 // ToPoolFilter validates p (which may be nil, meaning "no restriction")
 // into a game.PoolFilter, collecting field errors under the given prefix.
-func (p *PoolFilterPayload) ToPoolFilter(errs *[]string) game.PoolFilter {
+func (p *PoolFilterPayload) ToPoolFilter(errs *[]FieldError) game.PoolFilter {
 	if p == nil {
 		return game.PoolFilter{}
 	}
@@ -124,7 +124,7 @@ func (p *PoolFilterPayload) ToPoolFilter(errs *[]string) game.PoolFilter {
 	for _, raw := range p.FruitTypes {
 		t, err := enums.ParseFruitType(raw)
 		if err != nil {
-			*errs = append(*errs, fmt.Sprintf("poolFilter.fruitTypes: %v", err))
+			*errs = append(*errs, FieldError{Field: "poolFilter.fruitTypes", Code: ValInvalidValue, Message: fmt.Sprintf("poolFilter.fruitTypes: %v", err)})
 			continue
 		}
 		fruitTypes = append(fruitTypes, t)
@@ -133,24 +133,24 @@ func (p *PoolFilterPayload) ToPoolFilter(errs *[]string) game.PoolFilter {
 	for _, raw := range p.Banned {
 		id, err := powers.ParsePowerID(raw)
 		if err != nil {
-			*errs = append(*errs, fmt.Sprintf("poolFilter.banned: %v", err))
+			*errs = append(*errs, FieldError{Field: "poolFilter.banned", Code: ValInvalidValue, Message: fmt.Sprintf("poolFilter.banned: %v", err)})
 			continue
 		}
 		banned = append(banned, id)
 	}
 	filter, err := game.NewPoolFilter(standRarities, fruitRarities, fruitTypes, banned)
 	if err != nil {
-		*errs = append(*errs, fmt.Sprintf("poolFilter: %v", err))
+		*errs = append(*errs, FieldError{Field: "poolFilter", Code: ValInvalidValue, Message: fmt.Sprintf("poolFilter: %v", err)})
 	}
 	return filter
 }
 
-func parseRarities(raw []string, field string, errs *[]string) []enums.PowerRarity {
+func parseRarities(raw []string, field string, errs *[]FieldError) []enums.PowerRarity {
 	out := make([]enums.PowerRarity, 0, len(raw))
 	for _, r := range raw {
 		parsed, err := enums.ParsePowerRarity(r)
 		if err != nil {
-			*errs = append(*errs, fmt.Sprintf("%s: %v", field, err))
+			*errs = append(*errs, FieldError{Field: field, Code: ValInvalidValue, Message: fmt.Sprintf("%s: %v", field, err)})
 			continue
 		}
 		out = append(out, parsed)
@@ -161,12 +161,12 @@ func parseRarities(raw []string, field string, errs *[]string) []enums.PowerRari
 // parseMangas parses raw into a []enums.Manga, collecting field errors
 // under field - shared by CreateGameRequest/UpdateConfigPayload's
 // stageMangas and powerMangas.
-func parseMangas(raw []string, field string, errs *[]string) []enums.Manga {
+func parseMangas(raw []string, field string, errs *[]FieldError) []enums.Manga {
 	out := make([]enums.Manga, 0, len(raw))
 	for _, r := range raw {
 		m, err := enums.ParseManga(r)
 		if err != nil {
-			*errs = append(*errs, fmt.Sprintf("%s: %v", field, err))
+			*errs = append(*errs, FieldError{Field: field, Code: ValInvalidValue, Message: fmt.Sprintf("%s: %v", field, err)})
 			continue
 		}
 		out = append(out, m)
@@ -197,24 +197,24 @@ type UpdateConfigPayload struct {
 // Validate converts the payload into a services.ConfigUpdateInput,
 // collecting all field errors before returning.
 func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
-	var errs []string
+	var errs []FieldError
 
 	mode, err := enums.ParseGameModeKind(p.Mode)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("mode: %v", err))
+		errs = append(errs, FieldError{Field: "mode", Code: ValInvalidValue, Message: fmt.Sprintf("mode: %v", err)})
 	}
 	stageMangas := parseMangas(p.StageMangas, "stageMangas", &errs)
 	powerMangas := parseMangas(p.PowerMangas, "powerMangas", &errs)
 	abilitySource, err := enums.ParseAbilitySource(p.AbilitySource)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("abilitySource: %v", err))
+		errs = append(errs, FieldError{Field: "abilitySource", Code: ValInvalidValue, Message: fmt.Sprintf("abilitySource: %v", err)})
 	}
 	if p.TeamSize <= 0 {
-		errs = append(errs, "teamSize must be positive")
+		errs = append(errs, FieldError{Field: "teamSize", Code: ValInvalidValue, Message: "teamSize must be positive"})
 	}
 	visibility, err := enums.ParseLobbyVisibility(p.Visibility)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("visibility: %v", err))
+		errs = append(errs, FieldError{Field: "visibility", Code: ValInvalidValue, Message: fmt.Sprintf("visibility: %v", err)})
 	}
 	poolFilter := p.PoolFilter.ToPoolFilter(&errs)
 
@@ -222,7 +222,7 @@ func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
 	if p.RevealSpeed != "" {
 		revealSpeed, err = enums.ParseRevealSpeed(p.RevealSpeed)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("revealSpeed: %v", err))
+			errs = append(errs, FieldError{Field: "revealSpeed", Code: ValInvalidValue, Message: fmt.Sprintf("revealSpeed: %v", err)})
 		}
 	}
 

@@ -296,7 +296,7 @@ func (e *OnePieceCharacterEndpoints) patchPicture(w http.ResponseWriter, r *http
 
 	r.Body = http.MaxBytesReader(w, r.Body, e.svc.MaxPictureBytes()+maxMultipartMemory)
 	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil {
-		return &dto.ValidationError{Errors: []string{err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 	}
 	defer func() {
 		_ = r.MultipartForm.RemoveAll()

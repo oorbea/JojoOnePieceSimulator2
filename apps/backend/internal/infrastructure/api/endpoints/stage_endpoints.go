@@ -117,7 +117,7 @@ func (e *StageEndpoints) listPage(w http.ResponseWriter, r *http.Request, filter
 		}
 		manga, err := enums.ParseManga(cursor.Manga)
 		if err != nil {
-			return &dto.ValidationError{Errors: []string{"cursor: invalid manga"}}
+			return &dto.ValidationError{Errors: []dto.FieldError{{Field: "cursor", Code: dto.ValInvalidValue, Message: "cursor: invalid manga"}}}
 		}
 		after = &ports.StagePageCursor{Manga: manga, Position: cursor.Position, Name: cursor.Name}
 	}
@@ -297,7 +297,7 @@ func (e *StageEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 
 	r.Body = http.MaxBytesReader(w, r.Body, e.svc.MaxPictureBytes()+maxMultipartMemory)
 	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil {
-		return &dto.ValidationError{Errors: []string{err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 	}
 	defer func() {
 		_ = r.MultipartForm.RemoveAll()

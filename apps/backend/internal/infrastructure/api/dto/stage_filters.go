@@ -13,14 +13,14 @@ import (
 // filter is skipped. The bool reports whether any param was set at all.
 func StageFiltersFromQuery(q url.Values) (ports.StageFilters, bool, error) {
 	var filters ports.StageFilters
-	var errs []string
+	var errs []FieldError
 	hasFilters := false
 
 	if v := q.Get("manga"); v != "" {
 		hasFilters = true
 		manga, err := enums.ParseManga(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("manga: %v", err))
+			errs = append(errs, FieldError{Field: "manga", Code: ValInvalidValue, Message: fmt.Sprintf("manga: %v", err)})
 		} else {
 			filters.Manga = &manga
 		}

@@ -8,7 +8,7 @@ type GoogleLoginRequest struct {
 // Validate checks that an ID token was actually sent.
 func (r GoogleLoginRequest) Validate() error {
 	if r.IDToken == "" {
-		return &ValidationError{Errors: []string{"idToken is required"}}
+		return &ValidationError{Errors: []FieldError{{Field: "idToken", Code: ValRequired, Message: "idToken is required"}}}
 	}
 	return nil
 }

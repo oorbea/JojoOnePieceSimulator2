@@ -21,22 +21,22 @@ type TranslationRequest struct {
 // skill, and every other present locale must also have a non-empty
 // description and at least one skill (a locale is either fully translated
 // or absent - no partial/blank overrides).
-func validateTranslations(m map[string]TranslationRequest) (ports.PowerTranslations, []string) {
-	var errs []string
+func validateTranslations(m map[string]TranslationRequest) (ports.PowerTranslations, []FieldError) {
+	var errs []FieldError
 	out := make(ports.PowerTranslations, len(m))
 
 	for key, t := range m {
 		locale, err := enums.ParseLocale(key)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("translations: unsupported locale %q", key))
+			errs = append(errs, FieldError{Field: "translations", Code: ValLocaleUnsupported, Message: fmt.Sprintf("translations: unsupported locale %q", key)})
 			continue
 		}
 		if t.Description == "" {
-			errs = append(errs, fmt.Sprintf("translations.%s.description is required", key))
+			errs = append(errs, FieldError{Field: fmt.Sprintf("translations.%s.description", key), Code: ValDescriptionRequired, Message: fmt.Sprintf("translations.%s.description is required", key)})
 			continue
 		}
 		if len(t.Skills) == 0 {
-			errs = append(errs, fmt.Sprintf("translations.%s.skills are required", key))
+			errs = append(errs, FieldError{Field: fmt.Sprintf("translations.%s.skills", key), Code: ValSkillsRequired, Message: fmt.Sprintf("translations.%s.skills are required", key)})
 			continue
 		}
 		skills := append([]string(nil), t.Skills...)
@@ -44,7 +44,7 @@ func validateTranslations(m map[string]TranslationRequest) (ports.PowerTranslati
 	}
 
 	if _, ok := out[enums.EnGB]; !ok {
-		errs = append(errs, "translations.en-GB is required")
+		errs = append(errs, FieldError{Field: "translations.en-GB", Code: ValLocaleDefaultRequired, Message: "translations.en-GB is required"})
 	}
 
 	return out, errs
@@ -61,18 +61,18 @@ type StageTranslationRequest struct {
 // "translations" map: every key must be a supported locale, and - per the
 // owner's decision, unlike Power translations where only en-GB is mandatory -
 // every one of enums.Locales() must be present with a non-empty description.
-func validateStageTranslations(m map[string]StageTranslationRequest) (ports.StageTranslations, []string) {
-	var errs []string
+func validateStageTranslations(m map[string]StageTranslationRequest) (ports.StageTranslations, []FieldError) {
+	var errs []FieldError
 	out := make(ports.StageTranslations, len(m))
 
 	for key, t := range m {
 		locale, err := enums.ParseLocale(key)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("translations: unsupported locale %q", key))
+			errs = append(errs, FieldError{Field: "translations", Code: ValLocaleUnsupported, Message: fmt.Sprintf("translations: unsupported locale %q", key)})
 			continue
 		}
 		if t.Description == "" {
-			errs = append(errs, fmt.Sprintf("translations.%s.description is required", key))
+			errs = append(errs, FieldError{Field: fmt.Sprintf("translations.%s.description", key), Code: ValDescriptionRequired, Message: fmt.Sprintf("translations.%s.description is required", key)})
 			continue
 		}
 		out[locale] = t.Description
@@ -80,7 +80,7 @@ func validateStageTranslations(m map[string]StageTranslationRequest) (ports.Stag
 
 	for _, l := range enums.Locales() {
 		if _, ok := out[l]; !ok {
-			errs = append(errs, fmt.Sprintf("translations.%s is required", l))
+			errs = append(errs, FieldError{Field: fmt.Sprintf("translations.%s", l), Code: ValRequired, Message: fmt.Sprintf("translations.%s is required", l)})
 		}
 	}
 
@@ -100,25 +100,25 @@ type CharacterTranslationRequest struct {
 // key must be a supported locale, en-GB must be present with a non-empty
 // description, and any other present locale must also have a non-empty
 // description.
-func validateCharacterTranslations(m map[string]CharacterTranslationRequest) (ports.CharacterTranslations, []string) {
-	var errs []string
+func validateCharacterTranslations(m map[string]CharacterTranslationRequest) (ports.CharacterTranslations, []FieldError) {
+	var errs []FieldError
 	out := make(ports.CharacterTranslations, len(m))
 
 	for key, t := range m {
 		locale, err := enums.ParseLocale(key)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("translations: unsupported locale %q", key))
+			errs = append(errs, FieldError{Field: "translations", Code: ValLocaleUnsupported, Message: fmt.Sprintf("translations: unsupported locale %q", key)})
 			continue
 		}
 		if t.Description == "" {
-			errs = append(errs, fmt.Sprintf("translations.%s.description is required", key))
+			errs = append(errs, FieldError{Field: fmt.Sprintf("translations.%s.description", key), Code: ValDescriptionRequired, Message: fmt.Sprintf("translations.%s.description is required", key)})
 			continue
 		}
 		out[locale] = t.Description
 	}
 
 	if _, ok := out[enums.EnGB]; !ok {
-		errs = append(errs, "translations.en-GB is required")
+		errs = append(errs, FieldError{Field: "translations.en-GB", Code: ValLocaleDefaultRequired, Message: "translations.en-GB is required"})
 	}
 
 	return out, errs

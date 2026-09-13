@@ -49,6 +49,13 @@ export const devilFruitPageResponseSchema = z.object({
 })
 export type DevilFruitPageResponse = z.infer<typeof devilFruitPageResponseSchema>
 
+export const fieldErrorSchema = z.object({
+  field: z.string(),
+  code: z.string(),
+  message: z.string(),
+})
+export type FieldError = z.infer<typeof fieldErrorSchema>
+
 export const gameRoundResultResponseSchema = z.object({
   winner: z.string(),
   decidedByCoinFlip: z.boolean(),

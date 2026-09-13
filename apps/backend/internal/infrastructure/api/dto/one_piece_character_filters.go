@@ -14,14 +14,14 @@ import (
 // convention as DevilFruitFiltersFromQuery.
 func OnePieceCharacterFiltersFromQuery(q url.Values) (ports.OnePieceCharacterFilters, bool, error) {
 	var filters ports.OnePieceCharacterFilters
-	var errs []string
+	var errs []FieldError
 	hasFilters := false
 
 	if v := q.Get("rarity"); v != "" {
 		hasFilters = true
 		rarity, err := enums.ParsePowerRarity(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("rarity: %v", err))
+			errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 		} else {
 			filters.Rarity = &rarity
 		}
@@ -30,7 +30,7 @@ func OnePieceCharacterFiltersFromQuery(q url.Values) (ports.OnePieceCharacterFil
 		hasFilters = true
 		physicalForm, err := enums.ParsePhysicalForm(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("physicalForm: %v", err))
+			errs = append(errs, FieldError{Field: "physicalForm", Code: ValInvalidValue, Message: fmt.Sprintf("physicalForm: %v", err)})
 		} else {
 			filters.PhysicalForm = &physicalForm
 		}
@@ -39,7 +39,7 @@ func OnePieceCharacterFiltersFromQuery(q url.Values) (ports.OnePieceCharacterFil
 		hasFilters = true
 		haki, err := enums.ParseHakiLevel(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("armamentHaki: %v", err))
+			errs = append(errs, FieldError{Field: "armamentHaki", Code: ValInvalidValue, Message: fmt.Sprintf("armamentHaki: %v", err)})
 		} else {
 			filters.ArmamentHaki = &haki
 		}
@@ -48,7 +48,7 @@ func OnePieceCharacterFiltersFromQuery(q url.Values) (ports.OnePieceCharacterFil
 		hasFilters = true
 		haki, err := enums.ParseHakiLevel(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("observationHaki: %v", err))
+			errs = append(errs, FieldError{Field: "observationHaki", Code: ValInvalidValue, Message: fmt.Sprintf("observationHaki: %v", err)})
 		} else {
 			filters.ObservationHaki = &haki
 		}
@@ -57,7 +57,7 @@ func OnePieceCharacterFiltersFromQuery(q url.Values) (ports.OnePieceCharacterFil
 		hasFilters = true
 		haki, err := enums.ParseHakiLevel(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("conquerorHaki: %v", err))
+			errs = append(errs, FieldError{Field: "conquerorHaki", Code: ValInvalidValue, Message: fmt.Sprintf("conquerorHaki: %v", err)})
 		} else {
 			filters.ConquerorHaki = &haki
 		}
@@ -66,7 +66,7 @@ func OnePieceCharacterFiltersFromQuery(q url.Values) (ports.OnePieceCharacterFil
 		hasFilters = true
 		fruitMastery, err := enums.ParseFruitMastery(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("fruitMastery: %v", err))
+			errs = append(errs, FieldError{Field: "fruitMastery", Code: ValInvalidValue, Message: fmt.Sprintf("fruitMastery: %v", err)})
 		} else {
 			filters.FruitMastery = &fruitMastery
 		}

@@ -32,11 +32,11 @@ type CreateGameRequest struct {
 // Validate converts the request into a services.CreateGameInput, collecting
 // all field errors before returning.
 func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
-	var errs []string
+	var errs []FieldError
 
 	mode, err := enums.ParseGameModeKind(r.Mode)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("mode: %v", err))
+		errs = append(errs, FieldError{Field: "mode", Code: ValInvalidValue, Message: fmt.Sprintf("mode: %v", err)})
 	}
 
 	stageMangas := parseMangas(r.StageMangas, "stageMangas", &errs)
@@ -44,18 +44,18 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 
 	abilitySource, err := enums.ParseAbilitySource(r.AbilitySource)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("abilitySource: %v", err))
+		errs = append(errs, FieldError{Field: "abilitySource", Code: ValInvalidValue, Message: fmt.Sprintf("abilitySource: %v", err)})
 	}
 
 	if r.TeamSize <= 0 {
-		errs = append(errs, "teamSize must be positive")
+		errs = append(errs, FieldError{Field: "teamSize", Code: ValInvalidValue, Message: "teamSize must be positive"})
 	}
 
 	var visibility enums.LobbyVisibility
 	if r.Visibility != "" {
 		visibility, err = enums.ParseLobbyVisibility(r.Visibility)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("visibility: %v", err))
+			errs = append(errs, FieldError{Field: "visibility", Code: ValInvalidValue, Message: fmt.Sprintf("visibility: %v", err)})
 		}
 	}
 	poolFilter := r.PoolFilter.ToPoolFilter(&errs)
@@ -64,7 +64,7 @@ func (r CreateGameRequest) Validate() (services.CreateGameInput, error) {
 	if r.RevealSpeed != "" {
 		revealSpeed, err = enums.ParseRevealSpeed(r.RevealSpeed)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("revealSpeed: %v", err))
+			errs = append(errs, FieldError{Field: "revealSpeed", Code: ValInvalidValue, Message: fmt.Sprintf("revealSpeed: %v", err)})
 		}
 	}
 
@@ -97,7 +97,7 @@ type JoinGameRequest struct {
 func (r JoinGameRequest) Validate() (string, error) {
 	code := strings.ToUpper(strings.TrimSpace(r.Code))
 	if code == "" {
-		return "", &ValidationError{Errors: []string{"code is required"}}
+		return "", &ValidationError{Errors: []FieldError{{Field: "code", Code: ValRequired, Message: "code is required"}}}
 	}
 	return code, nil
 }

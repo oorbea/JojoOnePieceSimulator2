@@ -103,17 +103,17 @@ func DecodeCursor[K any](cursor string, expectedFingerprint string) (K, error) {
 	var zero K
 	data, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
-		return zero, &ValidationError{Errors: []string{"cursor: malformed"}}
+		return zero, &ValidationError{Errors: []FieldError{{Field: "cursor", Code: ValInvalidValue, Message: "cursor: malformed"}}}
 	}
 	var env cursorEnvelope[K]
 	if err := json.Unmarshal(data, &env); err != nil {
-		return zero, &ValidationError{Errors: []string{"cursor: malformed"}}
+		return zero, &ValidationError{Errors: []FieldError{{Field: "cursor", Code: ValInvalidValue, Message: "cursor: malformed"}}}
 	}
 	if env.V != cursorVersion {
-		return zero, &ValidationError{Errors: []string{"cursor: unsupported version"}}
+		return zero, &ValidationError{Errors: []FieldError{{Field: "cursor", Code: ValInvalidValue, Message: "cursor: unsupported version"}}}
 	}
 	if env.F != expectedFingerprint {
-		return zero, &ValidationError{Errors: []string{"cursor: does not match the current filters"}}
+		return zero, &ValidationError{Errors: []FieldError{{Field: "cursor", Code: ValInvalidValue, Message: "cursor: does not match the current filters"}}}
 	}
 	return env.K, nil
 }
@@ -189,7 +189,7 @@ type PageParams struct {
 // a non-numeric limit is a 400 (not silently clamped, since that's a client
 // bug worth surfacing rather than masking).
 func PageParamsFromQuery(q url.Values) (PageParams, error) {
-	var errs []string
+	var errs []FieldError
 	params := PageParams{WithTotal: true}
 
 	limitStr := q.Get("limit")
@@ -203,9 +203,9 @@ func PageParamsFromQuery(q url.Values) (PageParams, error) {
 	} else {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
-			errs = append(errs, "limit: must be a number")
+			errs = append(errs, FieldError{Field: "limit", Code: ValInvalidValue, Message: "limit: must be a number"})
 		} else if limit < 1 {
-			errs = append(errs, "limit: must be at least 1")
+			errs = append(errs, FieldError{Field: "limit", Code: ValInvalidValue, Message: "limit: must be at least 1"})
 		} else {
 			if limit > maxPageSize {
 				limit = maxPageSize
