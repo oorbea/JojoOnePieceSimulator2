@@ -1,0 +1,17 @@
+name = "jojo-r2-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-09-13"
+
+# No custom domain/route configured - this Worker is deliberately reached
+# only via its default *.workers.dev address (the same generic Cloudflare
+# edge pool that stayed reachable during the 2026-09-13 incident even
+# while R2's own S3 API endpoint was blackholed by the ISP - see
+# ObsidianVault/storage-fallback-chain.md). Adding a route here would be a
+# deliberate, separate decision, not a default.
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "jojo-one-piece-simulator-2"
+
+# R2_PROXY_SECRET is a Worker secret (`wrangler secret put R2_PROXY_SECRET`,
+# or set by CI's wrangler-action `secrets:` input) - never committed here.
