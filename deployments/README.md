@@ -71,6 +71,7 @@ doesn't read them):
 | `SERVER_IP` | Server's Tailscale IP/hostname |
 | `SERVER_USER` | SSH user on the server |
 | `SSH_PRIVATE_KEY` | SSH private key authorized on the server |
+| `CLOUDFLARE_API_TOKEN` | Deploys `apps/r2-worker-proxy` (Workers Scripts:Edit + R2 Storage:Edit permissions). `R2_ACCOUNT_ID` doubles as the Cloudflare account id for this. |
 
 The auth ones are the easiest to get wrong (a bad value fails at boot or,
 worse, silently locks the owner out of every admin route), so they are spelled
@@ -96,6 +97,35 @@ out here too — they are ordinary `.env.example` entries, not extra secrets:
 | `MEDIA_LQIP_MAX_BYTES` | `[CONFIG]` | Rejects (and logs) an LQIP data URI above this size instead of bloating every list response (default `512`). |
 | `STORAGE_PUT_TIMEOUT` | `[CONFIG]` | Bounds each storage-tier's upload attempt in the fallback chain (default `8s`). Without it, a tier whose connection stalls instead of erroring burns the whole `PICTURE_JOB_TIMEOUT`, and every later tier inherits an already-expired context and fails instantly — the fallback to B2/Supabase never actually runs. Keep `len(STORAGE_PROVIDERS) * STORAGE_PUT_TIMEOUT` comfortably under `PICTURE_JOB_TIMEOUT`. |
 | `HTTP_COMPRESS_LEVEL` | `[CONFIG]` | gzip level for the `/api/v1` REST group, excluding SSE/WebSocket routes (default `5`, `0` disables). |
+| `R2_WORKER_URL` / `R2_WORKER_SECRET` | `[SECRET]` | Optional — see "R2 via Cloudflare Worker" below. Must be set together. |
+
+### R2 via Cloudflare Worker (optional)
+
+`apps/r2-worker-proxy` fronts the R2 bucket through a Cloudflare Worker
+instead of R2's S3 API endpoint, so an ISP-side routing problem to that one
+specific Cloudflare anycast prefix (see
+`ObsidianVault/storage-fallback-chain.md`'s 2026-09-13 incident) can't break
+uploads or reads again — the Worker lives on the generic `*.workers.dev`
+pool instead. It's entirely optional: unset `R2_WORKER_URL`/
+`R2_WORKER_SECRET` and the backend talks to R2 directly, same as before this
+existed.
+
+One-time setup:
+
+1. Generate a long random value for `R2_WORKER_SECRET` and add it as a
+   GitHub secret with that exact name.
+2. Create a Cloudflare API token (Workers Scripts:Edit + R2 Storage:Edit)
+   and add it as `CLOUDFLARE_API_TOKEN`.
+3. Push to `main` — `cd.yml`'s `deploy-r2-worker-proxy` job runs
+   `wrangler deploy`, which creates the Worker and sets its
+   `R2_PROXY_SECRET` from the `R2_WORKER_SECRET` GitHub secret.
+4. Find the Worker's URL in the Cloudflare dashboard (Workers & Pages →
+   `jojo-r2-proxy`), or in that job's log — it's
+   `https://jojo-r2-proxy.<your-subdomain>.workers.dev`.
+5. Add that URL as the `R2_WORKER_URL` GitHub secret and push again (or
+   re-run the CD pipeline) — the backend picks it up on its next deploy.
+
+See `apps/r2-worker-proxy/README.md` for the wire protocol and local dev.
 
 ### Branch protection
 
