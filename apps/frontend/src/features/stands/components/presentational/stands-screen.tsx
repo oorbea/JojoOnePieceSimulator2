@@ -8,6 +8,7 @@ import { Spinner, XStack, YStack } from 'tamagui'
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { DetailModal } from '@/shared/components/presentational/detail-modal'
 import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
+import { FocalPointModal } from '@/shared/components/presentational/focal-point-modal'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import {
@@ -45,9 +46,19 @@ type FormState = {
   pictureUri: string | null
   onPickPicture: () => void
   isPictureBusy: boolean
+  onAdjustFocal: () => void
   activeLocale: Locale
   onLocaleChange: (locale: Locale) => void
   erroredLocales: Locale[]
+}
+
+type FocalModalState = {
+  visible: boolean
+  uri: string | null
+  x: number
+  y: number
+  onConfirm: (x: number, y: number) => void
+  onCancel?: () => void
 }
 
 export type StandStatFilterKey =
@@ -104,6 +115,7 @@ type WritableProps = {
   onDelete: (stand: StandResponse) => void
   openingEditId: string | null
   form: FormState
+  focalModal: FocalModalState
   deleteConfirm: ConfirmState
 }
 
@@ -380,9 +392,19 @@ export function StandsScreen(props: Props) {
             pictureUri={props.form.pictureUri}
             onPickPicture={props.form.onPickPicture}
             isPictureBusy={props.form.isPictureBusy}
+            onAdjustFocal={props.form.onAdjustFocal}
             activeLocale={props.form.activeLocale}
             onLocaleChange={props.form.onLocaleChange}
             erroredLocales={props.form.erroredLocales}
+          />
+
+          <FocalPointModal
+            visible={props.focalModal.visible}
+            uri={props.focalModal.uri}
+            x={props.focalModal.x}
+            y={props.focalModal.y}
+            onConfirm={props.focalModal.onConfirm}
+            onCancel={props.focalModal.onCancel}
           />
 
           <ConfirmSheet
