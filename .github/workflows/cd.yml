@@ -49,7 +49,7 @@ jobs:
           exclude = {
               'TS_OAUTH_CLIENT_ID', 'TS_OAUTH_SECRET',
               'SERVER_IP', 'SERVER_USER', 'SSH_PRIVATE_KEY',
-              'GITHUB_TOKEN',
+              'GITHUB_TOKEN', 'CLOUDFLARE_API_TOKEN',
           }
 
           with open('deployments/.env', 'w') as f:
