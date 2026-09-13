@@ -14,6 +14,7 @@ import (
 	"io"
 	"log"
 	"sync/atomic"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
@@ -47,6 +48,19 @@ type PictureStorage struct {
 	ledger       ports.IStorageLedger
 	thresholdPct int
 	usage        map[string]*usageCounter
+	putTimeout   time.Duration
+}
+
+// SetPutTimeout bounds every tier's Put attempt to d, instead of letting it
+// run for however long is left on the ctx Upload was called with. Without
+// this, a single stalled tier (a TCP connection stuck on a dead endpoint,
+// say) burns the whole ctx's budget, and every tier after it inherits an
+// already-expired ctx and fails instantly - the fallback chain becomes
+// dead-on-arrival in exactly the scenario it exists to survive. d <= 0
+// restores the default (each Put runs under Upload's own ctx, unwrapped) -
+// the zero value, so a chain that never calls this is unaffected.
+func (s *PictureStorage) SetPutTimeout(d time.Duration) {
+	s.putTimeout = d
 }
 
 var _ ports.IPictureStorage = (*PictureStorage)(nil)
@@ -145,6 +159,12 @@ func rewindableReader(content io.Reader, size int64) (io.ReadSeeker, error) {
 // quota and falling through to the next tier on a Put error. The first
 // tier's Put may error even with plenty of quota left (a transient network
 // issue, say) and the chain still tries the rest before giving up.
+//
+// Each tier's Put runs under its own child ctx, bounded by putTimeout (see
+// SetPutTimeout) rather than sharing the ctx Upload was called with -
+// otherwise a single stalled tier (Put that never returns instead of
+// erroring) burns the whole budget, and every later tier inherits an
+// already-expired ctx and fails instantly without ever really trying.
 func (s *PictureStorage) Upload(ctx context.Context, key string, pic ports.Picture) (ports.StoredPicture, error) {
 	content, err := rewindableReader(pic.Content, pic.Size)
 	if err != nil {
@@ -161,7 +181,14 @@ func (s *PictureStorage) Upload(ctx context.Context, key string, pic ports.Pictu
 		if _, err := content.Seek(0, io.SeekStart); err != nil {
 			return ports.StoredPicture{}, fmt.Errorf("rewinding picture content for %s: %w", t.Backend.Name(), err)
 		}
-		if err := t.Backend.Put(ctx, key, content, pic.ContentType, pic.Size); err != nil {
+		attemptCtx := ctx
+		cancel := func() {}
+		if s.putTimeout > 0 {
+			attemptCtx, cancel = context.WithTimeout(ctx, s.putTimeout)
+		}
+		err := t.Backend.Put(attemptCtx, key, content, pic.ContentType, pic.Size)
+		cancel()
+		if err != nil {
 			log.Printf("uploading %q to %s failed, trying next tier: %v", key, t.Backend.Name(), err)
 			errs = append(errs, err)
 			continue
