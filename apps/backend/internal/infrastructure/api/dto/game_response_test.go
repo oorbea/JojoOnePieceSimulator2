@@ -30,7 +30,7 @@ func buildLoadoutTestGame(t *testing.T) (*game.Game, *powers.Stand) {
 	if err != nil {
 		t.Fatalf("NewHumanParticipant: %v", err)
 	}
-	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg")
+	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg", 0.5, 0.5)
 	team, err := game.NewTeam(game.TeamID{10}, "Squad", 0)
 	if err != nil {
 		t.Fatalf("NewTeam: %v", err)
@@ -391,7 +391,7 @@ func TestNewGameStateResponse_ParticipantAvatar(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHumanParticipant: %v", err)
 	}
-	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg")
+	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg", 0.5, 0.5)
 	teamA, err := game.NewTeam(game.TeamID{10}, "Team A", 0)
 	if err != nil {
 		t.Fatalf("NewTeam(A): %v", err)
@@ -413,7 +413,7 @@ func TestNewGameStateResponse_ParticipantAvatar(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHumanParticipant(googleOnly): %v", err)
 	}
-	googleOnly.SetAvatar("", "https://accounts.google.com/only.jpg")
+	googleOnly.SetAvatar("", "https://accounts.google.com/only.jpg", 0.5, 0.5)
 	if err := g.Join(googleOnly); err != nil {
 		t.Fatalf("Join(googleOnly): %v", err)
 	}

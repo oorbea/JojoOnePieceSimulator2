@@ -431,6 +431,8 @@ export const gameParticipantResponseSchema = z.object({
   kind: participantKindSchema,
   connected: z.boolean(),
   avatarThumb: z.string(),
+  avatarFocalX: z.number(),
+  avatarFocalY: z.number(),
   loadout: gameLoadoutResponseSchema.optional(),
 })
 export type GameParticipantResponse = z.infer<typeof gameParticipantResponseSchema>

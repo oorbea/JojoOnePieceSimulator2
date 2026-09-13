@@ -25,6 +25,8 @@ function participant(overrides: Partial<GameParticipant> = {}): GameParticipant 
     kind: 'HUMAN',
     connected: true,
     avatarThumb: '',
+    avatarFocalX: 0.5,
+    avatarFocalY: 0.5,
     ...overrides,
   }
 }

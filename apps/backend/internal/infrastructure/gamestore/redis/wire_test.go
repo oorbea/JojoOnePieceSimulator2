@@ -34,7 +34,7 @@ func buildTestGame(t *testing.T) *game.Game {
 	if err != nil {
 		t.Fatalf("NewHumanParticipant: %v", err)
 	}
-	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg")
+	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg", 0.5, 0.5)
 	team, err := game.NewTeam(game.TeamID{10}, "Squad", 0)
 	if err != nil {
 		t.Fatalf("NewTeam: %v", err)
