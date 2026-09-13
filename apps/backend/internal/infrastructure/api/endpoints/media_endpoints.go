@@ -92,11 +92,11 @@ func parseVariantFile(variantFile string) (string, bool) {
 func (e *MediaEndpoints) public(w http.ResponseWriter, r *http.Request) error {
 	group := chi.URLParam(r, "group")
 	if !groupIDPattern.MatchString(group) {
-		return &dto.ValidationError{Errors: []string{"invalid group id"}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "group", Code: dto.ValInvalidValue, Message: "invalid group id"}}}
 	}
 	variant, ok := parseVariantFile(chi.URLParam(r, "variantFile"))
 	if !ok {
-		return &dto.ValidationError{Errors: []string{"invalid variant"}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "variant", Code: dto.ValInvalidValue, Message: "invalid variant"}}}
 	}
 	return e.serve(w, r, group, variant, "public", nil)
 }
@@ -106,15 +106,15 @@ func (e *MediaEndpoints) public(w http.ResponseWriter, r *http.Request) error {
 func (e *MediaEndpoints) private(w http.ResponseWriter, r *http.Request) error {
 	group := chi.URLParam(r, "group")
 	if !groupIDPattern.MatchString(group) {
-		return &dto.ValidationError{Errors: []string{"invalid group id"}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "group", Code: dto.ValInvalidValue, Message: "invalid group id"}}}
 	}
 	variant, ok := parseVariantFile(chi.URLParam(r, "variantFile"))
 	if !ok {
-		return &dto.ValidationError{Errors: []string{"invalid variant"}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "variant", Code: dto.ValInvalidValue, Message: "invalid variant"}}}
 	}
 	exp, err := strconv.ParseInt(chi.URLParam(r, "exp"), 10, 64)
 	if err != nil {
-		return &dto.ValidationError{Errors: []string{"invalid exp"}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "exp", Code: dto.ValInvalidValue, Message: "invalid exp"}}}
 	}
 	sig := chi.URLParam(r, "sig")
 	now := time.Now()

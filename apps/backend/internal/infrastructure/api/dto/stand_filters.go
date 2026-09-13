@@ -15,14 +15,14 @@ import (
 // set at all.
 func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 	var filters ports.StandFilters
-	var errs []string
+	var errs []FieldError
 	hasFilters := false
 
 	if v := q.Get("rarity"); v != "" {
 		hasFilters = true
 		rarity, err := enums.ParsePowerRarity(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("rarity: %v", err))
+			errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 		} else {
 			filters.Rarity = &rarity
 		}
@@ -31,7 +31,7 @@ func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 		hasFilters = true
 		stat, err := enums.ParseStandStat(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("attackPower: %v", err))
+			errs = append(errs, FieldError{Field: "attackPower", Code: ValInvalidValue, Message: fmt.Sprintf("attackPower: %v", err)})
 		} else {
 			filters.AttackPower = &stat
 		}
@@ -40,7 +40,7 @@ func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 		hasFilters = true
 		stat, err := enums.ParseStandStat(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("speed: %v", err))
+			errs = append(errs, FieldError{Field: "speed", Code: ValInvalidValue, Message: fmt.Sprintf("speed: %v", err)})
 		} else {
 			filters.Speed = &stat
 		}
@@ -49,7 +49,7 @@ func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 		hasFilters = true
 		stat, err := enums.ParseStandStat(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("attackRange: %v", err))
+			errs = append(errs, FieldError{Field: "attackRange", Code: ValInvalidValue, Message: fmt.Sprintf("attackRange: %v", err)})
 		} else {
 			filters.AttackRange = &stat
 		}
@@ -58,7 +58,7 @@ func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 		hasFilters = true
 		stat, err := enums.ParseStandStat(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("endurance: %v", err))
+			errs = append(errs, FieldError{Field: "endurance", Code: ValInvalidValue, Message: fmt.Sprintf("endurance: %v", err)})
 		} else {
 			filters.Endurance = &stat
 		}
@@ -67,7 +67,7 @@ func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 		hasFilters = true
 		stat, err := enums.ParseStandStat(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("precision: %v", err))
+			errs = append(errs, FieldError{Field: "precision", Code: ValInvalidValue, Message: fmt.Sprintf("precision: %v", err)})
 		} else {
 			filters.Precision = &stat
 		}
@@ -76,7 +76,7 @@ func StandFiltersFromQuery(q url.Values) (ports.StandFilters, bool, error) {
 		hasFilters = true
 		stat, err := enums.ParseStandStat(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("potential: %v", err))
+			errs = append(errs, FieldError{Field: "potential", Code: ValInvalidValue, Message: fmt.Sprintf("potential: %v", err)})
 		} else {
 			filters.Potential = &stat
 		}

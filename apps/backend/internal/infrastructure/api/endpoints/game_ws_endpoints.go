@@ -239,7 +239,7 @@ func (e *GameEndpoints) readPump(ctx context.Context, conn *websocket.Conn, outb
 
 		var cmd dto.ClientCommand
 		if err := json.Unmarshal(data, &cmd); err != nil {
-			e.sendError(conn, outbound, "", &dto.ValidationError{Errors: []string{err.Error()}})
+			e.sendError(conn, outbound, "", &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}})
 			continue
 		}
 
@@ -270,7 +270,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandAddBot:
 		var p dto.AddBotPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		teamID, err := game.ParseTeamID(p.TeamID)
 		if err != nil {
@@ -280,7 +280,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandRemoveBot:
 		var p dto.RemoveBotPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		botID, err := game.ParseParticipantID(p.BotID)
 		if err != nil {
@@ -294,7 +294,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandVote:
 		var p dto.VotePayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		return e.svc.CastVote(ctx, gameID, self, game.OptionID(p.Option))
 	case dto.CommandResync:
@@ -317,7 +317,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandSwitchTeam:
 		var p dto.SwitchTeamPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		teamID, err := game.ParseTeamID(p.TeamID)
 		if err != nil {
@@ -334,7 +334,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandMovePlayer:
 		var p dto.MovePlayerPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		target, err := game.ParseParticipantID(p.ParticipantID)
 		if err != nil {
@@ -348,7 +348,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandKick:
 		var p dto.KickPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		target, err := game.ParseParticipantID(p.ParticipantID)
 		if err != nil {
@@ -358,7 +358,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandTransferHost:
 		var p dto.TransferHostPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		target, err := game.ParseParticipantID(p.ParticipantID)
 		if err != nil {
@@ -368,13 +368,13 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 	case dto.CommandSetLock:
 		var p dto.SetLockPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		return e.svc.SetLobbyLocked(ctx, gameID, self, p.Locked)
 	case dto.CommandUpdateConfig:
 		var p dto.UpdateConfigPayload
 		if err := json.Unmarshal(cmd.Payload, &p); err != nil {
-			return nil, &dto.ValidationError{Errors: []string{err.Error()}}
+			return nil, &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 		}
 		input, err := p.Validate()
 		if err != nil {

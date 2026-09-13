@@ -394,7 +394,7 @@ func (e *StandEndpoints) patchPicture(w http.ResponseWriter, r *http.Request) er
 	// the multipart form overhead itself.
 	r.Body = http.MaxBytesReader(w, r.Body, e.svc.MaxPictureBytes()+maxMultipartMemory)
 	if err := r.ParseMultipartForm(maxMultipartMemory); err != nil {
-		return &dto.ValidationError{Errors: []string{err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 	}
 	defer func() {
 		_ = r.MultipartForm.RemoveAll()
@@ -513,7 +513,7 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) error {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(dst); err != nil {
-		return &dto.ValidationError{Errors: []string{err.Error()}}
+		return &dto.ValidationError{Errors: []dto.FieldError{{Field: "", Code: dto.ValInvalidValue, Message: err.Error()}}}
 	}
 	return nil
 }

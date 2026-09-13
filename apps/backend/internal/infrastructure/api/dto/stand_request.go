@@ -28,7 +28,7 @@ type StandRequest struct {
 // request, so the caller can report them all at once instead of stopping at
 // the first one.
 type ValidationError struct {
-	Errors []string
+	Errors []FieldError
 }
 
 func (e *ValidationError) Error() string {
@@ -38,49 +38,49 @@ func (e *ValidationError) Error() string {
 // Validate converts the request into a services.StandInput, collecting all
 // field errors before returning.
 func (r StandRequest) Validate() (services.StandInput, error) {
-	var errs []string
+	var errs []FieldError
 
 	if r.Name == "" {
-		errs = append(errs, "name is required")
+		errs = append(errs, FieldError{Field: "name", Code: ValNameRequired, Message: "name is required"})
 	}
 	translations, translationErrs := validateTranslations(r.Translations)
 	errs = append(errs, translationErrs...)
 
 	rarity, err := enums.ParsePowerRarity(r.Rarity)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("rarity: %v", err))
+		errs = append(errs, FieldError{Field: "rarity", Code: ValInvalidValue, Message: fmt.Sprintf("rarity: %v", err)})
 	}
 
 	attackPower, err := enums.ParseStandStat(r.AttackPower)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("attackPower: %v", err))
+		errs = append(errs, FieldError{Field: "attackPower", Code: ValInvalidValue, Message: fmt.Sprintf("attackPower: %v", err)})
 	}
 	speed, err := enums.ParseStandStat(r.Speed)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("speed: %v", err))
+		errs = append(errs, FieldError{Field: "speed", Code: ValInvalidValue, Message: fmt.Sprintf("speed: %v", err)})
 	}
 	attackRange, err := enums.ParseStandStat(r.AttackRange)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("attackRange: %v", err))
+		errs = append(errs, FieldError{Field: "attackRange", Code: ValInvalidValue, Message: fmt.Sprintf("attackRange: %v", err)})
 	}
 	endurance, err := enums.ParseStandStat(r.Endurance)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("endurance: %v", err))
+		errs = append(errs, FieldError{Field: "endurance", Code: ValInvalidValue, Message: fmt.Sprintf("endurance: %v", err)})
 	}
 	precision, err := enums.ParseStandStat(r.Precision)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("precision: %v", err))
+		errs = append(errs, FieldError{Field: "precision", Code: ValInvalidValue, Message: fmt.Sprintf("precision: %v", err)})
 	}
 	potential, err := enums.ParseStandStat(r.Potential)
 	if err != nil {
-		errs = append(errs, fmt.Sprintf("potential: %v", err))
+		errs = append(errs, FieldError{Field: "potential", Code: ValInvalidValue, Message: fmt.Sprintf("potential: %v", err)})
 	}
 
 	var evolvesFrom *powers.PowerID
 	if r.EvolvesFromID != nil {
 		id, err := powers.ParsePowerID(*r.EvolvesFromID)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("evolvesFromId: %v", err))
+			errs = append(errs, FieldError{Field: "evolvesFromId", Code: ValInvalidValue, Message: fmt.Sprintf("evolvesFromId: %v", err)})
 		} else {
 			evolvesFrom = &id
 		}

@@ -63,6 +63,7 @@ var restTypes = []any{
 	dto.PublicLobbyListResponse{},
 	dto.LobbyPreviewResponse{},
 	dto.ErrorResponse{},
+	dto.FieldError{},
 	dto.PictureEventPayload{},
 	// PoolFilterPayload/UpdateConfigPayload are shared: also WS command
 	// payloads (see wsOnlyTypes' doc comment), but registered here because
