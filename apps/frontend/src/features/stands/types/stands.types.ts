@@ -19,6 +19,8 @@ export const standFormSchema = z.object({
   precision: standStatSchema,
   potential: standStatSchema,
   evolvesFromId: z.string().uuid().nullable(),
+  focalX: z.number().min(0).max(1),
+  focalY: z.number().min(0).max(1),
 })
 
 export type StandFormValues = z.infer<typeof standFormSchema>

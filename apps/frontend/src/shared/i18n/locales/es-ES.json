@@ -550,7 +550,15 @@
   },
   "locale": {
     "required": "obligatorio",
-    "hasError": "tiene un error"
+    "hasError": "tiene un error",
+    "translatedContent": "Contenido traducido"
+  },
+  "focalPoint": {
+    "title": "Punto focal de la card",
+    "hint": "Toca o arrastra sobre la imagen para elegir qué se ve al recortarla.",
+    "previewLabel": "Vista previa de la card",
+    "reset": "Restablecer al centro",
+    "a11y": "Punto focal, {{x}}% horizontal, {{y}}% vertical. Arrastra para moverlo."
   },
   "skillsField": {
     "addPlaceholder": "Añade una habilidad…",

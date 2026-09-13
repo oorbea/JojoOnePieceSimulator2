@@ -550,7 +550,15 @@
   },
   "locale": {
     "required": "obligatori",
-    "hasError": "té un error"
+    "hasError": "té un error",
+    "translatedContent": "Contingut traduït"
+  },
+  "focalPoint": {
+    "title": "Punt focal de la targeta",
+    "hint": "Toca o arrossega sobre la imatge per triar què es veu en retallar-la.",
+    "previewLabel": "Vista prèvia de la targeta",
+    "reset": "Restableix al centre",
+    "a11y": "Punt focal, {{x}}% horitzontal, {{y}}% vertical. Arrossega per moure'l."
   },
   "skillsField": {
     "addPlaceholder": "Afegeix una habilitat…",

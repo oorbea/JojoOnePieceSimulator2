@@ -13,6 +13,8 @@ export const devilFruitFormSchema = z.object({
   translations: powerTranslationsFormSchema,
   rarity: raritySchema,
   fruitType: fruitTypeSchema,
+  focalX: z.number().min(0).max(1),
+  focalY: z.number().min(0).max(1),
 })
 
 export type DevilFruitFormValues = z.infer<typeof devilFruitFormSchema>

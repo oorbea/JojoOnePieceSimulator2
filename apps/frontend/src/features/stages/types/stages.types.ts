@@ -13,6 +13,8 @@ export const stageFormSchema = z.object({
   order: z.number().int().min(0, 'validation.orderNonNegative'),
   name: z.string().min(1, 'validation.nameRequired').max(100, 'validation.nameTooLong'),
   translations: stageTranslationsFormSchema,
+  focalX: z.number().min(0).max(1),
+  focalY: z.number().min(0).max(1),
 })
 
 export type StageFormValues = z.infer<typeof stageFormSchema>

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, useController } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
@@ -9,6 +9,7 @@ import { useAvatarPicker } from '@/features/profile/hooks/use-avatar-picker'
 import {
   useDeleteAccount,
   useDeleteAvatar,
+  useUpdateAvatarFocalPoint,
   useUpdateLanguage,
   useUpdateUsername,
   useUploadAvatar,
@@ -47,6 +48,7 @@ export function ProfileContainer() {
 
   const updateUsernameMutation = useUpdateUsername()
   const updateLanguageMutation = useUpdateLanguage()
+  const updateAvatarFocalPointMutation = useUpdateAvatarFocalPoint()
   const uploadAvatarMutation = useUploadAvatar()
   const deleteAvatarMutation = useDeleteAvatar()
   const deleteAccountMutation = useDeleteAccount()
@@ -55,6 +57,34 @@ export function ProfileContainer() {
 
   const [isRemoveAvatarOpen, setIsRemoveAvatarOpen] = useState(false)
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
+
+  // Local draft so the picker's live drag feedback never waits on a
+  // round-trip - persisted debounced (not per pixel of drag) via the
+  // timeout below. Reseeded from the server value whenever a fresh upload
+  // (or another device) changes it, same "not dirty" guard as username.
+  const [avatarFocal, setAvatarFocal] = useState({
+    x: profile?.avatarFocalX ?? 0.5,
+    y: profile?.avatarFocalY ?? 0.5,
+  })
+  const avatarFocalDirty = useRef(false)
+  const saveFocalTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (profile && !avatarFocalDirty.current) {
+      setAvatarFocal({ x: profile.avatarFocalX, y: profile.avatarFocalY })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.avatarFocalX, profile?.avatarFocalY])
+
+  const onChangeAvatarFocal = (x: number, y: number) => {
+    if (!profile) return
+    setAvatarFocal({ x, y })
+    avatarFocalDirty.current = true
+    if (saveFocalTimeout.current) clearTimeout(saveFocalTimeout.current)
+    saveFocalTimeout.current = setTimeout(() => {
+      avatarFocalDirty.current = false
+      updateAvatarFocalPointMutation.mutate({ username: profile.username, focalX: x, focalY: y })
+    }, 400)
+  }
 
   if (isLoading || !profile) {
     return <LoadingScreen />
@@ -76,7 +106,17 @@ export function ProfileContainer() {
 
   const onPickAvatar = async () => {
     const asset = await pickAvatar()
-    if (asset) uploadAvatarMutation.mutate(asset)
+    if (!asset) return
+    uploadAvatarMutation.mutate(asset, {
+      onSuccess: () => {
+        // A newly uploaded avatar has no relationship to whatever focal
+        // point the previous one had - reset to center (owner decision,
+        // same as the catalogue forms' onPickPicture).
+        setAvatarFocal({ x: 0.5, y: 0.5 })
+        avatarFocalDirty.current = false
+        updateAvatarFocalPointMutation.mutate({ username: profile.username, focalX: 0.5, focalY: 0.5 })
+      },
+    })
   }
 
   const onConfirmRemoveAvatar = () => {
@@ -97,6 +137,9 @@ export function ProfileContainer() {
       profile={profile}
       onPickAvatar={() => void onPickAvatar()}
       isAvatarBusy={uploadAvatarMutation.isPending || profile.avatarStatus === 'PENDING'}
+      avatarFocalX={avatarFocal.x}
+      avatarFocalY={avatarFocal.y}
+      onChangeAvatarFocal={onChangeAvatarFocal}
       username={username}
       onUsernameChange={onUsernameChange}
       usernameError={errors.username?.message && t(errors.username.message)}

@@ -15,7 +15,9 @@ import {
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { InfoHint } from '@/shared/components/presentational/info-hint'
+import { FocalPointPicker } from '@/shared/components/presentational/focal-point-picker'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
+import { TranslatedContentGroup } from '@/shared/components/presentational/translated-content-group'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
@@ -236,6 +238,53 @@ export function CharacterFormModal({
                     </YStack>
                   </YStack>
 
+                  {pictureUri && kind === 'JOJO' ? (
+                    <Controller
+                      control={jojoControl}
+                      name="focalX"
+                      render={({ field: focalXField }) => (
+                        <Controller
+                          control={jojoControl}
+                          name="focalY"
+                          render={({ field: focalYField }) => (
+                            <FocalPointPicker
+                              uri={pictureUri}
+                              x={focalXField.value}
+                              y={focalYField.value}
+                              onChange={(x, y) => {
+                                focalXField.onChange(x)
+                                focalYField.onChange(y)
+                              }}
+                            />
+                          )}
+                        />
+                      )}
+                    />
+                  ) : null}
+                  {pictureUri && kind === 'ONE_PIECE' ? (
+                    <Controller
+                      control={onePieceControl}
+                      name="focalX"
+                      render={({ field: focalXField }) => (
+                        <Controller
+                          control={onePieceControl}
+                          name="focalY"
+                          render={({ field: focalYField }) => (
+                            <FocalPointPicker
+                              uri={pictureUri}
+                              x={focalXField.value}
+                              y={focalYField.value}
+                              onChange={(x, y) => {
+                                focalXField.onChange(x)
+                                focalYField.onChange(y)
+                              }}
+                            />
+                          )}
+                        />
+                      )}
+                    />
+                  ) : null}
+
                   {kind === 'JOJO' ? (
                     <Controller
                       control={jojoControl}
@@ -420,56 +469,58 @@ export function CharacterFormModal({
                     </YStack>
                   )}
 
-                  <LocaleTabs
-                    value={activeLocale}
-                    onChange={onLocaleChange}
-                    requiredLocale={DEFAULT_LOCALE}
-                    localesWithErrors={erroredLocales}
-                    requiredLabel={t('locale.required')}
-                    errorLabel={t('locale.hasError')}
-                  />
+                  <TranslatedContentGroup locale={activeLocale}>
+                    <LocaleTabs
+                      value={activeLocale}
+                      onChange={onLocaleChange}
+                      requiredLocale={DEFAULT_LOCALE}
+                      localesWithErrors={erroredLocales}
+                      requiredLabel={t('locale.required')}
+                      errorLabel={t('locale.hasError')}
+                    />
 
-                  {kind === 'JOJO' ? (
-                    <Controller
-                      key={`translations.${activeLocale}.description`}
-                      control={jojoControl}
-                      name={`translations.${activeLocale}.description`}
-                      render={({ field }) => (
-                        <GlassField
-                          label={t('characters.description')}
-                          value={field.value}
-                          onChangeText={field.onChange}
-                          error={
-                            jojoErrors.translations?.[activeLocale]?.description?.message &&
-                            t(jojoErrors.translations[activeLocale].description.message)
-                          }
-                          multiline
-                          numberOfLines={3}
-                          height={100}
-                        />
-                      )}
-                    />
-                  ) : (
-                    <Controller
-                      key={`translations.${activeLocale}.description`}
-                      control={onePieceControl}
-                      name={`translations.${activeLocale}.description`}
-                      render={({ field }) => (
-                        <GlassField
-                          label={t('characters.description')}
-                          value={field.value}
-                          onChangeText={field.onChange}
-                          error={
-                            onePieceErrors.translations?.[activeLocale]?.description?.message &&
-                            t(onePieceErrors.translations[activeLocale].description.message)
-                          }
-                          multiline
-                          numberOfLines={3}
-                          height={100}
-                        />
-                      )}
-                    />
-                  )}
+                    {kind === 'JOJO' ? (
+                      <Controller
+                        key={`translations.${activeLocale}.description`}
+                        control={jojoControl}
+                        name={`translations.${activeLocale}.description`}
+                        render={({ field }) => (
+                          <GlassField
+                            label={t('characters.description')}
+                            value={field.value}
+                            onChangeText={field.onChange}
+                            error={
+                              jojoErrors.translations?.[activeLocale]?.description?.message &&
+                              t(jojoErrors.translations[activeLocale].description.message)
+                            }
+                            multiline
+                            numberOfLines={3}
+                            height={100}
+                          />
+                        )}
+                      />
+                    ) : (
+                      <Controller
+                        key={`translations.${activeLocale}.description`}
+                        control={onePieceControl}
+                        name={`translations.${activeLocale}.description`}
+                        render={({ field }) => (
+                          <GlassField
+                            label={t('characters.description')}
+                            value={field.value}
+                            onChangeText={field.onChange}
+                            error={
+                              onePieceErrors.translations?.[activeLocale]?.description?.message &&
+                              t(onePieceErrors.translations[activeLocale].description.message)
+                            }
+                            multiline
+                            numberOfLines={3}
+                            height={100}
+                          />
+                        )}
+                      />
+                    )}
+                  </TranslatedContentGroup>
                 </>
               )}
             </YStack>

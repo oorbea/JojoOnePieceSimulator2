@@ -11,7 +11,7 @@ import { ImageLightbox } from '@/shared/components/presentational/image-lightbox
 import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import { cardSource, fullSource, lqipSource } from '@/shared/lib/picture-source'
+import { cardSource, focalPosition, fullSource, lqipSource } from '@/shared/lib/picture-source'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 
 type Props = {
@@ -49,6 +49,7 @@ export const DevilFruitCard = forwardRef<View, Props>(function DevilFruitCard(
           uri={uri}
           lqip={lqipSource(devilFruit)}
           height={140}
+          contentPosition={focalPosition(devilFruit)}
           pictureStatus={devilFruit.pictureStatus}
           retryToken={retryToken}
           onStateChange={setImageState}

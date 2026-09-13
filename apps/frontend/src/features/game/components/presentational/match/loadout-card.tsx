@@ -12,7 +12,7 @@ import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import type { Manga } from '@/shared/contracts/enums'
-import { cardSource, lqipSource } from '@/shared/lib/picture-source'
+import { cardSource, focalPosition, lqipSource } from '@/shared/lib/picture-source'
 
 type Props = {
   participant: GameParticipant
@@ -128,6 +128,7 @@ function StandBlock({ stand, visible, t }: { stand?: StandResponse; visible: boo
             uri={cardSource(stand)}
             lqip={lqipSource(stand)}
             height={110}
+            contentPosition={focalPosition(stand)}
             pictureStatus={stand.pictureStatus}
             fallback={<Sparkles size={26} color="$standPurple" />}
           />
@@ -197,6 +198,7 @@ function DevilFruitBlock({
             uri={cardSource(devilFruit)}
             lqip={lqipSource(devilFruit)}
             height={90}
+            contentPosition={focalPosition(devilFruit)}
             pictureStatus={devilFruit.pictureStatus}
             fallback={<Sparkles size={22} color="$tangerine" />}
           />

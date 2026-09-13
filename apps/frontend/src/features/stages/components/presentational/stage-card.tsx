@@ -11,7 +11,7 @@ import { ImageLightbox } from '@/shared/components/presentational/image-lightbox
 import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
-import { cardSource, fullSource, lqipSource } from '@/shared/lib/picture-source'
+import { cardSource, focalPosition, fullSource, lqipSource } from '@/shared/lib/picture-source'
 import type { StageResponse } from '@/features/stages/types/stages.types'
 
 type Props = {
@@ -52,6 +52,7 @@ export const StageCard = forwardRef<View, Props>(function StageCard(
           uri={uri}
           lqip={lqipSource(stage)}
           height={140}
+          contentPosition={focalPosition(stage)}
           pictureStatus={stage.pictureStatus}
           retryToken={retryToken}
           onStateChange={setImageState}

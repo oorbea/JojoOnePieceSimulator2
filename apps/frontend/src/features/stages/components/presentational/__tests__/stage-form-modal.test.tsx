@@ -18,6 +18,8 @@ function createDefaultValues(): StageFormValues {
     order: 0,
     name: '',
     translations: createEmptyStageTranslationsForm(),
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 
