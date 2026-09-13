@@ -3,6 +3,11 @@ name: CD
 on:
   push:
     branches: [main]
+  # Lets a secret-only change (e.g. rotating R2_WORKER_URL/R2_WORKER_SECRET,
+  # CLOUDFLARE_API_TOKEN, ...) redeploy without needing an empty commit to
+  # main - GitHub Actions always reads secrets at run time, so a manual run
+  # here picks up whatever is currently set.
+  workflow_dispatch:
 
 concurrency:
   group: cd-main
