@@ -56,6 +56,8 @@ func (r *JojoCharacterRepository) Save(ctx context.Context, c *characters.JojoCh
 		PictureCard:   c.PictureCard(),
 		PictureStatus: c.PictureStatus().String(),
 		PictureLqip:   c.PictureLqip(),
+		FocalX:        c.FocalX(),
+		FocalY:        c.FocalY(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting character %q: %w", c.Name(), wrapPgError(err, ports.ErrJojoCharacterAlreadyExists))

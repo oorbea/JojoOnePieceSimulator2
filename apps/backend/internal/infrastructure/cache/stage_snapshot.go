@@ -26,6 +26,8 @@ type stageSnapshot struct {
 	PictureStatus  string   `json:"pictureStatus"`
 	PictureLqip    string   `json:"pictureLqip"`
 	PictureMediaID string   `json:"pictureMediaId"`
+	FocalX         float64  `json:"focalX"`
+	FocalY         float64  `json:"focalY"`
 }
 
 func ofStage(st game.Stage) stageSnapshot {
@@ -41,6 +43,8 @@ func ofStage(st game.Stage) stageSnapshot {
 		PictureStatus:  st.PictureStatus().String(),
 		PictureLqip:    st.PictureLqip(),
 		PictureMediaID: st.PictureMediaID(),
+		FocalX:         st.FocalX(),
+		FocalY:         st.FocalY(),
 	}
 }
 
@@ -64,6 +68,9 @@ func (s stageSnapshot) hydrate() (game.Stage, error) {
 	}
 	st.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, status)
 	st.SetMediaID(s.PictureMediaID)
+	if err := st.SetFocalPoint(s.FocalX, s.FocalY); err != nil {
+		return game.Stage{}, fmt.Errorf("stage %q: focal: %w", s.Name, err)
+	}
 	return st, nil
 }
 

@@ -21,6 +21,8 @@ type StandResponse struct {
 	PictureCard   string         `json:"pictureCard"`
 	PictureStatus string         `json:"pictureStatus" ts:"PictureStatus"`
 	PictureLqip   string         `json:"pictureLqip"`
+	FocalX        float64        `json:"focalX"`
+	FocalY        float64        `json:"focalY"`
 	AttackPower   string         `json:"attackPower" ts:"StandStat"`
 	Speed         string         `json:"speed" ts:"StandStat"`
 	AttackRange   string         `json:"attackRange" ts:"StandStat"`
@@ -98,6 +100,8 @@ func NewStandResponse(ctx context.Context, stand *powers.Stand, resolve PictureU
 		PictureCard:   pictureCardURL,
 		PictureLqip:   stand.PictureLqip(),
 		PictureStatus: stand.PictureStatus().String(),
+		FocalX:        stand.FocalX(),
+		FocalY:        stand.FocalY(),
 		AttackPower:   stand.AttackPower().String(),
 		Speed:         stand.Speed().String(),
 		AttackRange:   stand.AttackRange().String(),

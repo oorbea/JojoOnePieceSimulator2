@@ -25,6 +25,8 @@ type devilFruitRow struct {
 	PictureMediaID string
 	PictureStatus  string
 	PictureLqip    string
+	FocalX         float64
+	FocalY         float64
 	FruitType      string
 	Skills         []string
 }
@@ -33,6 +35,7 @@ func devilFruitRowFromGetByID(r db.GetDevilFruitRowByIDRow) devilFruitRow {
 	return devilFruitRow{
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 		FruitType: r.FruitType, Skills: r.Skills,
 	}
 }
@@ -41,6 +44,7 @@ func devilFruitRowFromGetByName(r db.GetDevilFruitRowByNameRow) devilFruitRow {
 	return devilFruitRow{
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 		FruitType: r.FruitType, Skills: r.Skills,
 	}
 }
@@ -51,6 +55,7 @@ func devilFruitRowsFromList(rs []db.ListDevilFruitRowsRow) []devilFruitRow {
 		rows[i] = devilFruitRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			FruitType: r.FruitType, Skills: r.Skills,
 		}
 	}
@@ -63,6 +68,7 @@ func devilFruitRowsFromFilter(rs []db.FilterDevilFruitRowsRow) []devilFruitRow {
 		rows[i] = devilFruitRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			FruitType: r.FruitType, Skills: r.Skills,
 		}
 	}
@@ -75,6 +81,7 @@ func devilFruitRowsFromPage(rs []db.PageDevilFruitRowsRow) []devilFruitRow {
 		rows[i] = devilFruitRow{
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			FruitType: r.FruitType, Skills: r.Skills,
 		}
 	}
@@ -102,6 +109,9 @@ func buildDevilFruit(row devilFruitRow) (*powers.DevilFruit, error) {
 	}
 	power.SetPictureRenditions(row.Picture, row.PictureThumb, row.PictureCard, row.PictureLqip, pictureStatus)
 	power.SetMediaID(row.PictureMediaID)
+	if err := power.SetFocalPoint(row.FocalX, row.FocalY); err != nil {
+		return nil, fmt.Errorf("devil fruit %q: focal: %w", row.Name, err)
+	}
 
 	fruitType, err := enums.ParseFruitType(row.FruitType)
 	if err != nil {

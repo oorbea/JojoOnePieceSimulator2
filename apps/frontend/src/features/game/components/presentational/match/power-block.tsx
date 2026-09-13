@@ -1,4 +1,5 @@
 import { Sparkles } from '@tamagui/lucide-icons-2'
+import type { ImageContentPosition } from 'expo-image'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pressable } from 'react-native'
@@ -18,6 +19,9 @@ export type PowerBlockProps = {
    * `picture` when the caller doesn't have one (e.g. already passed the
    * full picture in). */
   fullPicture?: string | null
+  /** The power's admin-chosen focal point - callers should pass
+   * focalPosition(power). */
+  contentPosition?: ImageContentPosition | null
   name?: string
   rarityLabel?: string
   description?: string
@@ -40,6 +44,7 @@ export type PowerBlockProps = {
 export function PowerBlock({
   picture,
   fullPicture,
+  contentPosition,
   name,
   rarityLabel,
   description,
@@ -67,6 +72,7 @@ export function PowerBlock({
           <LazyImage
             uri={picture ?? null}
             height={artHeight}
+            contentPosition={contentPosition}
             retryToken={retryToken}
             onStateChange={setImageState}
             fallback={<Sparkles size={36} color="$standPurple" />}

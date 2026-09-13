@@ -25,6 +25,8 @@ function baseCharacter(overrides: Partial<JojoCharacterResponse> = {}): JojoChar
     pictureCard: '',
     pictureStatus: 'NONE',
     pictureLqip: '',
+    focalX: 0.5,
+    focalY: 0.5,
     hamon: 'NONE',
     spin: 'NONE',
     battleIq: 130,

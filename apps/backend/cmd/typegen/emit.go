@@ -232,7 +232,8 @@ func tsTypeForType(t reflect.Type, tsTag, selfName string, enumIdx map[string]en
 	case reflect.Bool:
 		return "boolean"
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
 		return "number"
 	case reflect.Slice:
 		elem := t.Elem()

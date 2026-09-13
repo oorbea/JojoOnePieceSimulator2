@@ -29,6 +29,8 @@ type Character struct {
 	manga          enums.Manga
 	rarity         enums.PowerRarity
 	pictureStatus  enums.PictureStatus
+	focalX         float64
+	focalY         float64
 }
 
 // NewCharacter validates and builds a Character. picture is the only
@@ -53,7 +55,10 @@ func NewCharacter(id CharacterID, manga enums.Manga, name string, rarity enums.P
 	if description == "" {
 		return Character{}, errors.New("description is required")
 	}
-	return Character{id: id, manga: manga, name: name, rarity: rarity, description: description, picture: picture}, nil
+	return Character{
+		id: id, manga: manga, name: name, rarity: rarity, description: description, picture: picture,
+		focalX: 0.5, focalY: 0.5,
+	}, nil
 }
 
 func (c Character) ID() CharacterID           { return c.id }
@@ -89,4 +94,25 @@ func (c *Character) SetPictureRenditions(main, thumb, card, lqip string, status 
 	c.pictureCard = card
 	c.pictureLqip = lqip
 	c.pictureStatus = status
+}
+
+// FocalX and FocalY are the normalized (0..1) point of a Character's picture
+// a client should keep centered when rendering it with contentFit:'cover' -
+// see powers.Power.FocalX.
+func (c Character) FocalX() float64 { return c.focalX }
+func (c Character) FocalY() float64 { return c.focalY }
+
+// SetFocalPoint validates and stores a new focal point - see
+// powers.Power.SetFocalPoint.
+func (c *Character) SetFocalPoint(x, y float64) error {
+	if !isValidFocalCoordinate(x) || !isValidFocalCoordinate(y) {
+		return errors.New("focal point must be between 0 and 1")
+	}
+	c.focalX = x
+	c.focalY = y
+	return nil
+}
+
+func isValidFocalCoordinate(v float64) bool {
+	return v >= 0 && v <= 1
 }

@@ -38,6 +38,8 @@ export const devilFruitResponseSchema = z.object({
   pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
   pictureLqip: z.string(),
+  focalX: z.number(),
+  focalY: z.number(),
   fruitType: fruitTypeSchema,
 })
 export type DevilFruitResponse = z.infer<typeof devilFruitResponseSchema>
@@ -71,6 +73,8 @@ export const gameStageResponseSchema = z.object({
   picture: z.string(),
   pictureThumb: z.string(),
   pictureStatus: pictureStatusSchema,
+  focalX: z.number(),
+  focalY: z.number(),
 })
 export type GameStageResponse = z.infer<typeof gameStageResponseSchema>
 
@@ -120,6 +124,8 @@ export const jojoCharacterRequestSchema = z.object({
   hamon: hamonLevelSchema,
   spin: spinLevelSchema,
   battleIq: z.number().int(),
+  focalX: z.number().optional(),
+  focalY: z.number().optional(),
 })
 export type JojoCharacterRequest = z.infer<typeof jojoCharacterRequestSchema>
 
@@ -133,6 +139,8 @@ export const jojoCharacterResponseSchema = z.object({
   pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
   pictureLqip: z.string(),
+  focalX: z.number(),
+  focalY: z.number(),
   hamon: hamonLevelSchema,
   spin: spinLevelSchema,
   battleIq: z.number().int(),
@@ -171,6 +179,8 @@ export const onePieceCharacterRequestSchema = z.object({
   observationHaki: hakiLevelSchema,
   conquerorHaki: hakiLevelSchema,
   fruitMastery: fruitMasterySchema,
+  focalX: z.number().optional(),
+  focalY: z.number().optional(),
 })
 export type OnePieceCharacterRequest = z.infer<typeof onePieceCharacterRequestSchema>
 
@@ -184,6 +194,8 @@ export const onePieceCharacterResponseSchema = z.object({
   pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
   pictureLqip: z.string(),
+  focalX: z.number(),
+  focalY: z.number(),
   physicalForm: physicalFormSchema,
   armamentHaki: hakiLevelSchema,
   observationHaki: hakiLevelSchema,
@@ -295,6 +307,8 @@ export const publicUserResponseSchema = z.object({
   avatarThumb: z.string(),
   avatarCard: z.string(),
   avatarLqip: z.string(),
+  avatarFocalX: z.number(),
+  avatarFocalY: z.number(),
 })
 export type PublicUserResponse = z.infer<typeof publicUserResponseSchema>
 
@@ -309,6 +323,8 @@ export const stageResponseSchema = z.object({
   pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
   pictureLqip: z.string(),
+  focalX: z.number(),
+  focalY: z.number(),
 })
 export type StageResponse = z.infer<typeof stageResponseSchema>
 
@@ -329,6 +345,8 @@ export const stageRequestSchema = z.object({
   order: z.number().int(),
   name: z.string(),
   translations: z.partialRecord(localeSchema, stageTranslationRequestSchema),
+  focalX: z.number().optional(),
+  focalY: z.number().optional(),
 })
 export type StageRequest = z.infer<typeof stageRequestSchema>
 
@@ -359,6 +377,8 @@ export type StandResponse = {
   pictureCard: string
   pictureStatus: PictureStatus
   pictureLqip: string
+  focalX: number
+  focalY: number
   attackPower: StandStat
   speed: StandStat
   attackRange: StandStat
@@ -378,6 +398,8 @@ export const standResponseSchema: z.ZodType<StandResponse> = z.object({
   pictureCard: z.string(),
   pictureStatus: pictureStatusSchema,
   pictureLqip: z.string(),
+  focalX: z.number(),
+  focalY: z.number(),
   attackPower: standStatSchema,
   speed: standStatSchema,
   attackRange: standStatSchema,
@@ -409,6 +431,8 @@ export const gameParticipantResponseSchema = z.object({
   kind: participantKindSchema,
   connected: z.boolean(),
   avatarThumb: z.string(),
+  avatarFocalX: z.number(),
+  avatarFocalY: z.number(),
   loadout: gameLoadoutResponseSchema.optional(),
 })
 export type GameParticipantResponse = z.infer<typeof gameParticipantResponseSchema>
@@ -462,6 +486,8 @@ export const devilFruitRequestSchema = z.object({
   translations: z.partialRecord(localeSchema, translationRequestSchema),
   rarity: powerRaritySchema,
   fruitType: fruitTypeSchema,
+  focalX: z.number().optional(),
+  focalY: z.number().optional(),
 })
 export type DevilFruitRequest = z.infer<typeof devilFruitRequestSchema>
 
@@ -476,6 +502,8 @@ export const standRequestSchema = z.object({
   precision: standStatSchema,
   potential: standStatSchema,
   evolvesFromId: z.string().optional(),
+  focalX: z.number().optional(),
+  focalY: z.number().optional(),
 })
 export type StandRequest = z.infer<typeof standRequestSchema>
 
@@ -508,6 +536,8 @@ export type UpdateConfigPayload = z.infer<typeof updateConfigPayloadSchema>
 export const updateProfileRequestSchema = z.object({
   username: z.string(),
   language: localeSchema.optional(),
+  focalX: z.number().optional(),
+  focalY: z.number().optional(),
 })
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>
 
@@ -526,6 +556,8 @@ export const userResponseSchema = z.object({
   avatarCard: z.string(),
   avatarStatus: pictureStatusSchema,
   avatarLqip: z.string(),
+  avatarFocalX: z.number(),
+  avatarFocalY: z.number(),
   role: userRoleSchema,
   language: localeSchema,
 })

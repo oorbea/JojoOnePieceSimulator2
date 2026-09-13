@@ -42,6 +42,8 @@ function createDefaultValues(): StageFormValues {
     order: 0,
     name: '',
     translations: createEmptyStageTranslationsForm(),
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 
@@ -95,6 +97,7 @@ export function StagesContainer() {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<StageFormValues>({
     resolver: zodResolver(stageFormSchema),
@@ -139,6 +142,8 @@ export function StagesContainer() {
         order: stage.order,
         name: stage.name,
         translations: fromStageTranslationsResponse(translations),
+        focalX: stage.focalX,
+        focalY: stage.focalY,
       })
       setPendingPicture(null)
       setActiveLocale(DEFAULT_LOCALE)
@@ -152,7 +157,11 @@ export function StagesContainer() {
 
   const onPickPicture = async () => {
     const asset = await pickPicture()
-    if (asset) setPendingPicture(asset)
+    if (asset) {
+      setPendingPicture(asset)
+      setValue('focalX', 0.5)
+      setValue('focalY', 0.5)
+    }
   }
 
   const onSubmit = handleSubmit((values) => {

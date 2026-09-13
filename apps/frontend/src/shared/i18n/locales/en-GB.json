@@ -550,7 +550,15 @@
   },
   "locale": {
     "required": "required",
-    "hasError": "has an error"
+    "hasError": "has an error",
+    "translatedContent": "Translated content"
+  },
+  "focalPoint": {
+    "title": "Card focal point",
+    "hint": "Tap or drag the image to choose what stays visible when it's cropped.",
+    "previewLabel": "Card preview",
+    "reset": "Reset to centre",
+    "a11y": "Focal point, {{x}}% across, {{y}}% down. Drag to move."
   },
   "skillsField": {
     "addPlaceholder": "Add a skill…",

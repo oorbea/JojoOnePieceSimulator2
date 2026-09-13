@@ -24,6 +24,8 @@ function baseStage(overrides: Partial<StageResponse> = {}): StageResponse {
     pictureCard: '',
     pictureStatus: 'NONE',
     pictureLqip: '',
+    focalX: 0.5,
+    focalY: 0.5,
     ...overrides,
   }
 }

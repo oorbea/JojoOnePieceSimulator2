@@ -71,6 +71,22 @@ func (s *UserService) ChangeLanguage(ctx context.Context, id user.UserID, langua
 	return u, nil
 }
 
+// ChangeAvatarFocalPoint validates and persists a new avatar focal point for
+// id, independent of re-uploading the avatar itself.
+func (s *UserService) ChangeAvatarFocalPoint(ctx context.Context, id user.UserID, x, y float64) (*user.User, error) {
+	u, err := s.users.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := u.SetAvatarFocalPoint(x, y); err != nil {
+		return nil, err
+	}
+	if err := s.users.UpdateAvatarFocalPoint(ctx, id, x, y); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
 // SetAvatar validates an uploaded picture and hands it to the background
 // compression worker, moving id's avatar pipeline to PENDING without
 // touching the currently-served renditions. Mirrors

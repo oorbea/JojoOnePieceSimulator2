@@ -57,6 +57,8 @@ export const jojoCharacterFormSchema = z.object({
     .min(0, 'validation.battleIqRange')
     .max(255, 'validation.battleIqRange'),
   translations: characterTranslationsFormSchema,
+  focalX: z.number().min(0).max(1),
+  focalY: z.number().min(0).max(1),
 })
 export type JojoCharacterFormValues = z.infer<typeof jojoCharacterFormSchema>
 
@@ -69,6 +71,8 @@ export const onePieceCharacterFormSchema = z.object({
   conquerorHaki: hakiLevelSchema,
   fruitMastery: fruitMasterySchema,
   translations: characterTranslationsFormSchema,
+  focalX: z.number().min(0).max(1),
+  focalY: z.number().min(0).max(1),
 })
 export type OnePieceCharacterFormValues = z.infer<typeof onePieceCharacterFormSchema>
 

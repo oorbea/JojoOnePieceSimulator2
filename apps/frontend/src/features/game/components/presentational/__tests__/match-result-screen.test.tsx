@@ -21,6 +21,8 @@ function participant(overrides: Partial<GameParticipant> = {}): GameParticipant 
     kind: 'HUMAN',
     connected: true,
     avatarThumb: '',
+    avatarFocalX: 0.5,
+    avatarFocalY: 0.5,
     ...overrides,
   }
 }
@@ -37,6 +39,8 @@ function round(overrides: Partial<GameRound> = {}): GameRound {
       picture: '',
       pictureThumb: '',
       pictureStatus: 'READY',
+      focalX: 0.5,
+      focalY: 0.5,
     },
     options: ['SURVIVE', 'FALL'],
     tiebreakUsed: false,

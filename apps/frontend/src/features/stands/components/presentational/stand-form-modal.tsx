@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Controller, type Control, type FieldErrors } from 'react-hook-form'
 import { ScrollView, Spinner, XStack, YStack } from 'tamagui'
 
+import { FocalPointPicker } from '@/shared/components/presentational/focal-point-picker'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlassSelect, type GlassSelectOption } from '@/shared/components/presentational/glass-select'
@@ -13,6 +14,7 @@ import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { SkillsField } from '@/shared/components/presentational/skills-field'
+import { TranslatedContentGroup } from '@/shared/components/presentational/translated-content-group'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
@@ -173,6 +175,30 @@ export function StandFormModal({
                 </YStack>
               </YStack>
 
+              {pictureUri ? (
+                <Controller
+                  control={control}
+                  name="focalX"
+                  render={({ field: focalXField }) => (
+                    <Controller
+                      control={control}
+                      name="focalY"
+                      render={({ field: focalYField }) => (
+                        <FocalPointPicker
+                          uri={pictureUri}
+                          x={focalXField.value}
+                          y={focalYField.value}
+                          onChange={(x, y) => {
+                            focalXField.onChange(x)
+                            focalYField.onChange(y)
+                          }}
+                        />
+                      )}
+                    />
+                  )}
+                />
+              ) : null}
+
               <Controller
                 control={control}
                 name="name"
@@ -186,52 +212,54 @@ export function StandFormModal({
                 )}
               />
 
-              <LocaleTabs
-                value={activeLocale}
-                onChange={onLocaleChange}
-                requiredLocale={DEFAULT_LOCALE}
-                localesWithErrors={erroredLocales}
-                requiredLabel={t('locale.required')}
-                errorLabel={t('locale.hasError')}
-              />
+              <TranslatedContentGroup locale={activeLocale}>
+                <LocaleTabs
+                  value={activeLocale}
+                  onChange={onLocaleChange}
+                  requiredLocale={DEFAULT_LOCALE}
+                  localesWithErrors={erroredLocales}
+                  requiredLabel={t('locale.required')}
+                  errorLabel={t('locale.hasError')}
+                />
 
-              <Controller
-                key={`translations.${activeLocale}.description`}
-                control={control}
-                name={`translations.${activeLocale}.description`}
-                render={({ field }) => (
-                  <GlassField
-                    label={t('stands.description')}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={
-                      errors.translations?.[activeLocale]?.description?.message &&
-                      t(errors.translations[activeLocale].description.message)
-                    }
-                    multiline
-                    numberOfLines={3}
-                    height={100}
-                  />
-                )}
-              />
+                <Controller
+                  key={`translations.${activeLocale}.description`}
+                  control={control}
+                  name={`translations.${activeLocale}.description`}
+                  render={({ field }) => (
+                    <GlassField
+                      label={t('stands.description')}
+                      value={field.value}
+                      onChangeText={field.onChange}
+                      error={
+                        errors.translations?.[activeLocale]?.description?.message &&
+                        t(errors.translations[activeLocale].description.message)
+                      }
+                      multiline
+                      numberOfLines={3}
+                      height={100}
+                    />
+                  )}
+                />
 
-              <Controller
-                key={`translations.${activeLocale}.skills`}
-                control={control}
-                name={`translations.${activeLocale}.skills`}
-                render={({ field }) => (
-                  <SkillsField
-                    label={t('stands.skills')}
-                    skills={field.value}
-                    onAdd={(skill) => field.onChange([...field.value, skill])}
-                    onRemove={(index) => field.onChange(field.value.filter((_, i) => i !== index))}
-                    error={
-                      errors.translations?.[activeLocale]?.skills?.message &&
-                      t(errors.translations[activeLocale].skills.message)
-                    }
-                  />
-                )}
-              />
+                <Controller
+                  key={`translations.${activeLocale}.skills`}
+                  control={control}
+                  name={`translations.${activeLocale}.skills`}
+                  render={({ field }) => (
+                    <SkillsField
+                      label={t('stands.skills')}
+                      skills={field.value}
+                      onAdd={(skill) => field.onChange([...field.value, skill])}
+                      onRemove={(index) => field.onChange(field.value.filter((_, i) => i !== index))}
+                      error={
+                        errors.translations?.[activeLocale]?.skills?.message &&
+                        t(errors.translations[activeLocale].skills.message)
+                      }
+                    />
+                  )}
+                />
+              </TranslatedContentGroup>
 
               <Controller
                 control={control}

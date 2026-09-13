@@ -238,7 +238,7 @@ func (s *GameService) CreateGame(ctx context.Context, hostUserID user.UserID, in
 	if err != nil {
 		return nil, "", err
 	}
-	host.SetAvatar(hostUser.AvatarThumbKey(), hostUser.GooglePicture())
+	host.SetAvatar(hostUser.AvatarThumbKey(), hostUser.GooglePicture(), hostUser.AvatarFocalX(), hostUser.AvatarFocalY())
 
 	g, err := game.NewGame(s.gameIDs.NewID(), cfg, host, teams, stages)
 	if err != nil {
@@ -378,7 +378,7 @@ func (s *GameService) joinLocked(ctx context.Context, g *game.Game, userID user.
 	if err != nil {
 		return err
 	}
-	p.SetAvatar(u.AvatarThumbKey(), u.GooglePicture())
+	p.SetAvatar(u.AvatarThumbKey(), u.GooglePicture(), u.AvatarFocalX(), u.AvatarFocalY())
 	return g.Join(p)
 }
 
@@ -455,7 +455,7 @@ func (s *GameService) Rematch(ctx context.Context, gameID game.GameID, requester
 	if err != nil {
 		return nil, "", err
 	}
-	host.SetAvatar(oldHost.AvatarThumbKey(), oldHost.GooglePicture())
+	host.SetAvatar(oldHost.AvatarThumbKey(), oldHost.GooglePicture(), oldHost.AvatarFocalX(), oldHost.AvatarFocalY())
 
 	g, err := game.NewGame(s.gameIDs.NewID(), cfg, host, teams, stages)
 	if err != nil {
@@ -484,7 +484,7 @@ func (s *GameService) Rematch(ctx context.Context, gameID game.GameID, requester
 		if err != nil {
 			return nil, "", err
 		}
-		seat.SetAvatar(p.AvatarThumbKey(), p.GooglePicture())
+		seat.SetAvatar(p.AvatarThumbKey(), p.GooglePicture(), p.AvatarFocalX(), p.AvatarFocalY())
 		if err := g.Join(seat); err != nil {
 			return nil, "", err
 		}

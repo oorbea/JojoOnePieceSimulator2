@@ -15,6 +15,8 @@ function createDefaultValues(): DevilFruitFormValues {
   return {
     name: '',
     translations: createEmptyTranslationsForm(),
+    focalX: 0.5,
+    focalY: 0.5,
     rarity: 'COMMON',
     fruitType: 'PARAMECIA',
   }

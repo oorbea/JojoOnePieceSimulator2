@@ -3,8 +3,8 @@ package repositories
 import (
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func newStandRow(name string, skills []string) standRow {

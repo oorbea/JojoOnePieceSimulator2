@@ -1,6 +1,6 @@
 -- name: UpsertDevilFruitPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
-VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y)
+VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
@@ -9,6 +9,8 @@ ON CONFLICT (id) DO UPDATE
         picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
         picture_lqip   = EXCLUDED.picture_lqip,
+        focal_x        = EXCLUDED.focal_x,
+        focal_y        = EXCLUDED.focal_y,
         updated_at     = now()
 RETURNING id;
 
@@ -36,6 +38,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -61,6 +65,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -86,6 +92,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -111,6 +119,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -145,6 +155,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d

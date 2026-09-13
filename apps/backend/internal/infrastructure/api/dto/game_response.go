@@ -95,14 +95,16 @@ type GameLoadoutResponse struct {
 // at serialization time (own upload if the participant's user has one, else
 // their Google-synced picture, "" for a bot) - see resolveParticipantAvatar.
 type GameParticipantResponse struct {
-	ID          string               `json:"id"`
-	UserID      *string              `json:"userId,omitempty"`
-	DisplayName string               `json:"displayName"`
-	TeamID      string               `json:"teamId"`
-	Kind        string               `json:"kind" ts:"ParticipantKind"`
-	Connected   bool                 `json:"connected"`
-	AvatarThumb string               `json:"avatarThumb"`
-	Loadout     *GameLoadoutResponse `json:"loadout,omitempty"`
+	ID           string               `json:"id"`
+	UserID       *string              `json:"userId,omitempty"`
+	DisplayName  string               `json:"displayName"`
+	TeamID       string               `json:"teamId"`
+	Kind         string               `json:"kind" ts:"ParticipantKind"`
+	Connected    bool                 `json:"connected"`
+	AvatarThumb  string               `json:"avatarThumb"`
+	AvatarFocalX float64              `json:"avatarFocalX"`
+	AvatarFocalY float64              `json:"avatarFocalY"`
+	Loadout      *GameLoadoutResponse `json:"loadout,omitempty"`
 }
 
 // GameStageResponse mirrors game.Stage. Description is NOT read off the
@@ -113,14 +115,16 @@ type GameParticipantResponse struct {
 // StageTextResolver and NewGameStateResponse. Picture is locale-independent
 // and does come straight off the domain Stage.
 type GameStageResponse struct {
-	ID            string `json:"id"`
-	Manga         string `json:"manga" ts:"Manga"`
-	Order         int    `json:"order"`
-	Name          string `json:"name"`
-	Description   string `json:"description"`
-	Picture       string `json:"picture"`
-	PictureThumb  string `json:"pictureThumb"`
-	PictureStatus string `json:"pictureStatus" ts:"PictureStatus"`
+	ID            string  `json:"id"`
+	Manga         string  `json:"manga" ts:"Manga"`
+	Order         int     `json:"order"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	Picture       string  `json:"picture"`
+	PictureThumb  string  `json:"pictureThumb"`
+	PictureStatus string  `json:"pictureStatus" ts:"PictureStatus"`
+	FocalX        float64 `json:"focalX"`
+	FocalY        float64 `json:"focalY"`
 }
 
 // StageTextResolver resolves a Stage's description for a specific viewer
@@ -318,11 +322,13 @@ func NewGameStateResponse(
 	var viewer GameViewerResponse
 	for _, p := range g.Participants() {
 		pr := GameParticipantResponse{
-			ID:          p.ID().String(),
-			DisplayName: p.DisplayName(),
-			TeamID:      p.TeamID().String(),
-			Kind:        p.Kind().String(),
-			Connected:   p.Connected(),
+			ID:           p.ID().String(),
+			DisplayName:  p.DisplayName(),
+			TeamID:       p.TeamID().String(),
+			Kind:         p.Kind().String(),
+			Connected:    p.Connected(),
+			AvatarFocalX: p.AvatarFocalX(),
+			AvatarFocalY: p.AvatarFocalY(),
 		}
 		if uid := p.UserID(); uid != nil {
 			s := uid.String()
@@ -487,6 +493,7 @@ func newGameStageResponse(ctx context.Context, s game.Stage, resolvePicture Pict
 		ID: s.ID().String(), Manga: s.Manga().String(), Order: s.Order(), Name: s.Name(),
 		Description: description, Picture: pictureURL, PictureThumb: thumbURL,
 		PictureStatus: s.PictureStatus().String(),
+		FocalX:        s.FocalX(), FocalY: s.FocalY(),
 	}, nil
 }
 

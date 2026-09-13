@@ -41,3 +41,19 @@ export function cardSource(entity: CardPictureFields): string | null {
 export function lqipSource(entity: { pictureLqip?: string }): string | null {
   return entity.pictureLqip || null
 }
+
+// focalPosition: the admin-chosen focal point (0..1, see the focal-point
+// picker), converted to LazyImage's `contentPosition` prop - what a
+// contentFit:'cover' well keeps centered instead of always cropping to the
+// image's own center. Returns null for the default center (0.5, 0.5), which
+// is exactly today's behaviour, so every call site can pass this
+// unconditionally without special-casing entities that predate the focal
+// point column.
+export function focalPosition(
+  entity: { focalX?: number; focalY?: number } | null | undefined
+): { top: `${number}%`; left: `${number}%` } | null {
+  const x = entity?.focalX ?? 0.5
+  const y = entity?.focalY ?? 0.5
+  if (x === 0.5 && y === 0.5) return null
+  return { top: `${y * 100}%`, left: `${x * 100}%` }
+}

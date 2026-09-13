@@ -15,7 +15,9 @@ import {
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { FocalPointPicker } from '@/shared/components/presentational/focal-point-picker'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
+import { TranslatedContentGroup } from '@/shared/components/presentational/translated-content-group'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { SUPPORTED_LOCALES } from '@/shared/i18n'
@@ -158,6 +160,30 @@ export function StageFormModal({
                 </YStack>
               </YStack>
 
+              {pictureUri ? (
+                <Controller
+                  control={control}
+                  name="focalX"
+                  render={({ field: focalXField }) => (
+                    <Controller
+                      control={control}
+                      name="focalY"
+                      render={({ field: focalYField }) => (
+                        <FocalPointPicker
+                          uri={pictureUri}
+                          x={focalXField.value}
+                          y={focalYField.value}
+                          onChange={(x, y) => {
+                            focalXField.onChange(x)
+                            focalYField.onChange(y)
+                          }}
+                        />
+                      )}
+                    />
+                  )}
+                />
+              ) : null}
+
               <Controller
                 control={control}
                 name="name"
@@ -206,34 +232,36 @@ export function StageFormModal({
                 </YStack>
               </XStack>
 
-              <LocaleTabs
-                value={activeLocale}
-                onChange={onLocaleChange}
-                requiredLocale={SUPPORTED_LOCALES}
-                localesWithErrors={erroredLocales}
-                requiredLabel={t('locale.required')}
-                errorLabel={t('locale.hasError')}
-              />
+              <TranslatedContentGroup locale={activeLocale}>
+                <LocaleTabs
+                  value={activeLocale}
+                  onChange={onLocaleChange}
+                  requiredLocale={SUPPORTED_LOCALES}
+                  localesWithErrors={erroredLocales}
+                  requiredLabel={t('locale.required')}
+                  errorLabel={t('locale.hasError')}
+                />
 
-              <Controller
-                key={`translations.${activeLocale}.description`}
-                control={control}
-                name={`translations.${activeLocale}.description`}
-                render={({ field }) => (
-                  <GlassField
-                    label={t('stages.description')}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={
-                      errors.translations?.[activeLocale]?.description?.message &&
-                      t(errors.translations[activeLocale].description.message)
-                    }
-                    multiline
-                    numberOfLines={3}
-                    height={100}
-                  />
-                )}
-              />
+                <Controller
+                  key={`translations.${activeLocale}.description`}
+                  control={control}
+                  name={`translations.${activeLocale}.description`}
+                  render={({ field }) => (
+                    <GlassField
+                      label={t('stages.description')}
+                      value={field.value}
+                      onChangeText={field.onChange}
+                      error={
+                        errors.translations?.[activeLocale]?.description?.message &&
+                        t(errors.translations[activeLocale].description.message)
+                      }
+                      multiline
+                      numberOfLines={3}
+                      height={100}
+                    />
+                  )}
+                />
+              </TranslatedContentGroup>
             </YStack>
           </ScrollView>
 
