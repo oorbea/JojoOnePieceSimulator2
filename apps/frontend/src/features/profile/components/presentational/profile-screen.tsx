@@ -2,7 +2,7 @@ import { Camera } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { Paragraph, Spinner, XStack, YStack } from 'tamagui'
 
-import { FocalPointPicker } from '@/shared/components/presentational/focal-point-picker'
+import { FocalPointModal } from '@/shared/components/presentational/focal-point-modal'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlassSelect } from '@/shared/components/presentational/glass-select'
@@ -49,7 +49,15 @@ type Props = {
   isSavingLanguage: boolean
   avatarFocalX: number
   avatarFocalY: number
-  onChangeAvatarFocal: (x: number, y: number) => void
+  onAdjustFocal: () => void
+  focalModal: {
+    visible: boolean
+    uri: string | null
+    x: number
+    y: number
+    onConfirm: (x: number, y: number) => void
+    onCancel?: () => void
+  }
 }
 
 // Pure UI — an Aero glass account settings screen. All form state, mutation
@@ -73,7 +81,8 @@ export function ProfileScreen({
   isSavingLanguage,
   avatarFocalX,
   avatarFocalY,
-  onChangeAvatarFocal,
+  onAdjustFocal,
+  focalModal,
 }: Props) {
   const { t } = useTranslation()
   const avatarUri = profile.avatarThumb || profile.avatar || null
@@ -159,13 +168,28 @@ export function ProfileScreen({
           </GlowText>
 
           {hasCustomAvatar ? (
-            <FocalPointPicker
-              uri={profile.avatar || null}
-              x={avatarFocalX}
-              y={avatarFocalY}
-              onChange={onChangeAvatarFocal}
-            />
+            // The focal point is chosen in FocalPointModal - a mandatory
+            // step right after uploading a new avatar, reopenable here via
+            // "Ajustar encuadre".
+            <GlossButton
+              tone="glass"
+              btnSize="sm"
+              onPress={onAdjustFocal}
+              accessibilityLabel={t('focalPoint.adjust')}
+              tooltip={t('focalPoint.tooltip')}
+            >
+              {t('focalPoint.adjust')}
+            </GlossButton>
           ) : null}
+
+          <FocalPointModal
+            visible={focalModal.visible}
+            uri={focalModal.uri}
+            x={focalModal.x}
+            y={focalModal.y}
+            onConfirm={focalModal.onConfirm}
+            onCancel={focalModal.onCancel}
+          />
 
           <YStack width="100%" gap="$3">
             <GlassField

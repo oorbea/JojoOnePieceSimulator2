@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'expo-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useController } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
@@ -58,33 +58,46 @@ export function ProfileContainer() {
   const [isRemoveAvatarOpen, setIsRemoveAvatarOpen] = useState(false)
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
 
-  // Local draft so the picker's live drag feedback never waits on a
-  // round-trip - persisted debounced (not per pixel of drag) via the
-  // timeout below. Reseeded from the server value whenever a fresh upload
-  // (or another device) changes it, same "not dirty" guard as username.
+  // Local draft so the profile screen's own avatar preview (rendered while
+  // the framing modal is open on top of it) never waits on a round-trip -
+  // committed once on the modal's Confirm, not per pixel of drag (that
+  // replaced an earlier per-drag-tick debounced save - see
+  // ObsidianVault/admin-locale-badge-and-focal-point-2026-09-13.md). See
+  // stands-container.tsx's focalModal state for the mandatory-vs-reopened
+  // distinction.
   const [avatarFocal, setAvatarFocal] = useState({
     x: profile?.avatarFocalX ?? 0.5,
     y: profile?.avatarFocalY ?? 0.5,
   })
-  const avatarFocalDirty = useRef(false)
-  const saveFocalTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    if (profile && !avatarFocalDirty.current) {
+  const [focalModal, setFocalModal] = useState<{ visible: boolean; mandatory: boolean }>({
+    visible: false,
+    mandatory: false,
+  })
+  // Reseeds avatarFocal whenever the server value changes (a fresh upload,
+  // or another device) while the framing modal isn't open editing it.
+  // Adjusted directly during render off a "have we seen this server value
+  // yet" key (same pattern lobby-room-container.tsx uses) rather than a
+  // useEffect, which would call setState synchronously inside the effect
+  // body (react-hooks/set-state-in-effect).
+  const serverFocalKey = profile ? `${profile.avatarFocalX}:${profile.avatarFocalY}` : null
+  const [seenServerFocalKey, setSeenServerFocalKey] = useState(serverFocalKey)
+  if (serverFocalKey !== seenServerFocalKey) {
+    setSeenServerFocalKey(serverFocalKey)
+    if (profile && !focalModal.visible) {
       setAvatarFocal({ x: profile.avatarFocalX, y: profile.avatarFocalY })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.avatarFocalX, profile?.avatarFocalY])
+  }
 
-  const onChangeAvatarFocal = (x: number, y: number) => {
+  const onAdjustFocal = () => setFocalModal({ visible: true, mandatory: false })
+
+  const onConfirmFocal = (x: number, y: number) => {
     if (!profile) return
     setAvatarFocal({ x, y })
-    avatarFocalDirty.current = true
-    if (saveFocalTimeout.current) clearTimeout(saveFocalTimeout.current)
-    saveFocalTimeout.current = setTimeout(() => {
-      avatarFocalDirty.current = false
-      updateAvatarFocalPointMutation.mutate({ username: profile.username, focalX: x, focalY: y })
-    }, 400)
+    updateAvatarFocalPointMutation.mutate({ username: profile.username, focalX: x, focalY: y })
+    setFocalModal((prev) => ({ ...prev, visible: false }))
   }
+
+  const onCancelFocal = () => setFocalModal((prev) => ({ ...prev, visible: false }))
 
   if (isLoading || !profile) {
     return <LoadingScreen />
@@ -111,10 +124,11 @@ export function ProfileContainer() {
       onSuccess: () => {
         // A newly uploaded avatar has no relationship to whatever focal
         // point the previous one had - reset to center (owner decision,
-        // same as the catalogue forms' onPickPicture).
+        // same as the catalogue forms' onPickPicture) and immediately ask
+        // for the real framing, mandatory, the same as every other
+        // picture-bearing resource.
         setAvatarFocal({ x: 0.5, y: 0.5 })
-        avatarFocalDirty.current = false
-        updateAvatarFocalPointMutation.mutate({ username: profile.username, focalX: 0.5, focalY: 0.5 })
+        setFocalModal({ visible: true, mandatory: true })
       },
     })
   }
@@ -139,7 +153,15 @@ export function ProfileContainer() {
       isAvatarBusy={uploadAvatarMutation.isPending || profile.avatarStatus === 'PENDING'}
       avatarFocalX={avatarFocal.x}
       avatarFocalY={avatarFocal.y}
-      onChangeAvatarFocal={onChangeAvatarFocal}
+      onAdjustFocal={onAdjustFocal}
+      focalModal={{
+        visible: focalModal.visible,
+        uri: profile.avatar || profile.avatarThumb || null,
+        x: avatarFocal.x,
+        y: avatarFocal.y,
+        onConfirm: onConfirmFocal,
+        onCancel: focalModal.mandatory ? undefined : onCancelFocal,
+      }}
       username={username}
       onUsernameChange={onUsernameChange}
       usernameError={errors.username?.message && t(errors.username.message)}
