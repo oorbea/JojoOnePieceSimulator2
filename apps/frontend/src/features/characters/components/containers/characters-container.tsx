@@ -97,7 +97,7 @@ function toOnePieceInput(values: OnePieceCharacterFormValues): OnePieceCharacter
 // useJojoCharacters' doc on the `enabled` param.
 export function CharactersContainer() {
   const { t } = useTranslation()
-  const [mangaFilter, setMangaFilter] = useState<CharacterMangaFilter>('JOJO')
+  const [mangaFilter, setMangaFilter] = useState<CharacterMangaFilter>('ALL')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const queryClient = useQueryClient()
