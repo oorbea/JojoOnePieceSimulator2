@@ -1,13 +1,14 @@
 import { errorResponseSchema } from '@/shared/contracts/errors'
+import type { FieldError } from '@/shared/contracts/dto'
 
 // Normalizes the backend's {error, details?[]} shape (and network/unknown
 // failures) into one type every feature can catch and render consistently.
 export class AppError extends Error {
   readonly status?: number
   readonly code?: string
-  readonly details?: string[]
+  readonly details?: FieldError[]
 
-  constructor(message: string, options?: { status?: number; code?: string; details?: string[] }) {
+  constructor(message: string, options?: { status?: number; code?: string; details?: FieldError[] }) {
     super(message)
     this.name = 'AppError'
     this.status = options?.status

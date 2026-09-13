@@ -568,7 +568,11 @@
     "battleIqRange": "Battle IQ ha d'estar entre 0 i 255",
     "usernameMinLength": "El nom d'usuari ha de tenir com a mínim 3 caràcters",
     "usernameMaxLength": "El nom d'usuari ha de tenir com a màxim 32 caràcters",
-    "usernameFormat": "Només lletres minúscules, números i guions baixos"
+    "usernameFormat": "Només lletres minúscules, números i guions baixos",
+    "required": "Aquest camp és obligatori",
+    "invalidValue": "Valor no vàlid",
+    "localeUnsupported": "Idioma no admès",
+    "localeDefaultRequired": "Cal la traducció en anglès (Regne Unit)"
   },
   "toasts": {
     "standCreated": "Stand creat",

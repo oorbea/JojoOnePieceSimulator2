@@ -568,7 +568,11 @@
     "battleIqRange": "Battle IQ must be between 0 and 255",
     "usernameMinLength": "Username must be at least 3 characters",
     "usernameMaxLength": "Username must be at most 32 characters",
-    "usernameFormat": "Only lowercase letters, numbers, and underscores"
+    "usernameFormat": "Only lowercase letters, numbers, and underscores",
+    "required": "This field is required",
+    "invalidValue": "Invalid value",
+    "localeUnsupported": "Unsupported language",
+    "localeDefaultRequired": "English (UK) translation is required"
   },
   "toasts": {
     "standCreated": "Stand created",
