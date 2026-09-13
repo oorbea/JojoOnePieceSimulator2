@@ -57,3 +57,41 @@ export function focalPosition(
   if (x === 0.5 && y === 0.5) return null
   return { top: `${y * 100}%`, left: `${x * 100}%` }
 }
+
+// focalFromLocation: the inverse of focalPosition's math - turns a
+// touch/click location (in the same coordinate space as the rect it landed
+// in, e.g. RN's locationX/locationY) into a normalized 0..1 focal pair.
+// Callers must measure the *displayed image's* rect, not a letterboxed well
+// around it (see focal-point-picker.tsx) - dividing by the wrong rect gives
+// a point that doesn't match where the user actually clicked. Clamped so a
+// drag that overshoots the rect still lands at a valid edge instead of
+// producing an out-of-range focal value the backend would reject. A
+// zero-size rect (layout not measured yet) returns the center rather than
+// dividing by zero.
+export function focalFromLocation(
+  locationX: number,
+  locationY: number,
+  width: number,
+  height: number
+): { x: number; y: number } {
+  if (!width || !height) return { x: 0.5, y: 0.5 }
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
+  return { x: clamp01(locationX / width), y: clamp01(locationY / height) }
+}
+
+// imageRectForWell: the same "fit inside, preserve aspect ratio" math RN's
+// `resizeMode="contain"` uses internally, exposed so the focal-point picker
+// can measure the image's own *displayed* rect (letterboxed inside its
+// well) instead of the well itself - the two only coincide when the well
+// happens to share the image's aspect ratio exactly. Falls back to the well
+// itself (no letterbox correction) when either size isn't known yet, so the
+// gesture still works - just less precisely - until an onLoad measurement
+// lands.
+export function imageRectForWell(
+  natural: { width: number; height: number } | null,
+  well: { width: number; height: number }
+): { width: number; height: number } {
+  if (!natural || !well.width || !well.height) return well
+  const scale = Math.min(well.width / natural.width, well.height / natural.height)
+  return { width: natural.width * scale, height: natural.height * scale }
+}
