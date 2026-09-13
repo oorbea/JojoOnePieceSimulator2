@@ -92,5 +92,10 @@ Verified: backend `go build`/`go vet`/`go test ./...` (unit + `-tags integration
 Postgres/Redis via `make db-up`) all green, contracts regenerated with zero drift; frontend
 `tsc --noEmit` clean, `eslint` 0 errors, `pnpm jest` 69/69 suites — 1340/1340 tests.
 
+**Update (later same day): the shipped gesture didn't actually work** — see
+[[focal-point-gesture-fix-and-modal-2026-09-13]] for the root cause (wrong host element on web,
+wrong coordinate space) and the redesign into a mandatory post-upload framing modal.
+
 Related: [[i18n-multi-language]], [[media-proxy-content-addressed]], [[admin-panel-crud-ux-fixes]],
-[[entrega-imagenes-red-lenta-2026-09-07]], [[norma-verificacion-docker]]
+[[entrega-imagenes-red-lenta-2026-09-07]], [[norma-verificacion-docker]],
+[[focal-point-gesture-fix-and-modal-2026-09-13]]
