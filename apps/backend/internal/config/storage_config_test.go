@@ -42,6 +42,51 @@ func TestLoad_StorageProviders_DefaultsToR2Only(t *testing.T) {
 	if cfg.R2QuotaBytes != 10*1024*1024*1024 {
 		t.Errorf("R2QuotaBytes = %d, want 10 GiB", cfg.R2QuotaBytes)
 	}
+	if cfg.R2WorkerURL != "" || cfg.R2WorkerSecret != "" {
+		t.Errorf("R2WorkerURL/R2WorkerSecret should default empty, got %q/%q", cfg.R2WorkerURL, cfg.R2WorkerSecret)
+	}
+}
+
+func TestLoad_R2Worker_BothUnsetIsFine(t *testing.T) {
+	baseStorageEnv(t)
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.R2WorkerURL != "" || cfg.R2WorkerSecret != "" {
+		t.Errorf("R2WorkerURL/R2WorkerSecret = %q/%q, want both empty", cfg.R2WorkerURL, cfg.R2WorkerSecret)
+	}
+}
+
+func TestLoad_R2Worker_BothSetIsFine(t *testing.T) {
+	baseStorageEnv(t)
+	t.Setenv("R2_WORKER_URL", "https://r2-proxy.example.workers.dev")
+	t.Setenv("R2_WORKER_SECRET", "shared-secret")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.R2WorkerURL != "https://r2-proxy.example.workers.dev" {
+		t.Errorf("R2WorkerURL = %q", cfg.R2WorkerURL)
+	}
+	if cfg.R2WorkerSecret != "shared-secret" {
+		t.Errorf("R2WorkerSecret = %q", cfg.R2WorkerSecret)
+	}
+}
+
+func TestLoad_R2Worker_OnlyOneSetRejected(t *testing.T) {
+	for _, only := range []string{"R2_WORKER_URL", "R2_WORKER_SECRET"} {
+		t.Run(only, func(t *testing.T) {
+			baseStorageEnv(t)
+			t.Setenv(only, "set")
+
+			if _, err := config.Load(); err == nil {
+				t.Fatalf("Load: want error when only %s is set, got nil", only)
+			}
+		})
+	}
 }
 
 func TestLoad_StorageProviders_UnknownProviderRejected(t *testing.T) {

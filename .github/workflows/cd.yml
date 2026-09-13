@@ -49,7 +49,7 @@ jobs:
           exclude = {
               'TS_OAUTH_CLIENT_ID', 'TS_OAUTH_SECRET',
               'SERVER_IP', 'SERVER_USER', 'SSH_PRIVATE_KEY',
-              'GITHUB_TOKEN',
+              'GITHUB_TOKEN', 'CLOUDFLARE_API_TOKEN',
           }
 
           with open('deployments/.env', 'w') as f:
@@ -163,3 +163,27 @@ jobs:
             fi
 
             docker image prune -f
+
+  deploy-r2-worker-proxy:
+    name: Deploy R2 worker proxy
+    runs-on: ubuntu-latest
+    # Independent of continuous-deploy: this Worker doesn't share infra
+    # with the backend/frontend containers (see apps/r2-worker-proxy's
+    # README) and apps/backend only picks it up once R2_WORKER_URL/
+    # R2_WORKER_SECRET are set as repo secrets, so there's nothing for the
+    # two jobs to sequence against each other.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.R2_ACCOUNT_ID }}
+          workingDirectory: apps/r2-worker-proxy
+          command: deploy
+          secrets: |
+            R2_PROXY_SECRET
+        env:
+          R2_PROXY_SECRET: ${{ secrets.R2_WORKER_SECRET }}
