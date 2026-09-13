@@ -78,6 +78,7 @@ function Harness({ mode = 'create', initialKind = null, onSubmit, onCancel }: Ha
       pictureUri={null}
       onPickPicture={jest.fn()}
       isPictureBusy={false}
+      onAdjustFocal={jest.fn()}
       activeLocale={activeLocale}
       onLocaleChange={setActiveLocale}
       erroredLocales={[]}

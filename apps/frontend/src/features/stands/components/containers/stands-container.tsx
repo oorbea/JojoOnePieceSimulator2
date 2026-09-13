@@ -162,6 +162,14 @@ export function StandsContainer() {
   const [activeLocale, setActiveLocale] = useState<Locale>(DEFAULT_LOCALE)
   const [pendingPicture, setPendingPicture] = useState<PickedPicture | null>(null)
   const [standToDelete, setStandToDelete] = useState<StandResponse | null>(null)
+  // `mandatory` distinguishes the post-upload framing step (no way out but
+  // confirming - see focal-point-modal.tsx) from reopening via "Ajustar
+  // encuadre" in the edit form (has a real Cancel, restoring the value the
+  // form already had).
+  const [focalModal, setFocalModal] = useState<{ visible: boolean; mandatory: boolean }>({
+    visible: false,
+    mandatory: false,
+  })
   const [openingEditId, setOpeningEditId] = useState<string | null>(null)
   const [detailStand, setDetailStand] = useState<StandResponse | null>(null)
 
@@ -170,6 +178,7 @@ export function StandsContainer() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<StandFormValues>({
     resolver: zodResolver(standFormSchema),
@@ -265,8 +274,24 @@ export function StandsContainer() {
       // carry over a now-arbitrary crop (owner decision).
       setValue('focalX', 0.5)
       setValue('focalY', 0.5)
+      // Framing is mandatory right after picking a picture - the modal's
+      // own Confirm button is the only way out (no onCancel passed below).
+      setFocalModal({ visible: true, mandatory: true })
     }
   }
+
+  const onAdjustFocal = () => setFocalModal({ visible: true, mandatory: false })
+
+  const onConfirmFocal = (x: number, y: number) => {
+    setValue('focalX', x)
+    setValue('focalY', y)
+    setFocalModal((prev) => ({ ...prev, visible: false }))
+  }
+
+  // Only reachable in the reopened (non-mandatory) mode - the modal never
+  // wrote through to the form mid-drag, so closing without confirming
+  // leaves focalX/focalY exactly as they were before it opened.
+  const onCancelFocal = () => setFocalModal((prev) => ({ ...prev, visible: false }))
 
   const onSubmit = handleSubmit((values) => {
     const input = toInput(values)
@@ -378,9 +403,18 @@ export function StandsContainer() {
         pictureUri,
         onPickPicture: () => void onPickPicture(),
         isPictureBusy: uploadPictureMutation.isPending,
+        onAdjustFocal,
         activeLocale,
         onLocaleChange: setActiveLocale,
         erroredLocales,
+      }}
+      focalModal={{
+        visible: focalModal.visible,
+        uri: pictureUri,
+        x: watch('focalX'),
+        y: watch('focalY'),
+        onConfirm: onConfirmFocal,
+        onCancel: focalModal.mandatory ? undefined : onCancelFocal,
       }}
       deleteConfirm={{
         visible: standToDelete !== null,
