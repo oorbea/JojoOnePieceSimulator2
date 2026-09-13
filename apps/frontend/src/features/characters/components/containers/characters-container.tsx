@@ -150,6 +150,12 @@ export function CharactersContainer() {
     id: string
     name: string
   } | null>(null)
+  // See stands-container.tsx's focalModal state for the mandatory-vs-reopened
+  // distinction.
+  const [focalModal, setFocalModal] = useState<{ visible: boolean; mandatory: boolean }>({
+    visible: false,
+    mandatory: false,
+  })
 
   const activeCharacters = useMemo<TaggedCharacter[]>(() => {
     const jojoTagged = wantJojo
@@ -239,8 +245,24 @@ export function CharactersContainer() {
       jojoForm.setValue('focalY', 0.5)
       onePieceForm.setValue('focalX', 0.5)
       onePieceForm.setValue('focalY', 0.5)
+      setFocalModal({ visible: true, mandatory: true })
     }
   }
+
+  const onAdjustFocal = () => setFocalModal({ visible: true, mandatory: false })
+
+  // Only the active kind's form actually gets submitted (see onSubmit
+  // below) - the other one's focalX/focalY is written too but harmlessly
+  // discarded along with the rest of its unused values.
+  const onConfirmFocal = (x: number, y: number) => {
+    jojoForm.setValue('focalX', x)
+    jojoForm.setValue('focalY', y)
+    onePieceForm.setValue('focalX', x)
+    onePieceForm.setValue('focalY', y)
+    setFocalModal((prev) => ({ ...prev, visible: false }))
+  }
+
+  const onCancelFocal = () => setFocalModal((prev) => ({ ...prev, visible: false }))
 
   const jumpToFirstErroredLocale = (
     formErrors: typeof jojoForm.formState.errors | typeof onePieceForm.formState.errors
@@ -383,9 +405,18 @@ export function CharactersContainer() {
         pictureUri,
         onPickPicture: () => void onPickPicture(),
         isPictureBusy: uploadJojoPicture.isPending || uploadOnePiecePicture.isPending,
+        onAdjustFocal,
         activeLocale,
         onLocaleChange: setActiveLocale,
         erroredLocales,
+      }}
+      focalModal={{
+        visible: focalModal.visible,
+        uri: pictureUri,
+        x: modalState.kind === 'ONE_PIECE' ? onePieceForm.watch('focalX') : jojoForm.watch('focalX'),
+        y: modalState.kind === 'ONE_PIECE' ? onePieceForm.watch('focalY') : jojoForm.watch('focalY'),
+        onConfirm: onConfirmFocal,
+        onCancel: focalModal.mandatory ? undefined : onCancelFocal,
       }}
       deleteConfirm={{
         visible: characterToDelete !== null,
