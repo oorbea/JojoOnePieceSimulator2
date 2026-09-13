@@ -214,6 +214,15 @@ type Config struct {
 	// free-tier storage cap; 0 means unlimited (never falls through on
 	// quota, only on a runtime error).
 	R2QuotaBytes int64
+	// R2WorkerURL/R2WorkerSecret, if both set, route the "r2" tier through
+	// apps/r2-worker-proxy (infrastructure/storage/workerproxy) instead of
+	// talking to R2's S3 API endpoint directly - see that package's doc
+	// comment for why (an ISP can have a broken route to R2's specific
+	// Cloudflare anycast prefix while the rest of Cloudflare, including the
+	// Worker's *.workers.dev address, works fine). Optional: unset means
+	// the direct s3store-based R2 backend, same as before this existed.
+	R2WorkerURL    string
+	R2WorkerSecret string
 	// StorageProviders is the fallback chain order, e.g. []string{"r2",
 	// "b2", "supabase"}. A provider only needs its credentials/bucket/quota
 	// set if it's listed here.
@@ -601,6 +610,16 @@ func Load() (*Config, error) {
 	r2QuotaBytes, err := parseQuotaBytesEnv("R2_QUOTA_BYTES", defaultR2QuotaBytes)
 	if err != nil {
 		return nil, err
+	}
+
+	// Both optional; the R2 tier uses the Worker only when both are set
+	// (see workerproxy's doc comment). Setting only one is almost
+	// certainly a misconfiguration - fail loudly instead of silently
+	// falling back to the direct S3 path.
+	r2WorkerURL := os.Getenv("R2_WORKER_URL")
+	r2WorkerSecret := os.Getenv("R2_WORKER_SECRET")
+	if (r2WorkerURL == "") != (r2WorkerSecret == "") {
+		return nil, fmt.Errorf("R2_WORKER_URL and R2_WORKER_SECRET must be set together")
 	}
 
 	rateLimitMediaPerIP, err := parsePositiveIntEnv("RATE_LIMIT_MEDIA_PER_IP", defaultRateLimitMediaPerIP)
@@ -1083,6 +1102,8 @@ func Load() (*Config, error) {
 		R2Bucket:          r2Bucket,
 		R2PresignTTL:      r2PresignTTL,
 		R2QuotaBytes:      r2QuotaBytes,
+		R2WorkerURL:       r2WorkerURL,
+		R2WorkerSecret:    r2WorkerSecret,
 
 		MediaBaseURL:       mediaBaseURL,
 		MediaURLSecret:     mediaURLSecret,

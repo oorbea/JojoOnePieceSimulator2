@@ -6,8 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Online game about JoJo's Bizarre Adventure and One Piece — players get a
 randomized loadout (Stand or Devil Fruit) and play through game modes
-(Gauntlet, Versus). Not a real monorepo: `apps/backend` (Go) and
-`apps/frontend` (Expo) are two standalone projects with their own
+(Gauntlet, Versus). Not a real monorepo: `apps/backend` (Go),
+`apps/frontend` (Expo), and `apps/r2-worker-proxy` (Cloudflare Worker,
+optional — fronts the R2 bucket via a native binding so the backend can
+reach it without depending on R2's S3 API endpoint's specific Cloudflare
+anycast prefix, see its README) are standalone projects with their own
 lockfiles/toolchains, tied together only by `deployments/`.
 
 **Always check `ObsidianVault/` before implementing non-trivial changes** —
