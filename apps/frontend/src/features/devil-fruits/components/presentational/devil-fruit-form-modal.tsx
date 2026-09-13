@@ -6,12 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Controller, type Control, type FieldErrors } from 'react-hook-form'
 import { ScrollView, Spinner, XStack, YStack } from 'tamagui'
 
-import { FocalPointPicker } from '@/shared/components/presentational/focal-point-picker'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlassSelect, type GlassSelectOption } from '@/shared/components/presentational/glass-select'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { SkillsField } from '@/shared/components/presentational/skills-field'
 import { TranslatedContentGroup } from '@/shared/components/presentational/translated-content-group'
@@ -19,6 +19,7 @@ import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { DEFAULT_LOCALE } from '@/shared/i18n'
+import { focalPosition } from '@/shared/lib/picture-source'
 import { fruitTypeSchema, raritySchema, type Locale } from '@/shared/contracts/enums'
 import type { DevilFruitFormValues } from '@/features/devil-fruits/types/devil-fruits.types'
 
@@ -33,6 +34,7 @@ type Props = {
   pictureUri: string | null
   onPickPicture: () => void
   isPictureBusy: boolean
+  onAdjustFocal: () => void
   activeLocale: Locale
   onLocaleChange: (locale: Locale) => void
   erroredLocales: Locale[]
@@ -49,6 +51,7 @@ export function DevilFruitFormModal({
   pictureUri,
   onPickPicture,
   isPictureBusy,
+  onAdjustFocal,
   activeLocale,
   onLocaleChange,
   erroredLocales,
@@ -151,6 +154,9 @@ export function DevilFruitFormModal({
               </YStack>
 
               {pictureUri ? (
+                // The focal point is chosen in FocalPointModal - a
+                // mandatory step right after picking a picture, reopenable
+                // via "Ajustar encuadre". Just a live preview + that button.
                 <Controller
                   control={control}
                   name="focalX"
@@ -159,15 +165,27 @@ export function DevilFruitFormModal({
                       control={control}
                       name="focalY"
                       render={({ field: focalYField }) => (
-                        <FocalPointPicker
-                          uri={pictureUri}
-                          x={focalXField.value}
-                          y={focalYField.value}
-                          onChange={(x, y) => {
-                            focalXField.onChange(x)
-                            focalYField.onChange(y)
-                          }}
-                        />
+                        <YStack items="center" gap="$2">
+                          <YStack width={140}>
+                            <LazyImage
+                              uri={pictureUri}
+                              height={90}
+                              contentPosition={focalPosition({
+                                focalX: focalXField.value,
+                                focalY: focalYField.value,
+                              })}
+                            />
+                          </YStack>
+                          <GlossButton
+                            tone="glass"
+                            btnSize="sm"
+                            onPress={onAdjustFocal}
+                            accessibilityLabel={t('focalPoint.adjust')}
+                            tooltip={t('focalPoint.tooltip')}
+                          >
+                            {t('focalPoint.adjust')}
+                          </GlossButton>
+                        </YStack>
                       )}
                     />
                   )}

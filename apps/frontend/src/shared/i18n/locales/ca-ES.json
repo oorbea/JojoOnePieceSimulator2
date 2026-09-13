@@ -556,9 +556,15 @@
   "focalPoint": {
     "title": "Punt focal de la targeta",
     "hint": "Toca o arrossega sobre la imatge per triar què es veu en retallar-la.",
-    "previewLabel": "Vista prèvia de la targeta",
+    "previewCard": "Vista prèvia de la targeta",
+    "previewAvatar": "Vista prèvia de l'avatar",
+    "previewBanner": "Vista prèvia del bàner",
     "reset": "Restableix al centre",
-    "a11y": "Punt focal, {{x}}% horitzontal, {{y}}% vertical. Arrossega per moure'l."
+    "a11y": "Punt focal, {{x}}% horitzontal, {{y}}% vertical. Arrossega per moure'l.",
+    "modalTitle": "Enquadra la imatge",
+    "confirm": "Confirma l'enquadrament",
+    "adjust": "Ajusta l'enquadrament",
+    "tooltip": "Tria quina part de la imatge es veu sempre en retallar-la"
   },
   "skillsField": {
     "addPlaceholder": "Afegeix una habilitat…",

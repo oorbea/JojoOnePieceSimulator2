@@ -100,12 +100,19 @@ export function DevilFruitsContainer() {
   const [fruitToDelete, setFruitToDelete] = useState<DevilFruitResponse | null>(null)
   const [openingEditId, setOpeningEditId] = useState<string | null>(null)
   const [detailFruit, setDetailFruit] = useState<DevilFruitResponse | null>(null)
+  // See stands-container.tsx's focalModal state for the mandatory-vs-reopened
+  // distinction.
+  const [focalModal, setFocalModal] = useState<{ visible: boolean; mandatory: boolean }>({
+    visible: false,
+    mandatory: false,
+  })
 
   const {
     control,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<DevilFruitFormValues>({
     resolver: zodResolver(devilFruitFormSchema),
@@ -152,8 +159,19 @@ export function DevilFruitsContainer() {
       setPendingPicture(asset)
       setValue('focalX', 0.5)
       setValue('focalY', 0.5)
+      setFocalModal({ visible: true, mandatory: true })
     }
   }
+
+  const onAdjustFocal = () => setFocalModal({ visible: true, mandatory: false })
+
+  const onConfirmFocal = (x: number, y: number) => {
+    setValue('focalX', x)
+    setValue('focalY', y)
+    setFocalModal((prev) => ({ ...prev, visible: false }))
+  }
+
+  const onCancelFocal = () => setFocalModal((prev) => ({ ...prev, visible: false }))
 
   const onSubmit = handleSubmit((values) => {
     const input = toInput(values)
@@ -249,9 +267,18 @@ export function DevilFruitsContainer() {
         pictureUri,
         onPickPicture: () => void onPickPicture(),
         isPictureBusy: uploadPictureMutation.isPending,
+        onAdjustFocal,
         activeLocale,
         onLocaleChange: setActiveLocale,
         erroredLocales,
+      }}
+      focalModal={{
+        visible: focalModal.visible,
+        uri: pictureUri,
+        x: watch('focalX'),
+        y: watch('focalY'),
+        onConfirm: onConfirmFocal,
+        onCancel: focalModal.mandatory ? undefined : onCancelFocal,
       }}
       deleteConfirm={{
         visible: fruitToDelete !== null,

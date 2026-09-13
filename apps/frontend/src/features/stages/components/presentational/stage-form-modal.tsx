@@ -15,12 +15,13 @@ import {
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { FocalPointPicker } from '@/shared/components/presentational/focal-point-picker'
+import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { LocaleTabs } from '@/shared/components/presentational/locale-tabs'
 import { TranslatedContentGroup } from '@/shared/components/presentational/translated-content-group'
 import { InsetRing } from '@/shared/components/presentational/wii-card'
 import { a11yProps } from '@/shared/lib/a11y'
 import { SUPPORTED_LOCALES } from '@/shared/i18n'
+import { focalPosition } from '@/shared/lib/picture-source'
 import { mangaSchema, type Locale } from '@/shared/contracts/enums'
 import type { StageFormValues } from '@/features/stages/types/stages.types'
 
@@ -35,6 +36,7 @@ type Props = {
   pictureUri: string | null
   onPickPicture: () => void
   isPictureBusy: boolean
+  onAdjustFocal: () => void
   activeLocale: Locale
   onLocaleChange: (locale: Locale) => void
   erroredLocales: Locale[]
@@ -55,6 +57,7 @@ export function StageFormModal({
   pictureUri,
   onPickPicture,
   isPictureBusy,
+  onAdjustFocal,
   activeLocale,
   onLocaleChange,
   erroredLocales,
@@ -161,6 +164,9 @@ export function StageFormModal({
               </YStack>
 
               {pictureUri ? (
+                // The focal point is chosen in FocalPointModal - a
+                // mandatory step right after picking a picture, reopenable
+                // via "Ajustar encuadre". Just a live preview + that button.
                 <Controller
                   control={control}
                   name="focalX"
@@ -169,15 +175,27 @@ export function StageFormModal({
                       control={control}
                       name="focalY"
                       render={({ field: focalYField }) => (
-                        <FocalPointPicker
-                          uri={pictureUri}
-                          x={focalXField.value}
-                          y={focalYField.value}
-                          onChange={(x, y) => {
-                            focalXField.onChange(x)
-                            focalYField.onChange(y)
-                          }}
-                        />
+                        <YStack items="center" gap="$2">
+                          <YStack width={140}>
+                            <LazyImage
+                              uri={pictureUri}
+                              height={90}
+                              contentPosition={focalPosition({
+                                focalX: focalXField.value,
+                                focalY: focalYField.value,
+                              })}
+                            />
+                          </YStack>
+                          <GlossButton
+                            tone="glass"
+                            btnSize="sm"
+                            onPress={onAdjustFocal}
+                            accessibilityLabel={t('focalPoint.adjust')}
+                            tooltip={t('focalPoint.tooltip')}
+                          >
+                            {t('focalPoint.adjust')}
+                          </GlossButton>
+                        </YStack>
                       )}
                     />
                   )}
