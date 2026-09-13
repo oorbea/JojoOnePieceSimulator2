@@ -24,6 +24,8 @@ type onePieceCharacterRow struct {
 	PictureMediaID  string
 	PictureStatus   string
 	PictureLqip     string
+	FocalX          float64
+	FocalY          float64
 	PhysicalForm    string
 	ArmamentHaki    string
 	ObservationHaki string
@@ -36,6 +38,7 @@ func onePieceCharacterRowFromGetByID(r db.GetOnePieceCharacterRowByIDRow) onePie
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 		PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 		PhysicalForm: r.PhysicalForm, ArmamentHaki: r.ArmamentHaki,
 		ObservationHaki: r.ObservationHaki, ConquerorHaki: r.ConquerorHaki, FruitMastery: r.FruitMastery,
 	}
@@ -46,6 +49,7 @@ func onePieceCharacterRowFromGetByName(r db.GetOnePieceCharacterRowByNameRow) on
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 		PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 		PhysicalForm: r.PhysicalForm, ArmamentHaki: r.ArmamentHaki,
 		ObservationHaki: r.ObservationHaki, ConquerorHaki: r.ConquerorHaki, FruitMastery: r.FruitMastery,
 	}
@@ -58,6 +62,7 @@ func onePieceCharacterRowsFromList(rs []db.ListOnePieceCharacterRowsRow) []onePi
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 			PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			PhysicalForm: r.PhysicalForm, ArmamentHaki: r.ArmamentHaki,
 			ObservationHaki: r.ObservationHaki, ConquerorHaki: r.ConquerorHaki, FruitMastery: r.FruitMastery,
 		}
@@ -72,6 +77,7 @@ func onePieceCharacterRowsFromFilter(rs []db.FilterOnePieceCharacterRowsRow) []o
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 			PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			PhysicalForm: r.PhysicalForm, ArmamentHaki: r.ArmamentHaki,
 			ObservationHaki: r.ObservationHaki, ConquerorHaki: r.ConquerorHaki, FruitMastery: r.FruitMastery,
 		}
@@ -86,6 +92,7 @@ func onePieceCharacterRowsFromPage(rs []db.PageOnePieceCharacterRowsRow) []onePi
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 			PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			PhysicalForm: r.PhysicalForm, ArmamentHaki: r.ArmamentHaki,
 			ObservationHaki: r.ObservationHaki, ConquerorHaki: r.ConquerorHaki, FruitMastery: r.FruitMastery,
 		}
@@ -112,6 +119,9 @@ func buildOnePieceCharacter(row onePieceCharacterRow) (*characters.OnePieceChara
 	}
 	character.SetPictureRenditions(row.Picture, row.PictureThumb, row.PictureCard, row.PictureLqip, pictureStatus)
 	character.SetMediaID(row.PictureMediaID)
+	if err := character.SetFocalPoint(row.FocalX, row.FocalY); err != nil {
+		return nil, fmt.Errorf("one piece character %q: focal: %w", row.Name, err)
+	}
 
 	physicalForm, err := enums.ParsePhysicalForm(row.PhysicalForm)
 	if err != nil {

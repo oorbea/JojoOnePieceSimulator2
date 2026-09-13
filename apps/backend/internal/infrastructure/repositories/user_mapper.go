@@ -25,6 +25,8 @@ type userRow struct {
 	AvatarStatus   string
 	AvatarLqip     string
 	AvatarMediaID  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }
 
 func userRowFromGetByID(r db.GetUserByIDRow) userRow {
@@ -33,6 +35,7 @@ func userRowFromGetByID(r db.GetUserByIDRow) userRow {
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
 		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
+		AvatarFocalX: r.AvatarFocalX, AvatarFocalY: r.AvatarFocalY,
 	}
 }
 
@@ -42,6 +45,7 @@ func userRowFromGetByGoogleSub(r db.GetUserByGoogleSubRow) userRow {
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
 		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
+		AvatarFocalX: r.AvatarFocalX, AvatarFocalY: r.AvatarFocalY,
 	}
 }
 
@@ -51,6 +55,7 @@ func userRowFromGetByEmail(r db.GetUserByEmailRow) userRow {
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
 		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
+		AvatarFocalX: r.AvatarFocalX, AvatarFocalY: r.AvatarFocalY,
 	}
 }
 
@@ -60,6 +65,7 @@ func userRowFromGetByUsername(r db.GetUserByUsernameRow) userRow {
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
 		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
+		AvatarFocalX: r.AvatarFocalX, AvatarFocalY: r.AvatarFocalY,
 	}
 }
 
@@ -69,6 +75,7 @@ func userRowFromListUsers(r db.ListUsersRow) userRow {
 		CompleteName: r.CompleteName, GooglePicture: r.GooglePicture, Role: r.Role, Language: r.Language,
 		AvatarKey: r.AvatarKey, AvatarThumbKey: r.AvatarThumbKey, AvatarCardKey: r.AvatarCardKey,
 		AvatarStatus: r.AvatarStatus, AvatarLqip: r.AvatarLqip, AvatarMediaID: r.AvatarMediaID,
+		AvatarFocalX: r.AvatarFocalX, AvatarFocalY: r.AvatarFocalY,
 	}
 }
 
@@ -104,6 +111,9 @@ func buildUser(row userRow) (*user.User, error) {
 	}
 	u.SetAvatarRenditions(row.AvatarKey, row.AvatarThumbKey, row.AvatarCardKey, row.AvatarLqip, avatarStatus)
 	u.SetAvatarMediaID(row.AvatarMediaID)
+	if err := u.SetAvatarFocalPoint(row.AvatarFocalX, row.AvatarFocalY); err != nil {
+		return nil, err
+	}
 	if err := u.ChangeLanguage(language); err != nil {
 		return nil, err
 	}

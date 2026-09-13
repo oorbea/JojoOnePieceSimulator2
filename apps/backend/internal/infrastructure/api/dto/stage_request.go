@@ -16,6 +16,8 @@ type StageRequest struct {
 	Order        int                                `json:"order"`
 	Name         string                             `json:"name"`
 	Translations map[string]StageTranslationRequest `json:"translations" ts:"map[Locale]"`
+	FocalX       *float64                           `json:"focalX,omitempty"`
+	FocalY       *float64                           `json:"focalY,omitempty"`
 }
 
 // Validate converts the request into a services.StageInput, collecting all
@@ -36,9 +38,14 @@ func (r StageRequest) Validate() (services.StageInput, error) {
 	translations, translationErrs := validateStageTranslations(r.Translations)
 	errs = append(errs, translationErrs...)
 
+	errs = append(errs, validateFocal(r.FocalX, r.FocalY)...)
+
 	if len(errs) > 0 {
 		return services.StageInput{}, &ValidationError{Errors: errs}
 	}
 
-	return services.StageInput{Manga: manga, Order: r.Order, Name: r.Name, Translations: translations}, nil
+	return services.StageInput{
+		Manga: manga, Order: r.Order, Name: r.Name, Translations: translations,
+		FocalX: r.FocalX, FocalY: r.FocalY,
+	}, nil
 }

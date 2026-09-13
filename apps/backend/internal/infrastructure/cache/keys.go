@@ -15,25 +15,25 @@ import (
 // nested in the EvolvesFrom chain of any descendant, so enumerating the
 // affected keys is not tractable; flush-all is both correct and cheap for an
 // admin-write catalogue.
-// Bumped to v2 when PictureCard/PictureLqip/PictureMediaID were added to
-// the snapshot: Redis is appendonly on a persistent volume, so entries
-// written by the pre-v2 binary would otherwise survive the deploy and
-// deserialize with the new fields zeroed - silently serving stale/empty
-// media ids until standTTL expired. The version bump forces a cold cache
-// instead, which is cheap for a write-by-admin-only catalogue.
-const standsNamespace = "stands:v2"
+// Bumped to v3 when FocalX/FocalY were added to the snapshot - same
+// appendonly-Redis reasoning the v2 bump (PictureCard/PictureLqip/
+// PictureMediaID) already documented: a pre-v3 entry would otherwise
+// deserialize with focal = 0.0 (top-left crop) instead of the correct 0.5
+// center. The version bump forces a cold cache instead, cheap for an
+// admin-write catalogue.
+const standsNamespace = "stands:v3"
 
 // devilFruitsNamespace holds every cached DevilFruit read (FindByID,
 // FindByName, GetAll, Filter) and is invalidated as a whole on any write -
 // same reasoning as standsNamespace.
-// Bumped to v2 - see standsNamespace's doc.
-const devilFruitsNamespace = "devil_fruits:v2"
+// Bumped to v3 - see standsNamespace's doc.
+const devilFruitsNamespace = "devil_fruits:v3"
 
 // stagesNamespace holds every cached Stage read (Stages, List, Filter,
 // FindByID) and is invalidated as a whole on any write - same reasoning as
 // standsNamespace.
-// Bumped to v2 - see standsNamespace's doc.
-const stagesNamespace = "stages:v2"
+// Bumped to v3 - see standsNamespace's doc.
+const stagesNamespace = "stages:v3"
 
 // presignNamespace holds cached presigned picture URLs, keyed by object
 // storage key. Never invalidated wholesale - entries are evicted
@@ -44,11 +44,12 @@ const presignNamespace = "presign"
 // as a whole on any write - same reasoning as standsNamespace. Characters
 // are a separate CTI from powers, so this is deliberately its own
 // namespace, not folded into standsNamespace.
-const jojoCharactersNamespace = "jojo_characters:v1"
+// Bumped to v2 when FocalX/FocalY were added - see standsNamespace's doc.
+const jojoCharactersNamespace = "jojo_characters:v2"
 
 // onePieceCharactersNamespace mirrors jojoCharactersNamespace for the One
-// Piece side.
-const onePieceCharactersNamespace = "one_piece_characters:v1"
+// Piece side. Bumped to v2 - see standsNamespace's doc.
+const onePieceCharactersNamespace = "one_piece_characters:v2"
 
 // Every key below is prefixed with locale so a write's whole-namespace
 // Invalidate still clears every locale's entries together, while reads for

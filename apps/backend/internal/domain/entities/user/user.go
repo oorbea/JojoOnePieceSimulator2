@@ -21,6 +21,8 @@ type User struct {
 	role           enums.UserRole
 	avatarStatus   enums.PictureStatus
 	language       enums.Locale
+	avatarFocalX   float64
+	avatarFocalY   float64
 }
 
 // NewUser builds a User from the fields synced from Google. avatar* fields
@@ -62,6 +64,8 @@ func NewUser(
 		role:          role,
 		avatarStatus:  enums.PictureNone,
 		language:      enums.EnGB,
+		avatarFocalX:  0.5,
+		avatarFocalY:  0.5,
 	}, nil
 }
 
@@ -184,4 +188,21 @@ func (u *User) SetAvatarRenditions(key, thumbKey, cardKey, lqip string, status e
 	u.avatarCardKey = cardKey
 	u.avatarLqip = lqip
 	u.avatarStatus = status
+}
+
+// AvatarFocalX and AvatarFocalY are the normalized (0..1) point of the
+// user's avatar a client should keep centered when rendering it with
+// contentFit:'cover' - see powers.Power.FocalX.
+func (u *User) AvatarFocalX() float64 { return u.avatarFocalX }
+func (u *User) AvatarFocalY() float64 { return u.avatarFocalY }
+
+// SetAvatarFocalPoint validates and stores a new avatar focal point - see
+// powers.Power.SetFocalPoint.
+func (u *User) SetAvatarFocalPoint(x, y float64) error {
+	if x < 0 || x > 1 || y < 0 || y > 1 {
+		return errors.New("focal point must be between 0 and 1")
+	}
+	u.avatarFocalX = x
+	u.avatarFocalY = y
+	return nil
 }

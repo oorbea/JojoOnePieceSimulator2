@@ -135,10 +135,10 @@ type wireStage struct {
 }
 
 type wireRound struct {
-	Index        int              `json:"index"`
-	Stage        wireStage        `json:"stage"`
-	Ballot       wireBallot       `json:"ballot"`
-	TiebreakUsed bool             `json:"tiebreakUsed"`
+	Index        int        `json:"index"`
+	Stage        wireStage  `json:"stage"`
+	Ballot       wireBallot `json:"ballot"`
+	TiebreakUsed bool       `json:"tiebreakUsed"`
 	// TiedVotes mirrors game.RoundSnapshot.TiedVotes (added 2026-08-28,
 	// after this wire type already existed - the field was missed here
 	// then, silently dropping it on every Redis round trip: Save encoded

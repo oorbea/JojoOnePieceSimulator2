@@ -205,6 +205,16 @@ func (f *fakeUserRepository) SetAvatarMediaID(_ context.Context, id user.UserID,
 	return nil
 }
 
+func (f *fakeUserRepository) UpdateAvatarFocalPoint(_ context.Context, id user.UserID, x, y float64) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	return u.SetAvatarFocalPoint(x, y)
+}
+
 var _ ports.IUserRepository = (*fakeUserRepository)(nil)
 
 // fakeIDGenerator returns deterministic, incrementing ids.

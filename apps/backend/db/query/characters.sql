@@ -1,6 +1,6 @@
 -- name: UpsertCharacter :one
-INSERT INTO characters (id, manga, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO characters (id, manga, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
@@ -9,6 +9,8 @@ ON CONFLICT (id) DO UPDATE
         picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
         picture_lqip   = EXCLUDED.picture_lqip,
+        focal_x        = EXCLUDED.focal_x,
+        focal_y        = EXCLUDED.focal_y,
         updated_at     = now()
 RETURNING id;
 
@@ -70,7 +72,7 @@ ON CONFLICT (id) DO UPDATE
 
 -- name: GetJojoCharacterRowByID :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -85,7 +87,7 @@ WHERE c.id = $1;
 
 -- name: GetJojoCharacterRowByName :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -100,7 +102,7 @@ WHERE c.name = $1;
 
 -- name: ListJojoCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -115,7 +117,7 @@ ORDER BY c.name;
 
 -- name: FilterJojoCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -140,7 +142,7 @@ ORDER BY c.name;
 -- and detects HasMore from the extra row.
 -- name: PageJojoCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -193,7 +195,7 @@ ON CONFLICT (id) DO UPDATE
 
 -- name: GetOnePieceCharacterRowByID :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -208,7 +210,7 @@ WHERE c.id = $1;
 
 -- name: GetOnePieceCharacterRowByName :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -223,7 +225,7 @@ WHERE c.name = $1;
 
 -- name: ListOnePieceCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -238,7 +240,7 @@ ORDER BY c.name;
 
 -- name: FilterOnePieceCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -262,7 +264,7 @@ ORDER BY c.name;
 
 -- name: PageOnePieceCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id

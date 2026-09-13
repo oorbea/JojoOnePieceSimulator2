@@ -23,6 +23,8 @@ type DevilFruitSnapshot struct {
 	PictureStatus  string   `json:"pictureStatus"`
 	PictureLqip    string   `json:"pictureLqip"`
 	PictureMediaID string   `json:"pictureMediaId"`
+	FocalX         float64  `json:"focalX"`
+	FocalY         float64  `json:"focalY"`
 	FruitType      string   `json:"fruitType"`
 }
 
@@ -39,6 +41,8 @@ func OfDevilFruit(fruit *powers.DevilFruit) DevilFruitSnapshot {
 		PictureStatus:  fruit.PictureStatus().String(),
 		PictureLqip:    fruit.PictureLqip(),
 		PictureMediaID: fruit.PictureMediaID(),
+		FocalX:         fruit.FocalX(),
+		FocalY:         fruit.FocalY(),
 		FruitType:      fruit.FruitType().String(),
 	}
 }
@@ -59,6 +63,9 @@ func (s DevilFruitSnapshot) Hydrate() (*powers.DevilFruit, error) {
 	}
 	power.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
 	power.SetMediaID(s.PictureMediaID)
+	if err := power.SetFocalPoint(s.FocalX, s.FocalY); err != nil {
+		return nil, fmt.Errorf("devil fruit %q: focal: %w", s.Name, err)
+	}
 
 	fruitType, err := enums.ParseFruitType(s.FruitType)
 	if err != nil {

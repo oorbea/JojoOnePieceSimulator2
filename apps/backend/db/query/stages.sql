@@ -4,6 +4,8 @@
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -22,6 +24,8 @@ ORDER BY s.manga, s.position, s.name;
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -52,6 +56,8 @@ ORDER BY s.manga, s.position, s.name;
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -93,6 +99,8 @@ WHERE (sqlc.narg('manga')::manga IS NULL OR s.manga = sqlc.narg('manga')::manga)
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -105,8 +113,8 @@ FROM stages s
 WHERE s.id = sqlc.arg('id');
 
 -- name: UpsertStage :one
-INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (id) DO UPDATE
     SET manga          = EXCLUDED.manga,
         position       = EXCLUDED.position,
@@ -116,8 +124,10 @@ ON CONFLICT (id) DO UPDATE
         picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
         picture_lqip   = EXCLUDED.picture_lqip,
+        focal_x        = EXCLUDED.focal_x,
+        focal_y        = EXCLUDED.focal_y,
         updated_at     = now()
-RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip;
+RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y;
 
 -- Updates only a Stage's picture renditions and pipeline status, without
 -- touching manga/position/name/translations - same shape as

@@ -25,6 +25,8 @@ type jojoCharacterRow struct {
 	PictureMediaID string
 	PictureStatus  string
 	PictureLqip    string
+	FocalX         float64
+	FocalY         float64
 	Hamon          string
 	Spin           string
 	BattleIQ       int16
@@ -35,6 +37,7 @@ func jojoCharacterRowFromGetByID(r db.GetJojoCharacterRowByIDRow) jojoCharacterR
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 		PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 		Hamon: r.Hamon, Spin: r.Spin, BattleIQ: r.BattleIq,
 	}
 }
@@ -44,6 +47,7 @@ func jojoCharacterRowFromGetByName(r db.GetJojoCharacterRowByNameRow) jojoCharac
 		ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 		PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 		PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 		Hamon: r.Hamon, Spin: r.Spin, BattleIQ: r.BattleIq,
 	}
 }
@@ -55,6 +59,7 @@ func jojoCharacterRowsFromList(rs []db.ListJojoCharacterRowsRow) []jojoCharacter
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 			PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			Hamon: r.Hamon, Spin: r.Spin, BattleIQ: r.BattleIq,
 		}
 	}
@@ -68,6 +73,7 @@ func jojoCharacterRowsFromFilter(rs []db.FilterJojoCharacterRowsRow) []jojoChara
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 			PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			Hamon: r.Hamon, Spin: r.Spin, BattleIQ: r.BattleIq,
 		}
 	}
@@ -81,6 +87,7 @@ func jojoCharacterRowsFromPage(rs []db.PageJojoCharacterRowsRow) []jojoCharacter
 			ID: r.ID, Name: r.Name, Description: r.Description, Rarity: r.Rarity, Picture: r.Picture,
 			PictureThumb: r.PictureThumb, PictureCard: r.PictureCard, PictureStatus: r.PictureStatus,
 			PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+			FocalX: r.FocalX, FocalY: r.FocalY,
 			Hamon: r.Hamon, Spin: r.Spin, BattleIQ: r.BattleIq,
 		}
 	}
@@ -106,6 +113,9 @@ func buildJojoCharacter(row jojoCharacterRow) (*characters.JojoCharacter, error)
 	}
 	character.SetPictureRenditions(row.Picture, row.PictureThumb, row.PictureCard, row.PictureLqip, pictureStatus)
 	character.SetMediaID(row.PictureMediaID)
+	if err := character.SetFocalPoint(row.FocalX, row.FocalY); err != nil {
+		return nil, fmt.Errorf("jojo character %q: focal: %w", row.Name, err)
+	}
 
 	hamon, err := enums.ParseHamonLevel(row.Hamon)
 	if err != nil {

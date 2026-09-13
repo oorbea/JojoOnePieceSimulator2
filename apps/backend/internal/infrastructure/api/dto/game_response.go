@@ -113,14 +113,16 @@ type GameParticipantResponse struct {
 // StageTextResolver and NewGameStateResponse. Picture is locale-independent
 // and does come straight off the domain Stage.
 type GameStageResponse struct {
-	ID            string `json:"id"`
-	Manga         string `json:"manga" ts:"Manga"`
-	Order         int    `json:"order"`
-	Name          string `json:"name"`
-	Description   string `json:"description"`
-	Picture       string `json:"picture"`
-	PictureThumb  string `json:"pictureThumb"`
-	PictureStatus string `json:"pictureStatus" ts:"PictureStatus"`
+	ID            string  `json:"id"`
+	Manga         string  `json:"manga" ts:"Manga"`
+	Order         int     `json:"order"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	Picture       string  `json:"picture"`
+	PictureThumb  string  `json:"pictureThumb"`
+	PictureStatus string  `json:"pictureStatus" ts:"PictureStatus"`
+	FocalX        float64 `json:"focalX"`
+	FocalY        float64 `json:"focalY"`
 }
 
 // StageTextResolver resolves a Stage's description for a specific viewer
@@ -487,6 +489,7 @@ func newGameStageResponse(ctx context.Context, s game.Stage, resolvePicture Pict
 		ID: s.ID().String(), Manga: s.Manga().String(), Order: s.Order(), Name: s.Name(),
 		Description: description, Picture: pictureURL, PictureThumb: thumbURL,
 		PictureStatus: s.PictureStatus().String(),
+		FocalX:        s.FocalX(), FocalY: s.FocalY(),
 	}, nil
 }
 

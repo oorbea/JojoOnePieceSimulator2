@@ -143,7 +143,7 @@ func (q *Queries) DeleteCharacterTranslations(ctx context.Context, arg DeleteCha
 
 const filterJojoCharacterRows = `-- name: FilterJojoCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -184,6 +184,8 @@ type FilterJojoCharacterRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Hamon          string
 	Spin           string
 	BattleIq       int16
@@ -216,6 +218,8 @@ func (q *Queries) FilterJojoCharacterRows(ctx context.Context, arg FilterJojoCha
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.Hamon,
 			&i.Spin,
 			&i.BattleIq,
@@ -232,7 +236,7 @@ func (q *Queries) FilterJojoCharacterRows(ctx context.Context, arg FilterJojoCha
 
 const filterOnePieceCharacterRows = `-- name: FilterOnePieceCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -277,6 +281,8 @@ type FilterOnePieceCharacterRowsRow struct {
 	PictureStatus   string
 	PictureLqip     string
 	PictureMediaID  string
+	FocalX          float64
+	FocalY          float64
 	PhysicalForm    string
 	ArmamentHaki    string
 	ObservationHaki string
@@ -313,6 +319,8 @@ func (q *Queries) FilterOnePieceCharacterRows(ctx context.Context, arg FilterOne
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.PhysicalForm,
 			&i.ArmamentHaki,
 			&i.ObservationHaki,
@@ -359,7 +367,7 @@ func (q *Queries) GetCharacterTranslations(ctx context.Context, characterID pgty
 
 const getJojoCharacterRowByID = `-- name: GetJojoCharacterRowByID :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -389,6 +397,8 @@ type GetJojoCharacterRowByIDRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Hamon          string
 	Spin           string
 	BattleIq       int16
@@ -408,6 +418,8 @@ func (q *Queries) GetJojoCharacterRowByID(ctx context.Context, arg GetJojoCharac
 		&i.PictureStatus,
 		&i.PictureLqip,
 		&i.PictureMediaID,
+		&i.FocalX,
+		&i.FocalY,
 		&i.Hamon,
 		&i.Spin,
 		&i.BattleIq,
@@ -417,7 +429,7 @@ func (q *Queries) GetJojoCharacterRowByID(ctx context.Context, arg GetJojoCharac
 
 const getJojoCharacterRowByName = `-- name: GetJojoCharacterRowByName :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -447,6 +459,8 @@ type GetJojoCharacterRowByNameRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Hamon          string
 	Spin           string
 	BattleIq       int16
@@ -466,6 +480,8 @@ func (q *Queries) GetJojoCharacterRowByName(ctx context.Context, arg GetJojoChar
 		&i.PictureStatus,
 		&i.PictureLqip,
 		&i.PictureMediaID,
+		&i.FocalX,
+		&i.FocalY,
 		&i.Hamon,
 		&i.Spin,
 		&i.BattleIq,
@@ -475,7 +491,7 @@ func (q *Queries) GetJojoCharacterRowByName(ctx context.Context, arg GetJojoChar
 
 const getOnePieceCharacterRowByID = `-- name: GetOnePieceCharacterRowByID :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -505,6 +521,8 @@ type GetOnePieceCharacterRowByIDRow struct {
 	PictureStatus   string
 	PictureLqip     string
 	PictureMediaID  string
+	FocalX          float64
+	FocalY          float64
 	PhysicalForm    string
 	ArmamentHaki    string
 	ObservationHaki string
@@ -526,6 +544,8 @@ func (q *Queries) GetOnePieceCharacterRowByID(ctx context.Context, arg GetOnePie
 		&i.PictureStatus,
 		&i.PictureLqip,
 		&i.PictureMediaID,
+		&i.FocalX,
+		&i.FocalY,
 		&i.PhysicalForm,
 		&i.ArmamentHaki,
 		&i.ObservationHaki,
@@ -537,7 +557,7 @@ func (q *Queries) GetOnePieceCharacterRowByID(ctx context.Context, arg GetOnePie
 
 const getOnePieceCharacterRowByName = `-- name: GetOnePieceCharacterRowByName :one
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -567,6 +587,8 @@ type GetOnePieceCharacterRowByNameRow struct {
 	PictureStatus   string
 	PictureLqip     string
 	PictureMediaID  string
+	FocalX          float64
+	FocalY          float64
 	PhysicalForm    string
 	ArmamentHaki    string
 	ObservationHaki string
@@ -588,6 +610,8 @@ func (q *Queries) GetOnePieceCharacterRowByName(ctx context.Context, arg GetOneP
 		&i.PictureStatus,
 		&i.PictureLqip,
 		&i.PictureMediaID,
+		&i.FocalX,
+		&i.FocalY,
 		&i.PhysicalForm,
 		&i.ArmamentHaki,
 		&i.ObservationHaki,
@@ -599,7 +623,7 @@ func (q *Queries) GetOnePieceCharacterRowByName(ctx context.Context, arg GetOneP
 
 const listJojoCharacterRows = `-- name: ListJojoCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -624,6 +648,8 @@ type ListJojoCharacterRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Hamon          string
 	Spin           string
 	BattleIq       int16
@@ -649,6 +675,8 @@ func (q *Queries) ListJojoCharacterRows(ctx context.Context, locales []string) (
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.Hamon,
 			&i.Spin,
 			&i.BattleIq,
@@ -665,7 +693,7 @@ func (q *Queries) ListJojoCharacterRows(ctx context.Context, locales []string) (
 
 const listOnePieceCharacterRows = `-- name: ListOnePieceCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -690,6 +718,8 @@ type ListOnePieceCharacterRowsRow struct {
 	PictureStatus   string
 	PictureLqip     string
 	PictureMediaID  string
+	FocalX          float64
+	FocalY          float64
 	PhysicalForm    string
 	ArmamentHaki    string
 	ObservationHaki string
@@ -717,6 +747,8 @@ func (q *Queries) ListOnePieceCharacterRows(ctx context.Context, locales []strin
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.PhysicalForm,
 			&i.ArmamentHaki,
 			&i.ObservationHaki,
@@ -735,7 +767,7 @@ func (q *Queries) ListOnePieceCharacterRows(ctx context.Context, locales []strin
 
 const pageJojoCharacterRows = `-- name: PageJojoCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        j.hamon, j.spin, j.battle_iq
 FROM jojo_characters j
          JOIN characters c ON c.id = j.id
@@ -780,6 +812,8 @@ type PageJojoCharacterRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Hamon          string
 	Spin           string
 	BattleIq       int16
@@ -817,6 +851,8 @@ func (q *Queries) PageJojoCharacterRows(ctx context.Context, arg PageJojoCharact
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.Hamon,
 			&i.Spin,
 			&i.BattleIq,
@@ -833,7 +869,7 @@ func (q *Queries) PageJojoCharacterRows(ctx context.Context, arg PageJojoCharact
 
 const pageOnePieceCharacterRows = `-- name: PageOnePieceCharacterRows :many
 SELECT c.id, c.name, COALESCE(tr.description, '') AS description, c.rarity,
-       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id,
+       c.picture, c.picture_thumb, c.picture_card, c.picture_status, c.picture_lqip, c.picture_media_id, c.focal_x, c.focal_y,
        o.physical_form, o.armament_haki, o.observation_haki, o.conqueror_haki, o.fruit_mastery
 FROM one_piece_characters o
          JOIN characters c ON c.id = o.id
@@ -882,6 +918,8 @@ type PageOnePieceCharacterRowsRow struct {
 	PictureStatus   string
 	PictureLqip     string
 	PictureMediaID  string
+	FocalX          float64
+	FocalY          float64
 	PhysicalForm    string
 	ArmamentHaki    string
 	ObservationHaki string
@@ -920,6 +958,8 @@ func (q *Queries) PageOnePieceCharacterRows(ctx context.Context, arg PageOnePiec
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.PhysicalForm,
 			&i.ArmamentHaki,
 			&i.ObservationHaki,
@@ -991,8 +1031,8 @@ func (q *Queries) UpdateCharacterPicture(ctx context.Context, arg UpdateCharacte
 }
 
 const upsertCharacter = `-- name: UpsertCharacter :one
-INSERT INTO characters (id, manga, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO characters (id, manga, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
@@ -1001,6 +1041,8 @@ ON CONFLICT (id) DO UPDATE
         picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
         picture_lqip   = EXCLUDED.picture_lqip,
+        focal_x        = EXCLUDED.focal_x,
+        focal_y        = EXCLUDED.focal_y,
         updated_at     = now()
 RETURNING id
 `
@@ -1015,6 +1057,8 @@ type UpsertCharacterParams struct {
 	PictureCard   string
 	PictureStatus string
 	PictureLqip   string
+	FocalX        float64
+	FocalY        float64
 }
 
 func (q *Queries) UpsertCharacter(ctx context.Context, arg UpsertCharacterParams) (pgtype.UUID, error) {
@@ -1028,6 +1072,8 @@ func (q *Queries) UpsertCharacter(ctx context.Context, arg UpsertCharacterParams
 		arg.PictureCard,
 		arg.PictureStatus,
 		arg.PictureLqip,
+		arg.FocalX,
+		arg.FocalY,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)

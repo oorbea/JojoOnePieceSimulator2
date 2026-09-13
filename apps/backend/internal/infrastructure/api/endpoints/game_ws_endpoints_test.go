@@ -91,6 +91,10 @@ func (f *wsFakeUserRepository) SetAvatarMediaID(context.Context, user.UserID, st
 	return nil
 }
 
+func (f *wsFakeUserRepository) UpdateAvatarFocalPoint(context.Context, user.UserID, float64, float64) error {
+	return nil
+}
+
 func (f *wsFakeUserRepository) UpdateRole(context.Context, user.UserID, enums.UserRole) error {
 	return nil
 }

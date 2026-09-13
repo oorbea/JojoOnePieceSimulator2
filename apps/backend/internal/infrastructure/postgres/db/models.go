@@ -640,6 +640,8 @@ type Character struct {
 	PictureMediaID string
 	CreatedAt      pgtype.Timestamptz
 	UpdatedAt      pgtype.Timestamptz
+	FocalX         float64
+	FocalY         float64
 }
 
 type CharacterTranslation struct {
@@ -713,6 +715,8 @@ type Power struct {
 	PictureCard    string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 }
 
 type PowerTranslation struct {
@@ -735,6 +739,8 @@ type Stage struct {
 	PictureCard    string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 }
 
 type StageTranslation struct {
@@ -779,4 +785,6 @@ type User struct {
 	AvatarCardKey  string
 	AvatarLqip     string
 	AvatarMediaID  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }

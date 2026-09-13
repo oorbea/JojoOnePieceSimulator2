@@ -73,6 +73,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -110,6 +112,8 @@ type FilterDevilFruitRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	FruitType      string
 	Skills         []string
 }
@@ -140,6 +144,8 @@ func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruit
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -164,6 +170,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -194,6 +202,8 @@ type GetDevilFruitRowByIDRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	FruitType      string
 	Skills         []string
 }
@@ -216,6 +226,8 @@ func (q *Queries) GetDevilFruitRowByID(ctx context.Context, arg GetDevilFruitRow
 		&i.PictureStatus,
 		&i.PictureLqip,
 		&i.PictureMediaID,
+		&i.FocalX,
+		&i.FocalY,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -233,6 +245,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -263,6 +277,8 @@ type GetDevilFruitRowByNameRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	FruitType      string
 	Skills         []string
 }
@@ -282,6 +298,8 @@ func (q *Queries) GetDevilFruitRowByName(ctx context.Context, arg GetDevilFruitR
 		&i.PictureStatus,
 		&i.PictureLqip,
 		&i.PictureMediaID,
+		&i.FocalX,
+		&i.FocalY,
 		&i.FruitType,
 		&i.Skills,
 	)
@@ -299,6 +317,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -324,6 +344,8 @@ type ListDevilFruitRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	FruitType      string
 	Skills         []string
 }
@@ -349,6 +371,8 @@ func (q *Queries) ListDevilFruitRows(ctx context.Context, locales []string) ([]L
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -373,6 +397,8 @@ SELECT p.id,
        p.picture_status,
        p.picture_lqip,
        p.picture_media_id,
+       p.focal_x,
+       p.focal_y,
        d.fruit_type,
        COALESCE(tr.skills, '{}')::text[] AS skills
 FROM devil_fruits d
@@ -414,6 +440,8 @@ type PageDevilFruitRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	FruitType      string
 	Skills         []string
 }
@@ -450,6 +478,8 @@ func (q *Queries) PageDevilFruitRows(ctx context.Context, arg PageDevilFruitRows
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.FruitType,
 			&i.Skills,
 		); err != nil {
@@ -481,8 +511,8 @@ func (q *Queries) UpsertDevilFruit(ctx context.Context, arg UpsertDevilFruitPara
 }
 
 const upsertDevilFruitPower = `-- name: UpsertDevilFruitPower :one
-INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip)
-VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7, $8)
+INSERT INTO powers (id, kind, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y)
+VALUES ($1, 'DEVIL_FRUIT', $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (id) DO UPDATE
     SET name           = EXCLUDED.name,
         rarity         = EXCLUDED.rarity,
@@ -491,6 +521,8 @@ ON CONFLICT (id) DO UPDATE
         picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
         picture_lqip   = EXCLUDED.picture_lqip,
+        focal_x        = EXCLUDED.focal_x,
+        focal_y        = EXCLUDED.focal_y,
         updated_at     = now()
 RETURNING id
 `
@@ -504,6 +536,8 @@ type UpsertDevilFruitPowerParams struct {
 	PictureCard   string
 	PictureStatus string
 	PictureLqip   string
+	FocalX        float64
+	FocalY        float64
 }
 
 func (q *Queries) UpsertDevilFruitPower(ctx context.Context, arg UpsertDevilFruitPowerParams) (pgtype.UUID, error) {
@@ -516,6 +550,8 @@ func (q *Queries) UpsertDevilFruitPower(ctx context.Context, arg UpsertDevilFrui
 		arg.PictureCard,
 		arg.PictureStatus,
 		arg.PictureLqip,
+		arg.FocalX,
+		arg.FocalY,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)

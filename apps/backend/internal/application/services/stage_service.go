@@ -20,6 +20,8 @@ type StageInput struct {
 	Order        int
 	Name         string
 	Translations ports.StageTranslations
+	FocalX       *float64
+	FocalY       *float64
 }
 
 // StageService is the admin-facing CRUD service over ports.IStageRepository,
@@ -101,6 +103,14 @@ func (s *StageService) UpdateStage(ctx context.Context, id game.StageID, input S
 	if err != nil {
 		return game.Stage{}, err
 	}
+	if input.FocalX == nil {
+		x := existing.FocalX()
+		input.FocalX = &x
+	}
+	if input.FocalY == nil {
+		y := existing.FocalY()
+		input.FocalY = &y
+	}
 	return s.saveStage(ctx, id, existing.Picture(), existing.PictureThumb(), existing.PictureCard(), existing.PictureLqip(), existing.PictureStatus(), input)
 }
 
@@ -111,6 +121,11 @@ func (s *StageService) saveStage(ctx context.Context, id game.StageID, picture, 
 		return game.Stage{}, err
 	}
 	st.SetPictureRenditions(picture, pictureThumb, pictureCard, pictureLqip, pictureStatus)
+	if input.FocalX != nil && input.FocalY != nil {
+		if err := st.SetFocalPoint(*input.FocalX, *input.FocalY); err != nil {
+			return game.Stage{}, err
+		}
+	}
 
 	if err := s.repo.Save(ctx, st, input.Translations); err != nil {
 		return game.Stage{}, err

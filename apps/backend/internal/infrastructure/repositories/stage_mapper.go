@@ -24,6 +24,8 @@ type stageRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Position       int32
 	ID             pgtype.UUID
 }
@@ -43,6 +45,9 @@ func toStage(r stageRow) (game.Stage, error) {
 	}
 	st.SetPictureRenditions(r.Picture, r.PictureThumb, r.PictureCard, r.PictureLqip, status)
 	st.SetMediaID(r.PictureMediaID)
+	if err := st.SetFocalPoint(r.FocalX, r.FocalY); err != nil {
+		return game.Stage{}, fmt.Errorf("stage %q: focal: %w", r.Name, err)
+	}
 	return st, nil
 }
 
@@ -51,6 +56,7 @@ func fromListStagesRow(r db.ListStagesRow) stageRow {
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
 		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
 		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 	}
 }
 
@@ -59,6 +65,7 @@ func fromFilterStageRow(r db.FilterStageRowsRow) stageRow {
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
 		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
 		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 	}
 }
 
@@ -67,6 +74,7 @@ func fromGetStageByIDRow(r db.GetStageByIDRow) stageRow {
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
 		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
 		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 	}
 }
 
@@ -75,5 +83,6 @@ func fromPageStageRow(r db.PageStageRowsRow) stageRow {
 		ID: r.ID, Manga: r.Manga, Position: r.Position, Name: r.Name, Description: r.Description,
 		Picture: r.Picture, PictureThumb: r.PictureThumb, PictureCard: r.PictureCard,
 		PictureStatus: r.PictureStatus, PictureLqip: r.PictureLqip, PictureMediaID: r.PictureMediaID,
+		FocalX: r.FocalX, FocalY: r.FocalY,
 	}
 }

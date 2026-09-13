@@ -61,6 +61,8 @@ func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand, transla
 		PictureCard:   stand.PictureCard(),
 		PictureStatus: stand.PictureStatus().String(),
 		PictureLqip:   stand.PictureLqip(),
+		FocalX:        stand.FocalX(),
+		FocalY:        stand.FocalY(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting power %q: %w", stand.Name(), wrapPgError(err, ports.ErrStandAlreadyExists))
