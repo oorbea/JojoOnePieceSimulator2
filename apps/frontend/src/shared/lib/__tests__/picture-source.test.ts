@@ -1,4 +1,12 @@
-import { cardSource, focalPosition, fullSource, lqipSource, thumbSource } from '@/shared/lib/picture-source'
+import {
+  cardSource,
+  focalFromLocation,
+  focalPosition,
+  fullSource,
+  imageRectForWell,
+  lqipSource,
+  thumbSource,
+} from '@/shared/lib/picture-source'
 
 describe('thumbSource', () => {
   it('prefers the thumb rendition when present', () => {
@@ -86,5 +94,79 @@ describe('focalPosition', () => {
 
   it('converts a non-center focal point to percentage top/left', () => {
     expect(focalPosition({ focalX: 0.25, focalY: 0.75 })).toEqual({ top: '75%', left: '25%' })
+  })
+})
+
+describe('focalFromLocation', () => {
+  it('maps a point inside the rect to a proportional 0..1 pair', () => {
+    expect(focalFromLocation(50, 100, 200, 200)).toEqual({ x: 0.25, y: 0.5 })
+  })
+
+  it('maps the top-left corner to (0, 0)', () => {
+    expect(focalFromLocation(0, 0, 200, 100)).toEqual({ x: 0, y: 0 })
+  })
+
+  it('maps the bottom-right corner to (1, 1)', () => {
+    expect(focalFromLocation(200, 100, 200, 100)).toEqual({ x: 1, y: 1 })
+  })
+
+  it('clamps a location past the rect edges', () => {
+    expect(focalFromLocation(-40, 500, 200, 100)).toEqual({ x: 0, y: 1 })
+  })
+
+  it('returns the center when the rect has no size yet', () => {
+    expect(focalFromLocation(10, 10, 0, 0)).toEqual({ x: 0.5, y: 0.5 })
+  })
+})
+
+describe('imageRectForWell', () => {
+  // This is the "contain" fit math - the same shape RN's resizeMode="contain"
+  // uses to letterbox an image inside a well of a different aspect ratio.
+  // The focal picker needs its own copy of this so the gesture's coordinate
+  // space (locationX/Y relative to the well) matches the image's own
+  // displayed rect, not the letterboxed well around it - dividing by the
+  // well directly (the original bug) put the crosshair at a different point
+  // than the one the user actually touched whenever the aspect ratios
+  // differed.
+  it('letterboxes a portrait image inside a landscape well (pillarboxed)', () => {
+    // 100x200 image (portrait) inside a 300x200 well (landscape): height is
+    // the limiting dimension, so the image renders at its full 200px tall
+    // and half as wide (100 * (200/200) = 100... scaled by min(300/100,
+    // 200/200) = min(3, 1) = 1 -> 100x200, centered with empty bars left/right.
+    expect(imageRectForWell({ width: 100, height: 200 }, { width: 300, height: 200 })).toEqual({
+      width: 100,
+      height: 200,
+    })
+  })
+
+  it('letterboxes a landscape image inside a portrait well (letterboxed top/bottom)', () => {
+    // 200x100 image inside a 200x300 well: width is the limiting dimension
+    // (min(200/200, 300/100) = min(1, 3) = 1) -> full 200x100, centered
+    // with empty bars above/below.
+    expect(imageRectForWell({ width: 200, height: 100 }, { width: 200, height: 300 })).toEqual({
+      width: 200,
+      height: 100,
+    })
+  })
+
+  it('fills the well exactly when the aspect ratios already match', () => {
+    expect(imageRectForWell({ width: 400, height: 300 }, { width: 200, height: 150 })).toEqual({
+      width: 200,
+      height: 150,
+    })
+  })
+
+  it('falls back to the well itself when the natural size is not known yet', () => {
+    expect(imageRectForWell(null, { width: 200, height: 150 })).toEqual({
+      width: 200,
+      height: 150,
+    })
+  })
+
+  it('falls back to the well itself when the well has no size yet', () => {
+    expect(imageRectForWell({ width: 100, height: 100 }, { width: 0, height: 0 })).toEqual({
+      width: 0,
+      height: 0,
+    })
   })
 })

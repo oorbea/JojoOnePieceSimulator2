@@ -556,9 +556,15 @@
   "focalPoint": {
     "title": "Punto focal de la card",
     "hint": "Toca o arrastra sobre la imagen para elegir qué se ve al recortarla.",
-    "previewLabel": "Vista previa de la card",
+    "previewCard": "Vista previa de la card",
+    "previewAvatar": "Vista previa del avatar",
+    "previewBanner": "Vista previa del banner",
     "reset": "Restablecer al centro",
-    "a11y": "Punto focal, {{x}}% horizontal, {{y}}% vertical. Arrastra para moverlo."
+    "a11y": "Punto focal, {{x}}% horizontal, {{y}}% vertical. Arrastra para moverlo.",
+    "modalTitle": "Encuadra la imagen",
+    "confirm": "Confirmar encuadre",
+    "adjust": "Ajustar encuadre",
+    "tooltip": "Elige qué parte de la imagen se ve siempre al recortarla"
   },
   "skillsField": {
     "addPlaceholder": "Añade una habilidad…",
