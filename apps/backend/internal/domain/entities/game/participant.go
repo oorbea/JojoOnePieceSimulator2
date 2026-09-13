@@ -24,6 +24,8 @@ type Participant struct {
 	loadout        *Loadout
 	avatarThumbKey string
 	googlePicture  string
+	avatarFocalX   float64
+	avatarFocalY   float64
 }
 
 // NewHumanParticipant builds a Participant backed by a registered user.
@@ -42,12 +44,14 @@ func NewHumanParticipant(id ParticipantID, userID user.UserID, displayName strin
 	}
 	uid := userID
 	return &Participant{
-		id:          id,
-		userID:      &uid,
-		displayName: displayName,
-		teamID:      teamID,
-		kind:        enums.Human,
-		connected:   true,
+		id:           id,
+		userID:       &uid,
+		displayName:  displayName,
+		teamID:       teamID,
+		kind:         enums.Human,
+		connected:    true,
+		avatarFocalX: 0.5,
+		avatarFocalY: 0.5,
 	}, nil
 }
 
@@ -82,14 +86,20 @@ func (p *Participant) Connected() bool             { return p.connected }
 func (p *Participant) Loadout() *Loadout           { return p.loadout }
 func (p *Participant) AvatarThumbKey() string      { return p.avatarThumbKey }
 func (p *Participant) GooglePicture() string       { return p.googlePicture }
+func (p *Participant) AvatarFocalX() float64       { return p.avatarFocalX }
+func (p *Participant) AvatarFocalY() float64       { return p.avatarFocalY }
 
 // SetAvatar records where this participant's avatar picture comes from -
 // their own uploaded thumbnail key (presigned at serialization time) and/or
-// their Google-synced picture URL (already a full external URL). A bot
-// never calls this and so always resolves to no avatar.
-func (p *Participant) SetAvatar(avatarThumbKey, googlePicture string) {
+// their Google-synced picture URL (already a full external URL) - plus the
+// focal point (0..1) the owner picked for that picture, so a card cropping
+// this avatar to 'cover' crops the same spot as everywhere else. A bot
+// never calls this and so always resolves to no avatar / centered focal.
+func (p *Participant) SetAvatar(avatarThumbKey, googlePicture string, focalX, focalY float64) {
 	p.avatarThumbKey = avatarThumbKey
 	p.googlePicture = googlePicture
+	p.avatarFocalX = focalX
+	p.avatarFocalY = focalY
 }
 
 // Disconnect marks the participant as no longer reachable. It does not

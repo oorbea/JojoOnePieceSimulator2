@@ -9,20 +9,22 @@ import (
 // OnePieceCharacterResponse is the JSON representation of an
 // OnePieceCharacter - same convention as JojoCharacterResponse.
 type OnePieceCharacterResponse struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	Rarity          string `json:"rarity" ts:"PowerRarity"`
-	Picture         string `json:"picture"`
-	PictureThumb    string `json:"pictureThumb"`
-	PictureCard     string `json:"pictureCard"`
-	PictureStatus   string `json:"pictureStatus" ts:"PictureStatus"`
-	PictureLqip     string `json:"pictureLqip"`
-	PhysicalForm    string `json:"physicalForm" ts:"PhysicalForm"`
-	ArmamentHaki    string `json:"armamentHaki" ts:"HakiLevel"`
-	ObservationHaki string `json:"observationHaki" ts:"HakiLevel"`
-	ConquerorHaki   string `json:"conquerorHaki" ts:"HakiLevel"`
-	FruitMastery    string `json:"fruitMastery" ts:"FruitMastery"`
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	Description     string  `json:"description"`
+	Rarity          string  `json:"rarity" ts:"PowerRarity"`
+	Picture         string  `json:"picture"`
+	PictureThumb    string  `json:"pictureThumb"`
+	PictureCard     string  `json:"pictureCard"`
+	PictureStatus   string  `json:"pictureStatus" ts:"PictureStatus"`
+	PictureLqip     string  `json:"pictureLqip"`
+	FocalX          float64 `json:"focalX"`
+	FocalY          float64 `json:"focalY"`
+	PhysicalForm    string  `json:"physicalForm" ts:"PhysicalForm"`
+	ArmamentHaki    string  `json:"armamentHaki" ts:"HakiLevel"`
+	ObservationHaki string  `json:"observationHaki" ts:"HakiLevel"`
+	ConquerorHaki   string  `json:"conquerorHaki" ts:"HakiLevel"`
+	FruitMastery    string  `json:"fruitMastery" ts:"FruitMastery"`
 }
 
 // NewOnePieceCharacterResponse builds an OnePieceCharacterResponse from a
@@ -45,6 +47,8 @@ func NewOnePieceCharacterResponse(ctx context.Context, c *characters.OnePieceCha
 		PictureCard:     pictureCardURL,
 		PictureLqip:     c.PictureLqip(),
 		PictureStatus:   c.PictureStatus().String(),
+		FocalX:          c.FocalX(),
+		FocalY:          c.FocalY(),
 		PhysicalForm:    c.PhysicalForm().String(),
 		ArmamentHaki:    c.ArmamentHaki().String(),
 		ObservationHaki: c.ObservationHaki().String(),

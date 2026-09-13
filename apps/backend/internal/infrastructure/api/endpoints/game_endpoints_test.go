@@ -207,6 +207,16 @@ func (f *fakeGameUserRepository) SetAvatarMediaID(_ context.Context, id user.Use
 	return nil
 }
 
+func (f *fakeGameUserRepository) UpdateAvatarFocalPoint(_ context.Context, id user.UserID, x, y float64) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	return u.SetAvatarFocalPoint(x, y)
+}
+
 var _ ports.IUserRepository = (*fakeGameUserRepository)(nil)
 
 // fakeGameStageRepository is a minimal in-memory ports.IStageRepository -

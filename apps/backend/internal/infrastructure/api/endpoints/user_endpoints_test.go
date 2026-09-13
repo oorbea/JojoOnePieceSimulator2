@@ -202,6 +202,16 @@ func (f *fakeUserRepo) SetAvatarMediaID(_ context.Context, id user.UserID, media
 	return nil
 }
 
+func (f *fakeUserRepo) UpdateAvatarFocalPoint(_ context.Context, id user.UserID, x, y float64) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	u, ok := f.users[id]
+	if !ok {
+		return ports.ErrUserNotFound
+	}
+	return u.SetAvatarFocalPoint(x, y)
+}
+
 var _ ports.IUserRepository = (*fakeUserRepo)(nil)
 
 // seedUser saves a ready-made user with userIDForToken's id for tok (only

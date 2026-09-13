@@ -55,7 +55,8 @@ func (q *Queries) GetUserAvatarKeys(ctx context.Context, id pgtype.UUID) (GetUse
 
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id,
+       avatar_focal_x, avatar_focal_y
 FROM users
 WHERE email = $1
 `
@@ -75,6 +76,8 @@ type GetUserByEmailRow struct {
 	AvatarStatus   string
 	AvatarLqip     string
 	AvatarMediaID  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -95,13 +98,16 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.AvatarStatus,
 		&i.AvatarLqip,
 		&i.AvatarMediaID,
+		&i.AvatarFocalX,
+		&i.AvatarFocalY,
 	)
 	return i, err
 }
 
 const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id,
+       avatar_focal_x, avatar_focal_y
 FROM users
 WHERE google_sub = $1
 `
@@ -121,6 +127,8 @@ type GetUserByGoogleSubRow struct {
 	AvatarStatus   string
 	AvatarLqip     string
 	AvatarMediaID  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }
 
 func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (GetUserByGoogleSubRow, error) {
@@ -141,13 +149,16 @@ func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (Get
 		&i.AvatarStatus,
 		&i.AvatarLqip,
 		&i.AvatarMediaID,
+		&i.AvatarFocalX,
+		&i.AvatarFocalY,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id,
+       avatar_focal_x, avatar_focal_y
 FROM users
 WHERE id = $1
 `
@@ -167,6 +178,8 @@ type GetUserByIDRow struct {
 	AvatarStatus   string
 	AvatarLqip     string
 	AvatarMediaID  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
@@ -187,13 +200,16 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDR
 		&i.AvatarStatus,
 		&i.AvatarLqip,
 		&i.AvatarMediaID,
+		&i.AvatarFocalX,
+		&i.AvatarFocalY,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id,
+       avatar_focal_x, avatar_focal_y
 FROM users
 WHERE username = $1
 `
@@ -213,6 +229,8 @@ type GetUserByUsernameRow struct {
 	AvatarStatus   string
 	AvatarLqip     string
 	AvatarMediaID  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
@@ -233,13 +251,16 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.AvatarStatus,
 		&i.AvatarLqip,
 		&i.AvatarMediaID,
+		&i.AvatarFocalX,
+		&i.AvatarFocalY,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
 SELECT id, google_sub, email, username, complete_name, google_picture, role, language,
-       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id
+       avatar_key, avatar_thumb_key, avatar_card_key, avatar_status, avatar_lqip, avatar_media_id,
+       avatar_focal_x, avatar_focal_y
 FROM users
 ORDER BY created_at, id
 LIMIT $1 OFFSET $2
@@ -265,6 +286,8 @@ type ListUsersRow struct {
 	AvatarStatus   string
 	AvatarLqip     string
 	AvatarMediaID  string
+	AvatarFocalX   float64
+	AvatarFocalY   float64
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
@@ -291,6 +314,8 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 			&i.AvatarStatus,
 			&i.AvatarLqip,
 			&i.AvatarMediaID,
+			&i.AvatarFocalX,
+			&i.AvatarFocalY,
 		); err != nil {
 			return nil, err
 		}
@@ -340,6 +365,30 @@ func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarPara
 		arg.AvatarMediaID,
 		arg.ID,
 	)
+	return err
+}
+
+const updateUserAvatarFocalPoint = `-- name: UpdateUserAvatarFocalPoint :exec
+UPDATE users
+SET avatar_focal_x = $1,
+    avatar_focal_y = $2,
+    updated_at     = now()
+WHERE id = $3
+`
+
+type UpdateUserAvatarFocalPointParams struct {
+	AvatarFocalX float64
+	AvatarFocalY float64
+	ID           pgtype.UUID
+}
+
+// Updates only a User's avatar focal point (0..1 normalized), independent of
+// re-uploading the avatar itself - lets the profile screen's focal-point
+// picker save without going through the picture upload endpoint. See
+// UpdateUserAvatar above for why avatar_key/status/etc live in a separate
+// query instead of one combined with this.
+func (q *Queries) UpdateUserAvatarFocalPoint(ctx context.Context, arg UpdateUserAvatarFocalPointParams) error {
+	_, err := q.db.Exec(ctx, updateUserAvatarFocalPoint, arg.AvatarFocalX, arg.AvatarFocalY, arg.ID)
 	return err
 }
 

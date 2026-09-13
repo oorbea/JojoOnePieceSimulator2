@@ -24,6 +24,8 @@ function createDefaultValues(): StandFormValues {
     precision: 'NULL',
     potential: 'NULL',
     evolvesFromId: null,
+    focalX: 0.5,
+    focalY: 0.5,
   }
 }
 

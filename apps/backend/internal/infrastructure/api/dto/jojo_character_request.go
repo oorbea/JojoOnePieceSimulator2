@@ -18,6 +18,8 @@ type JojoCharacterRequest struct {
 	Hamon        string                                 `json:"hamon" ts:"HamonLevel"`
 	Spin         string                                 `json:"spin" ts:"SpinLevel"`
 	BattleIQ     int                                    `json:"battleIq"`
+	FocalX       *float64                               `json:"focalX,omitempty"`
+	FocalY       *float64                               `json:"focalY,omitempty"`
 }
 
 // Validate converts the request into a services.JojoCharacterInput,
@@ -47,6 +49,8 @@ func (r JojoCharacterRequest) Validate() (services.JojoCharacterInput, error) {
 		errs = append(errs, FieldError{Field: "battleIq", Code: ValBattleIqRange, Message: "battleIq: must be between 0 and 255"})
 	}
 
+	errs = append(errs, validateFocal(r.FocalX, r.FocalY)...)
+
 	if len(errs) > 0 {
 		return services.JojoCharacterInput{}, &ValidationError{Errors: errs}
 	}
@@ -58,5 +62,7 @@ func (r JojoCharacterRequest) Validate() (services.JojoCharacterInput, error) {
 		Hamon:        hamon,
 		Spin:         spin,
 		BattleIQ:     byte(r.BattleIQ),
+		FocalX:       r.FocalX,
+		FocalY:       r.FocalY,
 	}, nil
 }

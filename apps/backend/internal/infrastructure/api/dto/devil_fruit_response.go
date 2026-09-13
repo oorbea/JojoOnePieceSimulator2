@@ -18,6 +18,8 @@ type DevilFruitResponse struct {
 	PictureCard   string   `json:"pictureCard"`
 	PictureStatus string   `json:"pictureStatus" ts:"PictureStatus"`
 	PictureLqip   string   `json:"pictureLqip"`
+	FocalX        float64  `json:"focalX"`
+	FocalY        float64  `json:"focalY"`
 	FruitType     string   `json:"fruitType" ts:"FruitType"`
 }
 
@@ -47,6 +49,8 @@ func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolv
 		PictureCard:   pictureCardURL,
 		PictureLqip:   fruit.PictureLqip(),
 		PictureStatus: fruit.PictureStatus().String(),
+		FocalX:        fruit.FocalX(),
+		FocalY:        fruit.FocalY(),
 		FruitType:     fruit.FruitType().String(),
 	}, nil
 }

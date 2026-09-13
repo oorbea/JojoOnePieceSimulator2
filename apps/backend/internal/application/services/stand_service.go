@@ -64,6 +64,8 @@ type StandInput struct {
 	Rarity        enums.PowerRarity
 	PictureStatus enums.PictureStatus
 	PictureLqip   string
+	FocalX        *float64
+	FocalY        *float64
 	AttackPower   enums.StandStat
 	Speed         enums.StandStat
 	AttackRange   enums.StandStat
@@ -117,6 +119,14 @@ func (s *StandService) UpdateStand(ctx context.Context, id powers.PowerID, input
 	input.PictureCard = existing.PictureCard()
 	input.PictureLqip = existing.PictureLqip()
 	input.PictureStatus = existing.PictureStatus()
+	if input.FocalX == nil {
+		x := existing.FocalX()
+		input.FocalX = &x
+	}
+	if input.FocalY == nil {
+		y := existing.FocalY()
+		input.FocalY = &y
+	}
 	return s.saveStand(ctx, id, input)
 }
 
@@ -128,6 +138,11 @@ func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input S
 		return nil, err
 	}
 	power.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureCard, input.PictureLqip, input.PictureStatus)
+	if input.FocalX != nil && input.FocalY != nil {
+		if err := power.SetFocalPoint(*input.FocalX, *input.FocalY); err != nil {
+			return nil, err
+		}
+	}
 
 	var evolvesFromStand *powers.Stand
 	if input.EvolvesFrom != nil {

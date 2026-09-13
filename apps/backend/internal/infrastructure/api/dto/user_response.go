@@ -10,17 +10,19 @@ import (
 // UserResponse is the JSON representation of a User. GoogleSub never
 // appears here - it is an internal identity detail, not user-facing.
 type UserResponse struct {
-	ID           string `json:"id"`
-	Email        string `json:"email"`
-	Username     string `json:"username"`
-	CompleteName string `json:"completeName"`
-	Avatar       string `json:"avatar"`
-	AvatarThumb  string `json:"avatarThumb"`
-	AvatarCard   string `json:"avatarCard"`
-	AvatarStatus string `json:"avatarStatus" ts:"PictureStatus"`
-	AvatarLqip   string `json:"avatarLqip"`
-	Role         string `json:"role" ts:"UserRole"`
-	Language     string `json:"language" ts:"Locale"`
+	ID           string  `json:"id"`
+	Email        string  `json:"email"`
+	Username     string  `json:"username"`
+	CompleteName string  `json:"completeName"`
+	Avatar       string  `json:"avatar"`
+	AvatarThumb  string  `json:"avatarThumb"`
+	AvatarCard   string  `json:"avatarCard"`
+	AvatarStatus string  `json:"avatarStatus" ts:"PictureStatus"`
+	AvatarLqip   string  `json:"avatarLqip"`
+	AvatarFocalX float64 `json:"avatarFocalX"`
+	AvatarFocalY float64 `json:"avatarFocalY"`
+	Role         string  `json:"role" ts:"UserRole"`
+	Language     string  `json:"language" ts:"Locale"`
 }
 
 // resolveAvatar picks the avatar to show: the user's own uploaded avatar
@@ -79,6 +81,8 @@ func NewUserResponse(ctx context.Context, u *user.User, resolve PictureURLResolv
 		AvatarCard:   avatarCard,
 		AvatarStatus: u.AvatarStatus().String(),
 		AvatarLqip:   avatarLqip,
+		AvatarFocalX: u.AvatarFocalX(),
+		AvatarFocalY: u.AvatarFocalY(),
 		Role:         u.Role().String(),
 		Language:     u.Language().String(),
 	}, nil

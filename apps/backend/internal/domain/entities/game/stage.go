@@ -27,6 +27,8 @@ type Stage struct {
 	id             StageID
 	manga          enums.Manga
 	pictureStatus  enums.PictureStatus
+	focalX         float64
+	focalY         float64
 }
 
 // NewStage validates and builds a Stage. picture is the only picture field
@@ -48,7 +50,10 @@ func NewStage(id StageID, manga enums.Manga, order int, name string, description
 	if description == "" {
 		return Stage{}, errors.New("description is required")
 	}
-	return Stage{id: id, manga: manga, order: order, name: name, description: description, picture: picture}, nil
+	return Stage{
+		id: id, manga: manga, order: order, name: name, description: description, picture: picture,
+		focalX: 0.5, focalY: 0.5,
+	}, nil
 }
 
 func (s Stage) ID() StageID          { return s.id }
@@ -84,6 +89,27 @@ func (s *Stage) SetPictureRenditions(main, thumb, card, lqip string, status enum
 	s.pictureCard = card
 	s.pictureLqip = lqip
 	s.pictureStatus = status
+}
+
+// FocalX and FocalY are the normalized (0..1) point of a Stage's picture a
+// client should keep centered when rendering it with contentFit:'cover'
+// (e.g. the in-game 16:9 stage banner) - see powers.Power.FocalX.
+func (s Stage) FocalX() float64 { return s.focalX }
+func (s Stage) FocalY() float64 { return s.focalY }
+
+// SetFocalPoint validates and stores a new focal point - see
+// powers.Power.SetFocalPoint.
+func (s *Stage) SetFocalPoint(x, y float64) error {
+	if !isValidFocalCoordinate(x) || !isValidFocalCoordinate(y) {
+		return errors.New("focal point must be between 0 and 1")
+	}
+	s.focalX = x
+	s.focalY = y
+	return nil
+}
+
+func isValidFocalCoordinate(v float64) bool {
+	return v >= 0 && v <= 1
 }
 
 // Interleave merges per-manga Stage lists into Gauntlet round order: the

@@ -75,6 +75,8 @@ const filterStageRows = `-- name: FilterStageRows :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -108,6 +110,8 @@ type FilterStageRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Description    string
 }
 
@@ -134,6 +138,8 @@ func (q *Queries) FilterStageRows(ctx context.Context, arg FilterStageRowsParams
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -150,6 +156,8 @@ const getStageByID = `-- name: GetStageByID :one
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -178,6 +186,8 @@ type GetStageByIDRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Description    string
 }
 
@@ -195,6 +205,8 @@ func (q *Queries) GetStageByID(ctx context.Context, arg GetStageByIDParams) (Get
 		&i.PictureStatus,
 		&i.PictureLqip,
 		&i.PictureMediaID,
+		&i.FocalX,
+		&i.FocalY,
 		&i.Description,
 	)
 	return i, err
@@ -232,6 +244,8 @@ const listStages = `-- name: ListStages :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -255,6 +269,8 @@ type ListStagesRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Description    string
 }
 
@@ -280,6 +296,8 @@ func (q *Queries) ListStages(ctx context.Context, locales []string) ([]ListStage
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -296,6 +314,8 @@ const pageStageRows = `-- name: PageStageRows :many
 SELECT s.id, s.manga, s.position, s.name, s.picture, s.picture_thumb, s.picture_card, s.picture_status,
        s.picture_lqip,
        s.picture_media_id,
+       s.focal_x,
+       s.focal_y,
        COALESCE(tr.description, '') AS description
 FROM stages s
          LEFT JOIN LATERAL (
@@ -338,6 +358,8 @@ type PageStageRowsRow struct {
 	PictureStatus  string
 	PictureLqip    string
 	PictureMediaID string
+	FocalX         float64
+	FocalY         float64
 	Description    string
 }
 
@@ -380,6 +402,8 @@ func (q *Queries) PageStageRows(ctx context.Context, arg PageStageRowsParams) ([
 			&i.PictureStatus,
 			&i.PictureLqip,
 			&i.PictureMediaID,
+			&i.FocalX,
+			&i.FocalY,
 			&i.Description,
 		); err != nil {
 			return nil, err
@@ -447,8 +471,8 @@ func (q *Queries) UpdateStagePicture(ctx context.Context, arg UpdateStagePicture
 }
 
 const upsertStage = `-- name: UpsertStage :one
-INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO stages (id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (id) DO UPDATE
     SET manga          = EXCLUDED.manga,
         position       = EXCLUDED.position,
@@ -458,8 +482,10 @@ ON CONFLICT (id) DO UPDATE
         picture_card   = EXCLUDED.picture_card,
         picture_status = EXCLUDED.picture_status,
         picture_lqip   = EXCLUDED.picture_lqip,
+        focal_x        = EXCLUDED.focal_x,
+        focal_y        = EXCLUDED.focal_y,
         updated_at     = now()
-RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip
+RETURNING id, manga, position, name, picture, picture_thumb, picture_card, picture_status, picture_lqip, focal_x, focal_y
 `
 
 type UpsertStageParams struct {
@@ -472,6 +498,8 @@ type UpsertStageParams struct {
 	PictureCard   string
 	PictureStatus string
 	PictureLqip   string
+	FocalX        float64
+	FocalY        float64
 }
 
 type UpsertStageRow struct {
@@ -484,6 +512,8 @@ type UpsertStageRow struct {
 	PictureCard   string
 	PictureStatus string
 	PictureLqip   string
+	FocalX        float64
+	FocalY        float64
 }
 
 func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (UpsertStageRow, error) {
@@ -497,6 +527,8 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		arg.PictureCard,
 		arg.PictureStatus,
 		arg.PictureLqip,
+		arg.FocalX,
+		arg.FocalY,
 	)
 	var i UpsertStageRow
 	err := row.Scan(
@@ -509,6 +541,8 @@ func (q *Queries) UpsertStage(ctx context.Context, arg UpsertStageParams) (Upser
 		&i.PictureCard,
 		&i.PictureStatus,
 		&i.PictureLqip,
+		&i.FocalX,
+		&i.FocalY,
 	)
 	return i, err
 }

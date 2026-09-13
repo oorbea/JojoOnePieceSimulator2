@@ -15,6 +15,8 @@ function baseStand(overrides: Partial<StandResponse> = {}): StandResponse {
     pictureCard: '',
     pictureStatus: 'NONE',
     pictureLqip: '',
+    focalX: 0.5,
+    focalY: 0.5,
     attackPower: 'A',
     speed: 'A',
     attackRange: 'C',

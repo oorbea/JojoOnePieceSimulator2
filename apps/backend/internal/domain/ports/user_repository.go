@@ -24,6 +24,9 @@ type IUserRepository interface {
 	// SetAvatarMediaID updates only the content-addressed avatar media group
 	// id - see IStandRepository.SetMediaID.
 	SetAvatarMediaID(ctx context.Context, id user.UserID, mediaID string) error
+	// UpdateAvatarFocalPoint changes only id's avatar focal point, independent
+	// of re-uploading the avatar itself.
+	UpdateAvatarFocalPoint(ctx context.Context, id user.UserID, x, y float64) error
 	// AvatarKeys returns the main, thumbnail and card object-storage keys
 	// currently stored for id's avatar.
 	AvatarKeys(ctx context.Context, id user.UserID) (main, thumb, card string, err error)

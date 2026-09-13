@@ -13,8 +13,10 @@ import (
 // be settable here. decode() rejects unknown fields, so sending any of those
 // is a 400, not a silent no-op.
 type UpdateProfileRequest struct {
-	Username string  `json:"username"`
-	Language *string `json:"language,omitempty" ts:"Locale"`
+	Username string   `json:"username"`
+	Language *string  `json:"language,omitempty" ts:"Locale"`
+	FocalX   *float64 `json:"focalX,omitempty"`
+	FocalY   *float64 `json:"focalY,omitempty"`
 }
 
 // Validate checks Username against the same rule ChangeUsername enforces
@@ -22,8 +24,10 @@ type UpdateProfileRequest struct {
 // value surfaces as a 400 with a clear message instead of a 500 from the
 // domain constructor. The returned bool reports whether Language was
 // present at all - the zero enums.Locale (en-GB) is a valid choice, so the
-// caller can't tell "unset" from "set to en-GB" any other way.
-func (r UpdateProfileRequest) Validate() (language enums.Locale, hasLanguage bool, err error) {
+// caller can't tell "unset" from "set to en-GB" any other way. FocalX/FocalY
+// pass through unchanged (nil means "leave the stored avatar focal point
+// untouched") - see validateFocal.
+func (r UpdateProfileRequest) Validate() (language enums.Locale, hasLanguage bool, focalX, focalY *float64, err error) {
 	var errs []FieldError
 	if err := user.ValidateUsername(r.Username); err != nil {
 		errs = append(errs, FieldError{Field: "username", Code: ValInvalidValue, Message: fmt.Sprintf("username: %v", err)})
@@ -37,10 +41,11 @@ func (r UpdateProfileRequest) Validate() (language enums.Locale, hasLanguage boo
 			language = parsed
 		}
 	}
+	errs = append(errs, validateFocal(r.FocalX, r.FocalY)...)
 	if len(errs) > 0 {
-		return 0, false, &ValidationError{Errors: errs}
+		return 0, false, nil, nil, &ValidationError{Errors: errs}
 	}
-	return language, hasLanguage, nil
+	return language, hasLanguage, r.FocalX, r.FocalY, nil
 }
 
 // AdminUpdateUserRequest is the JSON body accepted by admin-only

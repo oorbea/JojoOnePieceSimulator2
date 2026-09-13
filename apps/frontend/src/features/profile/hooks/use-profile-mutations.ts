@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   deleteAccount,
   deleteAvatar,
+  updateAvatarFocalPoint,
   updateLanguage,
   updateUsername,
   uploadAvatar,
@@ -65,6 +66,22 @@ export function useUpdateLanguage() {
       // Not shown as a toast on purpose - the visible language switch across
       // the whole UI (see language.store.ts, driven by session.user.language
       // via app/_layout.tsx) is already all the feedback this needs.
+    },
+  })
+}
+
+export function useUpdateAvatarFocalPoint() {
+  const queryClient = useQueryClient()
+  const syncSession = useSyncSessionOnSuccess()
+
+  return useMutation({
+    mutationFn: ({ username, focalX, focalY }: { username: string; focalX: number; focalY: number }) =>
+      updateAvatarFocalPoint(username, focalX, focalY),
+    onSuccess: (user) => {
+      queryClient.setQueryData(profileKeys.me, user)
+      syncSession(user)
+      // Not toasted, same reasoning as useUpdateLanguage - the picker's own
+      // live preview already shows the effect immediately.
     },
   })
 }

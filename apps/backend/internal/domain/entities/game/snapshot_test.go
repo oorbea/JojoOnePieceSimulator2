@@ -37,7 +37,7 @@ func buildMidMatchVersusGame(t *testing.T) *game.Game {
 		t.Fatalf("NewConfig: %v", err)
 	}
 	host := mustHumanParticipant(t, 1, 1, 10)
-	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg")
+	host.SetAvatar("avatars/host/thumb.webp", "https://accounts.google.com/host.jpg", 0.5, 0.5)
 	teamA := mustTeam(t, 10, "Team A")
 	teamB := mustTeam(t, 20, "Team B")
 	g, err := game.NewGame(game.GameID{9}, cfg, host, []*game.Team{teamA, teamB}, someStages(t))

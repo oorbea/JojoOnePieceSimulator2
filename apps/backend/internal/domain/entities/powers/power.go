@@ -18,6 +18,8 @@ type Power struct {
 	id             PowerID
 	rarity         enums.PowerRarity
 	pictureStatus  enums.PictureStatus
+	focalX         float64
+	focalY         float64
 }
 
 func NewPower(
@@ -50,6 +52,8 @@ func NewPower(
 		rarity:      rarity,
 		skills:      *skills,
 		picture:     picture,
+		focalX:      0.5,
+		focalY:      0.5,
 	}, nil
 }
 
@@ -135,4 +139,28 @@ func (p *Power) SetPictureRenditions(main, thumb, card, lqip string, status enum
 	p.pictureCard = card
 	p.pictureLqip = lqip
 	p.pictureStatus = status
+}
+
+// FocalX and FocalY are the normalized (0..1) point of a Power's picture a
+// client should keep centered when rendering it with contentFit:'cover' -
+// see ObsidianVault/media-proxy-content-addressed.md. No server-side crop:
+// this is purely a value clients read through picture-source.ts.
+func (p Power) FocalX() float64 { return p.focalX }
+func (p Power) FocalY() float64 { return p.focalY }
+
+// SetFocalPoint validates and stores a new focal point. Both coordinates
+// must be finite numbers in [0, 1] - out-of-range or NaN/Inf is rejected
+// rather than clamped, so a bad client value surfaces as a 400 instead of
+// silently landing on an edge.
+func (p *Power) SetFocalPoint(x, y float64) error {
+	if !isValidFocalCoordinate(x) || !isValidFocalCoordinate(y) {
+		return errors.New("focal point must be between 0 and 1")
+	}
+	p.focalX = x
+	p.focalY = y
+	return nil
+}
+
+func isValidFocalCoordinate(v float64) bool {
+	return v >= 0 && v <= 1
 }

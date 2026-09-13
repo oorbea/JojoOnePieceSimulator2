@@ -24,6 +24,8 @@ type JojoCharacterInput struct {
 	Rarity        enums.PowerRarity
 	PictureStatus enums.PictureStatus
 	PictureLqip   string
+	FocalX        *float64
+	FocalY        *float64
 	Hamon         enums.HamonLevel
 	Spin          enums.SpinLevel
 	BattleIQ      byte
@@ -75,6 +77,14 @@ func (s *JojoCharacterService) UpdateJojoCharacter(ctx context.Context, id chara
 	input.PictureCard = existing.PictureCard()
 	input.PictureStatus = existing.PictureStatus()
 	input.PictureLqip = existing.PictureLqip()
+	if input.FocalX == nil {
+		x := existing.FocalX()
+		input.FocalX = &x
+	}
+	if input.FocalY == nil {
+		y := existing.FocalY()
+		input.FocalY = &y
+	}
 	return s.saveJojoCharacter(ctx, id, input)
 }
 
@@ -85,6 +95,11 @@ func (s *JojoCharacterService) saveJojoCharacter(ctx context.Context, id charact
 		return nil, err
 	}
 	character.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureCard, input.PictureLqip, input.PictureStatus)
+	if input.FocalX != nil && input.FocalY != nil {
+		if err := character.SetFocalPoint(*input.FocalX, *input.FocalY); err != nil {
+			return nil, err
+		}
+	}
 
 	c, err := characters.NewJojoCharacter(character, input.Hamon, input.Spin, input.BattleIQ)
 	if err != nil {

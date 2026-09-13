@@ -2,6 +2,7 @@ import { Camera } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { Paragraph, Spinner, XStack, YStack } from 'tamagui'
 
+import { FocalPointPicker } from '@/shared/components/presentational/focal-point-picker'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlassSelect } from '@/shared/components/presentational/glass-select'
@@ -10,6 +11,7 @@ import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 import { a11yProps } from '@/shared/lib/a11y'
+import { focalPosition } from '@/shared/lib/picture-source'
 import type { Locale } from '@/shared/contracts/enums'
 import { LOCALE_ENDONYMS, SUPPORTED_LOCALES } from '@/shared/i18n'
 import type { ProfileUser } from '@/features/profile/types/profile.types'
@@ -45,6 +47,9 @@ type Props = {
   deleteAccountConfirm: ConfirmState
   onChangeLanguage: (language: Locale) => void
   isSavingLanguage: boolean
+  avatarFocalX: number
+  avatarFocalY: number
+  onChangeAvatarFocal: (x: number, y: number) => void
 }
 
 // Pure UI — an Aero glass account settings screen. All form state, mutation
@@ -66,6 +71,9 @@ export function ProfileScreen({
   deleteAccountConfirm,
   onChangeLanguage,
   isSavingLanguage,
+  avatarFocalX,
+  avatarFocalY,
+  onChangeAvatarFocal,
 }: Props) {
   const { t } = useTranslation()
   const avatarUri = profile.avatarThumb || profile.avatar || null
@@ -92,6 +100,7 @@ export function ProfileScreen({
               <LazyImage
                 uri={avatarUri}
                 height={112}
+                contentPosition={focalPosition({ focalX: avatarFocalX, focalY: avatarFocalY })}
                 rounded="$circle"
                 fallback={
                   <YStack flex={1} items="center" justify="center" bg="$grapeSoda">
@@ -148,6 +157,15 @@ export function ProfileScreen({
                 ? t('profile.avatarFailed')
                 : t('profile.avatarTapHint')}
           </GlowText>
+
+          {hasCustomAvatar ? (
+            <FocalPointPicker
+              uri={profile.avatar || null}
+              x={avatarFocalX}
+              y={avatarFocalY}
+              onChange={onChangeAvatarFocal}
+            />
+          ) : null}
 
           <YStack width="100%" gap="$3">
             <GlassField

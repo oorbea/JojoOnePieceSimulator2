@@ -35,6 +35,8 @@ function baseSnapshot(overrides: Partial<GameSnapshot> = {}): GameSnapshot {
         kind: 'HUMAN',
         connected: true,
         avatarThumb: '',
+        avatarFocalX: 0.5,
+        avatarFocalY: 0.5,
       },
     ],
     rounds: [],
@@ -156,6 +158,8 @@ describe('canSwitchTeam', () => {
           kind: 'HUMAN',
           connected: true,
           avatarThumb: '',
+          avatarFocalX: 0.5,
+          avatarFocalY: 0.5,
         },
         {
           id: 'p2',
@@ -164,6 +168,8 @@ describe('canSwitchTeam', () => {
           kind: 'HUMAN',
           connected: true,
           avatarThumb: '',
+          avatarFocalX: 0.5,
+          avatarFocalY: 0.5,
         },
       ],
     })
@@ -205,6 +211,8 @@ describe('canKick', () => {
           kind: 'HUMAN',
           connected: true,
           avatarThumb: '',
+          avatarFocalX: 0.5,
+          avatarFocalY: 0.5,
         },
         {
           id: 'p2',
@@ -213,6 +221,8 @@ describe('canKick', () => {
           kind: 'HUMAN',
           connected: true,
           avatarThumb: '',
+          avatarFocalX: 0.5,
+          avatarFocalY: 0.5,
         },
       ],
     })
@@ -233,6 +243,8 @@ describe('canTransferHost', () => {
           kind: 'HUMAN',
           connected: true,
           avatarThumb: '',
+          avatarFocalX: 0.5,
+          avatarFocalY: 0.5,
         },
         {
           id: 'bot1',
@@ -241,6 +253,8 @@ describe('canTransferHost', () => {
           kind: 'BOT',
           connected: true,
           avatarThumb: '',
+          avatarFocalX: 0.5,
+          avatarFocalY: 0.5,
         },
       ],
     })

@@ -10,18 +10,20 @@ import (
 // Skills field (a Character has none) and no Manga field (implied by the
 // endpoint) - see DevilFruitResponse for the analogous omission of Kind.
 type JojoCharacterResponse struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Description   string `json:"description"`
-	Rarity        string `json:"rarity" ts:"PowerRarity"`
-	Picture       string `json:"picture"`
-	PictureThumb  string `json:"pictureThumb"`
-	PictureCard   string `json:"pictureCard"`
-	PictureStatus string `json:"pictureStatus" ts:"PictureStatus"`
-	PictureLqip   string `json:"pictureLqip"`
-	Hamon         string `json:"hamon" ts:"HamonLevel"`
-	Spin          string `json:"spin" ts:"SpinLevel"`
-	BattleIQ      int    `json:"battleIq"`
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	Rarity        string  `json:"rarity" ts:"PowerRarity"`
+	Picture       string  `json:"picture"`
+	PictureThumb  string  `json:"pictureThumb"`
+	PictureCard   string  `json:"pictureCard"`
+	PictureStatus string  `json:"pictureStatus" ts:"PictureStatus"`
+	PictureLqip   string  `json:"pictureLqip"`
+	FocalX        float64 `json:"focalX"`
+	FocalY        float64 `json:"focalY"`
+	Hamon         string  `json:"hamon" ts:"HamonLevel"`
+	Spin          string  `json:"spin" ts:"SpinLevel"`
+	BattleIQ      int     `json:"battleIq"`
 }
 
 // NewJojoCharacterResponse builds a JojoCharacterResponse from a domain
@@ -44,6 +46,8 @@ func NewJojoCharacterResponse(ctx context.Context, c *characters.JojoCharacter, 
 		PictureCard:   pictureCardURL,
 		PictureLqip:   c.PictureLqip(),
 		PictureStatus: c.PictureStatus().String(),
+		FocalX:        c.FocalX(),
+		FocalY:        c.FocalY(),
 		Hamon:         c.Hamon().String(),
 		Spin:          c.Spin().String(),
 		BattleIQ:      int(c.BattleIQ()),

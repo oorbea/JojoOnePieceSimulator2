@@ -14,7 +14,7 @@ import type { StandResponse } from '@/features/stands/types/stands.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
-import { cardSource, fullSource } from '@/shared/lib/picture-source'
+import { cardSource, focalPosition, fullSource } from '@/shared/lib/picture-source'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
 
 type Props = {
@@ -84,6 +84,7 @@ export function PowerRevealCard({ visible, kind, stand, devilFruit, participantN
             <PowerBlock
               picture={power ? cardSource(power) : undefined}
               fullPicture={power ? fullSource(power) : undefined}
+              contentPosition={power ? focalPosition(power) : undefined}
               name={power?.name}
               rarityLabel={
                 isStand

@@ -11,13 +11,15 @@ import (
 // caller must never be able to learn either about a user other than
 // themselves through this route.
 type PublicUserResponse struct {
-	ID           string `json:"id"`
-	Username     string `json:"username"`
-	CompleteName string `json:"completeName"`
-	Avatar       string `json:"avatar"`
-	AvatarThumb  string `json:"avatarThumb"`
-	AvatarCard   string `json:"avatarCard"`
-	AvatarLqip   string `json:"avatarLqip"`
+	ID           string  `json:"id"`
+	Username     string  `json:"username"`
+	CompleteName string  `json:"completeName"`
+	Avatar       string  `json:"avatar"`
+	AvatarThumb  string  `json:"avatarThumb"`
+	AvatarCard   string  `json:"avatarCard"`
+	AvatarLqip   string  `json:"avatarLqip"`
+	AvatarFocalX float64 `json:"avatarFocalX"`
+	AvatarFocalY float64 `json:"avatarFocalY"`
 }
 
 // NewPublicUserResponse builds a PublicUserResponse from a domain User,
@@ -35,5 +37,7 @@ func NewPublicUserResponse(ctx context.Context, u *user.User, resolve PictureURL
 		AvatarThumb:  avatarThumb,
 		AvatarCard:   avatarCard,
 		AvatarLqip:   avatarLqip,
+		AvatarFocalX: u.AvatarFocalX(),
+		AvatarFocalY: u.AvatarFocalY(),
 	}, nil
 }

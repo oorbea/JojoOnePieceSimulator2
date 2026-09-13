@@ -15,6 +15,8 @@ type DevilFruitRequest struct {
 	Translations map[string]TranslationRequest `json:"translations" ts:"map[Locale]"`
 	Rarity       string                        `json:"rarity" ts:"PowerRarity"`
 	FruitType    string                        `json:"fruitType" ts:"FruitType"`
+	FocalX       *float64                      `json:"focalX,omitempty"`
+	FocalY       *float64                      `json:"focalY,omitempty"`
 }
 
 // Validate converts the request into a services.DevilFruitInput, collecting
@@ -38,6 +40,8 @@ func (r DevilFruitRequest) Validate() (services.DevilFruitInput, error) {
 		errs = append(errs, FieldError{Field: "fruitType", Code: ValInvalidValue, Message: fmt.Sprintf("fruitType: %v", err)})
 	}
 
+	errs = append(errs, validateFocal(r.FocalX, r.FocalY)...)
+
 	if len(errs) > 0 {
 		return services.DevilFruitInput{}, &ValidationError{Errors: errs}
 	}
@@ -47,5 +51,7 @@ func (r DevilFruitRequest) Validate() (services.DevilFruitInput, error) {
 		Translations: translations,
 		Rarity:       rarity,
 		FruitType:    fruitType,
+		FocalX:       r.FocalX,
+		FocalY:       r.FocalY,
 	}, nil
 }
