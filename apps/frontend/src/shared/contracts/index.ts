@@ -40,6 +40,7 @@ export type {
   CharacterTranslationsResponse,
   DevilFruitResponse,
   DevilFruitPageResponse,
+  FieldError,
   GameRoundResultResponse,
   GameStageResponse,
   GameRoundResponse,
