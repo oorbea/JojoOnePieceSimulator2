@@ -21,6 +21,8 @@ type OnePieceCharacterInput struct {
 	Rarity          enums.PowerRarity
 	PictureStatus   enums.PictureStatus
 	PictureLqip     string
+	FocalX          *float64
+	FocalY          *float64
 	PhysicalForm    enums.PhysicalForm
 	ArmamentHaki    enums.HakiLevel
 	ObservationHaki enums.HakiLevel
@@ -67,6 +69,14 @@ func (s *OnePieceCharacterService) UpdateOnePieceCharacter(ctx context.Context, 
 	input.PictureCard = existing.PictureCard()
 	input.PictureStatus = existing.PictureStatus()
 	input.PictureLqip = existing.PictureLqip()
+	if input.FocalX == nil {
+		x := existing.FocalX()
+		input.FocalX = &x
+	}
+	if input.FocalY == nil {
+		y := existing.FocalY()
+		input.FocalY = &y
+	}
 	return s.saveOnePieceCharacter(ctx, id, input)
 }
 
@@ -77,6 +87,11 @@ func (s *OnePieceCharacterService) saveOnePieceCharacter(ctx context.Context, id
 		return nil, err
 	}
 	character.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureCard, input.PictureLqip, input.PictureStatus)
+	if input.FocalX != nil && input.FocalY != nil {
+		if err := character.SetFocalPoint(*input.FocalX, *input.FocalY); err != nil {
+			return nil, err
+		}
+	}
 
 	c, err := characters.NewOnePieceCharacter(character, input.PhysicalForm, input.ArmamentHaki, input.ObservationHaki, input.ConquerorHaki, input.FruitMastery)
 	if err != nil {

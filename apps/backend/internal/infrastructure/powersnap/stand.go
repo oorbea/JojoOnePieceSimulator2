@@ -30,6 +30,8 @@ type StandSnapshot struct {
 	PictureStatus  string         `json:"pictureStatus"`
 	PictureLqip    string         `json:"pictureLqip"`
 	PictureMediaID string         `json:"pictureMediaId"`
+	FocalX         float64        `json:"focalX"`
+	FocalY         float64        `json:"focalY"`
 	AttackPower    string         `json:"attackPower"`
 	Speed          string         `json:"speed"`
 	AttackRange    string         `json:"attackRange"`
@@ -59,6 +61,8 @@ func OfStand(stand *powers.Stand) StandSnapshot {
 		PictureStatus:  stand.PictureStatus().String(),
 		PictureLqip:    stand.PictureLqip(),
 		PictureMediaID: stand.PictureMediaID(),
+		FocalX:         stand.FocalX(),
+		FocalY:         stand.FocalY(),
 		AttackPower:    stand.AttackPower().String(),
 		Speed:          stand.Speed().String(),
 		AttackRange:    stand.AttackRange().String(),
@@ -97,6 +101,9 @@ func (s StandSnapshot) Hydrate() (*powers.Stand, error) {
 	}
 	power.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
 	power.SetMediaID(s.PictureMediaID)
+	if err := power.SetFocalPoint(s.FocalX, s.FocalY); err != nil {
+		return nil, fmt.Errorf("stand %q: focal: %w", s.Name, err)
+	}
 
 	attackPower, err := enums.ParseStandStat(s.AttackPower)
 	if err != nil {

@@ -25,6 +25,8 @@ type jojoCharacterSnapshot struct {
 	PictureStatus  string   `json:"pictureStatus"`
 	PictureLqip    string   `json:"pictureLqip"`
 	PictureMediaID string   `json:"pictureMediaId"`
+	FocalX         float64  `json:"focalX"`
+	FocalY         float64  `json:"focalY"`
 	Hamon          string   `json:"hamon"`
 	Spin           string   `json:"spin"`
 	BattleIQ       byte     `json:"battleIq"`
@@ -35,6 +37,7 @@ func ofJojoCharacter(c *characters.JojoCharacter) jojoCharacterSnapshot {
 		ID: c.ID(), Name: c.Name(), Description: c.Description(), Rarity: c.Rarity().String(),
 		Picture: c.Picture(), PictureThumb: c.PictureThumb(), PictureCard: c.PictureCard(),
 		PictureStatus: c.PictureStatus().String(), PictureLqip: c.PictureLqip(), PictureMediaID: c.PictureMediaID(),
+		FocalX: c.FocalX(), FocalY: c.FocalY(),
 		Hamon: c.Hamon().String(), Spin: c.Spin().String(), BattleIQ: c.BattleIQ(),
 	}
 }
@@ -54,6 +57,9 @@ func (s jojoCharacterSnapshot) hydrate() (*characters.JojoCharacter, error) {
 	}
 	character.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
 	character.SetMediaID(s.PictureMediaID)
+	if err := character.SetFocalPoint(s.FocalX, s.FocalY); err != nil {
+		return nil, fmt.Errorf("character %q: focal: %w", s.Name, err)
+	}
 
 	hamon, err := enums.ParseHamonLevel(s.Hamon)
 	if err != nil {
@@ -113,6 +119,8 @@ type onePieceCharacterSnapshot struct {
 	PictureStatus   string   `json:"pictureStatus"`
 	PictureLqip     string   `json:"pictureLqip"`
 	PictureMediaID  string   `json:"pictureMediaId"`
+	FocalX          float64  `json:"focalX"`
+	FocalY          float64  `json:"focalY"`
 	PhysicalForm    string   `json:"physicalForm"`
 	ArmamentHaki    string   `json:"armamentHaki"`
 	ObservationHaki string   `json:"observationHaki"`
@@ -125,6 +133,7 @@ func ofOnePieceCharacter(c *characters.OnePieceCharacter) onePieceCharacterSnaps
 		ID: c.ID(), Name: c.Name(), Description: c.Description(), Rarity: c.Rarity().String(),
 		Picture: c.Picture(), PictureThumb: c.PictureThumb(), PictureCard: c.PictureCard(),
 		PictureStatus: c.PictureStatus().String(), PictureLqip: c.PictureLqip(), PictureMediaID: c.PictureMediaID(),
+		FocalX: c.FocalX(), FocalY: c.FocalY(),
 		PhysicalForm: c.PhysicalForm().String(), ArmamentHaki: c.ArmamentHaki().String(),
 		ObservationHaki: c.ObservationHaki().String(), ConquerorHaki: c.ConquerorHaki().String(),
 		FruitMastery: c.FruitMastery().String(),
@@ -146,6 +155,9 @@ func (s onePieceCharacterSnapshot) hydrate() (*characters.OnePieceCharacter, err
 	}
 	character.SetPictureRenditions(s.Picture, s.PictureThumb, s.PictureCard, s.PictureLqip, pictureStatus)
 	character.SetMediaID(s.PictureMediaID)
+	if err := character.SetFocalPoint(s.FocalX, s.FocalY); err != nil {
+		return nil, fmt.Errorf("character %q: focal: %w", s.Name, err)
+	}
 
 	physicalForm, err := enums.ParsePhysicalForm(s.PhysicalForm)
 	if err != nil {

@@ -55,6 +55,8 @@ func (r *DevilFruitRepository) Save(ctx context.Context, fruit *powers.DevilFrui
 		PictureCard:   fruit.PictureCard(),
 		PictureStatus: fruit.PictureStatus().String(),
 		PictureLqip:   fruit.PictureLqip(),
+		FocalX:        fruit.FocalX(),
+		FocalY:        fruit.FocalY(),
 	})
 	if err != nil {
 		return fmt.Errorf("upserting power %q: %w", fruit.Name(), wrapPgError(err, ports.ErrDevilFruitAlreadyExists))

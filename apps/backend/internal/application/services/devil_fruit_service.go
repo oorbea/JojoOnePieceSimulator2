@@ -24,6 +24,8 @@ type DevilFruitInput struct {
 	Rarity        enums.PowerRarity
 	PictureStatus enums.PictureStatus
 	PictureLqip   string
+	FocalX        *float64
+	FocalY        *float64
 	FruitType     enums.FruitType
 }
 
@@ -72,6 +74,14 @@ func (s *DevilFruitService) UpdateDevilFruit(ctx context.Context, id powers.Powe
 	input.PictureCard = existing.PictureCard()
 	input.PictureStatus = existing.PictureStatus()
 	input.PictureLqip = existing.PictureLqip()
+	if input.FocalX == nil {
+		x := existing.FocalX()
+		input.FocalX = &x
+	}
+	if input.FocalY == nil {
+		y := existing.FocalY()
+		input.FocalY = &y
+	}
 	return s.saveDevilFruit(ctx, id, input)
 }
 
@@ -83,6 +93,11 @@ func (s *DevilFruitService) saveDevilFruit(ctx context.Context, id powers.PowerI
 		return nil, err
 	}
 	power.SetPictureRenditions(input.Picture, input.PictureThumb, input.PictureCard, input.PictureLqip, input.PictureStatus)
+	if input.FocalX != nil && input.FocalY != nil {
+		if err := power.SetFocalPoint(*input.FocalX, *input.FocalY); err != nil {
+			return nil, err
+		}
+	}
 
 	fruit, err := powers.NewDevilFruit(*power, input.FruitType)
 	if err != nil {

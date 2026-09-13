@@ -22,6 +22,8 @@ type StandRequest struct {
 	Precision     string                        `json:"precision" ts:"StandStat"`
 	Potential     string                        `json:"potential" ts:"StandStat"`
 	EvolvesFromID *string                       `json:"evolvesFromId,omitempty"`
+	FocalX        *float64                      `json:"focalX,omitempty"`
+	FocalY        *float64                      `json:"focalY,omitempty"`
 }
 
 // ValidationError collects every field error found while validating a
@@ -33,6 +35,23 @@ type ValidationError struct {
 
 func (e *ValidationError) Error() string {
 	return fmt.Sprintf("validation failed: %v", e.Errors)
+}
+
+// validateFocal checks an optional focal point pair (0..1, no NaN/Inf) -
+// shared by every request DTO that carries a picture (Stand/DevilFruit/
+// Stage/JojoCharacter/OnePieceCharacter/user profile). A nil pointer is
+// valid (means "leave the stored focal point untouched" - see the
+// respective *Input.FocalX/FocalY doc); only an out-of-range non-nil value
+// is an error, so partial requests still validate.
+func validateFocal(x, y *float64) []FieldError {
+	var errs []FieldError
+	if x != nil && (*x < 0 || *x > 1) {
+		errs = append(errs, FieldError{Field: "focalX", Code: ValInvalidValue, Message: "focalX: must be between 0 and 1"})
+	}
+	if y != nil && (*y < 0 || *y > 1) {
+		errs = append(errs, FieldError{Field: "focalY", Code: ValInvalidValue, Message: "focalY: must be between 0 and 1"})
+	}
+	return errs
 }
 
 // Validate converts the request into a services.StandInput, collecting all
@@ -86,6 +105,8 @@ func (r StandRequest) Validate() (services.StandInput, error) {
 		}
 	}
 
+	errs = append(errs, validateFocal(r.FocalX, r.FocalY)...)
+
 	if len(errs) > 0 {
 		return services.StandInput{}, &ValidationError{Errors: errs}
 	}
@@ -101,5 +122,7 @@ func (r StandRequest) Validate() (services.StandInput, error) {
 		Precision:    precision,
 		Potential:    potential,
 		EvolvesFrom:  evolvesFrom,
+		FocalX:       r.FocalX,
+		FocalY:       r.FocalY,
 	}, nil
 }

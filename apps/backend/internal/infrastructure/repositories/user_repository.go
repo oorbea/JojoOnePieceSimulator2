@@ -156,6 +156,18 @@ func (r *UserRepository) SetAvatarMediaID(ctx context.Context, id user.UserID, m
 	return nil
 }
 
+// UpdateAvatarFocalPoint implements ports.IUserRepository.
+func (r *UserRepository) UpdateAvatarFocalPoint(ctx context.Context, id user.UserID, x, y float64) error {
+	if err := r.queries.UpdateUserAvatarFocalPoint(ctx, db.UpdateUserAvatarFocalPointParams{
+		AvatarFocalX: x,
+		AvatarFocalY: y,
+		ID:           pgtype.UUID{Bytes: id, Valid: true},
+	}); err != nil {
+		return fmt.Errorf("updating avatar focal point for user %s: %w", id, err)
+	}
+	return nil
+}
+
 // UpdateRole changes only id's role.
 func (r *UserRepository) UpdateRole(ctx context.Context, id user.UserID, role enums.UserRole) error {
 	err := r.queries.UpdateUserRole(ctx, db.UpdateUserRoleParams{

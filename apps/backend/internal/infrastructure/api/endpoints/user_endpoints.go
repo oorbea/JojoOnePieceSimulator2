@@ -127,7 +127,7 @@ func (e *UserEndpoints) updateMe(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(w, r, &req); err != nil {
 		return err
 	}
-	language, hasLanguage, err := req.Validate()
+	language, hasLanguage, focalX, focalY, err := req.Validate()
 	if err != nil {
 		return err
 	}
@@ -137,6 +137,12 @@ func (e *UserEndpoints) updateMe(w http.ResponseWriter, r *http.Request) error {
 	}
 	if hasLanguage {
 		u, err = e.svc.ChangeLanguage(r.Context(), id, language)
+		if err != nil {
+			return err
+		}
+	}
+	if focalX != nil && focalY != nil {
+		u, err = e.svc.ChangeAvatarFocalPoint(r.Context(), id, *focalX, *focalY)
 		if err != nil {
 			return err
 		}

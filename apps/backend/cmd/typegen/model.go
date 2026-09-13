@@ -221,6 +221,10 @@ func zodExprForType(t reflect.Type, tsTag, selfName string, enumIdx map[string]e
 		mustNoTag(field, tsTag)
 		return "z.number().int().nonnegative()", nil
 
+	case reflect.Float32, reflect.Float64:
+		mustNoTag(field, tsTag)
+		return "z.number()", nil
+
 	case reflect.Slice:
 		elem := t.Elem()
 		if elem.Kind() == reflect.String {

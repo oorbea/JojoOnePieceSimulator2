@@ -205,6 +205,8 @@ func (r *StageRepository) Save(ctx context.Context, s game.Stage, translations p
 		PictureCard:   s.PictureCard(),
 		PictureStatus: s.PictureStatus().String(),
 		PictureLqip:   s.PictureLqip(),
+		FocalX:        s.FocalX(),
+		FocalY:        s.FocalY(),
 	}); err != nil {
 		return fmt.Errorf("saving stage %s: %w", s.ID(), wrapPgError(err, ports.ErrStageAlreadyExists))
 	}

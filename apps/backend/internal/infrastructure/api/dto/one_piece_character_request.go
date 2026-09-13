@@ -18,6 +18,8 @@ type OnePieceCharacterRequest struct {
 	ObservationHaki string                                 `json:"observationHaki" ts:"HakiLevel"`
 	ConquerorHaki   string                                 `json:"conquerorHaki" ts:"HakiLevel"`
 	FruitMastery    string                                 `json:"fruitMastery" ts:"FruitMastery"`
+	FocalX          *float64                               `json:"focalX,omitempty"`
+	FocalY          *float64                               `json:"focalY,omitempty"`
 }
 
 // Validate converts the request into a services.OnePieceCharacterInput,
@@ -56,6 +58,8 @@ func (r OnePieceCharacterRequest) Validate() (services.OnePieceCharacterInput, e
 		errs = append(errs, FieldError{Field: "fruitMastery", Code: ValInvalidValue, Message: fmt.Sprintf("fruitMastery: %v", err)})
 	}
 
+	errs = append(errs, validateFocal(r.FocalX, r.FocalY)...)
+
 	if len(errs) > 0 {
 		return services.OnePieceCharacterInput{}, &ValidationError{Errors: errs}
 	}
@@ -69,5 +73,7 @@ func (r OnePieceCharacterRequest) Validate() (services.OnePieceCharacterInput, e
 		ObservationHaki: observationHaki,
 		ConquerorHaki:   conquerorHaki,
 		FruitMastery:    fruitMastery,
+		FocalX:          r.FocalX,
+		FocalY:          r.FocalY,
 	}, nil
 }
