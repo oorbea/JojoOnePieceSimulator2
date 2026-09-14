@@ -20,6 +20,11 @@ type Props = {
   /** Message from a rejected REMATCH, already translated. */
   rematchError?: string | null
   onModalOpenChange?: (open: boolean) => void
+  /** True once the outcome cinematic has been seen and isn't currently
+   * showing - see use-outcome-cinematic.ts. False (and the button hidden)
+   * for an aborted game, which never gets a cinematic. */
+  canReplayCinematic?: boolean
+  onReplayCinematic?: () => void
 }
 
 const ACTIONS_GROUP_ID = 'match-result-actions'
@@ -41,20 +46,27 @@ export function MatchResultScreen({
   onRematch,
   rematchError,
   onModalOpenChange,
+  canReplayCinematic,
+  onReplayCinematic,
 }: Props) {
   const { t } = useTranslation()
   const recap = matchRecap(snapshot, you)
 
-  // Both actions share one Tab stop, arrows move between them - the roving
-  // group pattern this project uses for every small fixed control cluster
-  // (see norma-teclado). The host has two, everyone else only "back".
-  const actions = isHost ? 2 : 1
+  // Every action (back, host-only rematch, "watch again" once available)
+  // shares one Tab stop, arrows move between them - the roving group pattern
+  // this project uses for every small fixed control cluster (see
+  // norma-teclado). Order: back, rematch (host only), replay (once
+  // available) - fixed so index math below stays simple.
+  const showReplay = !!canReplayCinematic
+  const actions = 1 + (isHost ? 1 : 0) + (showReplay ? 1 : 0)
+  const replayIndex = 1 + (isHost ? 1 : 0)
   const { getItemProps } = useRovingGroup({
     groupId: ACTIONS_GROUP_ID,
     count: actions,
     onActivate: (index) => {
       if (index === 0) onBackToLobbies()
-      else onRematch()
+      else if (isHost && index === 1) onRematch()
+      else onReplayCinematic?.()
     },
   })
 
@@ -171,6 +183,17 @@ export function MatchResultScreen({
             {...getItemProps(1)}
           >
             {t('game.result.rematch')}
+          </GlossButton>
+        ) : null}
+        {showReplay ? (
+          <GlossButton
+            tone="glass"
+            onPress={onReplayCinematic}
+            accessibilityLabel={t('game.result.cinematic.replayA11y')}
+            tooltip={t('game.result.cinematic.replayA11y')}
+            {...getItemProps(replayIndex)}
+          >
+            {t('game.result.cinematic.replay')}
           </GlossButton>
         ) : null}
       </XStack>
