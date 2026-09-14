@@ -65,6 +65,15 @@ type wireGame struct {
 	// fresh full window rather than wedging. So no snapshotVersion bump, per
 	// that const's own stated criterion.
 	PhaseEndsAt *time.Time `json:"phaseEndsAt,omitempty"`
+	// RevealReady/SummaryReady mirror game.Snapshot.RevealReady/SummaryReady
+	// (added 2026-09-14, same additive/omitempty shape as TiedVotes above):
+	// without these, every Get→Restore round trip dropped the in-flight
+	// sorteo/summary skip vote, so "saltar" never completed even once every
+	// human had pressed it - only the configured phase timer ever advanced
+	// the game. An absent value decodes as nil, which game.Restore already
+	// treats as "nobody has voted yet for this window", the correct default.
+	RevealReady  [][16]byte `json:"revealReady,omitempty"`
+	SummaryReady [][16]byte `json:"summaryReady,omitempty"`
 }
 
 // Mangas is a legacy field - see game.ConfigSnapshot's doc comment. A
@@ -208,6 +217,18 @@ func toWire(s game.Snapshot) wireGame {
 		Stages:       make([]wireStage, 0, len(s.Stages)),
 		Rounds:       make([]wireRound, 0, len(s.Rounds)),
 		PhaseEndsAt:  s.PhaseEndsAt,
+	}
+	if s.RevealReady != nil {
+		w.RevealReady = make([][16]byte, len(s.RevealReady))
+		for i, pid := range s.RevealReady {
+			w.RevealReady[i] = [16]byte(pid)
+		}
+	}
+	if s.SummaryReady != nil {
+		w.SummaryReady = make([][16]byte, len(s.SummaryReady))
+		for i, pid := range s.SummaryReady {
+			w.SummaryReady[i] = [16]byte(pid)
+		}
 	}
 
 	for _, p := range s.Participants {
@@ -362,6 +383,18 @@ func fromWire(w wireGame) game.Snapshot {
 		Stages:       make([]game.StageSnapshot, 0, len(w.Stages)),
 		Rounds:       make([]game.RoundSnapshot, 0, len(w.Rounds)),
 		PhaseEndsAt:  w.PhaseEndsAt,
+	}
+	if w.RevealReady != nil {
+		s.RevealReady = make([]game.ParticipantID, len(w.RevealReady))
+		for i, pid := range w.RevealReady {
+			s.RevealReady[i] = game.ParticipantID(pid)
+		}
+	}
+	if w.SummaryReady != nil {
+		s.SummaryReady = make([]game.ParticipantID, len(w.SummaryReady))
+		for i, pid := range w.SummaryReady {
+			s.SummaryReady[i] = game.ParticipantID(pid)
+		}
 	}
 
 	for _, wp := range w.Participants {

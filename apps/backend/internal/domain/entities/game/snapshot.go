@@ -39,6 +39,20 @@ type Snapshot struct {
 	// game in that phase forever. Additive: nil is the safe default every
 	// snapshot written before this field existed decodes to.
 	PhaseEndsAt *time.Time
+	// RevealReady/SummaryReady mirror Game.revealReady/summaryReady - the
+	// participant ids that have already called MarkRevealReady/
+	// MarkSummaryReady for the CURRENT ASSIGNING/SUMMARY window's
+	// synchronized skip vote. Without these, a Get→Restore round trip (every
+	// withGame call once REDIS_URL is set - MemoryGameStore is the only
+	// store that doesn't round-trip, which is why this bug hid behind it)
+	// silently drops every vote already cast: the skip counter never
+	// completes, and the "saltar" button does nothing until the full
+	// configured phase timer expires. Additive: nil (every snapshot written
+	// before this field existed) decodes to "nobody has voted yet", the
+	// existing zero-value behaviour. In g.order (join order), not map
+	// iteration order, so encoding is deterministic.
+	RevealReady  []ParticipantID
+	SummaryReady []ParticipantID
 }
 
 // ConfigSnapshot mirrors Config. Visibility/VotingWindowSeconds/PoolFilter
@@ -192,6 +206,14 @@ func (g *Game) Snapshot() Snapshot {
 	if g.phaseEndsAt != nil {
 		t := *g.phaseEndsAt
 		s.PhaseEndsAt = &t
+	}
+	for _, pid := range g.order {
+		if _, ok := g.revealReady[pid]; ok {
+			s.RevealReady = append(s.RevealReady, pid)
+		}
+		if _, ok := g.summaryReady[pid]; ok {
+			s.SummaryReady = append(s.SummaryReady, pid)
+		}
 	}
 
 	for _, pid := range g.order {
@@ -510,6 +532,18 @@ func Restore(s Snapshot) (*Game, error) {
 	if s.PhaseEndsAt != nil {
 		t := *s.PhaseEndsAt
 		g.phaseEndsAt = &t
+	}
+	if len(s.RevealReady) > 0 {
+		g.revealReady = make(map[ParticipantID]struct{}, len(s.RevealReady))
+		for _, pid := range s.RevealReady {
+			g.revealReady[pid] = struct{}{}
+		}
+	}
+	if len(s.SummaryReady) > 0 {
+		g.summaryReady = make(map[ParticipantID]struct{}, len(s.SummaryReady))
+		for _, pid := range s.SummaryReady {
+			g.summaryReady[pid] = struct{}{}
+		}
 	}
 
 	for _, ps := range s.Participants {

@@ -347,6 +347,112 @@ func TestEncodeDecodeRoundTrip_PhaseEndsAt(t *testing.T) {
 	}
 }
 
+// TestEncodeDecodeRoundTrip_RevealReadySummaryReady guards the exact bug
+// this pair of fields was added to fix (2026-09-14, live-tested): the
+// sorteo/summary "saltar" skip vote (Game.revealReady/summaryReady) lived
+// only on the in-memory *Game, with no field on game.Snapshot or wireGame.
+// game.Snapshot()/Restore() alone never caught it (there was no field to
+// drop), and MemoryGameStore never caught it either (it hands back the same
+// live pointer, no round trip) - only encode/decode through THIS package
+// exercises the bug: with REDIS_URL set, every withGame call does a real
+// Get→Restore, so the vote a human had already cast was silently gone on
+// the very next command, and RevealReadyComplete/SummaryReadyComplete could
+// never reach "everyone's in" - the skip button did nothing until the full
+// configured phase timer expired regardless of how many players pressed it.
+func TestEncodeDecodeRoundTrip_RevealReadySummaryReady(t *testing.T) {
+	cfg, err := game.NewConfig(enums.Gauntlet, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, game.MaxGauntletPlayers, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	host, err := game.NewHumanParticipant(game.ParticipantID{1}, user.UserID{1}, "host", game.TeamID{10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant host: %v", err)
+	}
+	second, err := game.NewHumanParticipant(game.ParticipantID{2}, user.UserID{2}, "second", game.TeamID{10})
+	if err != nil {
+		t.Fatalf("NewHumanParticipant second: %v", err)
+	}
+	team, err := game.NewTeam(game.TeamID{10}, "Squad", 0)
+	if err != nil {
+		t.Fatalf("NewTeam: %v", err)
+	}
+	stage, err := game.NewStage(game.StageID{1}, enums.Jojo, 0, "Phantom Blood", "a test stage", "")
+	if err != nil {
+		t.Fatalf("NewStage: %v", err)
+	}
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{team}, []game.Stage{stage})
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	if err := g.Join(second); err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+	if err := g.Start(g.HostID()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	// Only the host has voted to skip the reveal - a real mid-vote snapshot,
+	// not the all-voted case (which would collapse straight to
+	// RevealReadyComplete()==true even if the count itself were lost).
+	if err := g.MarkRevealReady(host.ID()); err != nil {
+		t.Fatalf("MarkRevealReady: %v", err)
+	}
+
+	payload, err := encode(g, time.Now())
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	restored, err := decode(payload)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	ready, total := restored.RevealReadyProgress()
+	if total != 2 {
+		t.Fatalf("RevealReadyProgress total = %d, want 2", total)
+	}
+	if ready != 1 {
+		t.Fatalf("RevealReadyProgress ready = %d, want 1 (host's vote lost across the wire round trip)", ready)
+	}
+	if restored.RevealReadyComplete() {
+		t.Fatal("RevealReadyComplete = true, want false (only 1 of 2 humans ready)")
+	}
+
+	// Now the second human's vote completes it - proves the restored vote
+	// isn't just decorative but actually participates in
+	// RevealReadyComplete's count.
+	if err := restored.MarkRevealReady(second.ID()); err != nil {
+		t.Fatalf("MarkRevealReady on restored game: %v", err)
+	}
+	if !restored.RevealReadyComplete() {
+		t.Fatal("RevealReadyComplete = false after both humans ready, want true")
+	}
+
+	// summaryReady mirrors revealReady exactly - same field, same bug class,
+	// covered by advancing the restored game into SUMMARY and voting there.
+	if err := restored.OpenSummary(); err != nil {
+		t.Fatalf("OpenSummary: %v", err)
+	}
+	if err := restored.MarkSummaryReady(host.ID()); err != nil {
+		t.Fatalf("MarkSummaryReady: %v", err)
+	}
+
+	payload2, err := encode(restored, time.Now())
+	if err != nil {
+		t.Fatalf("encode (summary): %v", err)
+	}
+	restored2, err := decode(payload2)
+	if err != nil {
+		t.Fatalf("decode (summary): %v", err)
+	}
+	sReady, sTotal := restored2.SummaryReadyProgress()
+	if sTotal != 2 || sReady != 1 {
+		t.Fatalf("SummaryReadyProgress = %d/%d, want 1/2 (summaryReady lost across the wire round trip)", sReady, sTotal)
+	}
+	if restored2.SummaryReadyComplete() {
+		t.Fatal("SummaryReadyComplete = true, want false (only 1 of 2 humans ready)")
+	}
+}
+
 func TestDecodeRejectsUnknownVersion(t *testing.T) {
 	g := buildTestGame(t)
 	payload, err := encode(g, time.Now())
