@@ -8,6 +8,7 @@ import { GlowText } from '@/shared/components/presentational/glow-text'
 import { MeterBar } from '@/shared/components/presentational/meter-bar'
 import { a11yProps } from '@/shared/lib/a11y'
 import { useRovingGroup } from '@/shared/hooks/use-roving-group'
+import { useNavInsets } from '@/shared/lib/nav-insets'
 import { isWeb } from '@/shared/lib/web-blur'
 
 type Props = {
@@ -37,6 +38,11 @@ type Props = {
 // style{}, never as a top-level prop).
 export function VoteBar({ options, selectedOptionId, cast, total, closesAt, windowMs, now, tiebreak, onVote }: Props) {
   const { t } = useTranslation()
+  // Clears AppShell's floating bottom dock (mobile-width nav) - position:
+  // sticky resolves its offset against the scrollport, not PageShell's own
+  // pb, so this bar needs the same navInsets.bottom reservation by hand or
+  // it parks flush under the dock and covers/gets covered by it.
+  const navInsets = useNavInsets()
   const selectedIndex = Math.max(
     0,
     options.findIndex((o) => o.id === selectedOptionId)
@@ -61,7 +67,7 @@ export function VoteBar({ options, selectedOptionId, cast, total, closesAt, wind
       p="$4"
       gap="$2.5"
       width="100%"
-      style={isWeb ? ({ position: 'sticky', bottom: 0 } as object) : undefined}
+      style={isWeb ? ({ position: 'sticky', bottom: navInsets.bottom } as object) : undefined}
     >
       {progress !== null ? (
         <XStack items="center" gap="$2.5">
