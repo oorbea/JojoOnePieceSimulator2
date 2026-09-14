@@ -229,10 +229,22 @@ function usePositionedOverlay(visible: boolean, anchor: Anchor | null) {
 // behind it. A plain fixed-position portal to `document.body` gives the
 // same "floats above everything, anchored to a measured screen position"
 // behavior without that wrapper.
+// react-native-web's own Modal wrapper (ModalAnimation.js) hardcodes
+// z-index: 9999 with no prop to override it - every admin form (character/
+// stand/devil-fruit/stage) and every other RN Modal-based overlay (confirm
+// sheet, lightbox, focal point) sits at that z-index. This portal has to
+// clear it or a tooltip triggered from inside any of those modals renders
+// behind it - unreadable. Both this div and RNW's Modal wrapper are direct
+// children of <body>, so plain z-index comparison is all that decides who
+// paints on top.
+const TOOLTIP_PORTAL_Z_INDEX = 10000
+
 function OverlayPortal({ children }: { children: ReactNode }) {
   if (isWeb) {
     return createPortal(
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}>{children}</div>,
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: TOOLTIP_PORTAL_Z_INDEX }}>
+        {children}
+      </div>,
       document.body
     )
   }
