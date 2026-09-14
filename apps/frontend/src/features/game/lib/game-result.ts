@@ -1,6 +1,6 @@
 import type { VoteTallyEntry } from '@/features/game/lib/vote-options'
 import { voteTally } from '@/features/game/lib/vote-options'
-import type { GameSnapshot, GameViewer } from '@/features/game/types/game.types'
+import type { GameRound, GameSnapshot, GameViewer } from '@/features/game/types/game.types'
 import type { GameMode } from '@/shared/contracts/enums'
 
 // One round as the final result screen recaps it: the stage that was played
@@ -126,4 +126,25 @@ export function matchRecap(snapshot: GameSnapshot, you: GameViewer): MatchRecap 
     rounds,
     outcomes,
   }
+}
+
+// Drives the 1.5s round-flash cinematic (see outcome-cinematic.ts): whether
+// THIS round, for THIS viewer, was a mini-win, a mini-loss, or nothing to
+// flash. GAUNTLET's FALL is deliberately null here rather than 'lose' - a
+// FALL round always ends the game in the same beat, and the big defeat
+// cinematic owns that moment; flashing a small red loss first would just be
+// a false alarm ahead of the real one.
+export function roundOutcome(
+  snapshot: GameSnapshot,
+  you: GameViewer,
+  round: GameRound
+): 'win' | 'lose' | null {
+  const winner = round.result?.winner
+  if (!winner) return null
+
+  if (snapshot.mode === 'GAUNTLET') {
+    return winner === 'SURVIVE' ? 'win' : null
+  }
+
+  return winner === you.teamId ? 'win' : 'lose'
 }

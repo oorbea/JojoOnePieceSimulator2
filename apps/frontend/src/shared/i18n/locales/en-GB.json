@@ -474,6 +474,10 @@
         "skipA11y": "Skip the round result",
         "noVotes": "Nobody voted in time",
         "nextIn": "Next round in {{seconds}}s"
+      },
+      "cinematic": {
+        "roundWin": "VICTORY",
+        "roundLose": "DEFEAT"
       }
     },
     "vote": {
@@ -542,7 +546,18 @@
       "rematch": "Rematch",
       "rematchA11y": "Start a new lobby with the same players",
       "rematchError": "Could not start a rematch. Try again.",
-      "summaryA11y": "Final result of this game"
+      "summaryA11y": "Final result of this game",
+      "cinematic": {
+        "defeatTitle": "DEFEAT",
+        "victoryTitleGauntlet": "THE SQUAD SURVIVED",
+        "victoryTitleVersus": "{{team}} WINS",
+        "subtitleWon": "Your team won this match.",
+        "subtitleLost": "Your team lost this match.",
+        "skip": "Skip",
+        "skipA11y": "Skip the victory or defeat cinematic",
+        "replay": "Watch again",
+        "replayA11y": "Watch the victory or defeat cinematic again"
+      }
     },
     "a11y": {
       "playerRow": "{{name}}"

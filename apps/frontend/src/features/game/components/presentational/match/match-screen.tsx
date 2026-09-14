@@ -1,15 +1,22 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack } from 'tamagui'
 
 import { LoadoutSummaryStage } from '@/features/game/components/presentational/match/loadout-summary-stage'
 import { MatchRoster } from '@/features/game/components/presentational/match/match-roster'
 import { RevealStage } from '@/features/game/components/presentational/match/reveal-stage'
+import { RoundFlash } from '@/features/game/components/presentational/match/round-flash'
 import { RoundResultPanel } from '@/features/game/components/presentational/match/round-result-panel'
 import { StageBanner } from '@/features/game/components/presentational/match/stage-banner'
 import { VoteBar } from '@/features/game/components/presentational/match/vote-bar'
 import { VotingStatusBar } from '@/features/game/components/presentational/match/voting-status-bar'
 import { ConnectionBanner } from '@/features/game/components/presentational/connection-banner'
-import { currentRound, roundResultPanelVariant, voteProgress } from '@/features/game/lib/match-rules'
+import { roundOutcome } from '@/features/game/lib/game-result'
+import {
+  currentRound,
+  roundResultPanelVariant,
+  voteProgress,
+} from '@/features/game/lib/match-rules'
 import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import { voteOptions } from '@/features/game/lib/vote-options'
 import type { LiveMatchState, SocketStatus } from '@/features/game/stores/game-socket.store'
@@ -73,6 +80,17 @@ export function MatchScreen({
   const panelVariant = roundResultPanelVariant(snapshot, live)
   const showResolvedPanel = panelVariant === 'result'
   const showTiedPanel = panelVariant === 'tie'
+
+  // The 1.5s round-flash (see round-flash.tsx) fires once per round, right
+  // as RESOLVING opens - tracked by round index so a re-render (a vote
+  // count ticking, a reconnect's RESYNC) never replays it mid-window.
+  const flashOutcome = round && showResolvedPanel ? roundOutcome(snapshot, you, round) : null
+  const [flashedRoundIndex, setFlashedRoundIndex] = useState<number | null>(null)
+  const showFlash = flashOutcome !== null && round !== null && round.index !== flashedRoundIndex
+
+  const dismissFlash = () => {
+    if (round) setFlashedRoundIndex(round.index)
+  }
 
   return (
     <>
@@ -144,6 +162,15 @@ export function MatchScreen({
               variant="tie"
               onSkip={onSkipResult}
               resultEndsAt={null}
+            />
+          ) : null}
+
+          {showFlash && round && flashOutcome ? (
+            <RoundFlash
+              visible
+              outcome={flashOutcome}
+              reducedMotion={reducedMotion}
+              onDone={dismissFlash}
             />
           ) : null}
 

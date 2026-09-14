@@ -474,6 +474,10 @@
         "skipA11y": "Saltar el resultat de la ronda",
         "noVotes": "Ningú ha votat a temps",
         "nextIn": "Següent ronda en {{seconds}}s"
+      },
+      "cinematic": {
+        "roundWin": "VICTÒRIA",
+        "roundLose": "DERROTA"
       }
     },
     "vote": {
@@ -542,7 +546,18 @@
       "rematch": "Revenja",
       "rematchA11y": "Crear una sala nova amb els mateixos jugadors",
       "rematchError": "No s'ha pogut crear la revenja. Torna-ho a provar.",
-      "summaryA11y": "Resultat final d'aquesta partida"
+      "summaryA11y": "Resultat final d'aquesta partida",
+      "cinematic": {
+        "defeatTitle": "DERROTA",
+        "victoryTitleGauntlet": "L'ESQUADRA HA SOBREVISCUT",
+        "victoryTitleVersus": "{{team}} GUANYA",
+        "subtitleWon": "El teu equip ha guanyat aquesta partida.",
+        "subtitleLost": "El teu equip ha perdut aquesta partida.",
+        "skip": "Saltar",
+        "skipA11y": "Saltar la cinemàtica de victòria o derrota",
+        "replay": "Tornar a veure",
+        "replayA11y": "Tornar a veure la cinemàtica de victòria o derrota"
+      }
     },
     "a11y": {
       "playerRow": "{{name}}"
