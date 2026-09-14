@@ -268,9 +268,13 @@ export function LobbyRoomContainer() {
     setTimeout(() => setStarting(false), 3000)
   }
 
-  // Same cleanup the leave/kick paths use, minus any error toast: leaving a
-  // finished game is a normal exit, not a failure.
+  // Same cleanup the leave/kick paths use, minus any confirm/error toast:
+  // leaving a finished game is a normal exit, not a failure. Must send LEAVE
+  // (not just close the socket) - otherwise the backend treats this as a
+  // Disconnect, which keeps the seat and reassigns host, so a rematch the
+  // remaining players start would copy this ghost participant right back in.
   const handleBackToLobbies = () => {
+    commands.leave()
     queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
     resetSocket()
     router.replace('/play' as never)
