@@ -49,3 +49,6 @@ tamagui-web.css
 # generated native folders
 /ios
 /android
+
+# Local-only helper scripts' bytecode cache (scripts/*.py)
+__pycache__/
