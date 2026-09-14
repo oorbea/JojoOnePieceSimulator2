@@ -1,4 +1,4 @@
-import { matchRecap } from '@/features/game/lib/game-result'
+import { matchRecap, roundOutcome } from '@/features/game/lib/game-result'
 import type {
   GameParticipant,
   GameRound,
@@ -223,6 +223,44 @@ describe('matchRecap - VERSUS', () => {
   it('falls back to the live roster when the result carries no seat list', () => {
     const recap = matchRecap(versusSnapshot(), viewer({ teamId: 'team-a' }))
     expect(recap.outcomes.map((o) => o.participantId)).toEqual(['p1', 'p2'])
+  })
+})
+
+describe('roundOutcome', () => {
+  it('GAUNTLET: reports a win on SURVIVE (the mini-victory flash)', () => {
+    const snap = snapshot({ mode: 'GAUNTLET' })
+    const r = round({ result: { winner: 'SURVIVE', decidedByCoinFlip: false } })
+    expect(roundOutcome(snap, viewer(), r)).toBe('win')
+  })
+
+  it('GAUNTLET: reports null on FALL - the run-ending defeat owns that moment, not a round flash', () => {
+    const snap = snapshot({ mode: 'GAUNTLET' })
+    const r = round({ result: { winner: 'FALL', decidedByCoinFlip: false } })
+    expect(roundOutcome(snap, viewer(), r)).toBeNull()
+  })
+
+  it('VERSUS: reports a win when the round winner is your own team', () => {
+    const snap = snapshot({ mode: 'VERSUS' })
+    const r = round({
+      options: ['team-a', 'team-b'],
+      result: { winner: 'team-a', decidedByCoinFlip: false },
+    })
+    expect(roundOutcome(snap, viewer({ teamId: 'team-a' }), r)).toBe('win')
+  })
+
+  it('VERSUS: reports a loss when the round winner is the other team', () => {
+    const snap = snapshot({ mode: 'VERSUS' })
+    const r = round({
+      options: ['team-a', 'team-b'],
+      result: { winner: 'team-b', decidedByCoinFlip: false },
+    })
+    expect(roundOutcome(snap, viewer({ teamId: 'team-a' }), r)).toBe('lose')
+  })
+
+  it('reports null for an unresolved round', () => {
+    const snap = snapshot({ mode: 'VERSUS' })
+    const r = round({ options: ['team-a', 'team-b'] })
+    expect(roundOutcome(snap, viewer({ teamId: 'team-a' }), r)).toBeNull()
   })
 })
 

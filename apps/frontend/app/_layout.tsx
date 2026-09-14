@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { Platform, useColorScheme } from 'react-native'
 
 import { AppProviders } from '@/providers/app-providers'
+import { useAudioSettingsStore } from '@/shared/stores/audio-settings.store'
 import { useLanguageStore } from '@/shared/stores/language.store'
 import { useSessionStore } from '@/shared/stores/session.store'
 import { useThemeStore } from '@/shared/stores/theme.store'
@@ -30,6 +31,7 @@ export default function RootLayout() {
   const hydrate = useSessionStore((state) => state.hydrate)
   const hydrateTheme = useThemeStore((state) => state.hydrate)
   const hydrateLanguage = useLanguageStore((state) => state.hydrate)
+  const hydrateAudioSettings = useAudioSettingsStore((state) => state.hydrate)
   const sessionLanguage = useSessionStore((state) => state.session?.user.language)
   const storeLocale = useLanguageStore((state) => state.locale)
   const setLocale = useLanguageStore((state) => state.setLocale)
@@ -38,8 +40,9 @@ export default function RootLayout() {
     void hydrate()
     void hydrateTheme()
     void hydrateLanguage()
+    void hydrateAudioSettings()
     registerServiceWorker()
-  }, [hydrate, hydrateTheme, hydrateLanguage])
+  }, [hydrate, hydrateTheme, hydrateLanguage, hydrateAudioSettings])
 
   // Once a session is known, the backend's users.language is the source of
   // truth and overrides whatever was device-detected/stored pre-login - see

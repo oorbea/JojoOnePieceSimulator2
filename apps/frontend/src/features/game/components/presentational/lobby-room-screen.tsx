@@ -10,10 +10,13 @@ import { LobbyLockRow } from '@/features/game/components/presentational/lobby-lo
 import { MangaRow } from '@/features/game/components/presentational/manga-row'
 import { MatchResultScreen } from '@/features/game/components/presentational/match/match-result-screen'
 import { MatchScreen } from '@/features/game/components/presentational/match/match-screen'
+import { OutcomeCinematic } from '@/features/game/components/presentational/match/outcome-cinematic'
 import { SquadRoster } from '@/features/game/components/presentational/squad-roster'
 import { StartBar } from '@/features/game/components/presentational/start-bar'
 import { TeamColumn } from '@/features/game/components/presentational/team-column'
 import { useDropZones } from '@/features/game/hooks/use-drop-zones'
+import { useOutcomeCinematic } from '@/features/game/hooks/use-outcome-cinematic'
+import { matchRecap } from '@/features/game/lib/game-result'
 import { teamTone, type Gate } from '@/features/game/lib/lobby-rules'
 import type { RevealPhaseKind } from '@/features/game/lib/loadout-reveal'
 import type { GameSnapshot, GameViewer, PoolFilter } from '@/features/game/types/game.types'
@@ -178,13 +181,50 @@ export function LobbyRoomScreen({
   const capacity = snapshot.config.teamSize
   const [configExpanded, setConfigExpanded] = useState(false)
   const dropZones = useDropZones()
+  // Called unconditionally (rules of hooks) even though it's only relevant
+  // once snapshot.state reaches FINISHED - the same instance keeps mounted
+  // across LOBBY -> ... -> FINISHED.
+  const cinematic = useOutcomeCinematic(snapshot, you)
 
   // A terminal game stays on this same route and renders its own result
   // screen instead of bouncing to /play - the same in-place precedent
   // MatchScreen already set for the match itself.
   if (snapshot.state === 'FINISHED' || snapshot.state === 'ABORTED') {
+    const recap = matchRecap(snapshot, you)
+    const winnerNames =
+      cinematic.kind === 'victory'
+        ? recap.mode === 'GAUNTLET'
+          ? recap.outcomes.map((o) => o.displayName)
+          : recap.outcomes.filter((o) => o.won).map((o) => o.displayName)
+        : []
+    const cinematicTitle =
+      cinematic.kind === 'defeat'
+        ? t('game.result.cinematic.defeatTitle')
+        : recap.mode === 'GAUNTLET'
+          ? t('game.result.cinematic.victoryTitleGauntlet')
+          : t('game.result.cinematic.victoryTitleVersus', {
+              team: recap.winnerTeamName ?? recap.winnerOptionId,
+            })
+    const cinematicSubtitle =
+      recap.mode === 'VERSUS'
+        ? cinematic.kind === 'victory'
+          ? t('game.result.cinematic.subtitleWon')
+          : t('game.result.cinematic.subtitleLost')
+        : null
+
     return (
       <PageShell align="top" scroll maxWidth={1080}>
+        {cinematic.visible && cinematic.kind ? (
+          <OutcomeCinematic
+            key={cinematic.playToken}
+            kind={cinematic.kind}
+            title={cinematicTitle}
+            subtitle={cinematicSubtitle}
+            names={winnerNames}
+            reducedMotion={reducedMotion}
+            onDone={cinematic.dismiss}
+          />
+        ) : null}
         <MatchResultScreen
           snapshot={snapshot}
           you={you}
@@ -193,6 +233,8 @@ export function LobbyRoomScreen({
           onRematch={onRematch}
           rematchError={rematchError}
           onModalOpenChange={onModalOpenChange}
+          canReplayCinematic={cinematic.canReplay}
+          onReplayCinematic={cinematic.replay}
         />
         <ConfirmSheet
           visible={!!confirmSheet}
