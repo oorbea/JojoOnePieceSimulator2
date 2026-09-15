@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	goredis "github.com/redis/go-redis/v9"
@@ -170,12 +171,10 @@ func (s *Store) indexUserGames(ctx context.Context, g *game.Game, ttl time.Durat
 		}
 		pipe.ZAdd(ctx, userGamesKey(*uid), goredis.Z{Score: score, Member: idStr})
 	}
-	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, goredis.Nil) {
-		// Best-effort, see doc above - swallow rather than fail the caller's
-		// Create/Save. Nothing to log to (no logger threaded into this
-		// package); an index left stale self-heals on the next write.
-		_ = err
-	}
+	// Best-effort, see doc above - the error is swallowed rather than failing
+	// the caller's Create/Save. Nothing to log to (no logger threaded into
+	// this package); an index left stale self-heals on the next write.
+	_, _ = pipe.Exec(ctx)
 }
 
 // New connects to the Redis instance described by cfg and verifies
@@ -380,7 +379,7 @@ func (s *Store) GamesForUser(ctx context.Context, uid user.UserID) ([]*game.Game
 	defer cancel()
 
 	key := userGamesKey(uid)
-	if err := s.client.ZRemRangeByScore(opCtx, key, "-inf", fmt.Sprintf("%d", s.now().UnixMilli())).Err(); err != nil {
+	if err := s.client.ZRemRangeByScore(opCtx, key, "-inf", strconv.FormatInt(s.now().UnixMilli(), 10)).Err(); err != nil {
 		return nil, fmt.Errorf("pruning game index for user %s: %w", uid, err)
 	}
 	ids, err := s.client.ZRevRange(opCtx, key, 0, -1).Result()
@@ -397,8 +396,8 @@ func (s *Store) GamesForUser(ctx context.Context, uid user.UserID) ([]*game.Game
 		g, err := s.Get(opCtx, id)
 		if err != nil {
 			if errors.Is(err, ports.ErrGameNotFound) {
+				// Prune the dangling member so it stops costing a lookup.
 				_ = s.client.ZRem(opCtx, key, idStr).Err()
-				continue
 			}
 			continue
 		}
