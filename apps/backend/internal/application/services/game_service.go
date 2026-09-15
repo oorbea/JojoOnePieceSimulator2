@@ -626,6 +626,32 @@ func (s *GameService) SetLobbyLocked(ctx context.Context, gameID game.GameID, ca
 	})
 }
 
+// RegenerateGameCode rotates gameID's join code so a code a kicked (or
+// otherwise unwanted) player still remembers stops working. Host-only,
+// LOBBY-only; the roster, config and game id are all untouched - only the
+// store's side-index code changes (see ports.IGameStore.SetCode's doc for
+// why the code isn't part of the Game aggregate). CanRegenerateCode runs
+// before the first SetCode so a rejected caller never claims a code, and
+// RegenerateCode (which emits the event) only runs once one is claimed.
+// Same collision-retry loop as CreateGame/Rematch.
+func (s *GameService) RegenerateGameCode(ctx context.Context, gameID game.GameID, callerID game.ParticipantID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		if err := g.CanRegenerateCode(callerID); err != nil {
+			return err
+		}
+		for attempt := 0; attempt < maxCodeAttempts; attempt++ {
+			if err := s.store.SetCode(ctx, gameID, s.generateCode()); err != nil {
+				if errors.Is(err, ports.ErrGameCodeTaken) {
+					continue
+				}
+				return err
+			}
+			return g.RegenerateCode(callerID)
+		}
+		return ErrCodeGenerationFailed
+	})
+}
+
 // EditLobbyConfig replaces the lobby's whole Config while it is still in
 // LOBBY. Host-only. When the new mode differs from the current one, fresh
 // teams and the matching stage list are built first (mirroring CreateGame);

@@ -18,13 +18,14 @@ var wsFrameConstants = []string{
 	dto.FrameLobbyLockChanged, dto.FrameConfigUpdated, dto.FrameRevealReadyChanged,
 	dto.FrameSummaryOpened, dto.FrameSummaryReadyChanged, dto.FrameRematchReady,
 	dto.FramePlayerDisconnected, dto.FramePlayerReconnected, dto.FramePlayerAbandoned,
+	dto.FrameJoinCodeRegenerated,
 }
 
 var wsCommandConstants = []string{
 	dto.CommandLeave, dto.CommandAddBot, dto.CommandRemoveBot, dto.CommandStart, dto.CommandAbort,
 	dto.CommandVote, dto.CommandResync, dto.CommandSwitchTeam, dto.CommandMovePlayer, dto.CommandKick,
-	dto.CommandTransferHost, dto.CommandSetLock, dto.CommandUpdateConfig, dto.CommandRevealReady,
-	dto.CommandSummaryReady, dto.CommandRematch,
+	dto.CommandTransferHost, dto.CommandSetLock, dto.CommandUpdateConfig, dto.CommandRegenerateCode,
+	dto.CommandRevealReady, dto.CommandSummaryReady, dto.CommandRematch,
 }
 
 // TestFramePayloads_CoversEveryFrameConstant asserts dto.FramePayloads'

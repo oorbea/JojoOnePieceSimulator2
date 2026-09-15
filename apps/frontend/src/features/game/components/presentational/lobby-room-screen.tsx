@@ -58,6 +58,7 @@ type Props = {
   onToggleLock: () => void
   onCopyCode: () => Promise<'copied' | 'shared' | 'failed'>
   onShareCode: () => Promise<'copied' | 'shared' | 'failed'>
+  onRegenerateCode: () => void
   confirmSheet: ConfirmSheetState
   confirming: boolean
   onCancelConfirm: () => void
@@ -127,6 +128,7 @@ export function LobbyRoomScreen({
   onToggleLock,
   onCopyCode,
   onShareCode,
+  onRegenerateCode,
   confirmSheet,
   confirming,
   onCancelConfirm,
@@ -270,6 +272,7 @@ export function LobbyRoomScreen({
             isPublic={snapshot.config.visibility === 'PUBLIC'}
             onCopy={onCopyCode}
             onShare={onShareCode}
+            onRegenerate={you.isHost ? onRegenerateCode : undefined}
           />
 
           <MangaRow

@@ -123,6 +123,31 @@ redis.call('ZREM', KEYS[3], ARGV[1])
 return 1
 `)
 
+// recodeScript atomically rotates id's join code to newCode, preserving id's
+// own remaining TTL (read via PTTL, not the store's configured s.ttl - a
+// short-TTL terminal game's code rotation must not resurrect it for a full
+// lobby lifetime). Returns -1 if id isn't indexed (or, defensively, has no
+// TTL at all - every key this store writes always carries one), 0 if
+// newCode is already claimed by a different game, 1 on success.
+//
+// KEYS[1] = id key, KEYS[2] = new code key, KEYS[3] = codeof key
+// ARGV[1] = id, ARGV[2] = new code
+var recodeScript = goredis.NewScript(`
+local ttl = redis.call('PTTL', KEYS[1])
+if ttl < 0 then
+	return -1
+end
+if redis.call('SET', KEYS[2], ARGV[1], 'NX', 'PX', ttl) == false then
+	return 0
+end
+local old = redis.call('GET', KEYS[3])
+if old then
+	redis.call('DEL', 'jojo:game:code:' .. old)
+end
+redis.call('SET', KEYS[3], ARGV[2], 'PX', ttl)
+return 1
+`)
+
 // listPublicScript prunes any index member whose score (an absolute
 // now+ttl expiry, refreshed on every Create/Save) has already passed, then
 // returns up to limit of the remaining members' ids, most recently active
@@ -277,6 +302,28 @@ func (s *Store) Code(ctx context.Context, id game.GameID) (string, error) {
 		return "", fmt.Errorf("getting code for game %s: %w", id, err)
 	}
 	return code, nil
+}
+
+// SetCode implements ports.IGameStore.
+func (s *Store) SetCode(ctx context.Context, id game.GameID, newCode string) error {
+	opCtx, cancel := s.opContext(ctx)
+	defer cancel()
+
+	res, err := recodeScript.Run(opCtx, s.client,
+		[]string{idKey(id), codeKey(newCode), codeOfKey(id)},
+		id.String(), newCode,
+	).Int()
+	if err != nil {
+		return fmt.Errorf("setting code for game %s: %w", id, err)
+	}
+	switch res {
+	case -1:
+		return ports.ErrGameNotFound
+	case 0:
+		return ports.ErrGameCodeTaken
+	default:
+		return nil
+	}
 }
 
 // Save implements ports.IGameStore.

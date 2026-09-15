@@ -40,6 +40,13 @@ const (
 	CommandTransferHost = "TRANSFER_HOST"
 	CommandSetLock      = "SET_LOCK"
 	CommandUpdateConfig = "UPDATE_CONFIG"
+	// CommandRegenerateCode rotates the lobby's join code so a code someone
+	// unwanted (e.g. just-kicked) still remembers stops working. Host-only,
+	// LOBBY-only, takes no payload - it always means "a fresh one, right
+	// now". See services.GameService.RegenerateGameCode; the new code
+	// reaches every client on the mandatory STATE resend, not in the frame
+	// itself (the code lives outside the Game aggregate entirely).
+	CommandRegenerateCode = "REGENERATE_CODE"
 	// CommandRevealReady is the sorteo's own skip vote (owner decision,
 	// 2026-08-30) - takes no payload, since it always applies to "the
 	// caller, right now". See services.GameService.MarkRevealReady.
@@ -282,6 +289,7 @@ const (
 	FramePlayerDisconnected  = "PLAYER_DISCONNECTED"
 	FramePlayerReconnected   = "PLAYER_RECONNECTED"
 	FramePlayerAbandoned     = "PLAYER_ABANDONED"
+	FrameJoinCodeRegenerated = "JOIN_CODE_REGENERATED"
 )
 
 // RematchReadyPayload announces the new lobby a REMATCH created from this
@@ -462,6 +470,7 @@ var FramePayloads = []FrameSpec{
 	{FramePlayerDisconnected, PlayerDisconnectedPayload{}},
 	{FramePlayerReconnected, PlayerReconnectedPayload{}},
 	{FramePlayerAbandoned, PlayerAbandonedPayload{}},
+	{FrameJoinCodeRegenerated, nil},
 }
 
 // CommandSpec mirrors FrameSpec for the client->server direction.
@@ -488,6 +497,7 @@ var CommandPayloads = []CommandSpec{
 	{CommandTransferHost, TransferHostPayload{}},
 	{CommandSetLock, SetLockPayload{}},
 	{CommandUpdateConfig, UpdateConfigPayload{}},
+	{CommandRegenerateCode, nil},
 	{CommandRevealReady, nil},
 	{CommandSummaryReady, nil},
 	{CommandRematch, nil},

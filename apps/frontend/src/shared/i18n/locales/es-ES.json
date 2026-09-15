@@ -348,7 +348,14 @@
       "shared": "Código compartido",
       "shareMessage": "Únete a mi sala de JoJo x One Piece Simulator con el código {{code}}",
       "publicHint": "Pública: cualquiera puede encontrar y unirse a esta sala.",
-      "privateHint": "Privada: solo puede unirse quien tenga el código."
+      "privateHint": "Privada: solo puede unirse quien tenga el código.",
+      "regenerate": {
+        "action": "Generar nuevo código",
+        "title": "¿Generar un nuevo código de sala?",
+        "message": "El código antiguo deja de funcionar al instante. Todos los que estén ahora en la sala se quedan, y nada más cambia. Nota: una sala pública se puede seguir encontrando y unir desde el buscador; usa los controles de bloqueo/visibilidad de arriba para cerrar también esa vía.",
+        "confirm": "Nuevo código",
+        "done": "Nuevo código de sala generado"
+      }
     },
     "lock": {
       "locked": "Bloqueada",
@@ -531,6 +538,7 @@
     },
     "terminal": {
       "kicked": "Se te ha expulsado de esta sala.",
+      "removed": "Ya no formas parte de esta partida.",
       "abortedByHost": "El anfitrión ha cancelado esta partida.",
       "finished": "Esta partida ha terminado."
     },

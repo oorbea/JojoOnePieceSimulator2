@@ -96,6 +96,24 @@ func (s *MemoryGameStore) Code(_ context.Context, id game.GameID) (string, error
 	return e.code, nil
 }
 
+// SetCode implements ports.IGameStore.
+func (s *MemoryGameStore) SetCode(_ context.Context, id game.GameID, newCode string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	e, ok := s.byID[id]
+	if !ok {
+		return ports.ErrGameNotFound
+	}
+	if holder, exists := s.byCode[newCode]; exists && holder != id {
+		return ports.ErrGameCodeTaken
+	}
+	delete(s.byCode, e.code)
+	e.code = newCode
+	s.byCode[newCode] = id
+	return nil
+}
+
 func (s *MemoryGameStore) Save(ctx context.Context, g *game.Game) error {
 	return s.SaveWithTTL(ctx, g, 0)
 }
