@@ -43,7 +43,10 @@ export function RosterParticipant({ participant, isSelf, mangas, onOpenModal, it
   // disconnected seat is still within its reconnect grace window and reads
   // the same as connected here, same as the tile shows no separate label
   // for it either.
-  const statusSuffix = participant.abandoned ? t('game.lobby.abandoned') : null
+  const baseA11yLabel = t('game.match.loadout.viewA11y', { name: participant.displayName })
+  const viewA11yLabel = participant.abandoned
+    ? `${baseA11yLabel}, ${t('game.lobby.abandoned')}`
+    : baseA11yLabel
 
   return (
     <>
@@ -54,11 +57,7 @@ export function RosterParticipant({ participant, isSelf, mangas, onOpenModal, it
         triggerRef={triggerRef}
         triggerProps={triggerProps}
         itemProps={itemProps}
-        viewA11yLabel={
-          statusSuffix
-            ? `${t('game.match.loadout.viewA11y', { name: participant.displayName })}, ${statusSuffix}`
-            : t('game.match.loadout.viewA11y', { name: participant.displayName })
-        }
+        viewA11yLabel={viewA11yLabel}
       />
       <TooltipCard visible={visible} anchor={anchor}>
         <LoadoutCard participant={participant} isSelf={isSelf} mangas={mangas} />
