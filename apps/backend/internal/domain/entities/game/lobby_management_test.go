@@ -117,6 +117,41 @@ func TestKick_EmitsPlayerKickedBeforePlayerLeft(t *testing.T) {
 	}
 }
 
+func TestRegenerateCode_HostOnly(t *testing.T) {
+	g, host, other, _, _ := newVersusLobby(t, 2)
+	if err := g.RegenerateCode(other.ID()); err != game.ErrNotHost {
+		t.Fatalf("expected ErrNotHost, got %v", err)
+	}
+	if err := g.RegenerateCode(host.ID()); err != nil {
+		t.Fatalf("RegenerateCode: %v", err)
+	}
+}
+
+func TestRegenerateCode_LobbyOnly(t *testing.T) {
+	g, players := newGauntletGame(t, someStages(t), 1)
+	if err := g.Start(g.HostID()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if err := g.RegenerateCode(players[0].ID()); err != game.ErrInvalidStateTransition {
+		t.Fatalf("expected ErrInvalidStateTransition, got %v", err)
+	}
+}
+
+func TestRegenerateCode_EmitsExactlyOneEvent(t *testing.T) {
+	g, host, _, _, _ := newVersusLobby(t, 2)
+	g.PullEvents() // drain the PlayerJoined from newVersusLobby's Join
+	if err := g.RegenerateCode(host.ID()); err != nil {
+		t.Fatalf("RegenerateCode: %v", err)
+	}
+	events := g.PullEvents()
+	if len(events) != 1 {
+		t.Fatalf("expected exactly one event, got %+v", events)
+	}
+	if _, ok := events[0].(game.JoinCodeRegenerated); !ok {
+		t.Fatalf("expected JoinCodeRegenerated, got %T", events[0])
+	}
+}
+
 func TestTransferHost_HostOnly(t *testing.T) {
 	g, host, other, _, _ := newVersusLobby(t, 2)
 	if err := g.TransferHost(other.ID(), host.ID()); err != game.ErrNotHost {

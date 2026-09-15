@@ -123,6 +123,24 @@ func (s *fakeGameStore) Code(_ context.Context, id game.GameID) (string, error) 
 	return "", ports.ErrGameNotFound
 }
 
+func (s *fakeGameStore) SetCode(_ context.Context, id game.GameID, newCode string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.byID[id]; !ok {
+		return ports.ErrGameNotFound
+	}
+	if holder, ok := s.byCode[newCode]; ok && holder != id {
+		return ports.ErrGameCodeTaken
+	}
+	for code, gid := range s.byCode {
+		if gid == id {
+			delete(s.byCode, code)
+		}
+	}
+	s.byCode[newCode] = id
+	return nil
+}
+
 func (s *fakeGameStore) Save(ctx context.Context, g *game.Game) error {
 	return s.SaveWithTTL(ctx, g, 0)
 }
@@ -1657,6 +1675,98 @@ func TestKickParticipant_Service(t *testing.T) {
 	}
 	if len(g.Participants()) != 1 {
 		t.Fatalf("expected the kicked participant to be removed")
+	}
+}
+
+func TestRegenerateGameCode_Service(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, oldCode, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+
+	g, err = svc.RegenerateGameCode(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("RegenerateGameCode: %v", err)
+	}
+
+	if _, err := svc.GetGameByCode(context.Background(), oldCode); !errors.Is(err, ports.ErrGameNotFound) {
+		t.Fatalf("GetGameByCode(old code) = %v, want ErrGameNotFound", err)
+	}
+	newCode, err := svc.GameCode(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GameCode: %v", err)
+	}
+	if newCode == oldCode {
+		t.Fatalf("expected a different code, got the same %q back", newCode)
+	}
+	if len(g.Participants()) != 1 {
+		t.Fatalf("expected the roster to be untouched by a code rotation")
+	}
+}
+
+func TestRegenerateGameCode_NotHost_Forbidden(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	g, err = svc.JoinByCode(context.Background(), code, joinerID)
+	if err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	var joinerParticipant game.ParticipantID
+	for _, p := range g.Participants() {
+		if p.ID() != g.HostID() {
+			joinerParticipant = p.ID()
+		}
+	}
+
+	if _, err := svc.RegenerateGameCode(context.Background(), g.ID(), joinerParticipant); !errors.Is(err, game.ErrNotHost) {
+		t.Fatalf("err = %v, want ErrNotHost", err)
+	}
+	// Authorised BEFORE claiming a new code (game.CanRegenerateCode runs
+	// first inside the closure) - a rejected non-host attempt must leave the
+	// old code resolving exactly as before.
+	if _, err := svc.GetGameByCode(context.Background(), code); err != nil {
+		t.Fatalf("GetGameByCode(old code) after a rejected RegenerateGameCode: %v", err)
+	}
+}
+
+// alwaysCodeTakenStore wraps a *fakeGameStore and makes every SetCode call
+// fail as if the freshly-generated code were already claimed, so
+// RegenerateGameCode's collision-retry loop is forced to exhaust
+// maxCodeAttempts and return ErrCodeGenerationFailed - the one branch a
+// normal random-collision test can't reliably reach.
+type alwaysCodeTakenStore struct{ *fakeGameStore }
+
+func (alwaysCodeTakenStore) SetCode(context.Context, game.GameID, string) error {
+	return ports.ErrGameCodeTaken
+}
+
+func TestRegenerateGameCode_ExhaustsRetries_ReturnsErrCodeGenerationFailed(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+
+	svcBlocked := services.NewGameService(
+		alwaysCodeTakenStore{deps.store},
+		newFakeIDGen[game.GameID](), newFakeIDGen[game.ParticipantID](), newFakeIDGen[game.TeamID](),
+		deps.users, deps.stages, deps.powers, deps.weights, deps.tiebreak, deps.history, deps.rng, deps.hub, deps.clock,
+		services.VotingPolicy{Window: 30 * time.Second},
+	)
+
+	if _, err := svcBlocked.RegenerateGameCode(context.Background(), g.ID(), g.HostID()); !errors.Is(err, services.ErrCodeGenerationFailed) {
+		t.Fatalf("err = %v, want ErrCodeGenerationFailed", err)
 	}
 }
 
