@@ -27,9 +27,8 @@ export function useGameCommands() {
     kick: (participantId: string) => send(CLIENT_COMMAND.KICK, { participantId }),
     transferHost: (participantId: string) => send(CLIENT_COMMAND.TRANSFER_HOST, { participantId }),
     setLocked: (locked: boolean) => send(CLIENT_COMMAND.SET_LOCK, { locked }),
-    // Host-only, LOBBY-only. Takes no payload - it always means "a fresh
-    // code, right now". The new code arrives on the mandatory STATE resend
-    // that follows JOIN_CODE_REGENERATED, not in the frame itself.
+    // Host-only, LOBBY-only. The new code arrives on the STATE resend that
+    // follows JOIN_CODE_REGENERATED, never in the frame itself.
     regenerateCode: () => send(CLIENT_COMMAND.REGENERATE_CODE),
     // UPDATE_CONFIG is a full replacement (mirrors CreateGameRequest, plus
     // the fields only editable once a lobby exists) - callers must build

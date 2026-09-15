@@ -630,22 +630,20 @@ func (s *GameService) SetLobbyLocked(ctx context.Context, gameID game.GameID, ca
 // otherwise unwanted) player still remembers stops working. Host-only,
 // LOBBY-only; the roster, config and game id are all untouched - only the
 // store's side-index code changes (see ports.IGameStore.SetCode's doc for
-// why it isn't part of the Game aggregate). Authorises via
-// g.CanRegenerateCode BEFORE claiming a new code, so a non-host is rejected
-// without ever touching the store, and only emits JoinCodeRegenerated (via
-// g.RegenerateCode) once a code has actually been claimed. Same
-// collision-retry loop as CreateGame/Rematch.
+// why the code isn't part of the Game aggregate). CanRegenerateCode runs
+// before the first SetCode so a rejected caller never claims a code, and
+// RegenerateCode (which emits the event) only runs once one is claimed.
+// Same collision-retry loop as CreateGame/Rematch.
 func (s *GameService) RegenerateGameCode(ctx context.Context, gameID game.GameID, callerID game.ParticipantID) (*game.Game, error) {
 	return s.withGame(ctx, gameID, func(g *game.Game) error {
 		if err := g.CanRegenerateCode(callerID); err != nil {
 			return err
 		}
-		for i := 0; i < maxCodeAttempts; i++ {
-			err := s.store.SetCode(ctx, gameID, s.generateCode())
-			if errors.Is(err, ports.ErrGameCodeTaken) {
-				continue
-			}
-			if err != nil {
+		for attempt := 0; attempt < maxCodeAttempts; attempt++ {
+			if err := s.store.SetCode(ctx, gameID, s.generateCode()); err != nil {
+				if errors.Is(err, ports.ErrGameCodeTaken) {
+					continue
+				}
 				return err
 			}
 			return g.RegenerateCode(callerID)

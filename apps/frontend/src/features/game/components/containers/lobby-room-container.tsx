@@ -226,11 +226,12 @@ export function LobbyRoomContainer() {
   // kept readable server-side for a short TTL precisely so they can) - no
   // longer being in a lobby is the one terminal case with nothing left to
   // show you, so it keeps its toast-and-redirect. The toast fires before the
-  // navigation (not after, as it used to) so it's queued while this screen
-  // is still mounted rather than racing the route change.
+  // navigation so it's queued while this screen is still mounted rather than
+  // racing the route change.
   useEffect(() => {
-    if (socket.terminal?.kind !== 'KICKED' && socket.terminal?.kind !== 'REMOVED') return
-    const messageKey = socket.terminal.kind === 'KICKED' ? 'game.terminal.kicked' : 'game.terminal.removed'
+    const kind = socket.terminal?.kind
+    if (kind !== 'KICKED' && kind !== 'REMOVED') return
+    const messageKey = kind === 'KICKED' ? 'game.terminal.kicked' : 'game.terminal.removed'
     showErrorToast(new AppError(t(messageKey)))
     queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
     resetSocket()

@@ -528,12 +528,11 @@ func (g *Game) CanRegenerateCode(callerID ParticipantID) error {
 	return nil
 }
 
-// RegenerateCode authorises and announces a join-code rotation. The code
-// itself is not domain state - it lives entirely in the store's side index
-// (see ports.IGameStore.SetCode) - so this carries no code, only the same
-// host-only/LOBBY-only guard as every other lobby-management command and
-// the event that tells clients a fresh STATE (carrying the new code) is on
-// its way.
+// RegenerateCode authorises and announces a join-code rotation. It takes no
+// code because the code is not domain state - it lives entirely in the
+// store's side index (see ports.IGameStore.SetCode) - so all this emits is
+// the event telling clients a fresh STATE (carrying the new code) is on its
+// way.
 func (g *Game) RegenerateCode(callerID ParticipantID) error {
 	if err := g.CanRegenerateCode(callerID); err != nil {
 		return err
