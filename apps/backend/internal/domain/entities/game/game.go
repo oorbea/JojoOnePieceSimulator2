@@ -285,34 +285,66 @@ func (g *Game) Leave(id ParticipantID, rng RandomSource) error {
 }
 
 // Disconnect marks a participant unreachable without removing their seat,
-// reassigning the host and checking abort conditions exactly like Leave.
-func (g *Game) Disconnect(id ParticipantID, rng RandomSource) error {
+// reassigning the host and checking abort conditions exactly like Leave. at
+// is stamped on the participant so the application layer's grace-period
+// timer can derive (and re-derive, across a restart) the deadline from it -
+// see GameService's grace timers.
+func (g *Game) Disconnect(id ParticipantID, rng RandomSource, at time.Time) error {
 	p, ok := g.participants[id]
 	if !ok {
 		return ErrParticipantNotFound
 	}
-	p.Disconnect()
+	p.Disconnect(at)
 	if id == g.hostID {
 		g.reassignHost(rng)
 	}
 	g.checkAbortConditions()
+	g.emit(PlayerDisconnected{ParticipantID: id})
 	return nil
 }
 
-// Reconnect marks a previously disconnected participant reachable again.
-func (g *Game) Reconnect(id ParticipantID) error {
+// Reconnect marks a previously disconnected (or abandoned) participant
+// reachable again, restoring full control of their seat regardless of how
+// long they were gone. If the Game is currently host-less (every prior host
+// candidate disconnected/abandoned), the returning participant's presence
+// makes a re-election possible, so one runs here rather than leaving the
+// lobby stuck with no host until someone else happens to trigger one.
+func (g *Game) Reconnect(id ParticipantID, rng RandomSource) error {
 	p, ok := g.participants[id]
 	if !ok {
 		return ErrParticipantNotFound
 	}
 	p.Reconnect()
+	if g.hostID.IsNil() {
+		g.reassignHost(rng)
+	}
+	g.emit(PlayerReconnected{ParticipantID: id})
+	return nil
+}
+
+// Abandon marks a still-disconnected participant as no longer actively
+// played, once their grace period has elapsed with no Reconnect (see
+// GameService's grace timers). The seat, loadout and userID all stay put -
+// only whether this participant counts as "active" (see hasActiveHuman,
+// castBotVotes) changes. Abandoning can itself be what a stalled vote was
+// waiting on, so - like Disconnect - it always runs the abort check, and the
+// caller (GameService.fireGraceTimer) follows up by re-checking whether
+// voting can now close.
+func (g *Game) Abandon(id ParticipantID) error {
+	p, ok := g.participants[id]
+	if !ok {
+		return ErrParticipantNotFound
+	}
+	p.MarkAbandoned()
+	g.checkAbortConditions()
+	g.emit(PlayerAbandoned{ParticipantID: id})
 	return nil
 }
 
 func (g *Game) reassignHost(rng RandomSource) {
 	candidates := make([]ParticipantID, 0, len(g.order))
 	for _, pid := range g.order {
-		if p := g.participants[pid]; p != nil && p.Kind() == enums.Human && p.Connected() {
+		if p := g.participants[pid]; p != nil && p.Kind() == enums.Human && p.Connected() && !p.Abandoned() {
 			candidates = append(candidates, pid)
 		}
 	}
@@ -324,9 +356,17 @@ func (g *Game) reassignHost(rng RandomSource) {
 	g.emit(HostReassigned{NewHostID: g.hostID})
 }
 
-func (g *Game) hasConnectedHuman() bool {
+// hasActiveHuman reports whether any human seat is still being actively
+// played - connected, or disconnected but still within their grace period.
+// An abandoned seat (grace elapsed) no longer counts, which is what lets
+// checkAbortConditions abort a truly empty Game once Abandon runs, rather
+// than the instant every socket happens to be closed (that's exactly the
+// gap a brief disconnect/reload must not fall into). Deliberately
+// clock-free: nothing here reads a timestamp, only GameService's grace
+// timer decides when a disconnected seat becomes abandoned.
+func (g *Game) hasActiveHuman() bool {
 	for _, p := range g.participants {
-		if p.Kind() == enums.Human && p.Connected() {
+		if p.Kind() == enums.Human && !p.Abandoned() {
 			return true
 		}
 	}
@@ -337,7 +377,7 @@ func (g *Game) checkAbortConditions() {
 	if g.state == enums.Finished || g.state == enums.Aborted {
 		return
 	}
-	if !g.hasConnectedHuman() {
+	if !g.hasActiveHuman() {
 		g.abort("no connected humans remain")
 		return
 	}
@@ -820,18 +860,30 @@ func (g *Game) optionScores(options []OptionID) map[OptionID]int {
 	return scores
 }
 
+// autoVotes reports whether p should be voted for on their own behalf
+// without waiting for a human decision: a connected bot always does, and an
+// abandoned human seat does too in modes where AutoVotesForAbandoned is true
+// (Versus - a team must still be able to reach a majority; Gauntlet opts
+// out, see castBotVotes' doc).
+func (g *Game) autoVotes(p *Participant) bool {
+	if p.Kind() == enums.Bot {
+		return p.Connected()
+	}
+	return p.Abandoned() && g.mode.AutoVotesForAbandoned()
+}
+
 func (g *Game) castBotVotes(roundIndex int) {
 	round := &g.rounds[roundIndex]
 	options := g.mode.BallotOptions(g)
 	scores := g.optionScores(options)
 	voter := NewBotVoter(g.evaluator)
-	// Computed once, outside the loop: a bot ballot never moves the
-	// human-only counters (see humanVoteProgress), so every bot's VoteCast
-	// emitted in this batch carries the same progress snapshot.
+	// Computed once, outside the loop: neither a bot nor an abandoned seat's
+	// ballot moves the human-only counters (see humanVoteProgress), so every
+	// VoteCast emitted in this batch carries the same progress snapshot.
 	cast, total := g.humanVoteProgress()
 	for _, pid := range g.order {
 		p := g.participants[pid]
-		if p.Kind() != enums.Bot || !p.Connected() {
+		if !g.autoVotes(p) {
 			continue
 		}
 		choice := voter.Vote(options, scores)
@@ -841,6 +893,36 @@ func (g *Game) castBotVotes(roundIndex int) {
 				HumanVotesCast: cast, HumanVoters: total,
 			})
 		}
+	}
+}
+
+// CastAutoVoteFor casts an auto-vote for a single participant if the current
+// round is open, the mode auto-votes on their behalf (see autoVotes) and
+// they haven't voted yet. It exists for the one case castBotVotes' own
+// batch-at-window-open can't cover: a seat that becomes abandoned *while* a
+// round is already voting (GameService's grace timer firing mid-window). A
+// no-op otherwise, so callers can invoke it unconditionally.
+func (g *Game) CastAutoVoteFor(id ParticipantID) {
+	if g.state != enums.Voting && g.state != enums.Tiebreak {
+		return
+	}
+	round := g.currentRound()
+	if round == nil {
+		return
+	}
+	p, ok := g.participants[id]
+	if !ok || !g.autoVotes(p) || round.Ballot.HasVoted(id) {
+		return
+	}
+	options := g.mode.BallotOptions(g)
+	scores := g.optionScores(options)
+	choice := NewBotVoter(g.evaluator).Vote(options, scores)
+	if err := round.Ballot.Cast(id, choice); err == nil {
+		cast, total := g.humanVoteProgress()
+		g.emit(VoteCast{
+			RoundIndex: round.Index, ParticipantID: id, Option: choice,
+			HumanVotesCast: cast, HumanVoters: total,
+		})
 	}
 }
 

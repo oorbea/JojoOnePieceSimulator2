@@ -50,6 +50,16 @@ export const gameFinishedPayloadSchema = z.object({
 })
 export type GameFinishedPayload = z.infer<typeof gameFinishedPayloadSchema>
 
+export const playerAbandonedPayloadSchema = z.object({
+  participantId: z.string(),
+})
+export type PlayerAbandonedPayload = z.infer<typeof playerAbandonedPayloadSchema>
+
+export const playerDisconnectedPayloadSchema = z.object({
+  participantId: z.string(),
+})
+export type PlayerDisconnectedPayload = z.infer<typeof playerDisconnectedPayloadSchema>
+
 export const playerJoinedPayloadSchema = z.object({
   participantId: z.string(),
 })
@@ -64,6 +74,11 @@ export const playerLeftPayloadSchema = z.object({
   participantId: z.string(),
 })
 export type PlayerLeftPayload = z.infer<typeof playerLeftPayloadSchema>
+
+export const playerReconnectedPayloadSchema = z.object({
+  participantId: z.string(),
+})
+export type PlayerReconnectedPayload = z.infer<typeof playerReconnectedPayloadSchema>
 
 export const rematchReadyPayloadSchema = z.object({
   gameId: z.string(),
@@ -281,6 +296,9 @@ export const SERVER_FRAME = {
   SUMMARY_OPENED: 'SUMMARY_OPENED',
   SUMMARY_READY_CHANGED: 'SUMMARY_READY_CHANGED',
   REMATCH_READY: 'REMATCH_READY',
+  PLAYER_DISCONNECTED: 'PLAYER_DISCONNECTED',
+  PLAYER_RECONNECTED: 'PLAYER_RECONNECTED',
+  PLAYER_ABANDONED: 'PLAYER_ABANDONED',
 } as const
 
 export type ServerFrameType = (typeof SERVER_FRAME)[keyof typeof SERVER_FRAME]
@@ -395,6 +413,21 @@ export const serverFrameSchema = z.discriminatedUnion('type', [
     type: z.literal(SERVER_FRAME.REMATCH_READY),
     requestId: z.string().optional(),
     payload: rematchReadyPayloadSchema,
+  }),
+  z.object({
+    type: z.literal(SERVER_FRAME.PLAYER_DISCONNECTED),
+    requestId: z.string().optional(),
+    payload: playerDisconnectedPayloadSchema,
+  }),
+  z.object({
+    type: z.literal(SERVER_FRAME.PLAYER_RECONNECTED),
+    requestId: z.string().optional(),
+    payload: playerReconnectedPayloadSchema,
+  }),
+  z.object({
+    type: z.literal(SERVER_FRAME.PLAYER_ABANDONED),
+    requestId: z.string().optional(),
+    payload: playerAbandonedPayloadSchema,
   }),
 ])
 export type ServerFrame = z.infer<typeof serverFrameSchema>

@@ -14,4 +14,10 @@ export const gameKeys = {
   detail: (id: string) => [...gameKeys.allLocales, 'detail', id] as const,
   preview: (code: string) => [...gameKeys.allLocales, 'preview', code] as const,
   publicList: () => [...gameKeys.allLocales, 'public'] as const,
+  // `mine` (GET /games/me, see game.api.ts) follows the same rule as
+  // `detail`: never persisted (the 'games' segment as a whole is excluded
+  // from dehydration), a plain seed/fallback query that home-container.tsx
+  // reads once on mount to offer "resume your game" - not polled, not
+  // written to by the socket store.
+  mine: () => [...gameKeys.allLocales, 'mine'] as const,
 }

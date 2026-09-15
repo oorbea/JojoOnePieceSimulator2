@@ -781,6 +781,43 @@ func resolveEndpointParticipant(g *game.Game, userID user.UserID) (game.Particip
 	return game.NilParticipantID, ports.ErrForbidden
 }
 
+// --- GET /games/me ---
+
+func TestGetMine_RequiresAuth(t *testing.T) {
+	h, _ := newGameTestServer(t)
+	rec := doTokenRequest(t, h, http.MethodGet, "/api/v1/games/me", "", nil)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+}
+
+func TestGetMine_NoActiveGame_NoContent(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "lonely")
+
+	rec := doTokenRequest(t, h, http.MethodGet, "/api/v1/games/me", "user-token", nil)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusNoContent, rec.Body.String())
+	}
+}
+
+func TestGetMine_ReturnsActiveGame(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	rec := doTokenRequest(t, h, http.MethodGet, "/api/v1/games/me", "user-token", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	got := decodeGameBody(t, rec.Body.Bytes())
+	gameObj, _ := got["game"].(map[string]any)
+	if gameObj["id"] != id {
+		t.Errorf("game id = %v, want %v", gameObj["id"], id)
+	}
+}
+
 // --- PATCH /games/{id}/config ---
 
 func TestEditConfig_HostOnly_Success(t *testing.T) {
