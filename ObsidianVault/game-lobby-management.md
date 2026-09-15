@@ -98,6 +98,37 @@ package but nothing reusable exists in `endpoints_test`). Coverage today is doma
 `game_service_test.go`) + a real-Redis-verified `ListPublic` (extended `store_test.go`) - all
 passing, just not exercised through the actual HTTP/WS handlers end-to-end.
 
+## 2026-09-15: kicked-frame delivery race, and join-code regeneration
+
+`Kick`'s `PLAYER_KICKED` frame to the victim was silently lost almost every time: `forwardEvents`
+enqueued it on the buffered `outbound` channel (drained asynchronously by `writePump`) and then
+immediately called `conn.Close(StatusNormalClosure)` itself - the close almost always won the race,
+so `writePump` never got to write the frame it had just been handed. The existing test only
+asserted the frame was *enqueued*, never that it was actually written before the close, so this
+shipped clean. Fixed by making "write this, then close" one atomic item (`outMsg{data, closeCode,
+closeText}`) on the channel, so `writePump` itself performs the close right after the write -
+**never call `conn.Close` from a goroutine other than the one draining `outbound`, and never
+right after (not through) an enqueue you expect to be delivered first.** The regression test now
+runs `writePump` for real and asserts the frame is actually read off the wire before the close.
+
+Frontend-side, the victim missing that frame (or an expired lobby disconnect-grace's `Leave`
+happening while they're away) used to reconnect straight into a 403/404 mint rejection that only
+set `status: 'closed'` with no `terminal` - an orphaned screen with a stale roster and every action
+rejected. Added a `REMOVED` terminal (distinct from `KICKED`, same toast-and-redirect-to-`/play`),
+guarded so it never overwrites an already-set `FINISHED`/`ABORTED` terminal when that game's short
+TTL later 404s the same mint call.
+
+Added a host-only, LOBBY-only `REGENERATE_CODE` command (mirrors `SET_LOCK`'s shape exactly - see
+that command's nine-step path in this file's own history as the template) so a kicked player who
+remembers the old code can't just rejoin with it. Key design point: **the join code is not part of
+the `Game` aggregate** - it lives only in the store's side index (`byCode` map / Redis
+`jojo:game:code:*`+`codeof:*` keys), so `Game.Snapshot`/`Restore` and `redis/wire.go` are
+untouched, and the three-place rule below doesn't apply to it. `ports.IGameStore.SetCode` claims
+the new code and releases the old one atomically; the Redis Lua script reads the game's own
+`PTTL` (not the store's configured lobby TTL) so rotating the code on a near-expiry/terminal game
+never resurrects it for a full lobby lifetime. Rotating only ever locks out a **private** lobby -
+a public one is still joinable via the browser (`JoinByID`), so the frontend confirm sheet says so.
+
 ## Gotchas hit
 
 - `checkPoolSufficiency` (new, in `GameService.StartGame`, runs *before* `g.Start` so a rejected
