@@ -531,6 +531,7 @@
     },
     "terminal": {
       "kicked": "You were removed from this lobby.",
+      "removed": "You're no longer in this game.",
       "abortedByHost": "The host cancelled this game.",
       "finished": "This game has finished."
     },

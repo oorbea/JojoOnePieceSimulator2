@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -518,12 +519,17 @@ func TestDispatch_UnknownCommand(t *testing.T) {
 
 // --- forwardEvents: kicked participant's own socket closes ---
 
-// TestForwardEvents_KickedParticipant_ClosesOwnSocket exercises the one
-// branch of forwardEvents that isn't reachable via dispatch alone: once a
-// PlayerKicked event names self as the victim, forwardEvents must close
-// that connection with StatusNormalClosure and return, instead of the usual
-// resend-STATE-and-keep-going path every other event takes.
-func TestForwardEvents_KickedParticipant_ClosesOwnSocket(t *testing.T) {
+// TestForwardEvents_KickedParticipant_DeliversFrameThenCloses exercises the
+// one branch of forwardEvents that isn't reachable via dispatch alone: once
+// a PlayerKicked event names self as the victim, forwardEvents must attach
+// the close to the same outMsg as the PLAYER_KICKED frame, so writePump is
+// guaranteed to write the frame before closing with StatusNormalClosure -
+// instead of the usual resend-STATE-and-keep-going path every other event
+// takes. This test runs writePump alongside forwardEvents (unlike a bare
+// "enqueued on outbound" check) because that ordering guarantee is exactly
+// what a regression here would break: forwardEvents calling conn.Close
+// itself, racing writePump's drain of the very frame it just enqueued.
+func TestForwardEvents_KickedParticipant_DeliversFrameThenCloses(t *testing.T) {
 	e := NewGameEndpoints(nil, nil, nil, nil, nil, nil, nil, nil, context.Background(), GameWSConfig{})
 
 	var self game.ParticipantID
@@ -536,8 +542,21 @@ func TestForwardEvents_KickedParticipant_ClosesOwnSocket(t *testing.T) {
 		if err != nil {
 			return
 		}
-		outbound := make(chan []byte, wsOutboundBuffer)
+		outbound := make(chan outMsg, wsOutboundBuffer)
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			e.writePump(r.Context(), conn, outbound)
+		}()
 		e.forwardEvents(r.Context(), conn, outbound, game.GameID{}, self, events)
+		// r.Context() is canceled once ServeHTTP returns (true even for a
+		// hijacked connection - see serveWS's own wg.Wait() before it
+		// returns, for the same reason): the handler must not return, and
+		// so must not let r.Context() cancel, before writePump has actually
+		// drained and written the PLAYER_KICKED outMsg forwardEvents just
+		// enqueued for it.
+		wg.Wait()
 		close(done)
 	}))
 	defer srv.Close()
@@ -553,13 +572,24 @@ func TestForwardEvents_KickedParticipant_ClosesOwnSocket(t *testing.T) {
 
 	events <- services.GameEvent{Event: game.PlayerKicked{ParticipantID: self}}
 
-	// forwardEvents only enqueues the PLAYER_KICKED frame onto outbound
-	// (this test never runs the write pump that would actually flush it to
-	// the wire); it closes the connection directly via conn.Close, so the
-	// very next thing the client observes is the close itself.
+	// The victim must actually receive the PLAYER_KICKED frame - this is
+	// the regression this test exists to catch - before the connection
+	// closes underneath them.
+	_, data, err := clientConn.Read(ctx)
+	if err != nil {
+		t.Fatalf("Read PLAYER_KICKED frame: %v", err)
+	}
+	var frame dto.ServerFrame
+	if err := json.Unmarshal(data, &frame); err != nil {
+		t.Fatalf("unmarshal frame: %v", err)
+	}
+	if frame.Type != dto.FramePlayerKicked {
+		t.Fatalf("frame.Type = %q, want %q", frame.Type, dto.FramePlayerKicked)
+	}
+
 	_, _, err = clientConn.Read(ctx)
 	if err == nil {
-		t.Fatal("Read: want the connection closed, got nil error")
+		t.Fatal("Read: want the connection closed after the frame, got nil error")
 	}
 	if got := websocket.CloseStatus(err); got != websocket.StatusNormalClosure {
 		t.Errorf("close status = %v, want %v (err = %v)", got, websocket.StatusNormalClosure, err)
