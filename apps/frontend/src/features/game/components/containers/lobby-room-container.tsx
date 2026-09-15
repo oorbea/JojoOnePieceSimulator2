@@ -326,6 +326,20 @@ export function LobbyRoomContainer() {
     })
   }
 
+  const handleRegenerateCode = () => {
+    setConfirmSheet({
+      title: t('game.code.regenerate.title'),
+      message: t('game.code.regenerate.message'),
+      confirmLabel: t('game.code.regenerate.confirm'),
+      tone: 'red',
+      onConfirm: () => {
+        commands.regenerateCode()
+        setConfirmSheet(null)
+        showSuccessToast(t('game.code.regenerate.done'))
+      },
+    })
+  }
+
   const handleTransferHost = (participantId: string) => {
     setConfirmSheet({
       title: t('game.transferHost.title'),
@@ -465,6 +479,7 @@ export function LobbyRoomContainer() {
         if (result === 'shared') showSuccessToast(t('game.code.shared'))
         return result
       }}
+      onRegenerateCode={handleRegenerateCode}
       confirmSheet={confirmSheet}
       confirming={false}
       onCancelConfirm={() => setConfirmSheet(null)}

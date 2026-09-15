@@ -27,6 +27,13 @@ type IGameStore interface {
 	// Code returns the join code currently indexed for id, or
 	// ErrGameNotFound.
 	Code(ctx context.Context, id game.GameID) (string, error)
+	// SetCode atomically claims newCode for id and releases id's previous
+	// code, preserving id's own remaining TTL (never the store's configured
+	// lobby TTL - a short-TTL terminal game must not have its code rotation
+	// silently resurrect it for a full lobby lifetime). Returns
+	// ErrGameCodeTaken if newCode is already claimed by a different Game, or
+	// ErrGameNotFound if id isn't indexed at all.
+	SetCode(ctx context.Context, id game.GameID, newCode string) error
 	// Save persists g's current state and refreshes its TTL. g must have
 	// already been Create'd.
 	Save(ctx context.Context, g *game.Game) error

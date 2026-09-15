@@ -399,6 +399,8 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 			return nil, err
 		}
 		return e.svc.EditLobbyConfig(ctx, gameID, self, input)
+	case dto.CommandRegenerateCode:
+		return e.svc.RegenerateGameCode(ctx, gameID, self)
 	default:
 		return nil, errUnknownCommand
 	}
@@ -535,6 +537,8 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealWin
 		return dto.FrameLobbyLockChanged, dto.LobbyLockChangedPayload{Locked: e.Locked}, true
 	case game.ConfigUpdated:
 		return dto.FrameConfigUpdated, struct{}{}, true
+	case game.JoinCodeRegenerated:
+		return dto.FrameJoinCodeRegenerated, struct{}{}, true
 	case game.PlayerDisconnected:
 		return dto.FramePlayerDisconnected, dto.PlayerDisconnectedPayload{ParticipantID: e.ParticipantID.String()}, true
 	case game.PlayerReconnected:

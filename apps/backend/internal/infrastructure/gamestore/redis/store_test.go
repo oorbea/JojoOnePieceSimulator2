@@ -132,6 +132,116 @@ func TestStore_Create_DuplicateCodeFails(t *testing.T) {
 	}
 }
 
+func TestStore_SetCode_OldCodeStopsResolvingNewOneDoes(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	g, code := newFreshGame(t, 20)
+	t.Cleanup(func() { _ = s.Delete(ctx, g.ID()) })
+
+	if err := s.Create(ctx, code, g); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	newCode := code + "X" // distinct, still short enough not to collide with other seeds
+	if err := s.SetCode(ctx, g.ID(), newCode); err != nil {
+		t.Fatalf("SetCode: %v", err)
+	}
+
+	if _, err := s.GetByCode(ctx, code); err != ports.ErrGameNotFound {
+		t.Fatalf("GetByCode(old code) = %v, want ErrGameNotFound", err)
+	}
+	got, err := s.GetByCode(ctx, newCode)
+	if err != nil {
+		t.Fatalf("GetByCode(new code): %v", err)
+	}
+	if got.ID() != g.ID() {
+		t.Errorf("GetByCode(new code): ID mismatch got %s want %s", got.ID(), g.ID())
+	}
+	gotCode, err := s.Code(ctx, g.ID())
+	if err != nil {
+		t.Fatalf("Code: %v", err)
+	}
+	if gotCode != newCode {
+		t.Errorf("Code = %q, want %q", gotCode, newCode)
+	}
+}
+
+// TestStore_SetCode_PreservesRemainingTTL is the reason recodeScript reads
+// PTTL(idKey) instead of using the store's configured TTL: a code rotation
+// on a near-expiry (e.g. terminal, SaveWithTTL'd) game must not resurrect it
+// for a full lobby lifetime.
+func TestStore_SetCode_PreservesRemainingTTL(t *testing.T) {
+	s := newTestStore(t)
+	client := rawClient(t)
+	ctx := context.Background()
+	g, code := newFreshGame(t, 21)
+	t.Cleanup(func() { _ = s.Delete(ctx, g.ID()) })
+
+	if err := s.Create(ctx, code, g); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	const short = 5 * time.Second
+	if err := s.SaveWithTTL(ctx, g, short); err != nil {
+		t.Fatalf("SaveWithTTL: %v", err)
+	}
+
+	newCode := code + "X"
+	if err := s.SetCode(ctx, g.ID(), newCode); err != nil {
+		t.Fatalf("SetCode: %v", err)
+	}
+
+	newCodeKey := "jojo:game:code:" + newCode
+	ttl, err := client.PTTL(ctx, newCodeKey).Result()
+	if err != nil {
+		t.Fatalf("PTTL(%s): %v", newCodeKey, err)
+	}
+	if ttl > short {
+		t.Errorf("PTTL(%s) = %s, want <= the %s the game was already saved under - SetCode must not extend it", newCodeKey, ttl, short)
+	}
+	if ttl <= 0 {
+		t.Errorf("PTTL(%s) = %s, want the key to still be alive", newCodeKey, ttl)
+	}
+}
+
+func TestStore_SetCode_CollisionReturnsErrGameCodeTaken(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	g1, code1 := newFreshGame(t, 22)
+	g2, code2 := newFreshGame(t, 23)
+	t.Cleanup(func() {
+		_ = s.Delete(ctx, g1.ID())
+		_ = s.Delete(ctx, g2.ID())
+	})
+
+	if err := s.Create(ctx, code1, g1); err != nil {
+		t.Fatalf("Create(g1): %v", err)
+	}
+	if err := s.Create(ctx, code2, g2); err != nil {
+		t.Fatalf("Create(g2): %v", err)
+	}
+
+	if err := s.SetCode(ctx, g2.ID(), code1); err != ports.ErrGameCodeTaken {
+		t.Fatalf("SetCode(g2, g1's code) = %v, want ErrGameCodeTaken", err)
+	}
+	// g2's own code must be untouched by the rejected attempt.
+	gotCode, err := s.Code(ctx, g2.ID())
+	if err != nil {
+		t.Fatalf("Code: %v", err)
+	}
+	if gotCode != code2 {
+		t.Errorf("Code = %q after a rejected SetCode, want unchanged %q", gotCode, code2)
+	}
+}
+
+func TestStore_SetCode_UnknownGame_ReturnsNotFound(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+
+	if err := s.SetCode(ctx, game.GameID{0xFF}, "NEWCOD"); err != ports.ErrGameNotFound {
+		t.Fatalf("SetCode(unknown game) = %v, want ErrGameNotFound", err)
+	}
+}
+
 func TestStore_UnknownGame_ReturnsNotFound(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()
