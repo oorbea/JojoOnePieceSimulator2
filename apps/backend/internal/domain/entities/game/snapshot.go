@@ -102,6 +102,11 @@ type ParticipantSnapshot struct {
 	GooglePicture  string
 	AvatarFocalX   float64
 	AvatarFocalY   float64
+	// DisconnectedAt/Abandoned round-trip Participant's grace-period state -
+	// see GameService's grace timers. Both nil/false is the zero value every
+	// snapshot written before these fields existed already decodes to.
+	DisconnectedAt *time.Time
+	Abandoned      bool
 }
 
 // TeamSnapshot mirrors Team.
@@ -229,6 +234,11 @@ func (g *Game) Snapshot() Snapshot {
 			GooglePicture:  p.googlePicture,
 			AvatarFocalX:   p.avatarFocalX,
 			AvatarFocalY:   p.avatarFocalY,
+			Abandoned:      p.abandoned,
+		}
+		if p.disconnectedAt != nil {
+			t := *p.disconnectedAt
+			ps.DisconnectedAt = &t
 		}
 		if p.loadout != nil {
 			ls := snapshotLoadout(p.loadout)
@@ -562,6 +572,11 @@ func Restore(s Snapshot) (*Game, error) {
 			googlePicture:  ps.GooglePicture,
 			avatarFocalX:   ps.AvatarFocalX,
 			avatarFocalY:   ps.AvatarFocalY,
+			abandoned:      ps.Abandoned,
+		}
+		if ps.DisconnectedAt != nil {
+			t := *ps.DisconnectedAt
+			p.disconnectedAt = &t
 		}
 		if ps.Loadout != nil {
 			loadout, err := restoreLoadout(*ps.Loadout)

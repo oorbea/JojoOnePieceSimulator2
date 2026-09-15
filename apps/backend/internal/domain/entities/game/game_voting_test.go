@@ -2,6 +2,7 @@ package game_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -38,7 +39,7 @@ func TestGame_VotingComplete_TrueWhenLastHoldoutDisconnects(t *testing.T) {
 	if g.VotingComplete() {
 		t.Fatalf("expected VotingComplete to still be false")
 	}
-	if err := g.Disconnect(players[1].ID(), &fakeRandom{}); err != nil {
+	if err := g.Disconnect(players[1].ID(), &fakeRandom{}, time.Now()); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 	if !g.VotingComplete() {

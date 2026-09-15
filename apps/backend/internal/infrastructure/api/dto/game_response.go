@@ -94,17 +94,25 @@ type GameLoadoutResponse struct {
 // GameParticipantResponse mirrors game.Participant. AvatarThumb is resolved
 // at serialization time (own upload if the participant's user has one, else
 // their Google-synced picture, "" for a bot) - see resolveParticipantAvatar.
+//
+// Abandoned/DisconnectedAt surface the grace-period state a client renders a
+// participant with while GameService's grace timer is pending (grayed-out
+// avatar + countdown) or once it has fired without a reconnect (auto-voting
+// seat still counted in the squad). DisconnectedAt is omitted once
+// Connected is true.
 type GameParticipantResponse struct {
-	ID           string               `json:"id"`
-	UserID       *string              `json:"userId,omitempty"`
-	DisplayName  string               `json:"displayName"`
-	TeamID       string               `json:"teamId"`
-	Kind         string               `json:"kind" ts:"ParticipantKind"`
-	Connected    bool                 `json:"connected"`
-	AvatarThumb  string               `json:"avatarThumb"`
-	AvatarFocalX float64              `json:"avatarFocalX"`
-	AvatarFocalY float64              `json:"avatarFocalY"`
-	Loadout      *GameLoadoutResponse `json:"loadout,omitempty"`
+	ID             string               `json:"id"`
+	UserID         *string              `json:"userId,omitempty"`
+	DisplayName    string               `json:"displayName"`
+	TeamID         string               `json:"teamId"`
+	Kind           string               `json:"kind" ts:"ParticipantKind"`
+	Connected      bool                 `json:"connected"`
+	Abandoned      bool                 `json:"abandoned"`
+	DisconnectedAt *time.Time           `json:"disconnectedAt,omitempty"`
+	AvatarThumb    string               `json:"avatarThumb"`
+	AvatarFocalX   float64              `json:"avatarFocalX"`
+	AvatarFocalY   float64              `json:"avatarFocalY"`
+	Loadout        *GameLoadoutResponse `json:"loadout,omitempty"`
 }
 
 // GameStageResponse mirrors game.Stage. Description is NOT read off the
@@ -327,8 +335,12 @@ func NewGameStateResponse(
 			TeamID:       p.TeamID().String(),
 			Kind:         p.Kind().String(),
 			Connected:    p.Connected(),
+			Abandoned:    p.Abandoned(),
 			AvatarFocalX: p.AvatarFocalX(),
 			AvatarFocalY: p.AvatarFocalY(),
+		}
+		if disconnectedAt, ok := p.DisconnectedAt(); ok {
+			pr.DisconnectedAt = &disconnectedAt
 		}
 		if uid := p.UserID(); uid != nil {
 			s := uid.String()

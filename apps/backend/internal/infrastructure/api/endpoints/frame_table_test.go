@@ -17,6 +17,7 @@ var wsFrameConstants = []string{
 	dto.FrameError, dto.FrameResyncRequired, dto.FrameTeamChanged, dto.FramePlayerKicked,
 	dto.FrameLobbyLockChanged, dto.FrameConfigUpdated, dto.FrameRevealReadyChanged,
 	dto.FrameSummaryOpened, dto.FrameSummaryReadyChanged, dto.FrameRematchReady,
+	dto.FramePlayerDisconnected, dto.FramePlayerReconnected, dto.FramePlayerAbandoned,
 }
 
 var wsCommandConstants = []string{

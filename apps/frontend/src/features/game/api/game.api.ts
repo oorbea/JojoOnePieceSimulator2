@@ -41,3 +41,14 @@ export async function getPublicLobbies(): Promise<PublicLobbyList> {
   const response = await apiClient.get<PublicLobbyList>('/games/public')
   return response.data
 }
+
+// getMyGame resumes the caller's active game (see GET /games/me's own doc):
+// null means there is none to resume, not an error - the client's own
+// validateStatus already treats 204 as success, so callers never need to
+// retry it as if it failed.
+export async function getMyGame(): Promise<GameStateResponse | null> {
+  const response = await apiClient.get<GameStateResponse | ''>('/games/me')
+  if (response.status === 204 || !response.data) return null
+  if (__DEV__) assertContract(gameStateResponseSchema, response.data, 'GET /games/me')
+  return response.data
+}

@@ -53,6 +53,11 @@
   },
   "home": {
     "pickChannel": "Tria un canal",
+    "resume": {
+      "title": "Encara ets en una partida",
+      "cta": "Torna a la partida",
+      "ctaHint": "Reobre la partida que vas deixar - el teu lloc encara hi és"
+    },
     "channels": {
       "play": "Juga",
       "profile": "Perfil",
@@ -323,6 +328,7 @@
       "you": "Tu",
       "connected": "Connectat",
       "disconnected": "Desconnectat",
+      "abandoned": "Controlat per bot",
       "playersCount": "{{count}}/{{max}} jugadors",
       "switchTeam": "Canvia a {{name}}",
       "emptySlot": "Toca per unir-te",

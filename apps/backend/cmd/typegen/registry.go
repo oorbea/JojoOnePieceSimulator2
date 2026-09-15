@@ -106,6 +106,9 @@ var wsOnlyTypes = []any{
 	dto.TeamChangedPayload{},
 	dto.PlayerKickedPayload{},
 	dto.LobbyLockChangedPayload{},
+	dto.PlayerDisconnectedPayload{},
+	dto.PlayerReconnectedPayload{},
+	dto.PlayerAbandonedPayload{},
 }
 
 // nonWireTypeNames are exported package-dto type names that are

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 )
 
 // IGameStore holds every live Game aggregate for the duration of its
@@ -49,4 +50,16 @@ type IGameStore interface {
 	// call is needed - an adapter that cannot use SCAN/KEYS (Redis) keeps
 	// its own explicit index instead.
 	ListPublic(ctx context.Context, limit int) ([]*game.Game, error)
+	// GamesForUser returns every Game uid is currently seated in as a human
+	// participant, in no particular order - a user can be in more than one
+	// at once (see GameService.joinLocked's doc: the only duplicate-seat
+	// guard is within a single Game), so callers needing "the" active game
+	// (see GameService.ActiveGameForUser) must pick among the results
+	// themselves. The returned list may be stale/over-inclusive (e.g. a
+	// user's own membership index outliving the Game it points at, or a
+	// Game that has since finished) - callers must validate each result,
+	// never trust membership on its own. Same reasoning as ListPublic's own
+	// "an adapter that cannot use SCAN/KEYS keeps its own explicit index"
+	// note.
+	GamesForUser(ctx context.Context, uid user.UserID) ([]*game.Game, error)
 }

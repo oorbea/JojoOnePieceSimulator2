@@ -486,3 +486,103 @@ func TestDecodeRejectsTruncatedJSON(t *testing.T) {
 		t.Fatal("expected error decoding truncated JSON")
 	}
 }
+
+// TestEncodeDecodeRoundTrip_DisconnectedAbandonedAndFocalPoint guards the
+// same class of bug TiedVotes/RevealReady already bit twice: a field that
+// exists on game.ParticipantSnapshot but was never wired into
+// wireParticipant silently resets on every Redis round trip while
+// MemoryGameStore (which keeps the live pointer) never notices. Two fields
+// are covered here at once because they share that exact failure mode:
+//   - AvatarFocalX/AvatarFocalY were missed when wireParticipant was first
+//     written (see its doc comment) - a non-0.5 value (buildTestGame's own
+//     host defaults to 0.5/0.5, which would pass even with the bug) proves
+//     the fix.
+//   - DisconnectedAt/Abandoned are the new grace-period fields added
+//     alongside this test.
+func TestEncodeDecodeRoundTrip_DisconnectedAbandonedAndFocalPoint(t *testing.T) {
+	g := buildTestGame(t)
+	host, ok := g.Participant(game.ParticipantID{1})
+	if !ok {
+		t.Fatal("host missing before encode")
+	}
+	host.SetAvatar(host.AvatarThumbKey(), host.GooglePicture(), 0.2, 0.8)
+
+	disconnectedAt := time.Now().Add(-90 * time.Second).UTC().Truncate(time.Second)
+	if err := g.Disconnect(host.ID(), zeroWireRandom{}, disconnectedAt); err != nil {
+		t.Fatalf("Disconnect: %v", err)
+	}
+	if err := g.Abandon(host.ID()); err != nil {
+		t.Fatalf("Abandon: %v", err)
+	}
+
+	payload, err := encode(g, time.Now())
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+
+	restored, err := decode(payload)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	got, ok := restored.Participant(game.ParticipantID{1})
+	if !ok {
+		t.Fatal("host missing after decode")
+	}
+	if got.AvatarFocalX() != 0.2 || got.AvatarFocalY() != 0.8 {
+		t.Errorf("focal point = (%v, %v), want (0.2, 0.8) - lost across the wire round trip",
+			got.AvatarFocalX(), got.AvatarFocalY())
+	}
+	if !got.Abandoned() {
+		t.Error("expected Abandoned() == true after the wire round trip")
+	}
+	gotAt, ok := got.DisconnectedAt()
+	if !ok {
+		t.Fatal("expected DisconnectedAt to survive the wire round trip")
+	}
+	if !gotAt.Equal(disconnectedAt) {
+		t.Errorf("DisconnectedAt = %v, want %v", gotAt, disconnectedAt)
+	}
+
+	// A payload written before these fields existed must still decode
+	// cleanly to the safe default: connected, not abandoned.
+	var env map[string]any
+	if err := json.Unmarshal(payload, &env); err != nil {
+		t.Fatalf("unmarshal into map: %v", err)
+	}
+	gameObj, ok := env["game"].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected envelope shape, no game object: %+v", env)
+	}
+	participants, ok := gameObj["participants"].([]any)
+	if !ok || len(participants) == 0 {
+		t.Fatalf("unexpected game shape, no participants: %+v", gameObj)
+	}
+	for _, p := range participants {
+		pm, ok := p.(map[string]any)
+		if !ok {
+			continue
+		}
+		delete(pm, "avatarFocalX")
+		delete(pm, "avatarFocalY")
+		delete(pm, "disconnectedAt")
+		delete(pm, "abandoned")
+	}
+	legacy, err := json.Marshal(env)
+	if err != nil {
+		t.Fatalf("re-marshal: %v", err)
+	}
+	legacyGame, err := decode(legacy)
+	if err != nil {
+		t.Fatalf("decode legacy (grace-field-less) payload: %v", err)
+	}
+	legacyHost, ok := legacyGame.Participant(game.ParticipantID{1})
+	if !ok {
+		t.Fatal("host missing after decoding legacy payload")
+	}
+	if legacyHost.Abandoned() {
+		t.Error("a legacy payload must decode to not-abandoned")
+	}
+	if _, ok := legacyHost.DisconnectedAt(); ok {
+		t.Error("a legacy payload must decode to no disconnectedAt")
+	}
+}

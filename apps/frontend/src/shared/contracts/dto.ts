@@ -430,6 +430,8 @@ export const gameParticipantResponseSchema = z.object({
   teamId: z.string(),
   kind: participantKindSchema,
   connected: z.boolean(),
+  abandoned: z.boolean(),
+  disconnectedAt: z.iso.datetime({ offset: true }).optional(),
   avatarThumb: z.string(),
   avatarFocalX: z.number(),
   avatarFocalY: z.number(),

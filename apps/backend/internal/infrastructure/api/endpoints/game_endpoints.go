@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -172,6 +173,7 @@ func (e *GameEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 		r.With(write).Post("/join", Wrap(e.join))
 		r.With(read).Get("/public", Wrap(e.listPublic))
 		r.With(read).Get("/preview", Wrap(e.preview))
+		r.With(read).Get("/me", Wrap(e.getMine))
 		r.With(read).Get("/{id}", Wrap(e.get))
 		r.With(read).Get("/by-code/{code}", Wrap(e.getByCode))
 		r.With(write).Post("/{id}/join", Wrap(e.joinByID))
@@ -379,6 +381,37 @@ func (e *GameEndpoints) get(w http.ResponseWriter, r *http.Request) error {
 	}
 	g, err := e.svc.GetGame(r.Context(), id)
 	if err != nil {
+		return err
+	}
+	self, err := resolveParticipant(g, claims.UserID)
+	if err != nil {
+		return err
+	}
+	return e.respondState(w, r, g, self, http.StatusOK)
+}
+
+// getMine godoc
+//
+//	@Summary		Resume the caller's active game, if any
+//	@Description	Returns whichever Game the caller is currently seated in as a human participant (excluding FINISHED/ABORTED ones, which keep their own short-lived result screen instead), so reopening the app can route straight back to a lobby/match instead of leaving the player stranded with no way back in. 204 if there is none.
+//	@Tags			games
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	dto.GameStateResponse
+//	@Success		204
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Router			/games/me [get]
+func (e *GameEndpoints) getMine(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := ClaimsFromRequest(r)
+	if !ok {
+		return ports.ErrUnauthenticated
+	}
+	g, err := e.svc.ActiveGameForUser(r.Context(), claims.UserID)
+	if err != nil {
+		if errors.Is(err, ports.ErrGameNotFound) {
+			writeJSON(w, http.StatusNoContent, nil)
+			return nil
+		}
 		return err
 	}
 	self, err := resolveParticipant(g, claims.UserID)
