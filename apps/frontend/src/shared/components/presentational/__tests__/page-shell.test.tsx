@@ -29,11 +29,18 @@ function countGradients(root: JsonNode) {
 
 function styleOf(node: JsonNode): Record<string, unknown> {
   const style = node.props?.style
-  return Object.assign({}, ...(Array.isArray(style) ? style : [style]).filter(Boolean))
+  const merged = Object.assign({}, ...(Array.isArray(style) ? style : [style]).filter(Boolean))
+  // RN's ScrollView (RCTScrollView in the test renderer) carries the
+  // reservation on `contentContainerStyle`, not `style` — it's a separate
+  // prop the host component forwards to its inner content view, so a node
+  // search keyed only on `style` misses it in scroll mode.
+  return { ...merged, ...(node.props?.contentContainerStyle as object) }
 }
 
-// Finds PageShell's own padded content YStack (not the outer flex:1 wrapper,
-// nor anything AquaBackground/ScrollView render) by its unique paddingTop.
+// Finds the node carrying PageShell's nav-clearance padding — the content
+// YStack in non-scroll mode, or the ScrollView's contentContainerStyle in
+// scroll mode (not the outer flex:1 wrapper, nor anything AquaBackground
+// renders) — by its unique paddingTop.
 function paddingOf(root: JsonNode) {
   const withPadding = flatten(root).find((n) => styleOf(n).paddingTop !== undefined)
   const style = withPadding ? styleOf(withPadding) : {}
@@ -110,5 +117,39 @@ describe('PageShell nav clearance', () => {
     // Zero safe-area insets in the test environment, so this is exactly the
     // +16 breathing-room fallback.
     expect(paddingOf(toJSON() as JsonNode)).toEqual({ top: 16, bottom: 16 })
+  })
+
+  it('in scroll mode, takes its padding from NavInsetsProvider on the ScrollView content container', async () => {
+    const { toJSON } = await renderWithProviders(
+      <NavInsetsProvider value={{ top: 120, bottom: 90 }}>
+        <PageShell scroll>
+          <Text>content</Text>
+        </PageShell>
+      </NavInsetsProvider>
+    )
+
+    expect(paddingOf(toJSON() as JsonNode)).toEqual({ top: 120, bottom: 90 })
+  })
+
+  // Regression guard: the nav padding used to live on a `flex:1` YStack
+  // *inside* the ScrollView, which pins that box to the viewport height
+  // (flexBasis: 0, no min-height floor) — tall content then overflows past
+  // its own paddingBottom, so the reserved clearance never actually
+  // separates the last child from the floating bar sitting over it (see
+  // page-shell.tsx's comment). The padded node must be the scroll content
+  // container itself (flexGrow: 1, no fixed flexBasis), never a flex:1 child.
+  it('in scroll mode, does not pin the padded box to a fixed flexBasis', async () => {
+    const { toJSON } = await renderWithProviders(
+      <NavInsetsProvider value={{ top: 120, bottom: 90 }}>
+        <PageShell scroll>
+          <Text>content</Text>
+        </PageShell>
+      </NavInsetsProvider>
+    )
+
+    const padded = flatten(toJSON() as JsonNode).find((n) => styleOf(n).paddingTop !== undefined)
+    const style = padded ? styleOf(padded) : {}
+    expect(style.flexBasis).not.toBe(0)
+    expect(style.flexGrow).toBe(1)
   })
 })
