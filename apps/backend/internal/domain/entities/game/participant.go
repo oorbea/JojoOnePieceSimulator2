@@ -122,8 +122,7 @@ func (p *Participant) SetAvatar(avatarThumbKey, googlePicture string, focalX, fo
 // checks.
 func (p *Participant) Disconnect(at time.Time) {
 	p.connected = false
-	t := at
-	p.disconnectedAt = &t
+	p.disconnectedAt = &at
 }
 
 // Reconnect marks the participant as reachable again, clearing both the

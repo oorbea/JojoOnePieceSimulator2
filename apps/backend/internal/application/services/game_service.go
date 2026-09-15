@@ -1090,7 +1090,7 @@ func (s *GameService) closeVoting(ctx context.Context, g *game.Game) error {
 // --- Presence ---
 
 // Disconnect marks participantID unreachable without removing their seat and
-// arms their grace-period timer (see armGraceTimerLocked): a LOBBY seat is
+// arms their grace-period timer (see armGraceTimer): a LOBBY seat is
 // freed by a real Leave if nobody reconnects within LobbyDisconnectGrace, an
 // in-match seat is handed to auto-voting after MatchDisconnectGrace instead
 // (see Game.Abandon). If that was the last vote the current round was
@@ -1689,20 +1689,26 @@ func (s *GameService) armGraceTimer(id game.GameID, participantID game.Participa
 		remaining = 0
 	}
 
-	s.timersMu.Lock()
-	if prev, ok := s.graceTimers[key]; ok {
-		prev.Stop()
-		delete(s.graceTimers, key)
-	}
-	s.timersMu.Unlock()
-
+	// AfterFunc deliberately runs outside timersMu: an already-elapsed
+	// deadline can fire immediately, and fireGraceTimer's own withGame call
+	// re-takes this mutex.
 	timer := s.clock.AfterFunc(remaining, func() {
 		s.fireGraceTimer(id, participantID)
 	})
 
 	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	s.stopGraceTimerLocked(key)
 	s.graceTimers[key] = timer
-	s.timersMu.Unlock()
+}
+
+// stopGraceTimerLocked stops and forgets key's pending timer, if any.
+// Callers must already hold timersMu.
+func (s *GameService) stopGraceTimerLocked(key graceKey) {
+	if t, ok := s.graceTimers[key]; ok {
+		t.Stop()
+		delete(s.graceTimers, key)
+	}
 }
 
 // cancelGraceTimer stops and forgets participantID's pending grace timer, if
@@ -1710,13 +1716,9 @@ func (s *GameService) armGraceTimer(id game.GameID, participantID game.Participa
 // any other route (Leave/Kick/RemoveBot) so a stale timer can never fire
 // against a seat that is no longer theirs.
 func (s *GameService) cancelGraceTimer(id game.GameID, participantID game.ParticipantID) {
-	key := graceKey{game: id, participant: participantID}
 	s.timersMu.Lock()
 	defer s.timersMu.Unlock()
-	if t, ok := s.graceTimers[key]; ok {
-		t.Stop()
-		delete(s.graceTimers, key)
-	}
+	s.stopGraceTimerLocked(graceKey{game: id, participant: participantID})
 }
 
 // cancelGraceTimersForGame stops every pending grace timer for id - called
@@ -1725,10 +1727,9 @@ func (s *GameService) cancelGraceTimer(id game.GameID, participantID game.Partic
 func (s *GameService) cancelGraceTimersForGame(id game.GameID) {
 	s.timersMu.Lock()
 	defer s.timersMu.Unlock()
-	for key, t := range s.graceTimers {
+	for key := range s.graceTimers {
 		if key.game == id {
-			t.Stop()
-			delete(s.graceTimers, key)
+			s.stopGraceTimerLocked(key)
 		}
 	}
 }
