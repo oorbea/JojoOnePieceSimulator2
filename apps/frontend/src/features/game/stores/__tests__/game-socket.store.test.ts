@@ -697,6 +697,36 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().nextRetryAt).toBeNull()
   })
 
+  it('a 403 minting a ticket sets terminal REMOVED so the container can navigate away', async () => {
+    mockMint.mockRejectedValueOnce(httpError(403))
+    useGameSocketStore.getState().attach('g1', factory)
+    await flush()
+
+    expect(useGameSocketStore.getState().terminal).toEqual({ kind: 'REMOVED' })
+  })
+
+  it('a 404 minting a ticket while terminal is already FINISHED leaves it untouched', async () => {
+    mockMint.mockResolvedValueOnce('minted-abc')
+    useGameSocketStore.getState().attach('g1', factory)
+    await flush()
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({
+      type: 'GAME_FINISHED',
+      payload: { result: { winner: 'SURVIVE', roundsPlayed: 1, mode: 'GAUNTLET', aborted: false, participants: [] } },
+    })
+    expect(useGameSocketStore.getState().terminal?.kind).toBe('FINISHED')
+
+    // The finished game's short TTL has now expired - a later reconnect
+    // attempt's mint 404s. Must not overwrite the FINISHED screen.
+    mockMint.mockRejectedValueOnce(httpError(404))
+    ws.close()
+    useGameSocketStore.getState().retryNow()
+    await flush()
+
+    expect(useGameSocketStore.getState().terminal?.kind).toBe('FINISHED')
+  })
+
   it('a 401 minting a ticket closes the store (the interceptor already cleared the session)', async () => {
     mockMint.mockRejectedValueOnce(httpError(401))
     useGameSocketStore.getState().attach('g1', factory)

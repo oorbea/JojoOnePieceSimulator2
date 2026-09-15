@@ -38,6 +38,18 @@ const wsOutboundBuffer = 32
 // doesn't match any known command.
 var errUnknownCommand = errors.New("unknown command")
 
+// outMsg is one item on the outbound channel: a frame for writePump to
+// write, optionally followed by a close. The close travels on the same
+// channel as the payload (rather than being issued by a second goroutine)
+// so a frame can never be cut off by a Close racing it - see forwardEvents'
+// PlayerKicked handling, which relies on this to actually deliver the
+// victim's PLAYER_KICKED frame before the socket closes.
+type outMsg struct {
+	data      []byte
+	closeCode websocket.StatusCode // zero means "don't close"
+	closeText string
+}
+
 // connKey identifies one participant's presence in one game, used by
 // connRegistry to make Reconnect/Disconnect correct across multiple
 // simultaneous sockets for the same participant (e.g. two browser tabs).
@@ -162,7 +174,7 @@ func (e *GameEndpoints) serveWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	outbound := make(chan []byte, wsOutboundBuffer)
+	outbound := make(chan outMsg, wsOutboundBuffer)
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -201,7 +213,7 @@ func (e *GameEndpoints) serveWS(w http.ResponseWriter, r *http.Request) {
 // writePump is the sole writer on conn (coder/websocket allows only one),
 // draining outbound and sending a protocol-level ping every
 // heartbeatInterval so intermediaries don't consider the connection idle.
-func (e *GameEndpoints) writePump(ctx context.Context, conn *websocket.Conn, outbound <-chan []byte) {
+func (e *GameEndpoints) writePump(ctx context.Context, conn *websocket.Conn, outbound <-chan outMsg) {
 	ticker := time.NewTicker(heartbeatInterval)
 	defer ticker.Stop()
 	for {
@@ -215,11 +227,17 @@ func (e *GameEndpoints) writePump(ctx context.Context, conn *websocket.Conn, out
 			if err != nil {
 				return
 			}
-		case data := <-outbound:
-			writeCtx, cancel := context.WithTimeout(ctx, wsWriteTimeout)
-			err := conn.Write(writeCtx, websocket.MessageText, data)
-			cancel()
-			if err != nil {
+		case msg := <-outbound:
+			if msg.data != nil {
+				writeCtx, cancel := context.WithTimeout(ctx, wsWriteTimeout)
+				err := conn.Write(writeCtx, websocket.MessageText, msg.data)
+				cancel()
+				if err != nil {
+					return
+				}
+			}
+			if msg.closeCode != 0 {
+				_ = conn.Close(msg.closeCode, msg.closeText)
 				return
 			}
 		}
@@ -230,7 +248,7 @@ func (e *GameEndpoints) writePump(ctx context.Context, conn *websocket.Conn, out
 // answering with a fresh STATE on success or an ERROR frame on failure. A
 // malformed command doesn't close the connection - only a protocol
 // violation (handled inside conn.Read itself, e.g. the read limit) does.
-func (e *GameEndpoints) readPump(ctx context.Context, conn *websocket.Conn, outbound chan<- []byte, gameID game.GameID, self game.ParticipantID) {
+func (e *GameEndpoints) readPump(ctx context.Context, conn *websocket.Conn, outbound chan<- outMsg, gameID game.GameID, self game.ParticipantID) {
 	for {
 		_, data, err := conn.Read(ctx)
 		if err != nil {
@@ -392,7 +410,7 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 // and a dropped event (the hub silently drops for a full subscriber) is
 // self-healing. VOTE_CAST, GAME_FINISHED and GAME_ABORTED are the
 // exceptions - see buildEventFrame's doc.
-func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn, outbound chan<- []byte, gameID game.GameID, self game.ParticipantID, events <-chan services.GameEvent) {
+func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn, outbound chan<- outMsg, gameID game.GameID, self game.ParticipantID, events <-chan services.GameEvent) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -410,18 +428,22 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 				continue
 			}
 			data, err := json.Marshal(dto.ServerFrame{Type: frameType, Payload: payload})
-			if err == nil {
-				send(conn, outbound, data)
+			if err != nil {
+				continue
 			}
 			// A kicked participant's own connection is closed outright
 			// instead of getting the usual resend: resolveParticipant would
 			// 403 their next RESYNC anyway (they're no longer seated), and
 			// an explicit close gives the client a deterministic signal
-			// instead of a dangling socket waiting on a timeout.
+			// instead of a dangling socket waiting on a timeout. The close
+			// is attached to this same outMsg (instead of a separate
+			// conn.Close call racing the write pump) so the frame is
+			// guaranteed to be written before the socket closes.
 			if kicked, ok := evt.Event.(game.PlayerKicked); ok && kicked.ParticipantID == self {
-				_ = conn.Close(websocket.StatusNormalClosure, "kicked")
+				sendMsg(conn, outbound, outMsg{data: data, closeCode: websocket.StatusNormalClosure, closeText: "kicked"})
 				return
 			}
+			send(conn, outbound, data)
 			if resendState {
 				e.pushCurrentState(ctx, conn, outbound, gameID, self)
 			}
@@ -547,7 +569,7 @@ func frameDeadline(closesAt time.Time, window time.Duration) string {
 // pushCurrentState fetches the freshest state for gameID and sends it. Used
 // both for the connection's initial snapshot and after every
 // state-changing event/command.
-func (e *GameEndpoints) pushCurrentState(ctx context.Context, conn *websocket.Conn, outbound chan<- []byte, gameID game.GameID, self game.ParticipantID) {
+func (e *GameEndpoints) pushCurrentState(ctx context.Context, conn *websocket.Conn, outbound chan<- outMsg, gameID game.GameID, self game.ParticipantID) {
 	g, err := e.svc.GetGame(ctx, gameID)
 	if err != nil {
 		return
@@ -555,7 +577,7 @@ func (e *GameEndpoints) pushCurrentState(ctx context.Context, conn *websocket.Co
 	e.pushState(ctx, conn, outbound, g, self)
 }
 
-func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, outbound chan<- []byte, g *game.Game, self game.ParticipantID) {
+func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, outbound chan<- outMsg, g *game.Game, self game.ParticipantID) {
 	code, err := e.svc.GameCode(ctx, g.ID())
 	if err != nil {
 		return
@@ -592,7 +614,7 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 // sendError builds and sends an ERROR frame, reusing errorCode(err) so the
 // frontend's errors.<CODE> i18n lookup works over the socket with zero new
 // client-side mapping.
-func (e *GameEndpoints) sendError(conn *websocket.Conn, outbound chan<- []byte, requestID string, err error) {
+func (e *GameEndpoints) sendError(conn *websocket.Conn, outbound chan<- outMsg, requestID string, err error) {
 	data, marshalErr := json.Marshal(dto.ServerFrame{
 		Type:      dto.FrameError,
 		RequestID: requestID,
@@ -604,13 +626,19 @@ func (e *GameEndpoints) sendError(conn *websocket.Conn, outbound chan<- []byte, 
 	send(conn, outbound, data)
 }
 
-// send enqueues data for the write pump without blocking. If outbound is
+// send enqueues data for the write pump without blocking, with no close
+// attached. See sendMsg.
+func send(conn *websocket.Conn, outbound chan<- outMsg, data []byte) {
+	sendMsg(conn, outbound, outMsg{data: data})
+}
+
+// sendMsg enqueues msg for the write pump without blocking. If outbound is
 // already full, the client is genuinely too slow to keep up - closing with
 // StatusPolicyViolation and letting it reconnect for a fresh snapshot is
 // safer than serving a client whose view has silently fallen behind.
-func send(conn *websocket.Conn, outbound chan<- []byte, data []byte) {
+func sendMsg(conn *websocket.Conn, outbound chan<- outMsg, msg outMsg) {
 	select {
-	case outbound <- data:
+	case outbound <- msg:
 	default:
 		_ = conn.Close(websocket.StatusPolicyViolation, "too slow")
 	}

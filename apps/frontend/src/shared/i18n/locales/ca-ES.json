@@ -531,6 +531,7 @@
     },
     "terminal": {
       "kicked": "T'han expulsat d'aquesta sala.",
+      "removed": "Ja no formes part d'aquesta partida.",
       "abortedByHost": "L'amfitrió ha cancel·lat aquesta partida.",
       "finished": "Aquesta partida ha acabat."
     },
