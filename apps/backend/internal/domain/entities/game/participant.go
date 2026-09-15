@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -26,6 +27,8 @@ type Participant struct {
 	googlePicture  string
 	avatarFocalX   float64
 	avatarFocalY   float64
+	disconnectedAt *time.Time
+	abandoned      bool
 }
 
 // NewHumanParticipant builds a Participant backed by a registered user.
@@ -88,6 +91,16 @@ func (p *Participant) AvatarThumbKey() string      { return p.avatarThumbKey }
 func (p *Participant) GooglePicture() string       { return p.googlePicture }
 func (p *Participant) AvatarFocalX() float64       { return p.avatarFocalX }
 func (p *Participant) AvatarFocalY() float64       { return p.avatarFocalY }
+func (p *Participant) Abandoned() bool             { return p.abandoned }
+
+// DisconnectedAt reports when this participant went unreachable, if they
+// currently are. It is nil once Reconnect clears it.
+func (p *Participant) DisconnectedAt() (time.Time, bool) {
+	if p.disconnectedAt == nil {
+		return time.Time{}, false
+	}
+	return *p.disconnectedAt, true
+}
 
 // SetAvatar records where this participant's avatar picture comes from -
 // their own uploaded thumbnail key (presigned at serialization time) and/or
@@ -102,13 +115,33 @@ func (p *Participant) SetAvatar(avatarThumbKey, googlePicture string, focalX, fo
 	p.avatarFocalY = focalY
 }
 
-// Disconnect marks the participant as no longer reachable. It does not
-// remove them from the Game - Game.Disconnect handles the follow-on host
-// reassignment / abort checks.
-func (p *Participant) Disconnect() { p.connected = false }
+// Disconnect marks the participant as no longer reachable, stamping when
+// this happened so a grace-period timer can be derived/re-derived from it
+// later (see GameService's grace timers). It does not remove them from the
+// Game - Game.Disconnect handles the follow-on host reassignment / abort
+// checks.
+func (p *Participant) Disconnect(at time.Time) {
+	p.connected = false
+	t := at
+	p.disconnectedAt = &t
+}
 
-// Reconnect marks the participant as reachable again.
-func (p *Participant) Reconnect() { p.connected = true }
+// Reconnect marks the participant as reachable again, clearing both the
+// disconnected-since timestamp and any abandoned flag - a returning player
+// always regains full control of their seat, however long they were gone.
+func (p *Participant) Reconnect() {
+	p.connected = true
+	p.disconnectedAt = nil
+	p.abandoned = false
+}
+
+// MarkAbandoned flags a still-seated participant as no longer actively
+// played - the seat, loadout and userID all stay put, but the seat is now
+// treated as inactive (see Game.hasActiveHuman) and, in modes that allow it,
+// auto-votes like a bot (see IGameMode.AutoVotesForAbandoned). Only
+// GameService's grace timer calls this, once Disconnect's grace period has
+// elapsed without a Reconnect.
+func (p *Participant) MarkAbandoned() { p.abandoned = true }
 
 // AssignLoadout replaces this participant's current abilities.
 func (p *Participant) AssignLoadout(l *Loadout) { p.loadout = l }

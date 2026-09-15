@@ -25,6 +25,8 @@ func (GauntletMode) BallotOptions(g *Game) []OptionID {
 
 func (GauntletMode) ReassignsEachRound() bool { return false }
 
+func (GauntletMode) AutoVotesForAbandoned() bool { return false }
+
 func (GauntletMode) StageFor(g *Game, roundIndex int, rng RandomSource) (Stage, error) {
 	if roundIndex < 0 || roundIndex >= len(g.stages) {
 		return Stage{}, ErrNoStagesAvailable

@@ -2,6 +2,7 @@ package game_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -103,7 +104,7 @@ func TestGame_BotVoteCast_CountsHumansOnly(t *testing.T) {
 
 func TestGame_CastVote_ProgressExcludesDisconnectedHuman(t *testing.T) {
 	g, players := newGauntletGame(t, oneStage(t), 3)
-	if err := g.Disconnect(players[2].ID(), &fakeRandom{}); err != nil {
+	if err := g.Disconnect(players[2].ID(), &fakeRandom{}, time.Now()); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 	assignAndOpenVoting(t, g)
@@ -120,7 +121,7 @@ func TestGame_CastVote_ProgressExcludesDisconnectedHuman(t *testing.T) {
 
 func TestGame_VoteProgress_AgreesWithVotingComplete(t *testing.T) {
 	g, players := newGauntletGame(t, oneStage(t), 3)
-	if err := g.Disconnect(players[2].ID(), &fakeRandom{}); err != nil {
+	if err := g.Disconnect(players[2].ID(), &fakeRandom{}, time.Now()); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 	assignAndOpenVoting(t, g)

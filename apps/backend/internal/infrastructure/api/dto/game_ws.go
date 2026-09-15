@@ -279,6 +279,9 @@ const (
 	FrameSummaryOpened       = "SUMMARY_OPENED"
 	FrameSummaryReadyChanged = "SUMMARY_READY_CHANGED"
 	FrameRematchReady        = "REMATCH_READY"
+	FramePlayerDisconnected  = "PLAYER_DISCONNECTED"
+	FramePlayerReconnected   = "PLAYER_RECONNECTED"
+	FramePlayerAbandoned     = "PLAYER_ABANDONED"
 )
 
 // RematchReadyPayload announces the new lobby a REMATCH created from this
@@ -404,6 +407,18 @@ type LobbyLockChangedPayload struct {
 	Locked bool `json:"locked"`
 }
 
+type PlayerDisconnectedPayload struct {
+	ParticipantID string `json:"participantId"`
+}
+
+type PlayerReconnectedPayload struct {
+	ParticipantID string `json:"participantId"`
+}
+
+type PlayerAbandonedPayload struct {
+	ParticipantID string `json:"participantId"`
+}
+
 // FrameSpec pairs a server frame type with the payload shape it carries. A
 // nil Payload means the frame carries no payload on the wire (GAME_STARTED,
 // CONFIG_UPDATED, which today send struct{}{}).
@@ -444,6 +459,9 @@ var FramePayloads = []FrameSpec{
 	{FrameSummaryOpened, SummaryOpenedPayload{}},
 	{FrameSummaryReadyChanged, SummaryReadyChangedPayload{}},
 	{FrameRematchReady, RematchReadyPayload{}},
+	{FramePlayerDisconnected, PlayerDisconnectedPayload{}},
+	{FramePlayerReconnected, PlayerReconnectedPayload{}},
+	{FramePlayerAbandoned, PlayerAbandonedPayload{}},
 }
 
 // CommandSpec mirrors FrameSpec for the client->server direction.
