@@ -174,6 +174,50 @@ type GameService struct {
 	// not re-issue the inserts on every client reload. Purely an
 	// optimization - the inserts themselves are idempotent.
 	finalized map[game.GameID]struct{}
+
+	// graceTimers holds the pending grace-period timer for each disconnected
+	// participant, keyed by (GameID, ParticipantID) - deliberately separate
+	// from timers (one phase timer per GameID) since a Game can have several
+	// participants disconnected at once. Guarded by timersMu, the same mutex
+	// as timers/the four *Ends maps, since a fired grace timer and a fired
+	// phase timer both end up serializing on the same Game's withGame call
+	// anyway. Process memory only, healed the same way phase timers are -
+	// see rearmGraceTimersLocked.
+	graceTimers map[graceKey]Timer
+}
+
+// graceKey identifies one participant's pending grace-period timer.
+type graceKey struct {
+	game        game.GameID
+	participant game.ParticipantID
+}
+
+// LobbyDisconnectGrace/MatchDisconnectGrace are how long a disconnected
+// participant's seat stays merely "disconnected" before GameService.Leave
+// (LOBBY) or GameService.Abandon (any other state) runs - see
+// fireGraceTimer. They live here rather than internal/config because the
+// application layer must not import it (same reasoning as FinishedGameTTL's
+// own doc). LOBBY gets a short window since an empty seat there is trivial
+// to refill; mid-match gets a much longer one since Abandon has real
+// consequences (a bot auto-voting in Versus with the player's own loadout)
+// that a brief reload should never trigger.
+const (
+	LobbyDisconnectGrace = 45 * time.Second
+	MatchDisconnectGrace = 3 * time.Minute
+)
+
+// graceFor returns the grace period a disconnected participant gets before
+// GameService acts, derived purely from the Game's current state - never
+// stored as an absolute deadline (see Participant.DisconnectedAt's doc),
+// so a LOBBY disconnect that gets promoted to an in-match one mid-grace
+// (the host starts the game before the timer fires) is re-derived to the
+// longer window the next time anything re-arms it, rather than expiring
+// early under the LOBBY rule.
+func graceFor(state enums.GameState) time.Duration {
+	if state == enums.Lobby {
+		return LobbyDisconnectGrace
+	}
+	return MatchDisconnectGrace
 }
 
 // NewGameService builds a GameService. history may be nil until an
@@ -206,6 +250,7 @@ func NewGameService(
 		resultEnds:  make(map[game.GameID]time.Time),
 		summaryEnds: make(map[game.GameID]time.Time),
 		finalized:   make(map[game.GameID]struct{}),
+		graceTimers: make(map[graceKey]Timer),
 	}
 }
 
@@ -509,9 +554,11 @@ func (s *GameService) Rematch(ctx context.Context, gameID game.GameID, requester
 
 // LeaveGame removes participantID from the Game entirely.
 func (s *GameService) LeaveGame(ctx context.Context, gameID game.GameID, participantID game.ParticipantID) (*game.Game, error) {
-	return s.withGame(ctx, gameID, func(g *game.Game) error {
+	g, err := s.withGame(ctx, gameID, func(g *game.Game) error {
 		return g.Leave(participantID, s.rng)
 	})
+	s.cancelGraceTimer(gameID, participantID)
+	return g, err
 }
 
 // AddBot seats a new bot participant on teamID. Host-only.
@@ -531,7 +578,7 @@ func (s *GameService) AddBot(ctx context.Context, gameID game.GameID, callerID g
 
 // RemoveBot removes botID, which must in fact be a bot. Host-only.
 func (s *GameService) RemoveBot(ctx context.Context, gameID game.GameID, callerID game.ParticipantID, botID game.ParticipantID) (*game.Game, error) {
-	return s.withGame(ctx, gameID, func(g *game.Game) error {
+	g, err := s.withGame(ctx, gameID, func(g *game.Game) error {
 		if callerID != g.HostID() {
 			return game.ErrNotHost
 		}
@@ -544,6 +591,8 @@ func (s *GameService) RemoveBot(ctx context.Context, gameID game.GameID, callerI
 		}
 		return g.Leave(botID, s.rng)
 	})
+	s.cancelGraceTimer(gameID, botID)
+	return g, err
 }
 
 // SwitchTeam moves targetID onto teamID. Any participant may move
@@ -556,9 +605,11 @@ func (s *GameService) SwitchTeam(ctx context.Context, gameID game.GameID, caller
 
 // KickParticipant removes targetID from the Game entirely. Host-only.
 func (s *GameService) KickParticipant(ctx context.Context, gameID game.GameID, callerID, targetID game.ParticipantID) (*game.Game, error) {
-	return s.withGame(ctx, gameID, func(g *game.Game) error {
+	g, err := s.withGame(ctx, gameID, func(g *game.Game) error {
 		return g.Kick(callerID, targetID, s.rng)
 	})
+	s.cancelGraceTimer(gameID, targetID)
+	return g, err
 }
 
 // TransferHost hands the host role to targetID. Host-only.
@@ -1038,13 +1089,17 @@ func (s *GameService) closeVoting(ctx context.Context, g *game.Game) error {
 
 // --- Presence ---
 
-// Disconnect marks participantID unreachable without removing their seat.
-// If that was the last vote the current round was waiting on, the window
-// closes immediately - a disconnected participant counts as a null vote,
-// never blocking the round.
+// Disconnect marks participantID unreachable without removing their seat and
+// arms their grace-period timer (see armGraceTimerLocked): a LOBBY seat is
+// freed by a real Leave if nobody reconnects within LobbyDisconnectGrace, an
+// in-match seat is handed to auto-voting after MatchDisconnectGrace instead
+// (see Game.Abandon). If that was the last vote the current round was
+// waiting on, the window closes immediately - a disconnected participant
+// counts as a null vote, never blocking the round.
 func (s *GameService) Disconnect(ctx context.Context, gameID game.GameID, participantID game.ParticipantID) (*game.Game, error) {
-	return s.withGame(ctx, gameID, func(g *game.Game) error {
-		if err := g.Disconnect(participantID, s.rng); err != nil {
+	now := s.clock.Now()
+	g, err := s.withGame(ctx, gameID, func(g *game.Game) error {
+		if err := g.Disconnect(participantID, s.rng, now); err != nil {
 			return err
 		}
 		if (g.State() == enums.Voting || g.State() == enums.Tiebreak) && g.VotingComplete() {
@@ -1052,13 +1107,26 @@ func (s *GameService) Disconnect(ctx context.Context, gameID game.GameID, partic
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	// A terminal Game never gets a grace timer - closeVoting/checkAbortConditions
+	// may have just finished it above, and every player closing their tab on
+	// the result screen would otherwise leak one per socket.
+	if g.State() != enums.Finished && g.State() != enums.Aborted {
+		s.armGraceTimer(gameID, participantID, now, g.State())
+	}
+	return g, nil
 }
 
-// Reconnect marks a previously disconnected participant reachable again.
+// Reconnect marks a previously disconnected (or abandoned) participant
+// reachable again and cancels their pending grace timer.
 func (s *GameService) Reconnect(ctx context.Context, gameID game.GameID, participantID game.ParticipantID) (*game.Game, error) {
-	return s.withGame(ctx, gameID, func(g *game.Game) error {
-		return g.Reconnect(participantID)
+	g, err := s.withGame(ctx, gameID, func(g *game.Game) error {
+		return g.Reconnect(participantID, s.rng)
 	})
+	s.cancelGraceTimer(gameID, participantID)
+	return g, err
 }
 
 // --- Reads ---
@@ -1077,6 +1145,7 @@ func (s *GameService) GetGame(ctx context.Context, id game.GameID) (*game.Game, 
 		return nil, err
 	}
 	s.rearmPhaseTimerLocked(g)
+	s.rearmGraceTimersLocked(g)
 	return g, nil
 }
 
@@ -1092,6 +1161,51 @@ func (s *GameService) GetGameByCode(ctx context.Context, code string) (*game.Gam
 // GameCode returns the join code currently indexed for id.
 func (s *GameService) GameCode(ctx context.Context, id game.GameID) (string, error) {
 	return s.store.Code(ctx, id)
+}
+
+// ActiveGameForUser returns the Game uid is currently seated in as a human
+// participant, so a client that reopened the app (fresh reload, or a new
+// device) can be routed straight back to it instead of landing nowhere -
+// see GET /api/v1/games/me. Returns ports.ErrGameNotFound if uid has none.
+//
+// store.GamesForUser's own doc says its result may be stale/over-inclusive
+// (an index entry outliving the Game it points at, or naming a Game uid has
+// since left) - every candidate is re-validated here: still seated, and not
+// FINISHED/ABORTED (a just-ended match keeps its own short-lived
+// FinishedGameTTL result screen, which is not what "resume" means). A user
+// can genuinely be in more than one Game at once (see joinLocked's own
+// doc - the only duplicate-seat guard is within a single Game), so when more
+// than one candidate survives validation this picks the first; the store
+// interface has no "last active" timestamp to break the tie more precisely
+// than that, and needing to is rare enough not to justify adding one here.
+func (s *GameService) ActiveGameForUser(ctx context.Context, uid user.UserID) (*game.Game, error) {
+	candidates, err := s.store.GamesForUser(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	for _, g := range candidates {
+		if g.State() == enums.Finished || g.State() == enums.Aborted {
+			continue
+		}
+		if !isSeatedHuman(g, uid) {
+			continue
+		}
+		// Re-fetch through GetGame rather than returning the store's own
+		// result directly, so a stranded phase/grace timer for this Game
+		// gets re-armed exactly like any other read path does.
+		return s.GetGame(ctx, g.ID())
+	}
+	return nil, ports.ErrGameNotFound
+}
+
+// isSeatedHuman reports whether uid holds a human seat in g.
+func isSeatedHuman(g *game.Game, uid user.UserID) bool {
+	for _, p := range g.Participants() {
+		if p.UserID() != nil && *p.UserID() == uid {
+			return true
+		}
+	}
+	return false
 }
 
 // LobbyListing is the summary shape exposed by the public lobby browser and
@@ -1207,6 +1321,7 @@ func (s *GameService) withGame(ctx context.Context, id game.GameID, fn func(g *g
 	// a timed phase (a restart, or a game this instance has never touched),
 	// re-establish it from the persisted deadline.
 	s.rearmPhaseTimerLocked(g)
+	s.rearmGraceTimersLocked(g)
 
 	if err := fn(g); err != nil {
 		s.publish(g)
@@ -1278,6 +1393,7 @@ func (s *GameService) finalizeLocked(ctx context.Context, g *game.Game) {
 		log.Printf("saving finished game %s: %v", id, err)
 	}
 	s.cancelTimer(id)
+	s.cancelGraceTimersForGame(id)
 	// Deliberately NOT s.locks.delete(id) here, unlike the pre-result-screen
 	// version of this method. The aggregate stays live and readable now, so
 	// evicting its mutex would let a later reader and a concurrent
@@ -1555,6 +1671,156 @@ func (s *GameService) cancelTimer(id game.GameID) {
 	if t, ok := s.timers[id]; ok {
 		t.Stop()
 		delete(s.timers, id)
+	}
+}
+
+// armGraceTimer (re-)arms participantID's grace-period timer against
+// disconnectedAt + graceFor(state), stopping any timer already pending for
+// that seat first. Called right after Disconnect stamps disconnectedAt, and
+// again by rearmGraceTimersLocked/fireGraceTimer whenever the deadline needs
+// re-deriving (a restart, or a LOBBY grace outliving its window because the
+// host started the match). remaining is floored at 0 so an already-elapsed
+// deadline fires on the next tick rather than never.
+func (s *GameService) armGraceTimer(id game.GameID, participantID game.ParticipantID, disconnectedAt time.Time, state enums.GameState) {
+	key := graceKey{game: id, participant: participantID}
+	deadline := disconnectedAt.Add(graceFor(state))
+	remaining := deadline.Sub(s.clock.Now())
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	s.timersMu.Lock()
+	if prev, ok := s.graceTimers[key]; ok {
+		prev.Stop()
+		delete(s.graceTimers, key)
+	}
+	s.timersMu.Unlock()
+
+	timer := s.clock.AfterFunc(remaining, func() {
+		s.fireGraceTimer(id, participantID)
+	})
+
+	s.timersMu.Lock()
+	s.graceTimers[key] = timer
+	s.timersMu.Unlock()
+}
+
+// cancelGraceTimer stops and forgets participantID's pending grace timer, if
+// any - called on Reconnect, and whenever a participant leaves the Game by
+// any other route (Leave/Kick/RemoveBot) so a stale timer can never fire
+// against a seat that is no longer theirs.
+func (s *GameService) cancelGraceTimer(id game.GameID, participantID game.ParticipantID) {
+	key := graceKey{game: id, participant: participantID}
+	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	if t, ok := s.graceTimers[key]; ok {
+		t.Stop()
+		delete(s.graceTimers, key)
+	}
+}
+
+// cancelGraceTimersForGame stops every pending grace timer for id - called
+// from finalizeLocked, since a terminal Game must not keep a 3-minute
+// Abandon timer alive for players who are simply reading the result screen.
+func (s *GameService) cancelGraceTimersForGame(id game.GameID) {
+	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	for key, t := range s.graceTimers {
+		if key.game == id {
+			t.Stop()
+			delete(s.graceTimers, key)
+		}
+	}
+}
+
+// rearmGraceTimersLocked re-establishes this process's grace timers for
+// every participant g has recorded as disconnected but not yet abandoned -
+// exactly what a restart mid-grace-period leaves behind, since graceTimers
+// is process memory only. Mirrors rearmPhaseTimerLocked exactly, including
+// its accepted gap (a Game nobody ever loads is never re-armed and simply
+// expires by its lobby TTL) and its multi-instance story (two instances
+// both re-arming both eventually fire; the loser's withGame call hits a
+// benign error - see fireGraceTimer). Called from the same two call sites as
+// rearmPhaseTimerLocked: withGame (before any mutation) and GetGame (the
+// read path a reconnecting client's RESYNC goes through).
+func (s *GameService) rearmGraceTimersLocked(g *game.Game) {
+	id := g.ID()
+	for _, p := range g.Participants() {
+		if p.Connected() || p.Abandoned() {
+			continue
+		}
+		disconnectedAt, ok := p.DisconnectedAt()
+		if !ok {
+			// A snapshot written before disconnectedAt existed. Nothing to
+			// re-derive a deadline from - the seat stays disconnected with no
+			// timer until the next Disconnect (or a manual reconnect), same
+			// as an untimed field would behave anywhere else in this codebase.
+			continue
+		}
+		key := graceKey{game: id, participant: p.ID()}
+		s.timersMu.Lock()
+		_, alreadyArmed := s.graceTimers[key]
+		s.timersMu.Unlock()
+		if alreadyArmed {
+			continue
+		}
+		s.armGraceTimer(id, p.ID(), disconnectedAt, g.State())
+	}
+}
+
+// fireGraceTimer runs when a participant's grace period elapses without a
+// Reconnect. It re-enters withGame so the transition is serialized against
+// every other mutation of this Game exactly like a client-triggered command
+// would be.
+func (s *GameService) fireGraceTimer(id game.GameID, participantID game.ParticipantID) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.withGame(ctx, id, func(g *game.Game) error {
+		p, ok := g.Participant(participantID)
+		if !ok || p.Connected() || p.Abandoned() {
+			// Already gone, reconnected, or already abandoned by a previous
+			// firing (or a concurrent instance) - nothing to do.
+			return nil
+		}
+		disconnectedAt, hasDeadline := p.DisconnectedAt()
+		if hasDeadline {
+			// Re-derive against the *current* state: a LOBBY disconnect
+			// promoted to an in-match one (the host started the game before
+			// this timer fired) gets the longer window instead of expiring
+			// under the LOBBY rule it was originally armed for.
+			deadline := disconnectedAt.Add(graceFor(g.State()))
+			if s.clock.Now().Before(deadline) {
+				s.armGraceTimer(id, participantID, disconnectedAt, g.State())
+				return nil
+			}
+		}
+
+		if g.State() == enums.Lobby {
+			return g.Leave(participantID, s.rng)
+		}
+		if err := g.Abandon(participantID); err != nil {
+			return err
+		}
+		// The seat just seated behind may have been the last vote a live
+		// round was waiting on (see Disconnect's own doc for the symmetric
+		// case) - Abandon doesn't cast on its own, so do it here, then
+		// re-check completeness exactly like CastVote/Disconnect do.
+		g.CastAutoVoteFor(participantID)
+		if (g.State() == enums.Voting || g.State() == enums.Tiebreak) && g.VotingComplete() {
+			return s.closeVoting(ctx, g)
+		}
+		return nil
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, ports.ErrGameNotFound), errors.Is(err, game.ErrParticipantNotFound),
+			errors.Is(err, game.ErrInvalidStateTransition):
+			// Benign: the Game or seat is gone, or another instance's
+			// re-armed timer got there first.
+		default:
+			log.Printf("grace timer for participant %s in game %s: %v", participantID, id, err)
+		}
 	}
 }
 

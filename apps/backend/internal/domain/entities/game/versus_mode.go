@@ -24,6 +24,8 @@ func (VersusMode) BallotOptions(g *Game) []OptionID {
 
 func (VersusMode) ReassignsEachRound() bool { return true }
 
+func (VersusMode) AutoVotesForAbandoned() bool { return true }
+
 func (VersusMode) StageFor(g *Game, roundIndex int, rng RandomSource) (Stage, error) {
 	if len(g.stages) == 0 {
 		return Stage{}, ErrNoStagesAvailable

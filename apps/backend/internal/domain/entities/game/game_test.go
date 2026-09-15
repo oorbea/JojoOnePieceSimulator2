@@ -2,6 +2,7 @@ package game_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
@@ -91,7 +92,7 @@ func TestGame_GauntletRejectsBots(t *testing.T) {
 
 func TestGame_HostReassignedOnDisconnect(t *testing.T) {
 	g, players := newGauntletGame(t, oneStage(t), 2)
-	if err := g.Disconnect(g.HostID(), &fakeRandom{seq: []int{0}}); err != nil {
+	if err := g.Disconnect(g.HostID(), &fakeRandom{seq: []int{0}}, time.Now()); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 	if g.HostID() != players[1].ID() {
@@ -99,13 +100,34 @@ func TestGame_HostReassignedOnDisconnect(t *testing.T) {
 	}
 }
 
-func TestGame_AbortsWhenNoHumansRemain(t *testing.T) {
+// TestGame_DisconnectAloneDoesNotAbort pins the grace-period design: a mere
+// Disconnect (a closed tab, a dropped connection) must never abort a Game by
+// itself - only Abandon, once GameService's grace timer has actually
+// elapsed with no Reconnect, does. Without this, a solo player reloading
+// their own app would abort their own run before the grace period (or
+// GET /games/me) ever had a chance to bring them back. See
+// TestGame_AbortsWhenLastActiveHumanIsAbandoned for the case that does
+// abort.
+func TestGame_DisconnectAloneDoesNotAbort(t *testing.T) {
 	g, players := newGauntletGame(t, oneStage(t), 1)
-	if err := g.Disconnect(players[0].ID(), &fakeRandom{}); err != nil {
+	if err := g.Disconnect(players[0].ID(), &fakeRandom{}, time.Now()); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
+	if g.State() == enums.Aborted {
+		t.Fatalf("a disconnected-but-not-abandoned solo lobby must not abort")
+	}
+}
+
+func TestGame_AbortsWhenLastActiveHumanIsAbandoned(t *testing.T) {
+	g, players := newGauntletGame(t, oneStage(t), 1)
+	if err := g.Disconnect(players[0].ID(), &fakeRandom{}, time.Now()); err != nil {
+		t.Fatalf("Disconnect: %v", err)
+	}
+	if err := g.Abandon(players[0].ID()); err != nil {
+		t.Fatalf("Abandon: %v", err)
+	}
 	if g.State() != enums.Aborted {
-		t.Fatalf("expected ABORTED when no connected humans remain, got %v", g.State())
+		t.Fatalf("expected ABORTED once the only human is abandoned, got %v", g.State())
 	}
 }
 

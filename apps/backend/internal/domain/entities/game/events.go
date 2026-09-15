@@ -143,3 +143,25 @@ func (LobbyLockChanged) Name() string { return "LOBBY_LOCK_CHANGED" }
 type ConfigUpdated struct{}
 
 func (ConfigUpdated) Name() string { return "CONFIG_UPDATED" }
+
+// PlayerDisconnected is emitted by Game.Disconnect - unlike Leave/Kick this
+// keeps the seat, so other clients need their own signal to stop showing the
+// participant as present instead of waiting for a PlayerLeft that never
+// comes (see the bug this closes, ObsidianVault/bugfixes-partida-2026-09-14.md).
+type PlayerDisconnected struct{ ParticipantID ParticipantID }
+
+func (PlayerDisconnected) Name() string { return "PLAYER_DISCONNECTED" }
+
+// PlayerReconnected is emitted by Game.Reconnect, mirroring
+// PlayerDisconnected - also covers a seat returning from Abandoned.
+type PlayerReconnected struct{ ParticipantID ParticipantID }
+
+func (PlayerReconnected) Name() string { return "PLAYER_RECONNECTED" }
+
+// PlayerAbandoned is emitted by Game.Abandon once a disconnected
+// participant's grace period elapses without a Reconnect. The seat, loadout
+// and userID are untouched - see Participant.MarkAbandoned - only how the
+// seat now participates (auto-voting, squad membership) changes.
+type PlayerAbandoned struct{ ParticipantID ParticipantID }
+
+func (PlayerAbandoned) Name() string { return "PLAYER_ABANDONED" }

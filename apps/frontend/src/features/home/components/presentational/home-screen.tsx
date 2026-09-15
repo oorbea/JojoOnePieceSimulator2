@@ -4,6 +4,7 @@ import { Paragraph, XStack, YStack } from 'tamagui'
 
 import { ChannelTile } from '@/shared/components/presentational/channel-tile'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
+import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { LazyImage } from '@/shared/components/presentational/lazy-image'
 import { PageShell } from '@/shared/components/presentational/page-shell'
@@ -12,6 +13,12 @@ import type { SessionUser } from '@/shared/stores/session.store'
 type Props = {
   user: SessionUser
   onNavigate: (href: string) => void
+  /** The caller's currently active game, if any (see GET /games/me) - a
+   * player who reopened the app after closing a tab lands here with no way
+   * back into their lobby/match otherwise. null/undefined renders nothing;
+   * the banner never blocks the rest of the screen. */
+  resumeGameId?: string | null
+  onResumeGame?: (gameId: string) => void
 }
 
 // Every channel now leads somewhere: Play and Profile navigate directly,
@@ -68,10 +75,35 @@ const CHANNELS = [
 // Pure UI — lives inside the authenticated app shell, so it doesn't carry
 // its own backdrop or logout button; AppShell already provides both (a
 // second logout here would just duplicate the one in the top bar).
-export function HomeScreen({ user, onNavigate }: Props) {
+export function HomeScreen({ user, onNavigate, resumeGameId, onResumeGame }: Props) {
   const { t } = useTranslation()
   return (
     <PageShell align="top" scroll maxWidth={720}>
+      {resumeGameId ? (
+        <GlassPanel
+          tone="strong"
+          elevate={1}
+          width="100%"
+          p="$4"
+          gap="$1"
+          items="center"
+          $md={{ flexDirection: 'row', justify: 'space-between' }}
+        >
+          <XStack items="center" gap="$2.5">
+            <Gamepad2 size={22} color="$meadowGreen" />
+            <GlowText level="label">{t('home.resume.title')}</GlowText>
+          </XStack>
+          <GlossButton
+            tone="green"
+            btnSize="sm"
+            onPress={() => onResumeGame?.(resumeGameId)}
+            tooltip={t('home.resume.ctaHint')}
+          >
+            {t('home.resume.cta')}
+          </GlossButton>
+        </GlassPanel>
+      ) : null}
+
       <GlassPanel
         glossy
         elevate={2}

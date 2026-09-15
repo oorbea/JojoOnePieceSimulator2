@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
@@ -174,6 +175,25 @@ func (s *MemoryGameStore) ListPublic(_ context.Context, limit int) ([]*game.Game
 	out := make([]*game.Game, len(entries))
 	for i, e := range entries {
 		out[i] = e.game
+	}
+	return out, nil
+}
+
+// GamesForUser implements ports.IGameStore. A plain map scan, same
+// reasoning as ListPublic - no SCAN ban applies to a single-instance
+// in-memory store.
+func (s *MemoryGameStore) GamesForUser(_ context.Context, uid user.UserID) ([]*game.Game, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var out []*game.Game
+	for _, e := range s.byID {
+		for _, p := range e.game.Participants() {
+			if p.UserID() != nil && *p.UserID() == uid {
+				out = append(out, e.game)
+				break
+			}
+		}
 	}
 	return out, nil
 }

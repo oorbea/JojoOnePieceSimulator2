@@ -9,6 +9,7 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
@@ -134,16 +135,47 @@ redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1])
 return redis.call('ZREVRANGE', KEYS[1], 0, tonumber(ARGV[2]) - 1)
 `)
 
-func idKey(id game.GameID) string     { return "jojo:game:id:" + id.String() }
-func codeKey(code string) string      { return "jojo:game:code:" + code }
-func codeOfKey(id game.GameID) string { return "jojo:game:codeof:" + id.String() }
-func publicIndexKey() string          { return "jojo:game:public" }
+func idKey(id game.GameID) string         { return "jojo:game:id:" + id.String() }
+func codeKey(code string) string          { return "jojo:game:code:" + code }
+func codeOfKey(id game.GameID) string     { return "jojo:game:codeof:" + id.String() }
+func publicIndexKey() string              { return "jojo:game:public" }
+func userGamesKey(uid user.UserID) string { return "jojo:user:games:" + uid.String() }
 
 func publicFlag(g *game.Game) string {
 	if g.IsPubliclyJoinable() {
 		return "1"
 	}
 	return "0"
+}
+
+// indexUserGames adds g's id to every human participant's per-user ZSET
+// (jojo:user:games:<uid>), scored the same way the public index is - an
+// absolute now+ttl expiry in ms, so a stale member is prunable by score
+// alone without ever needing SCAN/KEYS. Unlike createScript/saveScript this
+// runs as a plain pipeline, not inside the atomic Lua: GamesForUser's own
+// doc already accepts a stale/over-inclusive index (a user's index
+// outliving the Game, or one that hasn't finished this write yet) because
+// the read path (GameService.ActiveGameForUser) validates every candidate
+// against the Game itself before trusting it. Best-effort: a failure here
+// never fails the Create/Save it rides along with, only degrades "resume my
+// game" until the next successful write re-indexes it.
+func (s *Store) indexUserGames(ctx context.Context, g *game.Game, ttl time.Duration) {
+	score := float64(s.now().Add(ttl).UnixMilli())
+	idStr := g.ID().String()
+	pipe := s.client.Pipeline()
+	for _, p := range g.Participants() {
+		uid := p.UserID()
+		if uid == nil {
+			continue
+		}
+		pipe.ZAdd(ctx, userGamesKey(*uid), goredis.Z{Score: score, Member: idStr})
+	}
+	if _, err := pipe.Exec(ctx); err != nil && !errors.Is(err, goredis.Nil) {
+		// Best-effort, see doc above - swallow rather than fail the caller's
+		// Create/Save. Nothing to log to (no logger threaded into this
+		// package); an index left stale self-heals on the next write.
+		_ = err
+	}
 }
 
 // New connects to the Redis instance described by cfg and verifies
@@ -191,6 +223,7 @@ func (s *Store) Create(ctx context.Context, code string, g *game.Game) error {
 	if res == 0 {
 		return ports.ErrGameCodeTaken
 	}
+	s.indexUserGames(opCtx, g, s.ttl)
 	return nil
 }
 
@@ -280,6 +313,7 @@ func (s *Store) SaveWithTTL(ctx context.Context, g *game.Game, ttl time.Duration
 	if res == 0 {
 		return ports.ErrGameNotFound
 	}
+	s.indexUserGames(opCtx, g, ttl)
 	return nil
 }
 
@@ -326,6 +360,44 @@ func (s *Store) ListPublic(ctx context.Context, limit int) ([]*game.Game, error)
 		if err != nil {
 			if errors.Is(err, ports.ErrGameNotFound) {
 				_ = s.client.ZRem(opCtx, publicIndexKey(), idStr).Err()
+				continue
+			}
+			continue
+		}
+		games = append(games, g)
+	}
+	return games, nil
+}
+
+// GamesForUser implements ports.IGameStore, never using SCAN/KEYS: it reads
+// the per-user ZSET (jojo:user:games:<uid>) maintained by indexUserGames,
+// pruning expired members by score first exactly like ListPublic's
+// listPublicScript does, then resolving each remaining id. A member whose
+// Game has already been deleted out-of-band is skipped rather than
+// surfaced, same tolerance ListPublic has for its own index.
+func (s *Store) GamesForUser(ctx context.Context, uid user.UserID) ([]*game.Game, error) {
+	opCtx, cancel := s.opContext(ctx)
+	defer cancel()
+
+	key := userGamesKey(uid)
+	if err := s.client.ZRemRangeByScore(opCtx, key, "-inf", fmt.Sprintf("%d", s.now().UnixMilli())).Err(); err != nil {
+		return nil, fmt.Errorf("pruning game index for user %s: %w", uid, err)
+	}
+	ids, err := s.client.ZRevRange(opCtx, key, 0, -1).Result()
+	if err != nil {
+		return nil, fmt.Errorf("listing games for user %s: %w", uid, err)
+	}
+
+	games := make([]*game.Game, 0, len(ids))
+	for _, idStr := range ids {
+		id, err := game.ParseGameID(idStr)
+		if err != nil {
+			continue
+		}
+		g, err := s.Get(opCtx, id)
+		if err != nil {
+			if errors.Is(err, ports.ErrGameNotFound) {
+				_ = s.client.ZRem(opCtx, key, idStr).Err()
 				continue
 			}
 			continue
