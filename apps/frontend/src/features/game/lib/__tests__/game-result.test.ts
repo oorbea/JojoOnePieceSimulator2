@@ -71,6 +71,7 @@ function participant(overrides: Partial<GameParticipant> = {}): GameParticipant 
     teamId: 't1',
     kind: 'HUMAN',
     connected: true,
+    abandoned: false,
     avatarThumb: '',
     avatarFocalX: 0.5,
     avatarFocalY: 0.5,
