@@ -53,6 +53,11 @@
   },
   "home": {
     "pickChannel": "Elige un canal",
+    "resume": {
+      "title": "Sigues en una partida",
+      "cta": "Volver a la partida",
+      "ctaHint": "Reabre la partida que dejaste - tu sitio sigue ahí"
+    },
     "channels": {
       "play": "Jugar",
       "profile": "Perfil",
@@ -323,6 +328,7 @@
       "you": "Tú",
       "connected": "Conectado",
       "disconnected": "Desconectado",
+      "abandoned": "Controlado por bot",
       "playersCount": "{{count}}/{{max}} jugadores",
       "switchTeam": "Cambiar a {{name}}",
       "emptySlot": "Toca para unirte",

@@ -60,7 +60,7 @@ func buildMidMatchVersusGame(t *testing.T) *game.Game {
 
 	// Host disconnects -> reassigns to `second` (only other connected
 	// human on Team A).
-	if err := g.Disconnect(host.ID(), &fakeRandom{}); err != nil {
+	if err := g.Disconnect(host.ID(), &fakeRandom{}, time.Now()); err != nil {
 		t.Fatalf("Disconnect(host): %v", err)
 	}
 	if g.HostID() != second.ID() {
@@ -178,6 +178,15 @@ func TestSnapshotRestoreRoundTrip(t *testing.T) {
 		}
 		if got.Connected() != want.Connected() || got.Kind() != want.Kind() || got.TeamID() != want.TeamID() {
 			t.Errorf("participant %s mismatch: got %+v want %+v", want.ID(), got, want)
+		}
+		if got.Abandoned() != want.Abandoned() {
+			t.Errorf("participant %s abandoned mismatch: got %v want %v", want.ID(), got.Abandoned(), want.Abandoned())
+		}
+		wantDisconnectedAt, wantOk := want.DisconnectedAt()
+		gotDisconnectedAt, gotOk := got.DisconnectedAt()
+		if gotOk != wantOk || (wantOk && !gotDisconnectedAt.Equal(wantDisconnectedAt)) {
+			t.Errorf("participant %s disconnectedAt mismatch: got (%v,%v) want (%v,%v)",
+				want.ID(), gotDisconnectedAt, gotOk, wantDisconnectedAt, wantOk)
 		}
 		if got.AvatarThumbKey() != want.AvatarThumbKey() || got.GooglePicture() != want.GooglePicture() {
 			t.Errorf("participant %s avatar mismatch: got thumb=%q google=%q want thumb=%q google=%q",

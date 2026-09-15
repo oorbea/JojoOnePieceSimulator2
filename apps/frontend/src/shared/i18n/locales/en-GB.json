@@ -53,6 +53,11 @@
   },
   "home": {
     "pickChannel": "Pick a channel",
+    "resume": {
+      "title": "You're still in a game",
+      "cta": "Jump back in",
+      "ctaHint": "Reopen the game you left - your seat is still there"
+    },
     "channels": {
       "play": "Play",
       "profile": "Profile",
@@ -323,6 +328,7 @@
       "you": "You",
       "connected": "Connected",
       "disconnected": "Disconnected",
+      "abandoned": "Bot-controlled",
       "playersCount": "{{count}}/{{max}} players",
       "switchTeam": "Switch to {{name}}",
       "emptySlot": "Tap to join",
