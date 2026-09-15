@@ -144,6 +144,14 @@ type ConfigUpdated struct{}
 
 func (ConfigUpdated) Name() string { return "CONFIG_UPDATED" }
 
+// JoinCodeRegenerated is emitted by RegenerateCode. It carries no fields -
+// the code itself lives in the store's side index, not on Game, so the
+// mandatory follow-up STATE frame is the only place the new code is
+// delivered.
+type JoinCodeRegenerated struct{}
+
+func (JoinCodeRegenerated) Name() string { return "JOIN_CODE_REGENERATED" }
+
 // PlayerDisconnected is emitted by Game.Disconnect - unlike Leave/Kick this
 // keeps the seat, so other clients need their own signal to stop showing the
 // participant as present instead of waiting for a PlayerLeft that never

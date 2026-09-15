@@ -182,6 +182,7 @@ export const CLIENT_COMMAND = {
   TRANSFER_HOST: 'TRANSFER_HOST',
   SET_LOCK: 'SET_LOCK',
   UPDATE_CONFIG: 'UPDATE_CONFIG',
+  REGENERATE_CODE: 'REGENERATE_CODE',
   REVEAL_READY: 'REVEAL_READY',
   SUMMARY_READY: 'SUMMARY_READY',
   REMATCH: 'REMATCH',
@@ -256,6 +257,11 @@ export const clientCommandSchema = z.discriminatedUnion('type', [
     payload: updateConfigPayloadSchema,
   }),
   z.object({
+    type: z.literal(CLIENT_COMMAND.REGENERATE_CODE),
+    requestId: z.string().optional(),
+    payload: z.object({}).optional(),
+  }),
+  z.object({
     type: z.literal(CLIENT_COMMAND.REVEAL_READY),
     requestId: z.string().optional(),
     payload: z.object({}).optional(),
@@ -299,6 +305,7 @@ export const SERVER_FRAME = {
   PLAYER_DISCONNECTED: 'PLAYER_DISCONNECTED',
   PLAYER_RECONNECTED: 'PLAYER_RECONNECTED',
   PLAYER_ABANDONED: 'PLAYER_ABANDONED',
+  JOIN_CODE_REGENERATED: 'JOIN_CODE_REGENERATED',
 } as const
 
 export type ServerFrameType = (typeof SERVER_FRAME)[keyof typeof SERVER_FRAME]
@@ -428,6 +435,11 @@ export const serverFrameSchema = z.discriminatedUnion('type', [
     type: z.literal(SERVER_FRAME.PLAYER_ABANDONED),
     requestId: z.string().optional(),
     payload: playerAbandonedPayloadSchema,
+  }),
+  z.object({
+    type: z.literal(SERVER_FRAME.JOIN_CODE_REGENERATED),
+    requestId: z.string().optional(),
+    payload: z.object({}).optional(),
   }),
 ])
 export type ServerFrame = z.infer<typeof serverFrameSchema>

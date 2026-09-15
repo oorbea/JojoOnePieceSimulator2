@@ -2,12 +2,14 @@ package gamestore
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 )
 
 func newTestGame(t *testing.T, seed byte) *game.Game {
@@ -113,6 +115,64 @@ func TestMemoryStore_SaveWithTTL_ZeroMeansDefault(t *testing.T) {
 	now = now.Add(30 * time.Minute)
 	if removed := s.DeleteExpired(ctx, 2*time.Hour); removed != 0 {
 		t.Fatalf("DeleteExpired removed %d entries, want 0 - a zero TTL must mean the default", removed)
+	}
+}
+
+func TestMemoryStore_SetCode(t *testing.T) {
+	s := NewMemoryGameStore()
+	ctx := context.Background()
+
+	g := newTestGame(t, 4)
+	if err := s.Create(ctx, "OLD001", g); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if err := s.SetCode(ctx, g.ID(), "NEW001"); err != nil {
+		t.Fatalf("SetCode: %v", err)
+	}
+
+	if _, err := s.GetByCode(ctx, "OLD001"); err == nil {
+		t.Fatal("GetByCode(old code): want an error, the old code must no longer resolve")
+	}
+	got, err := s.GetByCode(ctx, "NEW001")
+	if err != nil {
+		t.Fatalf("GetByCode(new code): %v", err)
+	}
+	if got.ID() != g.ID() {
+		t.Fatalf("GetByCode(new code) resolved to %v, want %v", got.ID(), g.ID())
+	}
+	code, err := s.Code(ctx, g.ID())
+	if err != nil {
+		t.Fatalf("Code: %v", err)
+	}
+	if code != "NEW001" {
+		t.Fatalf("Code = %q, want %q", code, "NEW001")
+	}
+}
+
+func TestMemoryStore_SetCode_CollisionReturnsErrGameCodeTaken(t *testing.T) {
+	s := NewMemoryGameStore()
+	ctx := context.Background()
+
+	g1 := newTestGame(t, 5)
+	if err := s.Create(ctx, "TAKEN1", g1); err != nil {
+		t.Fatalf("Create g1: %v", err)
+	}
+	g2 := newTestGame(t, 6)
+	if err := s.Create(ctx, "FREE01", g2); err != nil {
+		t.Fatalf("Create g2: %v", err)
+	}
+
+	if err := s.SetCode(ctx, g2.ID(), "TAKEN1"); !errors.Is(err, ports.ErrGameCodeTaken) {
+		t.Fatalf("SetCode onto an already-claimed code: err = %v, want ErrGameCodeTaken", err)
+	}
+	// g2's own code must be untouched by the rejected attempt.
+	code, err := s.Code(ctx, g2.ID())
+	if err != nil {
+		t.Fatalf("Code: %v", err)
+	}
+	if code != "FREE01" {
+		t.Fatalf("Code = %q after a rejected SetCode, want unchanged %q", code, "FREE01")
 	}
 }
 

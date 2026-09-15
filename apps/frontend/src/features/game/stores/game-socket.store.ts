@@ -17,6 +17,11 @@ export type TerminalInfo =
   | { kind: 'FINISHED'; result: GameResult }
   | { kind: 'ABORTED'; reason: string }
   | { kind: 'KICKED' }
+  // Set when a (re)connect's ticket mint is rejected with 403/404 - i.e. this
+  // user is no longer seated in the game (a missed PLAYER_KICKED frame, an
+  // expired lobby disconnect-grace that turned into a Leave, or the game is
+  // simply gone). Distinct from KICKED, which is the frame-delivered case.
+  | { kind: 'REMOVED' }
 
 type FeedEntry = { id: number; type: string; at: number }
 
@@ -244,7 +249,14 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
         // Not seated in this game (or it's gone). Terminal: before tickets,
         // this same rejection only surfaced as a WS handshake failure the
         // browser can't inspect, and the store retried it forever.
-        set({ status: 'closed', lastError: { message: appErr.message, code: appErr.code } })
+        // Only set REMOVED when nothing more specific already did - a
+        // finished/aborted game's short TTL can later 404 this same mint,
+        // and that screen must stay on FINISHED/ABORTED, not flip to REMOVED.
+        set((state) => ({
+          status: 'closed',
+          lastError: { message: appErr.message, code: appErr.code },
+          terminal: state.terminal ?? { kind: 'REMOVED' },
+        }))
         return
       }
       scheduleReconnect()

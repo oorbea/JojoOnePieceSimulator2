@@ -513,6 +513,34 @@ func (g *Game) SetLocked(callerID ParticipantID, locked bool) error {
 	return nil
 }
 
+// CanRegenerateCode reports whether callerID may rotate this lobby's join
+// code: host-only, LOBBY-only. Split out from RegenerateCode so the service
+// can authorise the caller before it ever touches the store - a non-host
+// must never end up claiming a new code and only then discovering they
+// weren't allowed to.
+func (g *Game) CanRegenerateCode(callerID ParticipantID) error {
+	if g.state != enums.Lobby {
+		return ErrInvalidStateTransition
+	}
+	if callerID != g.hostID {
+		return ErrNotHost
+	}
+	return nil
+}
+
+// RegenerateCode authorises and announces a join-code rotation. It takes no
+// code because the code is not domain state - it lives entirely in the
+// store's side index (see ports.IGameStore.SetCode) - so all this emits is
+// the event telling clients a fresh STATE (carrying the new code) is on its
+// way.
+func (g *Game) RegenerateCode(callerID ParticipantID) error {
+	if err := g.CanRegenerateCode(callerID); err != nil {
+		return err
+	}
+	g.emit(JoinCodeRegenerated{})
+	return nil
+}
+
 // Reconfigure replaces the lobby's Config while still in LOBBY. Host-only.
 // newTeams must already be built by the caller (Game cannot mint TeamIDs):
 // pass g.Teams() back unchanged when cfg.Mode() matches the current mode,

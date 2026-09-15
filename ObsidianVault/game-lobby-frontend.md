@@ -244,3 +244,30 @@ tests).
 Related: [[game-lobby-management]], [[gameplay-game-modes]], [[frontend-stack]],
 [[frontend-responsive-frutiger-aero]], [[i18n-multi-language]], [[zettelkasten-workflow]],
 [[norma-tooltips-y-ayuda-contextual]], [[game-match-assignment-frontend]].
+
+## 2026-09-15: fixed the orphaned-kicked-player bug, added code regeneration
+
+Full root cause and backend fix live in [[game-lobby-management]] (the `PLAYER_KICKED`
+write/close race). Frontend half: `game-socket.store.ts`'s `TerminalInfo` union gained a `REMOVED`
+kind, set from the mint-403/404 reconnect branch whenever `terminal` is still `null` - guarded so
+it never clobbers an already-set `FINISHED`/`ABORTED` when that game's short TTL later 404s the
+same mint call. `lobby-room-container.tsx`'s terminal effect now bounces on `KICKED` **or**
+`REMOVED`, and - a small ordering fix noticed in the same pass - fires the toast *before*
+`router.replace('/play')` instead of after, so it's queued while the screen is still mounted
+rather than racing the navigation.
+
+Added `onRegenerate` to `JoinCodeCard` (optional, host-gated by the container the same way
+`LobbyLockRow` takes its own `isHost` - the card renders for everyone, only the prop is
+conditional) - a third circular icon button (`RefreshCw`) next to copy/share, `accessibilityLabel`
+doubling as its tooltip per [[norma-tooltips-y-ayuda-contextual]] with zero extra wiring. Routed
+through the existing `ConfirmSheet` pattern (`tone: 'red'`, same shape as `handleKick`), and a new
+`use-game-commands.ts` `regenerateCode()` sender with no payload. The `JOIN_CODE_REGENERATED` frame
+needs no dedicated store case at all - it falls through the `default:` branch into the feed
+exactly like `CONFIG_UPDATED`, and the mandatory `STATE` resend that follows is what actually
+delivers the new code to `snapshot.code`.
+
+Verified: backend `go build`/`go vet`/`go test ./...` clean via Docker (endpoints, domain `game`,
+`application/services`, `gamestore` + `gamestore/redis` with `TEST_REDIS_URL` set); `make types`
+regenerated `shared/contracts/ws.ts` with the new command/frame and a follow-up `types-check`
+confirmed no drift; frontend `tsc --noEmit` clean, `pnpm lint` 0 errors (same pre-existing CRLF
+warnings as always), full `pnpm jest --ci --maxWorkers=2` green at 75 suites / 1411 tests.
