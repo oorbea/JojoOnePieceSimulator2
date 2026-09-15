@@ -43,15 +43,26 @@ export function PageShell({
   const insideShell = navInsets.top > 0 || navInsets.bottom > 0
   const showBackdrop = backdrop ?? !insideShell
 
+  const padTop = insideShell ? navInsets.top : insets.top + 16
+  const padBottom = insideShell ? navInsets.bottom : insets.bottom + 16
+
+  // `flex={1}` here would pin this box to exactly the viewport height
+  // (flexBasis: 0, no min-height floor) — content taller than the viewport
+  // would then overflow past its own `pb`, so the nav clearance never
+  // actually separates the last child from the floating bar sitting over
+  // it. In the scroll branch the padding instead lives on the ScrollView's
+  // own contentContainerStyle (the box the scroll extent is measured
+  // against) and this YStack only grows to fit its content.
   const content = (
     <YStack
-      flex={1}
+      flex={scroll ? undefined : 1}
+      grow={scroll ? 1 : undefined}
       width="100%"
       items="center"
       justify={align === 'center' ? 'center' : 'flex-start'}
       px="$4"
-      pt={insideShell ? navInsets.top : insets.top + 16}
-      pb={insideShell ? navInsets.bottom : insets.bottom + 16}
+      pt={scroll ? undefined : padTop}
+      pb={scroll ? undefined : padBottom}
       gap="$4"
       $md={{ px: '$6' }}
     >
@@ -75,7 +86,9 @@ export function PageShell({
       {scroll ? (
         <ScrollView
           flex={1}
-          contentContainerStyle={{ flexGrow: 1 } as object}
+          contentContainerStyle={
+            { flexGrow: 1, paddingTop: padTop, paddingBottom: padBottom } as object
+          }
           onScroll={notifyScroll}
           scrollEventThrottle={16}
         >
