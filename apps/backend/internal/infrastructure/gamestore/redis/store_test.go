@@ -400,3 +400,59 @@ func TestStore_ListPublic_RemovedAfterDelete(t *testing.T) {
 		}
 	}
 }
+
+// TestStore_GamesForUser covers the /games/me resume path's index: a user
+// seated in two Games at once (see joinLocked's own doc - the only
+// duplicate-seat guard is within a single Game) gets both back, and one an
+// unrelated user has never been seated in is not among them.
+func TestStore_GamesForUser(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+
+	g1, code1 := newFreshGame(t, 13)
+	uid := *g1.Participants()[0].UserID() // g1's host
+	t.Cleanup(func() { _ = s.Delete(ctx, g1.ID()) })
+	if err := s.Create(ctx, code1, g1); err != nil {
+		t.Fatalf("Create g1: %v", err)
+	}
+
+	g2, code2 := newFreshGame(t, 14)
+	t.Cleanup(func() { _ = s.Delete(ctx, g2.ID()) })
+	shared, err := game.NewHumanParticipant(game.ParticipantID{14, 99}, uid, "shared", g2.Teams()[0].ID())
+	if err != nil {
+		t.Fatalf("NewHumanParticipant(shared): %v", err)
+	}
+	if err := g2.Join(shared); err != nil {
+		t.Fatalf("Join(shared): %v", err)
+	}
+	if err := s.Create(ctx, code2, g2); err != nil {
+		t.Fatalf("Create g2: %v", err)
+	}
+
+	got, err := s.GamesForUser(ctx, uid)
+	if err != nil {
+		t.Fatalf("GamesForUser: %v", err)
+	}
+	found1, found2 := false, false
+	for _, g := range got {
+		if g.ID() == g1.ID() {
+			found1 = true
+		}
+		if g.ID() == g2.ID() {
+			found2 = true
+		}
+	}
+	if !found1 || !found2 {
+		t.Fatalf("GamesForUser missed a game: found1=%v found2=%v (got %d games)", found1, found2, len(got))
+	}
+
+	other, err := s.GamesForUser(ctx, user.UserID{99, 99})
+	if err != nil {
+		t.Fatalf("GamesForUser (unrelated user): %v", err)
+	}
+	for _, g := range other {
+		if g.ID() == g1.ID() || g.ID() == g2.ID() {
+			t.Fatalf("GamesForUser for an unrelated user unexpectedly returned game %s", g.ID())
+		}
+	}
+}

@@ -113,6 +113,20 @@ type wirePoolFilter struct {
 // empty-string default - see snapshotVersion's doc for why that means no
 // version bump: a payload written before this field existed just decodes
 // with both as "", exactly like a participant who never called SetAvatar.
+//
+// AvatarFocalX/AvatarFocalY were missed when this type was first written -
+// game.ParticipantSnapshot has always carried them, but nothing here read or
+// wrote them, so every Get→Restore round trip under Redis silently reset a
+// participant's picked focal point to 0,0 (crops jumping to the top-left
+// corner in prod; correct only when running without Redis, i.e.
+// MemoryGameStore). Same class of bug as TiedVotes/RevealReady above - both
+// omitempty with the constructor's own 0.5/0.5 default preserved by
+// game.Restore only for the zero-value case (see Restore's doc).
+//
+// DisconnectedAt/Abandoned mirror Participant's own grace-period state (see
+// GameService's grace timers) - additive/omitempty, absent decodes to
+// "connected, not abandoned", the correct default for a payload written
+// before these fields existed.
 type wireParticipant struct {
 	ID             [16]byte     `json:"id"`
 	UserID         *[16]byte    `json:"userId,omitempty"`
@@ -123,6 +137,10 @@ type wireParticipant struct {
 	Loadout        *wireLoadout `json:"loadout,omitempty"`
 	AvatarThumbKey string       `json:"avatarThumbKey,omitempty"`
 	GooglePicture  string       `json:"googlePicture,omitempty"`
+	AvatarFocalX   float64      `json:"avatarFocalX,omitempty"`
+	AvatarFocalY   float64      `json:"avatarFocalY,omitempty"`
+	DisconnectedAt *time.Time   `json:"disconnectedAt,omitempty"`
+	Abandoned      bool         `json:"abandoned,omitempty"`
 }
 
 type wireTeam struct {
@@ -240,6 +258,10 @@ func toWire(s game.Snapshot) wireGame {
 			Connected:      p.Connected,
 			AvatarThumbKey: p.AvatarThumbKey,
 			GooglePicture:  p.GooglePicture,
+			AvatarFocalX:   p.AvatarFocalX,
+			AvatarFocalY:   p.AvatarFocalY,
+			DisconnectedAt: p.DisconnectedAt,
+			Abandoned:      p.Abandoned,
 		}
 		if p.UserID != nil {
 			id := [16]byte(*p.UserID)
@@ -406,6 +428,10 @@ func fromWire(w wireGame) game.Snapshot {
 			Connected:      wp.Connected,
 			AvatarThumbKey: wp.AvatarThumbKey,
 			GooglePicture:  wp.GooglePicture,
+			AvatarFocalX:   wp.AvatarFocalX,
+			AvatarFocalY:   wp.AvatarFocalY,
+			DisconnectedAt: wp.DisconnectedAt,
+			Abandoned:      wp.Abandoned,
 		}
 		if wp.UserID != nil {
 			uid := user.UserID(*wp.UserID)

@@ -28,6 +28,14 @@ type IGameMode interface {
 	// reports whether the Game is now finished.
 	ApplyRoundResult(g *Game, round Round) (finished bool)
 
+	// AutoVotesForAbandoned reports whether an abandoned seat (a human whose
+	// disconnect grace period elapsed without a Reconnect - see
+	// Participant.MarkAbandoned) should be auto-voted for like a bot. Versus
+	// says yes (a team must still be able to reach a majority); Gauntlet
+	// says no (an abandoned seat's loadout still counts for the squad, but
+	// nothing votes on their behalf - see castBotVotes).
+	AutoVotesForAbandoned() bool
+
 	// Outcome computes the final GameResult. Only meaningful once the Game
 	// is Finished or Aborted.
 	Outcome(g *Game) (GameResult, error)

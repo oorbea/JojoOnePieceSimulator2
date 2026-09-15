@@ -115,3 +115,45 @@ func TestMemoryStore_SaveWithTTL_ZeroMeansDefault(t *testing.T) {
 		t.Fatalf("DeleteExpired removed %d entries, want 0 - a zero TTL must mean the default", removed)
 	}
 }
+
+// TestMemoryStore_GamesForUser covers the /games/me resume path's store
+// query: a user seated in two Games at once (see joinLocked's own doc - the
+// only duplicate-seat guard is within a single Game) gets both back, and a
+// user with none gets an empty result rather than an error.
+func TestMemoryStore_GamesForUser(t *testing.T) {
+	s := NewMemoryGameStore()
+	ctx := context.Background()
+
+	g1 := newTestGame(t, 1) // host userID {1, 2}
+	if err := s.Create(ctx, "GAME01", g1); err != nil {
+		t.Fatalf("Create g1: %v", err)
+	}
+
+	g2 := newTestGame(t, 2) // host userID {2, 2}
+	shared, err := game.NewHumanParticipant(game.ParticipantID{2, 99}, user.UserID{1, 2}, "shared", g2.Teams()[0].ID())
+	if err != nil {
+		t.Fatalf("NewHumanParticipant(shared): %v", err)
+	}
+	if err := g2.Join(shared); err != nil {
+		t.Fatalf("Join(shared): %v", err)
+	}
+	if err := s.Create(ctx, "GAME02", g2); err != nil {
+		t.Fatalf("Create g2: %v", err)
+	}
+
+	got, err := s.GamesForUser(ctx, user.UserID{1, 2})
+	if err != nil {
+		t.Fatalf("GamesForUser: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("GamesForUser returned %d games, want 2 (user seated in both)", len(got))
+	}
+
+	none, err := s.GamesForUser(ctx, user.UserID{9, 9})
+	if err != nil {
+		t.Fatalf("GamesForUser (unknown user): %v", err)
+	}
+	if len(none) != 0 {
+		t.Fatalf("GamesForUser for an unseated user = %d games, want 0", len(none))
+	}
+}

@@ -170,6 +170,22 @@ func (s *fakeGameStore) ListPublic(_ context.Context, limit int) ([]*game.Game, 
 	return out, nil
 }
 
+func (s *fakeGameStore) GamesForUser(_ context.Context, uid user.UserID) ([]*game.Game, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]*game.Game, 0)
+	for _, g := range s.byID {
+		for _, p := range g.Participants() {
+			if p.UserID() != nil && *p.UserID() == uid {
+				out = append(out, g)
+				break
+			}
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID().String() < out[j].ID().String() })
+	return out, nil
+}
+
 var _ ports.IGameStore = (*fakeGameStore)(nil)
 
 type fakeStageCatalog struct {
@@ -1403,6 +1419,11 @@ func TestDisconnect_HostReassigned(t *testing.T) {
 	}
 }
 
+// TestDisconnect_LastHuman_AbortsAndFinalizes pins the grace-period design:
+// a Disconnect alone must not abort the Game immediately (see
+// game.TestGame_DisconnectAloneDoesNotAbort) - only once the LOBBY grace
+// window elapses with nobody reconnecting does the seat actually Leave,
+// which then aborts a now-empty lobby.
 func TestDisconnect_LastHuman_AbortsAndFinalizes(t *testing.T) {
 	svc, deps := newTestGameService(t)
 	hostID := mustTestUser(t, deps, "host")
@@ -1416,8 +1437,17 @@ func TestDisconnect_LastHuman_AbortsAndFinalizes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
+	if g.State() == enums.Aborted {
+		t.Fatalf("a mere Disconnect must not abort before the grace window elapses")
+	}
+
+	deps.clock.Advance(2 * services.LobbyDisconnectGrace)
+	g, err = svc.GetGame(context.Background(), g.ID())
+	if err != nil {
+		t.Fatalf("GetGame: %v", err)
+	}
 	if g.State() != enums.Aborted {
-		t.Fatalf("state = %v, want ABORTED", g.State())
+		t.Fatalf("state = %v, want ABORTED once the grace window elapses", g.State())
 	}
 
 	results := deps.history.all()
@@ -1438,6 +1468,10 @@ func TestFinalize_NilHistory_DoesNotError(t *testing.T) {
 	}
 	if _, err := svc.Disconnect(context.Background(), g.ID(), g.HostID()); err != nil {
 		t.Fatalf("Disconnect: %v", err)
+	}
+	deps.clock.Advance(2 * services.LobbyDisconnectGrace)
+	if _, err := svc.GetGame(context.Background(), g.ID()); err != nil {
+		t.Fatalf("GetGame: %v", err)
 	}
 	assertStillReadableTerminal(t, svc, g.ID())
 }

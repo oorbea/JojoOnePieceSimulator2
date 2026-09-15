@@ -513,6 +513,12 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealWin
 		return dto.FrameLobbyLockChanged, dto.LobbyLockChangedPayload{Locked: e.Locked}, true
 	case game.ConfigUpdated:
 		return dto.FrameConfigUpdated, struct{}{}, true
+	case game.PlayerDisconnected:
+		return dto.FramePlayerDisconnected, dto.PlayerDisconnectedPayload{ParticipantID: e.ParticipantID.String()}, true
+	case game.PlayerReconnected:
+		return dto.FramePlayerReconnected, dto.PlayerReconnectedPayload{ParticipantID: e.ParticipantID.String()}, true
+	case game.PlayerAbandoned:
+		return dto.FramePlayerAbandoned, dto.PlayerAbandonedPayload{ParticipantID: e.ParticipantID.String()}, true
 	default:
 		return "", nil, false
 	}
