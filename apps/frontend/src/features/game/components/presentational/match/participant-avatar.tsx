@@ -31,44 +31,86 @@ type Props = {
 // case, most players never upload an avatar - an initial in a colour
 // circle derived from their id. Shared by ParticipantTile (the roster) and
 // LoadoutModal (the breakdown header) so the two never drift.
+//
+// A seat that has dropped out (see GameService's grace timers,
+// ObsidianVault) reads visually here too, without any extra prop - both
+// `connected`/`abandoned` already ride on `participant` itself:
+//   - disconnected (still within the grace window): the whole avatar dims
+//     and desaturates - RN has no CSS filter, so a semi-opaque grey scrim
+//     over the picture does the job instead of a true grayscale filter.
+//   - abandoned (grace elapsed, the seat now auto-plays/stays only for its
+//     loadout - see IGameMode.AutoVotesForAbandoned): same dimmed look plus
+//     a small bot badge, the same visual cue a real Bot participant already
+//     gets, since the seat is now effectively bot-controlled.
 export function ParticipantAvatar({ participant, size, isSelf = false }: Props) {
   const isBot = participant.kind === 'BOT'
+  const isAbandoned = participant.abandoned
+  const isInactive = !participant.connected || isAbandoned
+  const badgeSize = Math.max(14, size * 0.4)
 
   return (
     <YStack
       width={size}
       height={size}
       rounded="$circle"
-      overflow="hidden"
-      borderWidth={isSelf ? 2.5 : 1.5}
-      borderColor={isSelf ? ('$wiiBlue' as never) : '$glassEdge'}
+      overflow="visible"
+      opacity={isInactive ? 0.55 : 1}
     >
-      <LazyImage
-        uri={participant.avatarThumb || null}
+      <YStack
+        width={size}
         height={size}
         rounded="$circle"
-        contentPosition={focalPosition({
-          focalX: participant.avatarFocalX,
-          focalY: participant.avatarFocalY,
-        })}
-        fallback={
-          <YStack
-            flex={1}
-            width="100%"
-            items="center"
-            justify="center"
-            bg={(isBot ? '$plasticEdge' : toneFor(participant.id)) as never}
-          >
-            {isBot ? (
-              <Bot size={size * 0.46} color="$panelTextSoft" />
-            ) : (
-              <GlowText level="heading" tone="onColor" fontSize={size * 0.42}>
-                {initialFor(participant.displayName)}
-              </GlowText>
-            )}
-          </YStack>
-        }
-      />
+        overflow="hidden"
+        borderWidth={isSelf ? 2.5 : 1.5}
+        borderColor={isSelf ? ('$wiiBlue' as never) : '$glassEdge'}
+      >
+        <LazyImage
+          uri={participant.avatarThumb || null}
+          height={size}
+          rounded="$circle"
+          contentPosition={focalPosition({
+            focalX: participant.avatarFocalX,
+            focalY: participant.avatarFocalY,
+          })}
+          fallback={
+            <YStack
+              flex={1}
+              width="100%"
+              items="center"
+              justify="center"
+              bg={(isBot ? '$plasticEdge' : toneFor(participant.id)) as never}
+            >
+              {isBot ? (
+                <Bot size={size * 0.46} color="$panelTextSoft" />
+              ) : (
+                <GlowText level="heading" tone="onColor" fontSize={size * 0.42}>
+                  {initialFor(participant.displayName)}
+                </GlowText>
+              )}
+            </YStack>
+          }
+        />
+        {isInactive ? (
+          <YStack position="absolute" inset={0} bg="rgba(90,100,115,0.45)" />
+        ) : null}
+      </YStack>
+      {isAbandoned ? (
+        <YStack
+          position="absolute"
+          b={-2}
+          r={-2}
+          width={badgeSize}
+          height={badgeSize}
+          rounded="$circle"
+          items="center"
+          justify="center"
+          bg="$tangerine"
+          borderWidth={1.5}
+          borderColor="$glassEdge"
+        >
+          <Bot size={badgeSize * 0.62} color="$plasticWhite" />
+        </YStack>
+      ) : null}
     </YStack>
   )
 }

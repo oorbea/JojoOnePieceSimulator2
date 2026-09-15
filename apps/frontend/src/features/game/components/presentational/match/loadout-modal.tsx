@@ -78,6 +78,11 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
             <GlowText level="heading" flex={1} numberOfLines={1}>
               {participant.displayName}
             </GlowText>
+            {participant.abandoned ? (
+              <GlassPanel tone="plastic" px="$2" py="$0.5" rounded="$pill" elevate={0}>
+                <GlowText level="label">{t('game.lobby.abandoned')}</GlowText>
+              </GlassPanel>
+            ) : null}
             <GlossButton
               tone="glass"
               shape="circle"

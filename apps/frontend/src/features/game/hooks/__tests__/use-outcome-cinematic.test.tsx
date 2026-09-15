@@ -96,6 +96,7 @@ describe('useOutcomeCinematic', () => {
         teamId,
         kind: 'HUMAN',
         connected: true,
+        abandoned: false,
         avatarThumb: '',
         avatarFocalX: 0.5,
         avatarFocalY: 0.5,

@@ -36,6 +36,15 @@ export function RosterParticipant({ participant, isSelf, mangas, onOpenModal, it
     nativeAutoHideMs: null,
   })
 
+  // A dropped-out seat gets a dimmed avatar (see ParticipantAvatar) - the
+  // a11y label carries the same fact for anyone not reading it visually.
+  // Only `abandoned` gets its own word (the seat is now auto-playing on its
+  // own loadout, see IGameMode.AutoVotesForAbandoned); a merely
+  // disconnected seat is still within its reconnect grace window and reads
+  // the same as connected here, same as the tile shows no separate label
+  // for it either.
+  const statusSuffix = participant.abandoned ? t('game.lobby.abandoned') : null
+
   return (
     <>
       <ParticipantTile
@@ -45,7 +54,11 @@ export function RosterParticipant({ participant, isSelf, mangas, onOpenModal, it
         triggerRef={triggerRef}
         triggerProps={triggerProps}
         itemProps={itemProps}
-        viewA11yLabel={t('game.match.loadout.viewA11y', { name: participant.displayName })}
+        viewA11yLabel={
+          statusSuffix
+            ? `${t('game.match.loadout.viewA11y', { name: participant.displayName })}, ${statusSuffix}`
+            : t('game.match.loadout.viewA11y', { name: participant.displayName })
+        }
       />
       <TooltipCard visible={visible} anchor={anchor}>
         <LoadoutCard participant={participant} isSelf={isSelf} mangas={mangas} />
