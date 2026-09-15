@@ -228,13 +228,11 @@ func (e *GameEndpoints) writePump(ctx context.Context, conn *websocket.Conn, out
 				return
 			}
 		case msg := <-outbound:
-			if msg.data != nil {
-				writeCtx, cancel := context.WithTimeout(ctx, wsWriteTimeout)
-				err := conn.Write(writeCtx, websocket.MessageText, msg.data)
-				cancel()
-				if err != nil {
-					return
-				}
+			writeCtx, cancel := context.WithTimeout(ctx, wsWriteTimeout)
+			err := conn.Write(writeCtx, websocket.MessageText, msg.data)
+			cancel()
+			if err != nil {
+				return
 			}
 			if msg.closeCode != 0 {
 				_ = conn.Close(msg.closeCode, msg.closeText)
@@ -437,10 +435,9 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 			// instead of getting the usual resend: resolveParticipant would
 			// 403 their next RESYNC anyway (they're no longer seated), and
 			// an explicit close gives the client a deterministic signal
-			// instead of a dangling socket waiting on a timeout. The close
-			// is attached to this same outMsg (instead of a separate
-			// conn.Close call racing the write pump) so the frame is
-			// guaranteed to be written before the socket closes.
+			// instead of a dangling socket waiting on a timeout. Frame and
+			// close travel as one outMsg so the close can't beat the frame
+			// to the wire - see outMsg's doc.
 			if kicked, ok := evt.Event.(game.PlayerKicked); ok && kicked.ParticipantID == self {
 				sendMsg(conn, outbound, outMsg{data: data, closeCode: websocket.StatusNormalClosure, closeText: "kicked"})
 				return
