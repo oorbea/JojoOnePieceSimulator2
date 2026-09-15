@@ -348,7 +348,14 @@
       "shared": "Code shared",
       "shareMessage": "Join my JoJo x One Piece Simulator lobby with code {{code}}",
       "publicHint": "Public: anyone can find and join this lobby.",
-      "privateHint": "Private: only players with the code can join."
+      "privateHint": "Private: only players with the code can join.",
+      "regenerate": {
+        "action": "Get a new code",
+        "title": "Get a new join code?",
+        "message": "The old code stops working right away. Everyone currently in the lobby stays, and nothing else changes. Note: a public lobby can still be found and joined from the browser - use the lock/visibility controls above to close that off too.",
+        "confirm": "New code",
+        "done": "New join code generated"
+      }
     },
     "lock": {
       "locked": "Locked",

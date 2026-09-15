@@ -1,4 +1,4 @@
-import { Check, Copy, Globe, Lock, Share2 } from '@tamagui/lucide-icons-2'
+import { Check, Copy, Globe, Lock, RefreshCw, Share2 } from '@tamagui/lucide-icons-2'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
@@ -14,9 +14,12 @@ type Props = {
   isPublic: boolean
   onCopy: () => Promise<'copied' | 'shared' | 'failed'>
   onShare: () => Promise<'copied' | 'shared' | 'failed'>
+  // Host-only action - omitted entirely (not just disabled) for a
+  // non-host, same convention as LobbyLockRow's own isHost gate.
+  onRegenerate?: () => void
 }
 
-export function JoinCodeCard({ code, isPublic, onCopy, onShare }: Props) {
+export function JoinCodeCard({ code, isPublic, onCopy, onShare, onRegenerate }: Props) {
   const { t } = useTranslation()
   const [justCopied, setJustCopied] = useState(false)
 
@@ -54,6 +57,17 @@ export function JoinCodeCard({ code, isPublic, onCopy, onShare }: Props) {
         <GlossButton tone="glass" btnSize="md" shape="circle" onPress={onShare} accessibilityLabel={t('game.code.share')}>
           <Share2 size={20} color="$panelText" />
         </GlossButton>
+        {onRegenerate ? (
+          <GlossButton
+            tone="glass"
+            btnSize="md"
+            shape="circle"
+            onPress={onRegenerate}
+            accessibilityLabel={t('game.code.regenerate.action')}
+          >
+            <RefreshCw size={20} color="$panelText" />
+          </GlossButton>
+        ) : null}
       </XStack>
       <GlossOverlay coverage="third" shape="card" />
     </GlassPanel>

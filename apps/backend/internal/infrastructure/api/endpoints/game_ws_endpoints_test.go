@@ -507,6 +507,35 @@ func TestDispatch_UpdateConfig_NotHost_Forbidden(t *testing.T) {
 	}
 }
 
+// TestDispatch_RegenerateCode is a wiring test only: dispatch routes
+// REGENERATE_CODE to GameService.RegenerateGameCode and the code still
+// resolves afterwards. wsLobby's RandomSource (wsFakeRandom, always 0) makes
+// every generated code identical, so it can't itself demonstrate "the old
+// code stops resolving" - that's covered with a real RNG by
+// TestMemoryStore_SetCode and TestStore_SetCode_OldCodeStopsResolvingNewOneDoes.
+func TestDispatch_RegenerateCode(t *testing.T) {
+	lobby := newWSLobby(t)
+
+	cmd := dto.ClientCommand{Type: dto.CommandRegenerateCode}
+	got, err := lobby.endpoints.dispatch(context.Background(), lobby.gameID, lobby.hostID, cmd)
+	if err != nil {
+		t.Fatalf("dispatch REGENERATE_CODE: %v", err)
+	}
+	if _, err := lobby.endpoints.svc.GameCode(context.Background(), got.ID()); err != nil {
+		t.Fatalf("GameCode after regenerate: %v", err)
+	}
+}
+
+func TestDispatch_RegenerateCode_NotHost_Forbidden(t *testing.T) {
+	lobby := newWSLobby(t)
+
+	cmd := dto.ClientCommand{Type: dto.CommandRegenerateCode}
+	_, err := lobby.endpoints.dispatch(context.Background(), lobby.gameID, lobby.joinerID, cmd)
+	if err == nil {
+		t.Fatal("dispatch REGENERATE_CODE by non-host: want error, got nil")
+	}
+}
+
 func TestDispatch_UnknownCommand(t *testing.T) {
 	lobby := newWSLobby(t)
 

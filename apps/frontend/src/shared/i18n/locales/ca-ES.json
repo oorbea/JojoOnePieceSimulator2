@@ -348,7 +348,14 @@
       "shared": "Codi compartit",
       "shareMessage": "Uneix-te a la meva sala de JoJo x One Piece Simulator amb el codi {{code}}",
       "publicHint": "Pública: qualsevol pot trobar i unir-se a aquesta sala.",
-      "privateHint": "Privada: només s'hi pot unir qui tingui el codi."
+      "privateHint": "Privada: només s'hi pot unir qui tingui el codi.",
+      "regenerate": {
+        "action": "Genera un codi nou",
+        "title": "Vols generar un codi de sala nou?",
+        "message": "El codi antic deixa de funcionar a l'instant. Tothom qui sigui ara a la sala hi continua, i res més canvia. Nota: una sala pública encara es pot trobar i unir des del cercador; fes servir els controls de bloqueig/visibilitat de dalt per tancar també aquesta via.",
+        "confirm": "Codi nou",
+        "done": "Codi de sala nou generat"
+      }
     },
     "lock": {
       "locked": "Bloquejada",
