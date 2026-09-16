@@ -167,7 +167,16 @@ panel as unbuilt when it had actually shipped. Two things worth keeping as reusa
   `create-lobby-container.tsx`. Also holds `ConfigFormState`, `clampTeamSize`,
   `configFormFromSnapshot`, `applyModeChange`, `buildUpdateConfigPayload` (always builds a full
   replacement payload, never a patch, mirroring `CreateGameRequest`). Both create and edit flows
-  should keep pulling from here rather than re-deriving limits locally.
+  should keep pulling from here rather than re-deriving limits locally. `VOTING_WINDOW_LIMITS`
+  (5-180) and `SUMMARY_DURATION_LIMITS` (10-300) joined it 2026-09-16, same treatment - mirrors
+  `apps/backend/internal/domain/entities/game/config.go`'s Min/Max constants, hand-synced since
+  they're not in any generated contract (see [[contratos-tipos-generados]]).
+- **`NumberStepper`'s value is tap-to-edit** (2026-09-16): the `-`/value/`+` row's value is now a
+  `GlossButton` that opens a digits-only Tamagui `Input` (same `replace(/[^0-9]/g, '')` idiom as
+  `stage-form-modal.tsx`), typing 47 instead of tapping `+` 37 times. Commit clamps silently to
+  `[min,max]` (owner decision - no error state); empty draft reverts. See
+  [[bugfix-lobby-config-flexbasis-mobile-2026-09-16]] for the mobile layout fix that shipped
+  alongside it.
 
 Also fixed while auditing: three host-only field values in `lobby-config-panel.tsx` (reveal speed,
 privacy, allow-bots labels) were raw strings outside a `GlowText`, unlike their non-host siblings -
