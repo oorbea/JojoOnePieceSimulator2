@@ -249,6 +249,7 @@
       "allowBotsOn": "Bots on",
       "allowBotsOff": "No bots",
       "allowBotsGauntletHint": "Bots aren't allowed in Gauntlet.",
+      "editValueHint": "Tap to type a value",
       "submit": "Create Lobby",
       "creating": "Creating…",
       "help": {

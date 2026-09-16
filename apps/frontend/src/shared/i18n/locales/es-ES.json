@@ -249,6 +249,7 @@
       "allowBotsOn": "Con bots",
       "allowBotsOff": "Sin bots",
       "allowBotsGauntletHint": "Los bots no están permitidos en Gauntlet.",
+      "editValueHint": "Pulsa para escribir un valor",
       "submit": "Crear sala",
       "creating": "Creando…",
       "help": {
