@@ -33,13 +33,17 @@ export function SettingRow({ label, help, children, stacked = false }: Props) {
       width="100%"
       gap="$1.5"
       items="flex-start"
-      {...(stacked ? {} : { $md: { flexDirection: 'row', justify: 'space-between', items: 'center', gap: '$3' } })}
+      {...(stacked
+        ? {}
+        : { $md: { flexDirection: 'row', flexWrap: 'wrap', justify: 'space-between', items: 'center', gap: '$3' } })}
     >
-      <XStack items="center" gap="$1.5">
-        <GlowText level="label">{label}</GlowText>
-        {help}
+      <XStack items="center" gap="$1.5" shrink={1} minW={0}>
+        <GlowText level="label" shrink={1}>
+          {label}
+        </GlowText>
+        {help ? <XStack shrink={0}>{help}</XStack> : null}
       </XStack>
-      <YStack self="flex-start" {...(stacked ? {} : { $md: { self: 'auto' } })}>
+      <YStack self="flex-start" shrink={0} {...(stacked ? {} : { $md: { self: 'auto' } })}>
         {children}
       </YStack>
     </YStack>

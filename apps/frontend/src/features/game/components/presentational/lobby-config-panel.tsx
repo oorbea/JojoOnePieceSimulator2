@@ -7,6 +7,7 @@ import { BanByFilterFields } from '@/features/game/components/presentational/fie
 import { BanlistField, type BannableItem } from '@/features/game/components/presentational/fields/banlist-field'
 import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
 import { PowerPoolFields } from '@/features/game/components/presentational/fields/power-pool-fields'
+import { SUMMARY_DURATION_LIMITS, VOTING_WINDOW_LIMITS } from '@/features/game/lib/config-form'
 import { computePoolCounts, poolShortfalls } from '@/features/game/lib/pool-stats'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -170,7 +171,7 @@ export function LobbyConfigPanel({
       )}
 
       <GlassPanel glossy p="$5" gap="$4" width="100%" $md={{ flexDirection: 'row' }}>
-        <YStack flexBasis={320} grow={1} gap="$4">
+        <YStack grow={1} gap="$4" $md={{ flexBasis: 320, minW: 0 }}>
           {isHost ? (
             <NumberStepper
               label={mode === 'GAUNTLET' ? t('game.create.teamSizeGauntletLabel') : t('game.create.teamSizeLabel')}
@@ -190,14 +191,14 @@ export function LobbyConfigPanel({
           )}
         </YStack>
 
-        <YStack flexBasis={320} grow={1} gap="$4">
+        <YStack grow={1} gap="$4" $md={{ flexBasis: 320, minW: 0 }}>
           {isHost ? (
             <NumberStepper
               label={t('game.create.votingSecondsLabel')}
               help={<InfoHint text={t('game.create.help.votingSeconds')} />}
               value={votingWindowSeconds}
-              min={5}
-              max={180}
+              min={VOTING_WINDOW_LIMITS.min}
+              max={VOTING_WINDOW_LIMITS.max}
               onChange={onChangeVotingWindow}
             />
           ) : (
@@ -212,8 +213,8 @@ export function LobbyConfigPanel({
               label={t('game.create.summarySecondsLabel')}
               help={<InfoHint text={t('game.create.help.summarySeconds')} />}
               value={summaryDurationSeconds}
-              min={10}
-              max={300}
+              min={SUMMARY_DURATION_LIMITS.min}
+              max={SUMMARY_DURATION_LIMITS.max}
               onChange={onChangeSummaryDuration}
             />
           ) : (
