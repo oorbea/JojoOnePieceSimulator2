@@ -30,4 +30,7 @@ export type {
   LobbyPreviewResponse as LobbyPreview,
   CreateGameRequest as CreateGameInput,
   UpdateConfigPayload as UpdateGameConfigInput,
+  GameInviteResponse as GameInvite,
+  InvitePreviewResponse as InvitePreview,
+  InviteStatusResponse as InviteStatusResult,
 } from '@/shared/contracts/dto'

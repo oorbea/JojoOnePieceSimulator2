@@ -3,3 +3,4 @@ export { CreateLobbyContainer } from '@/features/game/components/containers/crea
 export { JoinLobbyContainer } from '@/features/game/components/containers/join-lobby-container'
 export { BrowseLobbiesContainer } from '@/features/game/components/containers/browse-lobbies-container'
 export { LobbyRoomContainer } from '@/features/game/components/containers/lobby-room-container'
+export { JoinInviteContainer } from '@/features/game/components/containers/join-invite-container'

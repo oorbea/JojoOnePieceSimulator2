@@ -343,19 +343,55 @@
     },
     "code": {
       "title": "Join code",
-      "copy": "Copy code",
+      "copy": "Copy join code",
       "copied": "Code copied",
       "share": "Share code",
       "shared": "Code shared",
+      "shareLink": "Share invite link",
       "shareMessage": "Join my JoJo x One Piece Simulator lobby with code {{code}}",
+      "shareLinkMessage": "Join my JoJo x One Piece Simulator lobby",
+      "linkCopied": "Invite link copied",
+      "linkShared": "Invite link shared",
+      "linkFailed": "Couldn't create an invite link",
       "publicHint": "Public: anyone can find and join this lobby.",
       "privateHint": "Private: only players with the code can join.",
       "regenerate": {
         "action": "Get a new code",
         "title": "Get a new join code?",
-        "message": "The old code stops working right away. Everyone currently in the lobby stays, and nothing else changes. Note: a public lobby can still be found and joined from the browser - use the lock/visibility controls above to close that off too.",
+        "message": "The old code stops working right away, and so does every invite link you've already shared. Everyone currently in the lobby stays, and nothing else changes. Note: a public lobby can still be found and joined from the browser - use the lock/visibility controls above to close that off too.",
         "confirm": "New code",
         "done": "New join code generated"
+      }
+    },
+    "invite": {
+      "title": "Join lobby",
+      "checking": "Checking your invite…",
+      "joining": "Joining…",
+      "join": "Join lobby",
+      "backToGames": "Back to games",
+      "switch": {
+        "title": "Leave your current game?",
+        "message": "You're already in another game. Leave it and join this lobby instead?",
+        "confirm": "Leave and join"
+      },
+      "error": {
+        "expired": "This invite link has expired.",
+        "revoked": "This invite link no longer works - the host generated a new join code.",
+        "started": "This game has already started.",
+        "full": "This lobby is full.",
+        "locked": "This lobby is locked.",
+        "gone": "This lobby couldn't be found.",
+        "generic": "This invite link couldn't be used."
+      },
+      "share": {
+        "title": "Share invite link",
+        "copyLink": "Copy link",
+        "qr": "Show QR code",
+        "qrHint": "Scan with another device to open this link.",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "x": "X",
+        "email": "Email"
       }
     },
     "lock": {
@@ -834,6 +870,9 @@
     "REFRESH_REUSE": "Your session was signed out for security reasons. Please sign in again.",
     "OBJECT_NOT_FOUND": "This image couldn't be found.",
     "MEDIA_SIGNATURE_INVALID": "This image link has expired.",
+    "INVITE_INVALID": "This invite link has expired.",
+    "INVITE_REVOKED": "This invite link no longer works - the host generated a new join code.",
+    "GAME_ALREADY_STARTED": "This game has already started.",
     "INTERNAL": "Something went wrong on our end."
   }
 }
