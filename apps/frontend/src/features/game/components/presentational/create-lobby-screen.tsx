@@ -8,6 +8,7 @@ import { BanlistField, type BannableItem } from '@/features/game/components/pres
 import { NumberStepper } from '@/features/game/components/presentational/fields/number-stepper'
 import { PowerPoolFields } from '@/features/game/components/presentational/fields/power-pool-fields'
 import { MangaRow } from '@/features/game/components/presentational/manga-row'
+import { SUMMARY_DURATION_LIMITS, VOTING_WINDOW_LIMITS } from '@/features/game/lib/config-form'
 import { computePoolCounts, poolShortfalls } from '@/features/game/lib/pool-stats'
 import type { PoolFilter } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
@@ -159,7 +160,7 @@ export function CreateLobbyScreen({
       <TooltipBubble visible={versusTooltipVisible} label={t('game.create.help.modeVersus')} anchor={versusTooltipAnchor} />
 
       <GlassPanel glossy p="$5" gap="$4" width="100%" $md={{ flexDirection: 'row' }}>
-        <YStack flexBasis={320} grow={1} gap="$4">
+        <YStack grow={1} gap="$4" $md={{ flexBasis: 320, minW: 0 }}>
           <MangaRow
             stageMangas={stageMangas}
             powerMangas={powerMangas}
@@ -178,13 +179,13 @@ export function CreateLobbyScreen({
           />
         </YStack>
 
-        <YStack flexBasis={320} grow={1} gap="$4">
+        <YStack grow={1} gap="$4" $md={{ flexBasis: 320, minW: 0 }}>
           <NumberStepper
             label={t('game.create.votingSecondsLabel')}
             help={<InfoHint text={t('game.create.help.votingSeconds')} />}
             value={votingWindowSeconds}
-            min={5}
-            max={180}
+            min={VOTING_WINDOW_LIMITS.min}
+            max={VOTING_WINDOW_LIMITS.max}
             onChange={onChangeVotingWindow}
           />
 
@@ -192,8 +193,8 @@ export function CreateLobbyScreen({
             label={t('game.create.summarySecondsLabel')}
             help={<InfoHint text={t('game.create.help.summarySeconds')} />}
             value={summaryDurationSeconds}
-            min={10}
-            max={300}
+            min={SUMMARY_DURATION_LIMITS.min}
+            max={SUMMARY_DURATION_LIMITS.max}
             onChange={onChangeSummaryDuration}
           />
 
@@ -210,7 +211,7 @@ export function CreateLobbyScreen({
                 ) : (
                   <Lock size={14} color="$panelText" />
                 )}
-                {t(`enums.lobbyVisibility.${visibility}`)}
+                <GlowText level="heading">{t(`enums.lobbyVisibility.${visibility}`)}</GlowText>
               </XStack>
             </GlossButton>
           </SettingRow>
@@ -229,7 +230,9 @@ export function CreateLobbyScreen({
               >
                 <XStack items="center" gap="$2">
                   <Bot size={14} color="$panelText" />
-                  {allowBots ? t('game.create.allowBotsOn') : t('game.create.allowBotsOff')}
+                  <GlowText level="heading">
+                    {allowBots ? t('game.create.allowBotsOn') : t('game.create.allowBotsOff')}
+                  </GlowText>
                 </XStack>
               </GlossButton>
             </SettingRow>
