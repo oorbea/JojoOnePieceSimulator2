@@ -93,6 +93,9 @@ var Codes = []string{
 	JojoCharacterAlreadyExists,
 	OnePieceCharacterNotFound,
 	OnePieceCharacterAlreadyExists,
+	InviteInvalid,
+	InviteRevoked,
+	GameAlreadyStarted,
 	Internal,
 }
 
@@ -175,6 +178,9 @@ const (
 	JojoCharacterAlreadyExists     = "JOJO_CHARACTER_ALREADY_EXISTS"
 	OnePieceCharacterNotFound      = "ONE_PIECE_CHARACTER_NOT_FOUND"
 	OnePieceCharacterAlreadyExists = "ONE_PIECE_CHARACTER_ALREADY_EXISTS"
+	InviteInvalid                  = "INVITE_INVALID"
+	InviteRevoked                  = "INVITE_REVOKED"
+	GameAlreadyStarted             = "GAME_ALREADY_STARTED"
 	// Internal is the fallback code for any error not otherwise mapped -
 	// endpoints.errorCode's default case.
 	Internal = "INTERNAL"

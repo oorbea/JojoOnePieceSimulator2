@@ -343,19 +343,55 @@
     },
     "code": {
       "title": "Código de sala",
-      "copy": "Copiar código",
+      "copy": "Copiar código de sala",
       "copied": "Código copiado",
       "share": "Compartir código",
       "shared": "Código compartido",
+      "shareLink": "Compartir enlace de invitación",
       "shareMessage": "Únete a mi sala de JoJo x One Piece Simulator con el código {{code}}",
+      "shareLinkMessage": "Únete a mi sala de JoJo x One Piece Simulator",
+      "linkCopied": "Enlace de invitación copiado",
+      "linkShared": "Enlace de invitación compartido",
+      "linkFailed": "No se ha podido crear el enlace de invitación",
       "publicHint": "Pública: cualquiera puede encontrar y unirse a esta sala.",
       "privateHint": "Privada: solo puede unirse quien tenga el código.",
       "regenerate": {
         "action": "Generar nuevo código",
         "title": "¿Generar un nuevo código de sala?",
-        "message": "El código antiguo deja de funcionar al instante. Todos los que estén ahora en la sala se quedan, y nada más cambia. Nota: una sala pública se puede seguir encontrando y unir desde el buscador; usa los controles de bloqueo/visibilidad de arriba para cerrar también esa vía.",
+        "message": "El código antiguo deja de funcionar al instante, y también todos los enlaces de invitación que ya hayas compartido. Todos los que estén ahora en la sala se quedan, y nada más cambia. Nota: una sala pública se puede seguir encontrando y unir desde el buscador; usa los controles de bloqueo/visibilidad de arriba para cerrar también esa vía.",
         "confirm": "Nuevo código",
         "done": "Nuevo código de sala generado"
+      }
+    },
+    "invite": {
+      "title": "Unirse a la sala",
+      "checking": "Comprobando tu invitación…",
+      "joining": "Uniéndose…",
+      "join": "Unirse a la sala",
+      "backToGames": "Volver a partidas",
+      "switch": {
+        "title": "¿Salir de tu partida actual?",
+        "message": "Ya estás en otra partida. ¿Salir de ella y unirte a esta sala?",
+        "confirm": "Salir y unirse"
+      },
+      "error": {
+        "expired": "Este enlace de invitación ha caducado.",
+        "revoked": "Este enlace de invitación ya no funciona: el host generó un código de sala nuevo.",
+        "started": "Esta partida ya ha empezado.",
+        "full": "Esta sala está llena.",
+        "locked": "Esta sala está bloqueada.",
+        "gone": "No se ha encontrado esta sala.",
+        "generic": "No se ha podido usar este enlace de invitación."
+      },
+      "share": {
+        "title": "Compartir enlace de invitación",
+        "copyLink": "Copiar enlace",
+        "qr": "Mostrar código QR",
+        "qrHint": "Escanéalo con otro dispositivo para abrir este enlace.",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "x": "X",
+        "email": "Correo"
       }
     },
     "lock": {
@@ -834,6 +870,9 @@
     "REFRESH_REUSE": "Tu sesión se ha cerrado por motivos de seguridad. Vuelve a iniciar sesión.",
     "OBJECT_NOT_FOUND": "No se ha podido encontrar esta imagen.",
     "MEDIA_SIGNATURE_INVALID": "Este enlace de imagen ha caducado.",
+    "INVITE_INVALID": "Este enlace de invitación ha caducado.",
+    "INVITE_REVOKED": "Este enlace de invitación ya no funciona: el host generó un código de sala nuevo.",
+    "GAME_ALREADY_STARTED": "Esta partida ya ha empezado.",
     "INTERNAL": "Algo ha ido mal por nuestra parte."
   }
 }

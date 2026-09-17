@@ -343,19 +343,55 @@
     },
     "code": {
       "title": "Codi de sala",
-      "copy": "Copia el codi",
+      "copy": "Copia el codi de sala",
       "copied": "Codi copiat",
       "share": "Comparteix el codi",
       "shared": "Codi compartit",
+      "shareLink": "Comparteix l'enllaç d'invitació",
       "shareMessage": "Uneix-te a la meva sala de JoJo x One Piece Simulator amb el codi {{code}}",
+      "shareLinkMessage": "Uneix-te a la meva sala de JoJo x One Piece Simulator",
+      "linkCopied": "Enllaç d'invitació copiat",
+      "linkShared": "Enllaç d'invitació compartit",
+      "linkFailed": "No s'ha pogut crear l'enllaç d'invitació",
       "publicHint": "Pública: qualsevol pot trobar i unir-se a aquesta sala.",
       "privateHint": "Privada: només s'hi pot unir qui tingui el codi.",
       "regenerate": {
         "action": "Genera un codi nou",
         "title": "Vols generar un codi de sala nou?",
-        "message": "El codi antic deixa de funcionar a l'instant. Tothom qui sigui ara a la sala hi continua, i res més canvia. Nota: una sala pública encara es pot trobar i unir des del cercador; fes servir els controls de bloqueig/visibilitat de dalt per tancar també aquesta via.",
+        "message": "El codi antic deixa de funcionar a l'instant, i també tots els enllaços d'invitació que ja hagis compartit. Tothom qui sigui ara a la sala hi continua, i res més canvia. Nota: una sala pública encara es pot trobar i unir des del cercador; fes servir els controls de bloqueig/visibilitat de dalt per tancar també aquesta via.",
         "confirm": "Codi nou",
         "done": "Codi de sala nou generat"
+      }
+    },
+    "invite": {
+      "title": "Uneix-te a la sala",
+      "checking": "Comprovant la teva invitació…",
+      "joining": "Unint-se…",
+      "join": "Uneix-te a la sala",
+      "backToGames": "Torna a partides",
+      "switch": {
+        "title": "Vols sortir de la teva partida actual?",
+        "message": "Ja ets en una altra partida. Vols sortir-ne i unir-te a aquesta sala?",
+        "confirm": "Surt i uneix-te"
+      },
+      "error": {
+        "expired": "Aquest enllaç d'invitació ha caducat.",
+        "revoked": "Aquest enllaç d'invitació ja no funciona: l'amfitrió ha generat un codi de sala nou.",
+        "started": "Aquesta partida ja ha començat.",
+        "full": "Aquesta sala és plena.",
+        "locked": "Aquesta sala està bloquejada.",
+        "gone": "No s'ha trobat aquesta sala.",
+        "generic": "No s'ha pogut fer servir aquest enllaç d'invitació."
+      },
+      "share": {
+        "title": "Comparteix l'enllaç d'invitació",
+        "copyLink": "Copia l'enllaç",
+        "qr": "Mostra el codi QR",
+        "qrHint": "Escaneja'l amb un altre dispositiu per obrir aquest enllaç.",
+        "whatsapp": "WhatsApp",
+        "telegram": "Telegram",
+        "x": "X",
+        "email": "Correu"
       }
     },
     "lock": {
@@ -834,6 +870,9 @@
     "REFRESH_REUSE": "La teva sessió s'ha tancat per motius de seguretat. Torna a iniciar sessió.",
     "OBJECT_NOT_FOUND": "No s'ha pogut trobar aquesta imatge.",
     "MEDIA_SIGNATURE_INVALID": "Aquest enllaç d'imatge ha caducat.",
+    "INVITE_INVALID": "Aquest enllaç d'invitació ha caducat.",
+    "INVITE_REVOKED": "Aquest enllaç d'invitació ja no funciona: l'amfitrió ha generat un codi de sala nou.",
+    "GAME_ALREADY_STARTED": "Aquesta partida ja ha començat.",
     "INTERNAL": "Alguna cosa ha anat malament per la nostra part."
   }
 }

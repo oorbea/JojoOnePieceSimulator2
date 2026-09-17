@@ -22,10 +22,18 @@ import {
   type ConfigFormState,
 } from '@/features/game/lib/config-form'
 import { formatCode } from '@/features/game/lib/game-code'
+import { useGameInvite } from '@/features/game/hooks/use-game-invite'
+import { buildInviteUrl } from '@/features/game/lib/invite-url'
 import { startGate } from '@/features/game/lib/lobby-rules'
 import { shouldReveal } from '@/features/game/lib/loadout-reveal'
-import { shareJoinCode } from '@/features/game/lib/share'
+import {
+  canSystemShare,
+  copyToClipboard,
+  shareInviteLink,
+  shareJoinCode,
+} from '@/features/game/lib/share'
 import { voteOptions } from '@/features/game/lib/vote-options'
+import { ShareInviteSheet } from '@/features/game/components/presentational/share-invite-sheet'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
@@ -95,6 +103,9 @@ export function LobbyRoomContainer() {
   const [rosterModalOpen, setRosterModalOpen] = useState(false)
   const [rematchRequestId, setRematchRequestId] = useState<string | null>(null)
   const [rematchError, setRematchError] = useState<string | null>(null)
+  const [shareSheetOpen, setShareSheetOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const { getOrMintToken } = useGameInvite()
 
   const snapshot = socket.snapshot ?? detail.data?.game ?? null
   const you = socket.you ?? detail.data?.you ?? null
@@ -373,7 +384,9 @@ export function LobbyRoomContainer() {
     setConfigSaving(true)
     setConfigSaved(false)
     setConfigError(undefined)
-    const requestId = commands.updateConfig(buildUpdateConfigPayload(next, snapshot.config.abilitySource))
+    const requestId = commands.updateConfig(
+      buildUpdateConfigPayload(next, snapshot.config.abilitySource)
+    )
     setConfigRequestId(requestId)
   }
 
@@ -454,92 +467,129 @@ export function LobbyRoomContainer() {
   const shareMessage = t('game.code.shareMessage', { code: formatCode(snapshot.code) })
 
   return (
-    <LobbyRoomScreen
-      snapshot={snapshot}
-      you={you}
-      socketStatus={socket.status}
-      nextRetryAt={socket.nextRetryAt}
-      onRetryNow={socket.retryNow}
-      gate={gate}
-      starting={starting}
-      onStart={handleStart}
-      onLeave={handleLeave}
-      onAbort={handleAbort}
-      onJoinTeam={(teamId) => commands.switchTeam(teamId)}
-      onMovePlayer={(participantId, teamId) => commands.movePlayer(participantId, teamId)}
-      onKick={handleKick}
-      onTransferHost={handleTransferHost}
-      onToggleLock={() => commands.setLocked(!snapshot.locked)}
-      onCopyCode={async () => {
-        const result = await shareJoinCode(snapshot.code, shareMessage)
-        if (result === 'copied') showSuccessToast(t('game.code.copied'))
-        return result
-      }}
-      onShareCode={async () => {
-        const result = await shareJoinCode(snapshot.code, shareMessage)
-        if (result === 'shared') showSuccessToast(t('game.code.shared'))
-        return result
-      }}
-      onRegenerateCode={handleRegenerateCode}
-      confirmSheet={confirmSheet}
-      confirming={false}
-      onCancelConfirm={() => setConfirmSheet(null)}
-      configMode={form.mode}
-      onChangeConfigMode={handleChangeConfigMode}
-      configStageMangas={form.stageMangas}
-      configPowerMangas={form.powerMangas}
-      onToggleConfigStageManga={handleToggleConfigStageManga}
-      onToggleConfigPowerManga={handleToggleConfigPowerManga}
-      configTeamSize={form.teamSize}
-      configTeamSizeMin={TEAM_SIZE_LIMITS[form.mode].min}
-      configTeamSizeMax={TEAM_SIZE_LIMITS[form.mode].max}
-      onChangeConfigTeamSize={(teamSize) => setConfigForm({ ...form, teamSize })}
-      configAllowBots={form.allowBots}
-      onToggleConfigAllowBots={() => setConfigForm({ ...form, allowBots: !form.allowBots })}
-      configVisibility={form.visibility}
-      onToggleConfigVisibility={() =>
-        setConfigForm({ ...form, visibility: form.visibility === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC' })
-      }
-      configVotingWindowSeconds={form.votingWindowSeconds}
-      onChangeConfigVotingWindow={(votingWindowSeconds) =>
-        setConfigForm({ ...form, votingWindowSeconds })
-      }
-      configSummaryDurationSeconds={form.summaryDurationSeconds}
-      onChangeConfigSummaryDuration={(summaryDurationSeconds) =>
-        setConfigForm({ ...form, summaryDurationSeconds })
-      }
-      configRevealSpeed={form.revealSpeed}
-      onCycleConfigRevealSpeed={() => {
-        const i = REVEAL_SPEED_CYCLE.indexOf(form.revealSpeed)
-        const revealSpeed = REVEAL_SPEED_CYCLE[(i + 1) % REVEAL_SPEED_CYCLE.length]
-        setConfigForm({ ...form, revealSpeed })
-      }}
-      configPoolFilter={form.poolFilter}
-      configPoolActiveCount={configPoolActiveCount}
-      configBanlistItems={banlistItems}
-      onAddConfigBan={handleAddConfigBan}
-      onRemoveConfigBan={handleRemoveConfigBan}
-      onBanMatchingConfig={handleBanMatchingConfig}
-      onClearConfigPoolFilter={handleClearConfigPoolFilter}
-      configSaving={configSaving || configOffline}
-      configSaved={configSaved}
-      configError={configError}
-      onSubmitConfig={handleSubmitConfig}
-      live={socket.live}
-      revealPhase={loadoutReveal.phase}
-      revealParticipantIndex={loadoutReveal.participantIndex}
-      revealSlotIndex={loadoutReveal.slotIndex}
-      revealTotalSlots={loadoutReveal.totalSlots}
-      isRevealing={loadoutReveal.isRevealing}
-      onSkipReveal={loadoutReveal.skip}
-      onSummaryReady={commands.summaryReady}
-      reducedMotion={reducedMotion}
-      onVote={handleVote}
-      onSkipResult={socket.dismissResult}
-      onModalOpenChange={setRosterModalOpen}
-      onBackToLobbies={handleBackToLobbies}
-      onRematch={handleRematch}
-      rematchError={rematchError}
-    />
+    <>
+      {shareUrl ? (
+        <ShareInviteSheet
+          visible={shareSheetOpen}
+          onClose={() => setShareSheetOpen(false)}
+          url={shareUrl}
+          message={t('game.code.shareLinkMessage')}
+          onCopy={async () => {
+            const ok = await copyToClipboard(shareUrl)
+            if (ok) showSuccessToast(t('game.code.linkCopied'))
+            return ok
+          }}
+        />
+      ) : null}
+      <LobbyRoomScreen
+        snapshot={snapshot}
+        you={you}
+        socketStatus={socket.status}
+        nextRetryAt={socket.nextRetryAt}
+        onRetryNow={socket.retryNow}
+        gate={gate}
+        starting={starting}
+        onStart={handleStart}
+        onLeave={handleLeave}
+        onAbort={handleAbort}
+        onJoinTeam={(teamId) => commands.switchTeam(teamId)}
+        onMovePlayer={(participantId, teamId) => commands.movePlayer(participantId, teamId)}
+        onKick={handleKick}
+        onTransferHost={handleTransferHost}
+        onToggleLock={() => commands.setLocked(!snapshot.locked)}
+        onCopyCode={async () => {
+          const result = await shareJoinCode(snapshot.code, shareMessage)
+          if (result === 'copied') showSuccessToast(t('game.code.copied'))
+          return result
+        }}
+        onShareCode={async () => {
+          const token = await getOrMintToken(snapshot.id, snapshot.code).catch(() => null)
+          const url = token ? buildInviteUrl(token) : null
+          if (!url) {
+            // No usable origin to build a link under (native without
+            // EXPO_PUBLIC_WEB_ORIGIN, or minting failed) - fall back to
+            // sharing the raw code, same as before this feature existed.
+            const result = await shareJoinCode(snapshot.code, shareMessage)
+            if (result === 'shared') showSuccessToast(t('game.code.shared'))
+            return result
+          }
+          const linkMessage = t('game.code.shareLinkMessage')
+          if (canSystemShare()) {
+            const result = await shareInviteLink(url, linkMessage)
+            if (result === 'shared') showSuccessToast(t('game.code.linkShared'))
+            if (result === 'failed') showErrorToast(new AppError(t('game.code.linkFailed')))
+            // 'cancelled' (share sheet dismissed) is deliberately silent - no
+            // toast either way, same as closing any other picker.
+            return result === 'failed' ? 'failed' : 'shared'
+          }
+          setShareUrl(url)
+          setShareSheetOpen(true)
+          return 'shared'
+        }}
+        onRegenerateCode={handleRegenerateCode}
+        confirmSheet={confirmSheet}
+        confirming={false}
+        onCancelConfirm={() => setConfirmSheet(null)}
+        configMode={form.mode}
+        onChangeConfigMode={handleChangeConfigMode}
+        configStageMangas={form.stageMangas}
+        configPowerMangas={form.powerMangas}
+        onToggleConfigStageManga={handleToggleConfigStageManga}
+        onToggleConfigPowerManga={handleToggleConfigPowerManga}
+        configTeamSize={form.teamSize}
+        configTeamSizeMin={TEAM_SIZE_LIMITS[form.mode].min}
+        configTeamSizeMax={TEAM_SIZE_LIMITS[form.mode].max}
+        onChangeConfigTeamSize={(teamSize) => setConfigForm({ ...form, teamSize })}
+        configAllowBots={form.allowBots}
+        onToggleConfigAllowBots={() => setConfigForm({ ...form, allowBots: !form.allowBots })}
+        configVisibility={form.visibility}
+        onToggleConfigVisibility={() =>
+          setConfigForm({
+            ...form,
+            visibility: form.visibility === 'PUBLIC' ? 'PRIVATE' : 'PUBLIC',
+          })
+        }
+        configVotingWindowSeconds={form.votingWindowSeconds}
+        onChangeConfigVotingWindow={(votingWindowSeconds) =>
+          setConfigForm({ ...form, votingWindowSeconds })
+        }
+        configSummaryDurationSeconds={form.summaryDurationSeconds}
+        onChangeConfigSummaryDuration={(summaryDurationSeconds) =>
+          setConfigForm({ ...form, summaryDurationSeconds })
+        }
+        configRevealSpeed={form.revealSpeed}
+        onCycleConfigRevealSpeed={() => {
+          const i = REVEAL_SPEED_CYCLE.indexOf(form.revealSpeed)
+          const revealSpeed = REVEAL_SPEED_CYCLE[(i + 1) % REVEAL_SPEED_CYCLE.length]
+          setConfigForm({ ...form, revealSpeed })
+        }}
+        configPoolFilter={form.poolFilter}
+        configPoolActiveCount={configPoolActiveCount}
+        configBanlistItems={banlistItems}
+        onAddConfigBan={handleAddConfigBan}
+        onRemoveConfigBan={handleRemoveConfigBan}
+        onBanMatchingConfig={handleBanMatchingConfig}
+        onClearConfigPoolFilter={handleClearConfigPoolFilter}
+        configSaving={configSaving || configOffline}
+        configSaved={configSaved}
+        configError={configError}
+        onSubmitConfig={handleSubmitConfig}
+        live={socket.live}
+        revealPhase={loadoutReveal.phase}
+        revealParticipantIndex={loadoutReveal.participantIndex}
+        revealSlotIndex={loadoutReveal.slotIndex}
+        revealTotalSlots={loadoutReveal.totalSlots}
+        isRevealing={loadoutReveal.isRevealing}
+        onSkipReveal={loadoutReveal.skip}
+        onSummaryReady={commands.summaryReady}
+        reducedMotion={reducedMotion}
+        onVote={handleVote}
+        onSkipResult={socket.dismissResult}
+        onModalOpenChange={setRosterModalOpen}
+        onBackToLobbies={handleBackToLobbies}
+        onRematch={handleRematch}
+        rematchError={rematchError}
+      />
+    </>
   )
 }

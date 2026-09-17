@@ -170,6 +170,23 @@ const defaultStreamTicketReapInterval = time.Minute
 // backoff (2s -> 30s) already keeps one tab's reconnect rate well under 1/s.
 const defaultRateLimitTicketPerUser = 60
 
+// defaultGameInviteTTL bounds how long a minted lobby share link stays
+// redeemable - the product requirement is a flat 15 minutes regardless of
+// how the code that shares it behaves (see GameService.RegenerateGameCode's
+// doc for the other, earlier revocation path).
+const defaultGameInviteTTL = 15 * time.Minute
+
+// defaultGameInviteReapInterval only matters for the in-memory invite
+// store - Redis expires its own keys via PX. 0 would disable it.
+const defaultGameInviteReapInterval = time.Minute
+
+// defaultRateLimitInviteStatusPerIP bounds how many unauthenticated
+// invite-status checks one client IP may make per RateLimitWindow. The
+// status route is the app's second unauthenticated surface after /media -
+// 256 bits of token entropy make brute force pointless, but an
+// unauthenticated endpoint with no limiter at all is a free amplifier.
+const defaultRateLimitInviteStatusPerIP = 120
+
 // defaultRefreshTokenTTL bounds how long a minted refresh token stays
 // redeemable - 30 days, long enough that a returning player isn't forced to
 // re-authenticate with Google constantly, short enough to bound the damage
@@ -281,7 +298,11 @@ type Config struct {
 	// load is ~100 image requests, so this tier is deliberately far above
 	// RateLimitGlobalPerIP, which was sized for JSON-only traffic.
 	RateLimitMediaPerIP int
-	R2PresignTTL        time.Duration
+	// RateLimitInviteStatusPerIP bounds the public
+	// GET /games/invite/{token}/status route, the app's second
+	// unauthenticated surface after /media.
+	RateLimitInviteStatusPerIP int
+	R2PresignTTL               time.Duration
 	// MediaBaseURL is the origin+prefix media URLs are built under (see
 	// dto.MediaURLBuilder) - relative in prod (same-origin behind NPM),
 	// absolute in local dev (frontend :3000, backend :8080 are different
@@ -359,6 +380,11 @@ type Config struct {
 	// in-memory ticket store (0 disables it); Redis expires its own keys.
 	StreamTicketTTL          time.Duration
 	StreamTicketReapInterval time.Duration
+	// GameInviteTTL bounds how long a minted lobby share link stays
+	// redeemable. GameInviteReapInterval only applies to the in-memory
+	// invite store (0 disables it); Redis expires its own keys.
+	GameInviteTTL          time.Duration
+	GameInviteReapInterval time.Duration
 	// RefreshTokenTTL bounds how long a minted refresh token stays
 	// redeemable. RefreshTokenReapInterval only applies to the in-memory
 	// store (0 disables it); Redis expires its own keys.
@@ -623,6 +649,11 @@ func Load() (*Config, error) {
 	}
 
 	rateLimitMediaPerIP, err := parsePositiveIntEnv("RATE_LIMIT_MEDIA_PER_IP", defaultRateLimitMediaPerIP)
+	if err != nil {
+		return nil, err
+	}
+
+	rateLimitInviteStatusPerIP, err := parsePositiveIntEnv("RATE_LIMIT_INVITE_STATUS_PER_IP", defaultRateLimitInviteStatusPerIP)
 	if err != nil {
 		return nil, err
 	}
@@ -1007,6 +1038,30 @@ func Load() (*Config, error) {
 		streamTicketReapInterval = parsed
 	}
 
+	gameInviteTTL := defaultGameInviteTTL
+	if raw := os.Getenv("GAME_INVITE_TTL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing GAME_INVITE_TTL: %w", err)
+		}
+		if parsed <= 0 {
+			return nil, fmt.Errorf("GAME_INVITE_TTL must be positive")
+		}
+		gameInviteTTL = parsed
+	}
+
+	gameInviteReapInterval := defaultGameInviteReapInterval
+	if raw := os.Getenv("GAME_INVITE_REAP_INTERVAL"); raw != "" {
+		parsed, err := time.ParseDuration(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing GAME_INVITE_REAP_INTERVAL: %w", err)
+		}
+		if parsed < 0 {
+			return nil, fmt.Errorf("GAME_INVITE_REAP_INTERVAL must not be negative")
+		}
+		gameInviteReapInterval = parsed
+	}
+
 	refreshTokenTTL := defaultRefreshTokenTTL
 	if raw := os.Getenv("REFRESH_TOKEN_TTL"); raw != "" {
 		parsed, err := time.ParseDuration(raw)
@@ -1093,8 +1148,9 @@ func Load() (*Config, error) {
 		RateLimitLoginPerIP:    rateLimitLoginPerIP,
 		RateLimitReadPerUser:   rateLimitReadPerUser,
 		RateLimitWritePerUser:  rateLimitWritePerUser,
-		RateLimitTicketPerUser: rateLimitTicketPerUser,
-		RateLimitMediaPerIP:    rateLimitMediaPerIP,
+		RateLimitTicketPerUser:     rateLimitTicketPerUser,
+		RateLimitMediaPerIP:        rateLimitMediaPerIP,
+		RateLimitInviteStatusPerIP: rateLimitInviteStatusPerIP,
 
 		R2AccountID:       r2AccountID,
 		R2AccessKeyID:     r2AccessKeyID,
@@ -1165,6 +1221,9 @@ func Load() (*Config, error) {
 
 		StreamTicketTTL:          streamTicketTTL,
 		StreamTicketReapInterval: streamTicketReapInterval,
+
+		GameInviteTTL:          gameInviteTTL,
+		GameInviteReapInterval: gameInviteReapInterval,
 
 		RefreshTokenTTL:          refreshTokenTTL,
 		RefreshTokenReapInterval: refreshTokenReapInterval,
