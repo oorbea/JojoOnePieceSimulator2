@@ -30,6 +30,11 @@ type RateLimitConfig struct {
 	// far above GlobalPerIP: a catalogue's cold load is ~100 image requests
 	// alone, on top of the one JSON request that used to cover it.
 	MediaPerIP int
+	// InviteStatusPerIP bounds GET /games/invite/{token}/status, keyed by
+	// client IP - the app's second unauthenticated surface after /media. The
+	// token's 256 bits of entropy make brute force pointless; this exists so
+	// an unauthenticated route is never left with zero limiting at all.
+	InviteStatusPerIP int
 }
 
 // keyByClientIP keys the limiter on chi's resolved client IP, populated by
@@ -134,6 +139,15 @@ func mediaRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler { return next }
 	}
 	return limit(cfg.MediaPerIP, cfg.Window, keyByClientIP)
+}
+
+// inviteStatusRateLimit applies to GET /games/invite/{token}/status, keyed
+// by client IP since the route sits outside RequireAuth.
+func inviteStatusRateLimit(cfg RateLimitConfig) func(http.Handler) http.Handler {
+	if !cfg.Enabled {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return limit(cfg.InviteStatusPerIP, cfg.Window, keyByClientIP)
 }
 
 // refreshRateLimit applies to POST /auth/refresh and /auth/logout, keyed by
