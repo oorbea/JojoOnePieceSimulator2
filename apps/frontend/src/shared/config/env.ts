@@ -9,6 +9,11 @@ const envSchema = z.object({
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: z.string().optional(),
   EXPO_PUBLIC_SOCKET_URL: z.string().optional(),
+  // Origin lobby invite links are built under (buildInviteUrl,
+  // features/game/lib/invite-url.ts). Optional: web falls back to
+  // window.location.origin, native with nothing configured just can't share
+  // a link (share.ts falls back to the raw code).
+  EXPO_PUBLIC_WEB_ORIGIN: z.string().optional(),
   // Distinct per deploy (commit SHA in CI, "dev" locally) - used as the
   // React Query persister's buster (query-provider.tsx) so a new build
   // never rehydrates a persisted cache shaped for an older one.
@@ -21,6 +26,7 @@ const parsed = envSchema.safeParse({
   EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   EXPO_PUBLIC_SOCKET_URL: process.env.EXPO_PUBLIC_SOCKET_URL,
+  EXPO_PUBLIC_WEB_ORIGIN: process.env.EXPO_PUBLIC_WEB_ORIGIN,
   EXPO_PUBLIC_BUILD_ID: process.env.EXPO_PUBLIC_BUILD_ID,
 })
 
