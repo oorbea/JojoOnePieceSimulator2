@@ -36,6 +36,14 @@ export function clampTeamSize(mode: GameMode, teamSize: number): number {
   return Math.min(Math.max(teamSize, min), max)
 }
 
+// Mirrors apps/backend/internal/domain/entities/game/config.go's
+// MinVotingWindowSeconds/MaxVotingWindowSeconds and
+// MinSummaryDurationSeconds/MaxSummaryDurationSeconds - not part of any
+// generated contract, so keep these two in sync by hand if the backend
+// bounds ever change.
+export const VOTING_WINDOW_LIMITS = { min: 5, max: 180 } as const
+export const SUMMARY_DURATION_LIMITS = { min: 10, max: 300 } as const
+
 export function configFormFromSnapshot(mode: GameMode, config: GameConfig): ConfigFormState {
   return {
     mode,

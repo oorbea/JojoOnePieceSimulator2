@@ -249,6 +249,7 @@
       "allowBotsOn": "Amb bots",
       "allowBotsOff": "Sense bots",
       "allowBotsGauntletHint": "Els bots no es permeten a Gauntlet.",
+      "editValueHint": "Prem per escriure un valor",
       "submit": "Crea la sala",
       "creating": "Creant…",
       "help": {
