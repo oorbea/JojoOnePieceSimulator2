@@ -52,6 +52,16 @@ var (
 	// actually reached FINISHED/ABORTED yet - a rematch of a game still in
 	// progress is meaningless.
 	ErrGameNotOver = errors.New("game is not over yet")
+
+	// ErrInviteRevoked is returned by JoinByInvite when the token is valid
+	// and unexpired but the host has since rotated the game's join code
+	// (RegenerateGameCode) - see game_invite.go for how this is detected.
+	ErrInviteRevoked = errors.New("invite link was revoked")
+
+	// ErrGameAlreadyStarted is returned by JoinByInvite when the target
+	// Game has already left LOBBY, so the link's holder can be told exactly
+	// why they cannot join instead of a generic state-transition error.
+	ErrGameAlreadyStarted = errors.New("game has already started")
 )
 
 // CreateGameInput carries every field needed to set up a new Game's Config,
@@ -121,6 +131,9 @@ type GameService struct {
 	hub       *GameEventHub
 	clock     Clock
 	votingCfg VotingPolicy
+	// invites mints/looks up short-lived, multi-use lobby share-link
+	// tokens - see game_invite.go.
+	invites ports.IGameInviteStore
 
 	// locks serializes every mutation of a given Game by its GameID, so
 	// concurrent requests (a vote, a disconnect, a timer firing) against the
@@ -237,12 +250,14 @@ func NewGameService(
 	hub *GameEventHub,
 	clock Clock,
 	votingCfg VotingPolicy,
+	invites ports.IGameInviteStore,
 ) *GameService {
 	return &GameService{
 		store: store, gameIDs: gameIDs, partIDs: partIDs, teamIDs: teamIDs,
 		users: users, stages: stages, powers: powerPool, weights: weights,
 		tiebreak: tiebreak, history: history, rng: rng, hub: hub, clock: clock,
 		votingCfg:   votingCfg,
+		invites:     invites,
 		locks:       newGameLocks(),
 		timers:      make(map[game.GameID]Timer),
 		revealEnds:  make(map[game.GameID]time.Time),

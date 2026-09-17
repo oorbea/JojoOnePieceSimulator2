@@ -182,6 +182,12 @@ func errorCode(err error) string {
 		return apierr.OnePieceCharacterNotFound
 	case errors.Is(err, ports.ErrOnePieceCharacterAlreadyExists):
 		return apierr.OnePieceCharacterAlreadyExists
+	case errors.Is(err, ports.ErrInviteInvalid):
+		return apierr.InviteInvalid
+	case errors.Is(err, services.ErrInviteRevoked):
+		return apierr.InviteRevoked
+	case errors.Is(err, services.ErrGameAlreadyStarted):
+		return apierr.GameAlreadyStarted
 	default:
 		return apierr.Internal
 	}

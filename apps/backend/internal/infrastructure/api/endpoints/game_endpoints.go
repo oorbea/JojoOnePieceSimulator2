@@ -177,9 +177,20 @@ func (e *GameEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 		r.With(read).Get("/{id}", Wrap(e.get))
 		r.With(read).Get("/by-code/{code}", Wrap(e.getByCode))
 		r.With(write).Post("/{id}/join", Wrap(e.joinByID))
+		r.With(write).Post("/{id}/leave", Wrap(e.leave))
 		r.With(write).Patch("/{id}/config", Wrap(e.editConfig))
 		r.With(ticket).Post("/{id}/ws-ticket", Wrap(e.mintWSTicket))
+		r.With(ticket).Post("/{id}/invite", Wrap(e.createInvite))
+		r.With(read).Get("/invite/{token}", Wrap(e.invitePreview))
+		r.With(write).Post("/join-invite", Wrap(e.joinByInvite))
 	})
+	// PUBLIC - deliberately outside the Group above (and its RequireAuth),
+	// same reasoning as /{id}/ws: an invite link may be opened by a visitor
+	// who has never logged in, and the whole point of this route is to
+	// answer "is this link still good" before asking them to. See
+	// GameService.InviteStatus's doc for what it withholds precisely
+	// because this route has no bearer token to gate it.
+	r.With(inviteStatusRateLimit(rateCfg)).Get("/invite/{token}/status", Wrap(e.inviteStatus))
 	return r
 }
 
@@ -600,6 +611,159 @@ func (e *GameEndpoints) editConfig(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 	g, err = e.svc.EditLobbyConfig(r.Context(), id, self, input)
+	if err != nil {
+		return err
+	}
+	return e.respondState(w, r, g, self, http.StatusOK)
+}
+
+// leave godoc
+//
+//	@Summary		Leave a game
+//	@Description	Removes the caller from the game entirely. Exists as a REST route (mirroring the WS LEAVE command GameService.LeaveGame already backs) specifically for a visitor who has opened a lobby share link while already seated somewhere else and confirmed they want to switch - that flow has no open socket to the game being left.
+//	@Tags			games
+//	@Security		BearerAuth
+//	@Param			id	path	string	true	"Game id (UUID)"
+//	@Success		204
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/games/{id}/leave [post]
+func (e *GameEndpoints) leave(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := ClaimsFromRequest(r)
+	if !ok {
+		return ports.ErrUnauthenticated
+	}
+	id, err := game.ParseGameID(chi.URLParam(r, "id"))
+	if err != nil {
+		return err
+	}
+	g, err := e.svc.GetGame(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	self, err := resolveParticipant(g, claims.UserID)
+	if err != nil {
+		return err
+	}
+	if _, err := e.svc.LeaveGame(r.Context(), id, self); err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusNoContent, nil)
+	return nil
+}
+
+// createInvite godoc
+//
+//	@Summary		Mint a lobby share-link invite token
+//	@Description	Any seated human participant may mint one, not only the host - see POST /games/{id}/ws-ticket for the same authorization shape. Multi-use and short-lived (see GameService.CreateInvite); dies early if the host rotates the join code before it expires on its own.
+//	@Tags			games
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string	true	"Game id (UUID)"
+//	@Success		200	{object}	dto.GameInviteResponse
+//	@Failure		401	{object}	dto.ErrorResponse
+//	@Failure		403	{object}	dto.ErrorResponse
+//	@Failure		404	{object}	dto.ErrorResponse
+//	@Failure		409	{object}	dto.ErrorResponse
+//	@Failure		429	{object}	dto.ErrorResponse
+//	@Router			/games/{id}/invite [post]
+func (e *GameEndpoints) createInvite(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := ClaimsFromRequest(r)
+	if !ok {
+		return ports.ErrUnauthenticated
+	}
+	id, err := game.ParseGameID(chi.URLParam(r, "id"))
+	if err != nil {
+		return err
+	}
+	token, expiresAt, err := e.svc.CreateInvite(r.Context(), id, claims.UserID)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.GameInviteResponse{Token: token, ExpiresAt: expiresAt})
+	return nil
+}
+
+// inviteStatus godoc
+//
+//	@Summary		Check whether a lobby invite link is still usable
+//	@Description	PUBLIC - no bearer token required, reachable by a visitor who has not logged in yet (or an unfurl bot). Answers only VALID/EXPIRED, deliberately nothing else - see dto.InviteStatusResponse's doc. Always 200; Cache-Control: no-store so neither a cache nor the HTTP status itself becomes an existence oracle.
+//	@Tags			games
+//	@Produce		json
+//	@Param			token	path		string	true	"Invite token"
+//	@Success		200		{object}	dto.InviteStatusResponse
+//	@Failure		429		{object}	dto.ErrorResponse
+//	@Router			/games/invite/{token}/status [get]
+func (e *GameEndpoints) inviteStatus(w http.ResponseWriter, r *http.Request) error {
+	token := chi.URLParam(r, "token")
+	status := e.svc.InviteStatus(r.Context(), token)
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, dto.NewInviteStatusResponse(status))
+	return nil
+}
+
+// invitePreview godoc
+//
+//	@Summary		Preview a lobby by its invite token
+//	@Description	Authenticated counterpart of GET /games/preview - the token is the credential, so this also works for PRIVATE lobbies. Roster-free, join-code-free, exactly like every other lobby preview shape.
+//	@Tags			games
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			token	path		string	true	"Invite token"
+//	@Success		200		{object}	dto.InvitePreviewResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
+//	@Router			/games/invite/{token} [get]
+func (e *GameEndpoints) invitePreview(w http.ResponseWriter, r *http.Request) error {
+	if _, ok := ClaimsFromRequest(r); !ok {
+		return ports.ErrUnauthenticated
+	}
+	token := chi.URLParam(r, "token")
+	listing, err := e.svc.InvitePreview(r.Context(), token)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, dto.NewInvitePreviewResponse(listing))
+	return nil
+}
+
+// joinByInvite godoc
+//
+//	@Summary		Join a lobby by its invite token
+//	@Description	Works against PRIVATE lobbies too - see GameService.JoinByInvite's doc for exactly how this differs from POST /games/join (idempotent if already seated, a dedicated 409 if the game already started, revoked if the host has since rotated the join code).
+//	@Tags			games
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		dto.JoinByInviteRequest	true	"Invite token"
+//	@Success		200		{object}	dto.GameStateResponse
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		401		{object}	dto.ErrorResponse
+//	@Failure		404		{object}	dto.ErrorResponse
+//	@Failure		409		{object}	dto.ErrorResponse
+//	@Failure		429		{object}	dto.ErrorResponse
+//	@Router			/games/join-invite [post]
+func (e *GameEndpoints) joinByInvite(w http.ResponseWriter, r *http.Request) error {
+	claims, ok := ClaimsFromRequest(r)
+	if !ok {
+		return ports.ErrUnauthenticated
+	}
+	var req dto.JoinByInviteRequest
+	if err := decode(w, r, &req); err != nil {
+		return err
+	}
+	token, err := req.Validate()
+	if err != nil {
+		return err
+	}
+	g, err := e.svc.JoinByInvite(r.Context(), token, claims.UserID)
+	if err != nil {
+		return err
+	}
+	self, err := resolveParticipant(g, claims.UserID)
 	if err != nil {
 		return err
 	}
