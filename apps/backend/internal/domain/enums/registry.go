@@ -39,6 +39,7 @@ var WireEnums = []WireEnum{
 	{"GameState", []wireMember{Lobby, Assigning, Summary, Voting, Tiebreak, Resolving, Finished, Aborted}},
 	{"HakiLevel", []wireMember{HakiNone, HakiPrivate, HakiViceAdmiral, HakiYonkoCommander, HakiYonkoPlus}},
 	{"HamonLevel", []wireMember{HamonNone, HamonBasic, HamonAdvanced, HamonPerfect}},
+	{"InviteStatus", []wireMember{InviteValid, InviteExpired}},
 	{"LobbyVisibility", []wireMember{Private, Public}},
 	{"Locale", []wireMember{EnGB, EsES, CaES}},
 	{"Manga", []wireMember{Jojo, OnePiece}},

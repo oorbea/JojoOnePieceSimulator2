@@ -25,6 +25,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gameinvite"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
@@ -232,6 +233,7 @@ func newWSLobby(t *testing.T) *wsLobby {
 		services.NewGameEventHub(),
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: 30 * time.Second},
+		gameinvite.NewMemoryStore(gameinvite.Config{TTL: 15 * time.Minute}),
 	)
 
 	var hostUserID, joinerUserID user.UserID

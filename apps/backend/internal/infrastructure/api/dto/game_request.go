@@ -101,3 +101,20 @@ func (r JoinGameRequest) Validate() (string, error) {
 	}
 	return code, nil
 }
+
+// JoinByInviteRequest is the JSON body accepted by POST /games/join-invite.
+type JoinByInviteRequest struct {
+	Token string `json:"token"`
+}
+
+// Validate trims the token. Unlike JoinGameRequest.Validate, no
+// uppercasing: an invite token is base64url, case-sensitive by
+// construction (see gameinvite's 43-character tokens). The actual
+// existence/expiry check happens in GameService.JoinByInvite.
+func (r JoinByInviteRequest) Validate() (string, error) {
+	token := strings.TrimSpace(r.Token)
+	if token == "" {
+		return "", &ValidationError{Errors: []FieldError{{Field: "token", Code: ValRequired, Message: "token is required"}}}
+	}
+	return token, nil
+}

@@ -24,6 +24,8 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache"
 	rediscache "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/cache/redis"
 	gameinfra "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gameinvite"
+	redisgameinvite "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gameinvite/redis"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
 	redisgamestore "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore/redis"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
@@ -340,6 +342,35 @@ func main() {
 		log.Printf("stream tickets: REDIS_URL unset, using in-memory store (tickets are lost on restart, which only forces a reconnect)")
 	}
 
+	// Lobby share-link invite tokens: short-lived, multi-use credentials
+	// that let a "join this lobby" URL admit its bearer without a join
+	// code. Same Redis-or-memory branch as the game store, for the same
+	// reason - a second backend instance must be able to redeem an invite
+	// minted by the first.
+	var gameInvites ports.IGameInviteStore
+	if cfg.RedisURL != "" {
+		redisInvites, err := redisgameinvite.New(ctx, redisgameinvite.Config{
+			URL:         cfg.RedisURL,
+			DialTimeout: cfg.RedisDialTimeout,
+			OpTimeout:   cfg.GameStoreOpTimeout,
+			TTL:         cfg.GameInviteTTL,
+		})
+		if err != nil {
+			log.Fatalf("connecting to redis game-invite store: %v", err)
+		}
+		defer func() {
+			if err := redisInvites.Close(); err != nil {
+				log.Printf("closing redis game-invite store connection: %v", err)
+			}
+		}()
+		gameInvites = redisInvites
+	} else {
+		memInvites := gameinvite.NewMemoryStore(gameinvite.Config{TTL: cfg.GameInviteTTL})
+		go gameinvite.NewReaper(memInvites, cfg.GameInviteReapInterval).Start(ctx)
+		gameInvites = memInvites
+		log.Printf("game invites: REDIS_URL unset, using in-memory store (invite links are lost on restart)")
+	}
+
 	stageService := services.NewStageService(stageRepo, idgen.UUIDGenerator[game.StageID]{},
 		pictures, imageProcessor, pictureWorker, picturePolicy)
 	stageEndpoints := endpoints.NewStageEndpoints(stageService)
@@ -364,6 +395,7 @@ func main() {
 		gameEventHub,
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: cfg.GameVotingWindow},
+		gameInvites,
 	)
 	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepo, standRepo, devilFruitRepo, userRepo, tokenIssuer, streamTickets, ctx, endpoints.GameWSConfig{
 		VotingWindow:             cfg.GameVotingWindow,
@@ -397,6 +429,8 @@ func main() {
 		TicketPerUser: cfg.RateLimitTicketPerUser,
 		RefreshPerIP:  cfg.RateLimitRefreshPerIP,
 		MediaPerIP:    cfg.RateLimitMediaPerIP,
+
+		InviteStatusPerIP: cfg.RateLimitInviteStatusPerIP,
 	}
 
 	// The ETag/Cache-Control layer is independent of Redis - it stays on
