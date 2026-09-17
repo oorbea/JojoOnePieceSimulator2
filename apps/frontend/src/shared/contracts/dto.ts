@@ -5,7 +5,7 @@
 // apps/backend (or `make types-docker`). CI fails if this file is stale.
 
 import { z } from 'zod'
-import { AbilitySource, FruitMastery, FruitType, GameModeKind, GameState, HakiLevel, HamonLevel, LobbyVisibility, Locale, Manga, ParticipantKind, PhysicalForm, PictureStatus, PictureSubjectKind, PowerRarity, RevealSpeed, SpinLevel, StandStat, UserRole, abilitySourceSchema, fruitMasterySchema, fruitTypeSchema, gameModeKindSchema, gameStateSchema, hakiLevelSchema, hamonLevelSchema, lobbyVisibilitySchema, localeSchema, mangaSchema, participantKindSchema, physicalFormSchema, pictureStatusSchema, pictureSubjectKindSchema, powerRaritySchema, revealSpeedSchema, spinLevelSchema, standStatSchema, userRoleSchema } from './enums'
+import { AbilitySource, FruitMastery, FruitType, GameModeKind, GameState, HakiLevel, HamonLevel, InviteStatus, LobbyVisibility, Locale, Manga, ParticipantKind, PhysicalForm, PictureStatus, PictureSubjectKind, PowerRarity, RevealSpeed, SpinLevel, StandStat, UserRole, abilitySourceSchema, fruitMasterySchema, fruitTypeSchema, gameModeKindSchema, gameStateSchema, hakiLevelSchema, hamonLevelSchema, inviteStatusSchema, lobbyVisibilitySchema, localeSchema, mangaSchema, participantKindSchema, physicalFormSchema, pictureStatusSchema, pictureSubjectKindSchema, powerRaritySchema, revealSpeedSchema, spinLevelSchema, standStatSchema, userRoleSchema } from './enums'
 
 export const adminUpdateUserRequestSchema = z.object({
   username: z.string(),
@@ -57,6 +57,12 @@ export const fieldErrorSchema = z.object({
   message: z.string(),
 })
 export type FieldError = z.infer<typeof fieldErrorSchema>
+
+export const gameInviteResponseSchema = z.object({
+  token: z.string(),
+  expiresAt: z.iso.datetime({ offset: true }),
+})
+export type GameInviteResponse = z.infer<typeof gameInviteResponseSchema>
 
 export const gameRoundResultResponseSchema = z.object({
   winner: z.string(),
@@ -111,6 +117,31 @@ export const googleLoginRequestSchema = z.object({
   idToken: z.string(),
 })
 export type GoogleLoginRequest = z.infer<typeof googleLoginRequestSchema>
+
+export const invitePreviewResponseSchema = z.object({
+  gameId: z.string(),
+  mode: gameModeKindSchema,
+  hostDisplayName: z.string(),
+  abilitySource: abilitySourceSchema,
+  mangas: z.array(mangaSchema),
+  playerCount: z.number().int(),
+  maxPlayers: z.number().int(),
+  votingWindowSeconds: z.number().int(),
+  allowBots: z.boolean(),
+  locked: z.boolean(),
+  visibility: lobbyVisibilitySchema,
+})
+export type InvitePreviewResponse = z.infer<typeof invitePreviewResponseSchema>
+
+export const inviteStatusResponseSchema = z.object({
+  status: inviteStatusSchema,
+})
+export type InviteStatusResponse = z.infer<typeof inviteStatusResponseSchema>
+
+export const joinByInviteRequestSchema = z.object({
+  token: z.string(),
+})
+export type JoinByInviteRequest = z.infer<typeof joinByInviteRequestSchema>
 
 export const joinGameRequestSchema = z.object({
   code: z.string(),

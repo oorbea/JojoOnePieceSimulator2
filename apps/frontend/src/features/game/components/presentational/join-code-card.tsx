@@ -32,15 +32,28 @@ export function JoinCodeCard({ code, isPublic, onCopy, onShare, onRegenerate }: 
   }
 
   return (
-    <GlassPanel glossy elevate={2} width="100%" p="$5" gap="$4" $md={{ flexDirection: 'row', justify: 'space-between' }}>
+    <GlassPanel
+      glossy
+      elevate={2}
+      width="100%"
+      p="$5"
+      gap="$4"
+      $md={{ flexDirection: 'row', justify: 'space-between' }}
+    >
       <YStack gap="$2" items="center" $md={{ items: 'flex-start' }}>
         <GlowText level="label">{t('game.code.title')}</GlowText>
         <GlowText level="hero" letterSpacing={4}>
           {formatCode(code)}
         </GlowText>
         <XStack items="center" gap="$1.5">
-          {isPublic ? <Globe size={14} color="$panelTextSoft" /> : <Lock size={14} color="$panelTextSoft" />}
-          <GlowText level="label">{isPublic ? t('game.code.publicHint') : t('game.code.privateHint')}</GlowText>
+          {isPublic ? (
+            <Globe size={14} color="$panelTextSoft" />
+          ) : (
+            <Lock size={14} color="$panelTextSoft" />
+          )}
+          <GlowText level="label">
+            {isPublic ? t('game.code.publicHint') : t('game.code.privateHint')}
+          </GlowText>
         </XStack>
       </YStack>
 
@@ -54,7 +67,13 @@ export function JoinCodeCard({ code, isPublic, onCopy, onShare, onRegenerate }: 
         >
           {justCopied ? <Check size={20} color="white" /> : <Copy size={20} color="$panelText" />}
         </GlossButton>
-        <GlossButton tone="glass" btnSize="md" shape="circle" onPress={onShare} accessibilityLabel={t('game.code.share')}>
+        <GlossButton
+          tone="glass"
+          btnSize="md"
+          shape="circle"
+          onPress={onShare}
+          accessibilityLabel={t('game.code.shareLink')}
+        >
           <Share2 size={20} color="$panelText" />
         </GlossButton>
         {onRegenerate ? (

@@ -49,6 +49,9 @@ export type HakiLevel = z.infer<typeof hakiLevelSchema>
 export const hamonLevelSchema = z.enum(['NONE', 'BASIC', 'ADVANCED', 'PERFECT'])
 export type HamonLevel = z.infer<typeof hamonLevelSchema>
 
+export const inviteStatusSchema = z.enum(['VALID', 'EXPIRED'])
+export type InviteStatus = z.infer<typeof inviteStatusSchema>
+
 export const lobbyVisibilitySchema = z.enum(['PRIVATE', 'PUBLIC'])
 export type LobbyVisibility = z.infer<typeof lobbyVisibilitySchema>
 

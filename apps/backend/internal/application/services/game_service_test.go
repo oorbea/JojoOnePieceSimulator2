@@ -16,6 +16,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/dto"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gameinvite"
 )
 
 // noResponsePictures/noResponseStageText/noResponsePowerText are trivial
@@ -482,6 +483,7 @@ type gameTestDeps struct {
 	hub      *services.GameEventHub
 	clock    *fakeClock
 	users    *fakeUserRepository
+	invites  ports.IGameInviteStore
 	// finishedID is set by the finished-game helpers so a test can keep
 	// asserting against a game after the aggregate itself has gone terminal.
 	finishedID game.GameID
@@ -505,6 +507,7 @@ func newTestGameService(t *testing.T) (*services.GameService, *gameTestDeps) {
 		hub:      services.NewGameEventHub(),
 		clock:    newFakeClock(),
 		users:    newFakeUserRepository(),
+		invites:  gameinvite.NewMemoryStore(gameinvite.Config{TTL: 15 * time.Minute}),
 	}
 	svc := newGameServiceFromDeps(deps, deps.history)
 	return svc, deps
@@ -526,6 +529,7 @@ func newGameServiceFromDeps(deps *gameTestDeps, history ports.IGameHistory) *ser
 		deps.hub,
 		deps.clock,
 		services.VotingPolicy{Window: 30 * time.Second},
+		deps.invites,
 	)
 }
 
@@ -1763,6 +1767,7 @@ func TestRegenerateGameCode_ExhaustsRetries_ReturnsErrCodeGenerationFailed(t *te
 		newFakeIDGen[game.GameID](), newFakeIDGen[game.ParticipantID](), newFakeIDGen[game.TeamID](),
 		deps.users, deps.stages, deps.powers, deps.weights, deps.tiebreak, deps.history, deps.rng, deps.hub, deps.clock,
 		services.VotingPolicy{Window: 30 * time.Second},
+		deps.invites,
 	)
 
 	if _, err := svcBlocked.RegenerateGameCode(context.Background(), g.ID(), g.HostID()); !errors.Is(err, services.ErrCodeGenerationFailed) {

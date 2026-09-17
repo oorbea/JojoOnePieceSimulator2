@@ -120,4 +120,11 @@ var (
 	// OnePieceCharacter would violate the unique (manga, name) constraint
 	// against a different, already-existing character.
 	ErrOnePieceCharacterAlreadyExists = errors.New("one piece character already exists")
+
+	// ErrInviteInvalid is returned when a game invite token is unknown or
+	// expired. Kept distinct from ErrGameNotFound so callers can tell "the
+	// token itself is bad" from "the game it names is gone" - though the
+	// public invite-status endpoint deliberately collapses both, and every
+	// other cause of an unusable invite, into the same outward answer.
+	ErrInviteInvalid = errors.New("invalid or expired invite")
 )

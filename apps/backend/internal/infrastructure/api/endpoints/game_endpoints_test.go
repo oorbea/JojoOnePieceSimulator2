@@ -19,6 +19,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/api/endpoints"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gameinvite"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/gamestore"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/streamticket"
@@ -534,6 +535,7 @@ func newGameTestServer(t *testing.T) (http.Handler, *gameEndpointsTestDeps) {
 		services.NewGameEventHub(),
 		services.NewSystemClock(),
 		services.VotingPolicy{Window: 30_000_000_000},
+		gameinvite.NewMemoryStore(gameinvite.Config{TTL: 15 * time.Minute}),
 	)
 
 	tickets := streamticket.NewMemoryStore(streamticket.Config{TTL: 30 * time.Second})
@@ -1104,4 +1106,203 @@ func TestServeWS_BearerHeader_StillUpgrades(t *testing.T) {
 		t.Fatalf("Dial: %v", err)
 	}
 	conn.CloseNow()
+}
+
+// --- POST /games/{id}/invite, GET /games/invite/{token}(/status),
+// POST /games/join-invite, POST /games/{id}/leave ---
+
+// createInvite POSTs /games/{id}/invite as token and returns the minted
+// invite token (empty on a non-200).
+func createInvite(t *testing.T, h http.Handler, id, token string) (invite string, status int) {
+	t.Helper()
+	rec := doTokenRequest(t, h, http.MethodPost, "/api/v1/games/"+id+"/invite", token, nil)
+	if rec.Code != http.StatusOK {
+		return "", rec.Code
+	}
+	var body struct {
+		Token     string    `json:"token"`
+		ExpiresAt time.Time `json:"expiresAt"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding invite response: %v, body = %s", err, rec.Body.String())
+	}
+	if body.Token == "" {
+		t.Fatalf("invite response has an empty token: %s", rec.Body.String())
+	}
+	return body.Token, rec.Code
+}
+
+func TestCreateInvite_Unauthenticated(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	_, status := createInvite(t, h, id, "")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", status)
+	}
+}
+
+func TestCreateInvite_SeatedParticipant_ReturnsToken(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	invite, status := createInvite(t, h, id, "user-token")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want 200", status)
+	}
+	if invite == "" {
+		t.Fatal("expected a non-empty invite token")
+	}
+}
+
+// TestInviteStatus_NoBearer_Returns200 is the headline test for the public
+// route: it must answer without any Authorization header at all, and its
+// body must carry exactly the one documented field.
+func TestInviteStatus_NoBearer_Returns200(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+	invite, _ := createInvite(t, h, id, "user-token")
+
+	rec := doTokenRequest(t, h, http.MethodGet, "/api/v1/games/invite/"+invite+"/status", "", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (no bearer required), body = %s", rec.Code, rec.Body.String())
+	}
+	got := decodeGameBody(t, rec.Body.Bytes())
+	if len(got) != 1 {
+		t.Fatalf("body has %d field(s), want exactly 1 (status): %v", len(got), got)
+	}
+	if got["status"] != "VALID" {
+		t.Fatalf("status field = %v, want VALID", got["status"])
+	}
+}
+
+func TestInviteStatus_UnknownToken_StillReturns200Expired(t *testing.T) {
+	h, _ := newGameTestServer(t)
+
+	rec := doTokenRequest(t, h, http.MethodGet, "/api/v1/games/invite/does-not-exist/status", "", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 even for an unknown token, body = %s", rec.Code, rec.Body.String())
+	}
+	got := decodeGameBody(t, rec.Body.Bytes())
+	if got["status"] != "EXPIRED" {
+		t.Fatalf("status field = %v, want EXPIRED", got["status"])
+	}
+}
+
+func TestInvitePreview_Unauthenticated(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+	invite, _ := createInvite(t, h, id, "user-token")
+
+	rec := doTokenRequest(t, h, http.MethodGet, "/api/v1/games/invite/"+invite, "", nil)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestInvitePreview_Authenticated_ReturnsListing(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	mustGameUser(t, deps, "user2-token", "stranger")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+	invite, _ := createInvite(t, h, id, "user-token")
+
+	rec := doTokenRequest(t, h, http.MethodGet, "/api/v1/games/invite/"+invite, "user2-token", nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body = %s", rec.Code, rec.Body.String())
+	}
+	got := decodeGameBody(t, rec.Body.Bytes())
+	if got["gameId"] != id {
+		t.Fatalf("gameId = %v, want %v", got["gameId"], id)
+	}
+	if _, hasCode := got["code"]; hasCode {
+		t.Fatalf("invite preview leaked the raw join code: %v", got)
+	}
+}
+
+func TestJoinByInvite_Success(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	mustGameUser(t, deps, "user2-token", "joiner")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+	invite, _ := createInvite(t, h, id, "user-token")
+
+	rec := doTokenRequest(t, h, http.MethodPost, "/api/v1/games/join-invite", "user2-token", map[string]any{"token": invite})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestJoinByInvite_UnknownToken_NotFound(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "joiner")
+
+	rec := doTokenRequest(t, h, http.MethodPost, "/api/v1/games/join-invite", "user-token", map[string]any{"token": "does-not-exist"})
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404, body = %s", rec.Code, rec.Body.String())
+	}
+	got := decodeGameBody(t, rec.Body.Bytes())
+	if got["code"] != "INVITE_INVALID" {
+		t.Fatalf("code = %v, want INVITE_INVALID", got["code"])
+	}
+}
+
+func TestJoinByInvite_EmptyToken_BadRequest(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "joiner")
+
+	rec := doTokenRequest(t, h, http.MethodPost, "/api/v1/games/join-invite", "user-token", map[string]any{"token": ""})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Revocation-after-RegenerateGameCode itself (the headline guarantee) is
+// covered at the service layer:
+// TestJoinByInvite_AfterRegenerateGameCode_Revoked in game_invite_test.go.
+// It isn't re-proven through this HTTP harness because fakeGameRandom's
+// IntN() is a fixed 0 (every other test here relies on that determinism),
+// which makes generateCode() regenerate the exact same code
+// ("AAAAAA") - IGameStore.SetCode allows a game to reclaim its own current
+// code, so a rotation would silently no-op and the test would prove
+// nothing. This file's ErrInviteInvalid-mapping test
+// (TestJoinByInvite_UnknownToken_NotFound) already exercises the same
+// 404/errorCode switch branch ErrInviteRevoked shares (see error_codes.go).
+
+func TestLeaveGame_Unauthenticated(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	id, _ := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+
+	rec := doTokenRequest(t, h, http.MethodPost, "/api/v1/games/"+id+"/leave", "", nil)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401, body = %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestLeaveGame_SeatedParticipant_Success(t *testing.T) {
+	h, deps := newGameTestServer(t)
+	mustGameUser(t, deps, "user-token", "host")
+	mustGameUser(t, deps, "user2-token", "joiner")
+	id, code := createGameViaAPI(t, h, "user-token", gauntletCreateBody())
+	rec := doTokenRequest(t, h, http.MethodPost, "/api/v1/games/join", "user2-token", map[string]any{"code": code})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("join: status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doTokenRequest(t, h, http.MethodPost, "/api/v1/games/"+id+"/leave", "user2-token", nil)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204, body = %s", rec.Code, rec.Body.String())
+	}
+
+	// Confirm the leave actually took: the joiner is no longer a
+	// participant, so resuming by id now 403s them.
+	rec = doTokenRequest(t, h, http.MethodGet, "/api/v1/games/"+id, "user2-token", nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status after leaving = %d, want 403, body = %s", rec.Code, rec.Body.String())
+	}
 }
