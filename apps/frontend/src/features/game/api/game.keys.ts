@@ -20,4 +20,9 @@ export const gameKeys = {
   // reads once on mount to offer "resume your game" - not polled, not
   // written to by the socket store.
   mine: () => [...gameKeys.allLocales, 'mine'] as const,
+  // Invite-link queries: status is public/pollable-by-anyone, preview needs
+  // auth. Neither is persisted (outside the 'games' dehydration allowlist,
+  // same as detail/preview/mine above).
+  inviteStatus: (token: string) => [...gameKeys.allLocales, 'invite', 'status', token] as const,
+  invitePreview: (token: string) => [...gameKeys.allLocales, 'invite', 'preview', token] as const,
 }
