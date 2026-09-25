@@ -489,6 +489,7 @@ export const gameSnapshotResponseSchema = z.object({
   rounds: z.array(gameRoundResponseSchema),
   result: gameResultResponseSchema.optional(),
   revealEndsAt: z.iso.datetime({ offset: true }).optional(),
+  revealStartedAt: z.iso.datetime({ offset: true }).optional(),
   votingEndsAt: z.iso.datetime({ offset: true }).optional(),
   resultEndsAt: z.iso.datetime({ offset: true }).optional(),
   summaryEndsAt: z.iso.datetime({ offset: true }).optional(),

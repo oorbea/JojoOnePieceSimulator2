@@ -239,6 +239,11 @@ type GameSnapshotResponse struct {
 	// RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a
 	// pending reveal - see NewGameStateResponse's deadlines param.
 	RevealEndsAt *string `json:"revealEndsAt,omitempty" ts:"datetime"`
+	// RevealStartedAt mirrors RevealEndsAt, set to the instant the reveal
+	// timer was armed - a (re)connecting client uses the pair to seek its
+	// locally-computed reveal timeline instead of restarting it at phase
+	// zero. See LoadoutsAssignedPayload's identical field.
+	RevealStartedAt *string `json:"revealStartedAt,omitempty" ts:"datetime"`
 	// VotingEndsAt is set (RFC3339) only while the game is VOTING/TIEBREAK
 	// with a pending window - the deadline a client reconnecting mid-vote
 	// needs, since the VOTING_OPENED/TIEBREAK_OPENED frames that carry
@@ -282,6 +287,9 @@ type GameStateDeadlines struct {
 	// RevealEndsAt is set only while the Game is ASSIGNING with a pending
 	// reveal - see GameService.RevealEndsAt.
 	RevealEndsAt *time.Time
+	// RevealStartedAt is set only while the Game is ASSIGNING with a
+	// pending reveal - see GameService.RevealStartedAt.
+	RevealStartedAt *time.Time
 	// VotingEndsAt is set only while the Game is VOTING/TIEBREAK with a
 	// pending window - see GameService.VotingEndsAt.
 	VotingEndsAt *time.Time
@@ -437,21 +445,25 @@ func NewGameStateResponse(
 		}
 	}
 
-	var revealEndsAtStr, votingEndsAtStr, resultEndsAtStr, summaryEndsAtStr *string
+	var revealEndsAtStr, votingEndsAtStr, resultEndsAtStr, summaryEndsAtStr, revealStartedAtStr *string
 	if deadlines.RevealEndsAt != nil {
-		s := deadlines.RevealEndsAt.Format(time.RFC3339)
+		s := FormatWireTime(*deadlines.RevealEndsAt)
 		revealEndsAtStr = &s
 	}
+	if deadlines.RevealStartedAt != nil {
+		s := FormatWireTime(*deadlines.RevealStartedAt)
+		revealStartedAtStr = &s
+	}
 	if deadlines.VotingEndsAt != nil {
-		s := deadlines.VotingEndsAt.Format(time.RFC3339)
+		s := FormatWireTime(*deadlines.VotingEndsAt)
 		votingEndsAtStr = &s
 	}
 	if deadlines.ResultEndsAt != nil {
-		s := deadlines.ResultEndsAt.Format(time.RFC3339)
+		s := FormatWireTime(*deadlines.ResultEndsAt)
 		resultEndsAtStr = &s
 	}
 	if deadlines.SummaryEndsAt != nil {
-		s := deadlines.SummaryEndsAt.Format(time.RFC3339)
+		s := FormatWireTime(*deadlines.SummaryEndsAt)
 		summaryEndsAtStr = &s
 	}
 
@@ -475,14 +487,15 @@ func NewGameStateResponse(
 				RevealSpeed:            g.Config().RevealSpeed().String(),
 				SummaryDurationSeconds: g.Config().SummaryDurationSeconds(),
 			},
-			Teams:         teams,
-			Participants:  participants,
-			Rounds:        rounds,
-			Result:        result,
-			RevealEndsAt:  revealEndsAtStr,
-			VotingEndsAt:  votingEndsAtStr,
-			ResultEndsAt:  resultEndsAtStr,
-			SummaryEndsAt: summaryEndsAtStr,
+			Teams:           teams,
+			Participants:    participants,
+			Rounds:          rounds,
+			Result:          result,
+			RevealEndsAt:    revealEndsAtStr,
+			RevealStartedAt: revealStartedAtStr,
+			VotingEndsAt:    votingEndsAtStr,
+			ResultEndsAt:    resultEndsAtStr,
+			SummaryEndsAt:   summaryEndsAtStr,
 		},
 		You: viewer,
 	}, nil

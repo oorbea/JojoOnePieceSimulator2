@@ -423,11 +423,11 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 			if votingWindow == 0 {
 				votingWindow = e.cfg.VotingWindow
 			}
-			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealWindow, evt.SummaryWindow, evt.ClosesAt)
+			frameType, payload, resendState := buildEventFrame(evt.Event, votingWindow, evt.RevealWindow, evt.SummaryWindow, evt.ClosesAt, evt.RevealStartsAt)
 			if frameType == "" {
 				continue
 			}
-			data, err := json.Marshal(dto.ServerFrame{Type: frameType, Payload: payload})
+			data, err := json.Marshal(dto.NewServerFrame(frameType, "", payload))
 			if err != nil {
 				continue
 			}
@@ -471,7 +471,9 @@ func (e *GameEndpoints) forwardEvents(ctx context.Context, conn *websocket.Conn,
 // at publish time (services.GameEvent.ClosesAt); it is used verbatim for
 // the five timed frames (VOTING_OPENED, TIEBREAK_OPENED, SUMMARY_OPENED,
 // LOADOUTS_ASSIGNED, ROUND_RESOLVED). See frameDeadline for the fallback.
-func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealWindow time.Duration, summaryWindow time.Duration, closesAt time.Time) (frameType string, payload any, resendState bool) {
+// revealStartsAt is LOADOUTS_ASSIGNED's own extra timestamp - see
+// GameEvent.RevealStartsAt and LoadoutsAssignedPayload's doc.
+func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealWindow time.Duration, summaryWindow time.Duration, closesAt time.Time, revealStartsAt time.Time) (frameType string, payload any, resendState bool) {
 	switch e := evt.(type) {
 	case game.PlayerJoined:
 		return dto.FramePlayerJoined, dto.PlayerJoinedPayload{ParticipantID: e.ParticipantID.String()}, true
@@ -482,8 +484,13 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealWin
 	case game.GameStarted:
 		return dto.FrameGameStarted, struct{}{}, true
 	case game.LoadoutsAssigned:
+		revealStarted := revealStartsAt
+		if revealStarted.IsZero() && !closesAt.IsZero() {
+			revealStarted = closesAt.Add(-revealWindow)
+		}
 		return dto.FrameLoadoutsAssigned, dto.LoadoutsAssignedPayload{
 			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, revealWindow),
+			RevealStartedAt: frameDeadline(revealStarted, 0),
 		}, true
 	case game.VotingOpened:
 		return dto.FrameVotingOpened, dto.VotingOpenedPayload{
@@ -562,9 +569,9 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealWin
 // so a client always gets *some* countdown to render.
 func frameDeadline(closesAt time.Time, window time.Duration) string {
 	if closesAt.IsZero() {
-		return time.Now().Add(window).Format(time.RFC3339)
+		return dto.FormatWireTime(time.Now().Add(window))
 	}
-	return closesAt.Format(time.RFC3339)
+	return dto.FormatWireTime(closesAt)
 }
 
 // pushCurrentState fetches the freshest state for gameID and sends it. Used
@@ -588,6 +595,9 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 	if t, ok := e.svc.RevealEndsAt(g.ID()); ok {
 		deadlines.RevealEndsAt = &t
 	}
+	if t, ok := e.svc.RevealStartedAt(g.ID()); ok {
+		deadlines.RevealStartedAt = &t
+	}
 	if t, ok := e.svc.VotingEndsAt(g.ID()); ok {
 		deadlines.VotingEndsAt = &t
 	}
@@ -605,7 +615,7 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 		log.Printf("game ws: building state for %s: %v", g.ID(), err)
 		return
 	}
-	data, err := json.Marshal(dto.ServerFrame{Type: dto.FrameState, Payload: resp})
+	data, err := json.Marshal(dto.NewServerFrame(dto.FrameState, "", resp))
 	if err != nil {
 		return
 	}
@@ -616,11 +626,7 @@ func (e *GameEndpoints) pushState(ctx context.Context, conn *websocket.Conn, out
 // frontend's errors.<CODE> i18n lookup works over the socket with zero new
 // client-side mapping.
 func (e *GameEndpoints) sendError(conn *websocket.Conn, outbound chan<- outMsg, requestID string, err error) {
-	data, marshalErr := json.Marshal(dto.ServerFrame{
-		Type:      dto.FrameError,
-		RequestID: requestID,
-		Payload:   dto.ErrorResponse{Error: err.Error(), Code: errorCode(err)},
-	})
+	data, marshalErr := json.Marshal(dto.NewServerFrame(dto.FrameError, requestID, dto.ErrorResponse{Error: err.Error(), Code: errorCode(err)}))
 	if marshalErr != nil {
 		return
 	}

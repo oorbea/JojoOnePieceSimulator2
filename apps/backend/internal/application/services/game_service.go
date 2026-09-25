@@ -157,6 +157,14 @@ type GameService struct {
 	// restart mid-reveal loses this (and its timer), the same known gap
 	// scheduleVotingTimer already has.
 	revealEnds map[game.GameID]time.Time
+	// revealStarts holds the wall-clock instant the in-flight reveal's timer
+	// was armed for each Game currently in ASSIGNING with a pending reveal
+	// timer, keyed by GameID - the twin of revealEnds (always
+	// revealEnds[id].Add(-window)), read by RevealStartedAt so a client
+	// joining/reconnecting mid-reveal can seek its local timeline to the
+	// server's actual position instead of restarting it from phase zero.
+	// Same process-memory-only caveat as revealEnds.
+	revealStarts map[game.GameID]time.Time
 	// votingEnds holds the wall-clock deadline of the open voting (or
 	// revote) window for each Game currently in VOTING/TIEBREAK with a
 	// pending voting timer, keyed by GameID - read by VotingEndsAt so a
@@ -256,16 +264,17 @@ func NewGameService(
 		store: store, gameIDs: gameIDs, partIDs: partIDs, teamIDs: teamIDs,
 		users: users, stages: stages, powers: powerPool, weights: weights,
 		tiebreak: tiebreak, history: history, rng: rng, hub: hub, clock: clock,
-		votingCfg:   votingCfg,
-		invites:     invites,
-		locks:       newGameLocks(),
-		timers:      make(map[game.GameID]Timer),
-		revealEnds:  make(map[game.GameID]time.Time),
-		votingEnds:  make(map[game.GameID]time.Time),
-		resultEnds:  make(map[game.GameID]time.Time),
-		summaryEnds: make(map[game.GameID]time.Time),
-		finalized:   make(map[game.GameID]struct{}),
-		graceTimers: make(map[graceKey]Timer),
+		votingCfg:    votingCfg,
+		invites:      invites,
+		locks:        newGameLocks(),
+		timers:       make(map[game.GameID]Timer),
+		revealEnds:   make(map[game.GameID]time.Time),
+		revealStarts: make(map[game.GameID]time.Time),
+		votingEnds:   make(map[game.GameID]time.Time),
+		resultEnds:   make(map[game.GameID]time.Time),
+		summaryEnds:  make(map[game.GameID]time.Time),
+		finalized:    make(map[game.GameID]struct{}),
+		graceTimers:  make(map[graceKey]Timer),
 	}
 }
 
@@ -869,6 +878,7 @@ func (s *GameService) schedulePhaseTimer(g *game.Game) {
 func (s *GameService) openSummaryAfterReveal(ctx context.Context, id game.GameID) {
 	s.timersMu.Lock()
 	delete(s.revealEnds, id)
+	delete(s.revealStarts, id)
 	s.timersMu.Unlock()
 
 	_, err := s.withGame(ctx, id, func(g *game.Game) error {
@@ -930,6 +940,17 @@ func (s *GameService) RevealEndsAt(id game.GameID) (time.Time, bool) {
 	s.timersMu.Lock()
 	defer s.timersMu.Unlock()
 	t, ok := s.revealEnds[id]
+	return t, ok
+}
+
+// RevealStartedAt reports id's in-flight reveal's arm instant, if any - the
+// twin of RevealEndsAt, used the same way (a (re)connecting client seeks its
+// local reveal timeline to the server's real position instead of restarting
+// it). The bool is false once the reveal has ended (or never started).
+func (s *GameService) RevealStartedAt(id game.GameID) (time.Time, bool) {
+	s.timersMu.Lock()
+	defer s.timersMu.Unlock()
+	t, ok := s.revealStarts[id]
 	return t, ok
 }
 
@@ -1471,11 +1492,12 @@ func (s *GameService) publish(g *game.Game) {
 	votingEndsAt, hasVotingEnd := s.votingEnds[id]
 	summaryEndsAt, hasSummaryEnd := s.summaryEnds[id]
 	revealEndsAt, hasRevealEnd := s.revealEnds[id]
+	revealStartsAt, hasRevealStart := s.revealStarts[id]
 	resultEndsAt, hasResultEnd := s.resultEnds[id]
 	s.timersMu.Unlock()
 
 	for _, e := range g.PullEvents() {
-		var closesAt time.Time
+		var closesAt, revealStartedAt time.Time
 		switch e.(type) {
 		case game.VotingOpened, game.TiebreakOpened:
 			if hasVotingEnd {
@@ -1489,6 +1511,9 @@ func (s *GameService) publish(g *game.Game) {
 			if hasRevealEnd {
 				closesAt = revealEndsAt
 			}
+			if hasRevealStart {
+				revealStartedAt = revealStartsAt
+			}
 		case game.RoundResolved:
 			if hasResultEnd {
 				closesAt = resultEndsAt
@@ -1497,7 +1522,7 @@ func (s *GameService) publish(g *game.Game) {
 		s.hub.Publish(GameEvent{
 			GameID: id, Name: e.Name(), Event: e,
 			VotingWindow: window, RevealWindow: revealWindow, SummaryWindow: summaryWindow,
-			ClosesAt: closesAt,
+			ClosesAt: closesAt, RevealStartsAt: revealStartedAt,
 		})
 	}
 }
@@ -1641,6 +1666,9 @@ func (s *GameService) armPhaseTimer(g *game.Game, pt phaseTimer, deadline time.T
 
 	s.timersMu.Lock()
 	s.endsMapFor(pt.kind)[id] = deadline
+	if pt.kind == phaseReveal {
+		s.revealStarts[id] = deadline.Add(-pt.window)
+	}
 	if prev, ok := s.timers[id]; ok {
 		prev.Stop()
 		delete(s.timers, id)
@@ -1706,6 +1734,7 @@ func (s *GameService) cancelTimer(id game.GameID) {
 	s.timersMu.Lock()
 	defer s.timersMu.Unlock()
 	delete(s.revealEnds, id)
+	delete(s.revealStarts, id)
 	delete(s.votingEnds, id)
 	delete(s.resultEnds, id)
 	delete(s.summaryEnds, id)
