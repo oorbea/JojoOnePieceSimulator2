@@ -34,7 +34,19 @@
 
 export type ImagePriority = number
 
-export type QueueLane = 'grid' | 'high'
+// 'grid'/'high': the two concurrency-limited lanes documented above.
+// 'hero': for the single foreground image on screen (2026-09-25 sorteo
+// reveal-card fix, see ObsidianVault/sorteo-strip-image-dedupe-bug-2026-09-
+// 25.md) - it bypasses the queue's concurrency limit entirely instead of
+// competing for one of maxConcurrent slots. The bug this fixes: the reel's
+// 50 tiles unmount the instant a slot lands, but a tile whose fetch was
+// already granted keeps its slot until it settles or its watchdog fires (up
+// to highLaneTimeoutMs) - that's the deliberate cancellation policy above,
+// working as designed for the grid. The reveal card that mounts right after
+// is the only image on screen at that moment and reading it fast matters far
+// more than smoothing bandwidth across a strip that no longer exists, so it
+// must never wait behind those orphaned slots.
+export type QueueLane = 'grid' | 'high' | 'hero'
 
 export type ImageHandle = {
   // Marks this image as done consuming its slot (loaded or errored),
@@ -138,6 +150,27 @@ export function enqueueImage(opts: {
   const { key, priority, lane = 'grid', onGrant, onTimeout } = opts
   const sub: Subscriber = { onGrant, onTimeout, settled: false }
 
+  // 'hero' bypasses the concurrency limit entirely - granted immediately,
+  // never enters `waiting`/`inFlight`, so it never counts against
+  // maxConcurrent and never waits behind another lane's orphaned slots (see
+  // QueueLane's doc). Still gets a watchdog so a genuinely stuck hero fetch
+  // eventually flips to 'error' instead of hanging forever.
+  if (lane === 'hero') {
+    const entry: Entry = {
+      key,
+      priority,
+      lane,
+      granted: true,
+      anySettled: false,
+      watchdog: setTimeout(() => {
+        if (!sub.settled) sub.onTimeout()
+      }, config.timeoutMs),
+      subscribers: new Set([sub]),
+    }
+    sub.onGrant()
+    return handleFor(entry, sub)
+  }
+
   const existing = waiting.get(key) ?? inFlight.get(key)
   if (existing) {
     existing.subscribers.add(sub)
@@ -189,7 +222,11 @@ function handleFor(entry: Entry, sub: Subscriber): ImageHandle {
       entry.priority = priority
     },
     cancel: () => {
-      if (entry.granted) return
+      // The "no-op once granted" policy exists to protect an in-flight
+      // download's queue slot from being freed early (see the module doc).
+      // 'hero' never held a slot to protect - always release on unmount, or
+      // its watchdog timer leaks until it fires.
+      if (entry.granted && entry.lane !== 'hero') return
       leave()
     },
   }

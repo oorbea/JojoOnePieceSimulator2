@@ -98,6 +98,7 @@ type Props = {
   revealParticipantIndex: number
   revealSlotIndex: number
   revealTotalSlots: number
+  revealEvolveStage: number
   revealScale: number
   isRevealing: boolean
   onSkipReveal: () => void
@@ -169,6 +170,7 @@ export function LobbyRoomScreen({
   revealParticipantIndex,
   revealSlotIndex,
   revealTotalSlots,
+  revealEvolveStage,
   revealScale,
   isRevealing,
   onSkipReveal,
@@ -388,6 +390,7 @@ export function LobbyRoomScreen({
           revealParticipantIndex={revealParticipantIndex}
           revealSlotIndex={revealSlotIndex}
           revealTotalSlots={revealTotalSlots}
+          revealEvolveStage={revealEvolveStage}
           revealScale={revealScale}
           isRevealing={isRevealing}
           onSkipReveal={onSkipReveal}

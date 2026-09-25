@@ -1,5 +1,8 @@
 import {
   playerSlots,
+  REVEAL_EVOLVE_BASE_MS,
+  REVEAL_EVOLVE_STEP_MS,
+  REVEAL_EVOLVING_MS,
   REVEAL_HOLD_EMPTY_MS,
   REVEAL_HOLD_FRUIT_MS,
   REVEAL_HOLD_SCALAR_MS,
@@ -269,6 +272,50 @@ describe('revealTimeline', () => {
     const swift = revealTimeline('g1', 0, ['JOJO'], [NO_POWERS], 'SWIFT')
     const relaxed = revealTimeline('g1', 0, ['JOJO'], [NO_POWERS], 'RELAXED')
     expect(relaxed[0].durationMs).toBeGreaterThan(swift[0].durationMs)
+  })
+
+  // 2026-09-25 "algo esta pasando" evolution reveal - a landed Stand with
+  // standEvolutionSteps > 0 inserts evolveBase/evolving/evolveStep* beats
+  // between that slot's own spin and land, and nothing else changes.
+  describe('evolving stand', () => {
+    it('a non-evolving stand (steps undefined) inserts nothing - unchanged from before', () => {
+      const player: RevealPlayer = { ...BOTH_POWERS }
+      const timeline = revealTimeline('g1', 0, ['JOJO'], [player], 'SWIFT')
+      expect(timeline.some((p) => p.phase.kind.startsWith('evolve'))).toBe(false)
+    })
+
+    it('a one-step evolution inserts evolveBase + evolving, no evolveStep, before land', () => {
+      const player: RevealPlayer = { ...BOTH_POWERS, standEvolutionSteps: 1 }
+      const timeline = revealTimeline('g1', 0, ['JOJO'], [player], 'SWIFT')
+      const kinds = timeline
+        .filter((p) => p.phase.participant === 0 && p.phase.slot === 0)
+        .map((p) => p.phase.kind)
+      expect(kinds).toEqual(['narrator', 'spin', 'evolveBase', 'evolving', 'land'])
+
+      const base = timeline.find((p) => p.phase.kind === 'evolveBase')
+      const evolving = timeline.find((p) => p.phase.kind === 'evolving')
+      expect(base?.durationMs).toBe(REVEAL_EVOLVE_BASE_MS)
+      expect(evolving?.durationMs).toBe(REVEAL_EVOLVING_MS)
+      // The final stage still gets the slot's normal full hold.
+      const land = timeline.find((p) => p.phase.kind === 'land' && p.phase.slot === 0)
+      expect(land?.durationMs).toBe(REVEAL_HOLD_STAND_MS)
+    })
+
+    it('a four-stage chain (3 steps) inserts exactly 2 evolveStep beats, 0-indexed', () => {
+      const player: RevealPlayer = { ...BOTH_POWERS, standEvolutionSteps: 3 }
+      const timeline = revealTimeline('g1', 0, ['JOJO'], [player], 'SWIFT')
+      const steps = timeline.filter((p) => p.phase.kind === 'evolveStep')
+      expect(steps).toHaveLength(2)
+      expect(steps.map((p) => p.phase.evolveStage)).toEqual([0, 1])
+      expect(steps.every((p) => p.durationMs === REVEAL_EVOLVE_STEP_MS)).toBe(true)
+    })
+
+    it('only the stand slot gets evolve beats, even with standEvolutionSteps set', () => {
+      const player: RevealPlayer = { ...BOTH_POWERS, standEvolutionSteps: 2 }
+      const timeline = revealTimeline('g1', 0, ['JOJO', 'ONE_PIECE'], [player], 'SWIFT')
+      const evolvePhases = timeline.filter((p) => p.phase.kind.startsWith('evolve'))
+      expect(evolvePhases.every((p) => p.phase.slot === 1)).toBe(true) // stand is slot 1
+    })
   })
 })
 

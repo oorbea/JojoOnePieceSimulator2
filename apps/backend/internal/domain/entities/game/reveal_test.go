@@ -242,3 +242,48 @@ func TestSpinMsFor_PowerSlotsUseTheFixedCSStripDuration(t *testing.T) {
 		t.Fatalf("spinMsFor(RevealHamon) never produced both 1x (%v) and 2x (%v) across 40 participants", found1x, found2x)
 	}
 }
+
+// TestRevealDuration_EvolvingStandTakesLonger pins the 2026-09-25 "algo esta
+// pasando" evolution reveal: a landed Stand with StandEvolutionSteps > 0
+// must add exactly evolveMs's own extra time to the Stand slot, on top of
+// its normal RevealHoldStandMs (which the final stage still gets in full -
+// see evolveMs's doc). StandEvolutionSteps == 0 (today's behaviour, base
+// stands and stands with no Stand at all) must be byte-for-byte unchanged.
+func TestRevealDuration_EvolvingStandTakesLonger(t *testing.T) {
+	id := GameID{5}
+	mangas := []enums.Manga{enums.Jojo}
+
+	nonEvolving := RevealDuration(id, 0, mangas, []RevealPlayer{{HasStand: true}}, enums.Swift)
+	oneStep := RevealDuration(id, 0, mangas, []RevealPlayer{{HasStand: true, StandEvolutionSteps: 1}}, enums.Swift)
+	threeSteps := RevealDuration(id, 0, mangas, []RevealPlayer{{HasStand: true, StandEvolutionSteps: 3}}, enums.Swift)
+
+	wantOneStepExtra := time.Duration(RevealEvolveBaseMs+RevealEvolvingMs) * time.Millisecond
+	if got := oneStep - nonEvolving; got != wantOneStepExtra {
+		t.Fatalf("RevealDuration(1-step evolution) - RevealDuration(non-evolving) = %v, want %v", got, wantOneStepExtra)
+	}
+
+	wantThreeStepsExtra := time.Duration(RevealEvolveBaseMs+RevealEvolvingMs+2*RevealEvolveStepMs) * time.Millisecond
+	if got := threeSteps - nonEvolving; got != wantThreeStepsExtra {
+		t.Fatalf("RevealDuration(3-step evolution) - RevealDuration(non-evolving) = %v, want %v", got, wantThreeStepsExtra)
+	}
+
+	zeroSteps := RevealDuration(id, 0, mangas, []RevealPlayer{{HasStand: true, StandEvolutionSteps: 0}}, enums.Swift)
+	if zeroSteps != nonEvolving {
+		t.Fatalf("RevealDuration with StandEvolutionSteps=0 = %v, want == the zero-value default %v", zeroSteps, nonEvolving)
+	}
+}
+
+// TestEvolveMs_OnlyAppliesToTheStandSlot pins that evolveMs never leaks into
+// any other slot, even when StandEvolutionSteps is set - a DevilFruit or
+// scalar slot's timing must never change because of it.
+func TestEvolveMs_OnlyAppliesToTheStandSlot(t *testing.T) {
+	player := RevealPlayer{HasStand: true, HasDevilFruit: true, StandEvolutionSteps: 3}
+	for _, slot := range []RevealSlot{RevealDevilFruit, RevealHamon, RevealSpin, RevealBattleIQ} {
+		if got := evolveMs(slot, player); got != 0 {
+			t.Fatalf("evolveMs(%v, StandEvolutionSteps=3) = %d, want 0", slot, got)
+		}
+	}
+	if got := evolveMs(RevealStand, player); got == 0 {
+		t.Fatalf("evolveMs(RevealStand, StandEvolutionSteps=3) = 0, want > 0")
+	}
+}

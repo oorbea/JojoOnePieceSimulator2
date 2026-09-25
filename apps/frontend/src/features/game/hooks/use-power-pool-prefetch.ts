@@ -3,10 +3,11 @@ import { Image as ExpoImage } from 'expo-image'
 import { useEffect, useRef } from 'react'
 
 import { applyPoolFilter } from '@/features/game/lib/power-pool'
+import { standEvolutionChain } from '@/features/game/lib/stand-evolution'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 import type { DevilFruitResponse } from '@/features/devil-fruits'
 import type { StandResponse } from '@/features/stands'
-import { thumbSource } from '@/shared/lib/picture-source'
+import { cardSource, thumbSource } from '@/shared/lib/picture-source'
 
 // Warms expo-image's own disk/memory cache for every Stand/Devil Fruit the
 // lobby's power pool could roll, well before the sorteo strip needs them
@@ -107,4 +108,48 @@ export function usePowerPoolPrefetch(
       cancelled = true
     }
   }, [snapshot, stands, fruits])
+
+  // Second, separate warmup for the CARD (512px) rendition - the reveal
+  // card (power-reveal-card.tsx) shows cardSource(), not the thumb the loop
+  // above warms, and only for the participants' own already-landed
+  // loadouts plus every intermediate stage of a Stand's evolution chain
+  // (2026-09-25 "algo esta pasando" feature) - a landed stand is an
+  // ordinary pool entry, so its base/intermediate stages aren't necessarily
+  // in the pool filter at all. Small, fixed-size set (players * ~1-4
+  // stages), so no batching needed. Keyed the same way as above so a
+  // reconnect/refetch with fresh presigned URLs re-warms instead of
+  // silently reusing an expired one.
+  const cardKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!snapshot) return
+    const urls = new Set<string>()
+    for (const participant of snapshot.participants) {
+      const loadout = participant.loadout
+      if (!loadout) continue
+      if (loadout.stand) {
+        for (const stage of standEvolutionChain(loadout.stand)) {
+          const url = cardSource(stage)
+          if (url) urls.add(url)
+        }
+      }
+      if (loadout.devilFruit) {
+        const url = cardSource(loadout.devilFruit)
+        if (url) urls.add(url)
+      }
+    }
+    if (urls.size === 0) return
+    const key = Array.from(urls).sort().join('|')
+    if (key === cardKeyRef.current) return
+    cardKeyRef.current = key
+
+    let cancelled = false
+    void (async () => {
+      if (cancelled) return
+      await prefetchInBatches(Array.from(urls))
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [snapshot])
 }

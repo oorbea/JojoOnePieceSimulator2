@@ -60,6 +60,55 @@ describe('PowerRevealCard', () => {
     ).toBeTruthy()
   })
 
+  // 2026-09-25 "algo está pasando" evolution reveal.
+  it('shows the evolving message instead of the description/skills during evolvePhase="evolving"', async () => {
+    await renderWithProviders(
+      <PowerRevealCard
+        visible
+        kind="stand"
+        stand={stand({ name: 'Silver Chariot' })}
+        participantName="jotaro"
+        onSkip={jest.fn()}
+        evolvePhase="evolving"
+        evolveMessage="Algo está pasando... ¡tu stand está evolucionando!"
+      />
+    )
+
+    // MangaVerdictText stacks several copies of its own text on native (the
+    // comic-book outline trick, see its own doc) - getAllByText, not
+    // getByText, since RNTL's getByText throws on more than one match.
+    expect(
+      screen.getAllByText('Algo está pasando... ¡tu stand está evolucionando!').length
+    ).toBeGreaterThan(0)
+    expect(screen.getByText('Silver Chariot')).toBeTruthy()
+    expect(
+      screen.queryByText(
+        'Restoration: Repairs any damaged object or living being back to a prior working state.'
+      )
+    ).toBeNull()
+  })
+
+  it('shows the description/skills again once landed, with the evolution stamp for the final stage', async () => {
+    await renderWithProviders(
+      <PowerRevealCard
+        visible
+        kind="stand"
+        stand={stand({ name: 'Chariot Requiem' })}
+        participantName="jotaro"
+        onSkip={jest.fn()}
+        evolvePhase="final"
+      />
+    )
+
+    expect(screen.getByText('Chariot Requiem')).toBeTruthy()
+    expect(
+      screen.getByText(
+        'Restoration: Repairs any damaged object or living being back to a prior working state.'
+      )
+    ).toBeTruthy()
+    expect(screen.getByText('EVOLUTION!')).toBeTruthy()
+  })
+
   it('keeps the Skip button present and reachable', async () => {
     const onSkip = jest.fn()
     await renderWithProviders(
