@@ -26,11 +26,15 @@ ARG EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
 # Query persister's buster (src/providers/query-provider.tsx) so a new build
 # never rehydrates a persisted cache shaped for an older one.
 ARG EXPO_PUBLIC_BUILD_ID=dev
+# Renders the /dev-login screen - only ever "true" via
+# docker-compose.dev.yml's build args (see that file and env.ts).
+ARG EXPO_PUBLIC_DEV_AUTH
 ENV EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL}
 ENV EXPO_PUBLIC_SOCKET_URL=${EXPO_PUBLIC_SOCKET_URL}
 ENV EXPO_PUBLIC_WEB_ORIGIN=${EXPO_PUBLIC_WEB_ORIGIN}
 ENV EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}
 ENV EXPO_PUBLIC_BUILD_ID=${EXPO_PUBLIC_BUILD_ID}
+ENV EXPO_PUBLIC_DEV_AUTH=${EXPO_PUBLIC_DEV_AUTH}
 RUN pnpm expo export -p web
 
 FROM nginx:alpine
