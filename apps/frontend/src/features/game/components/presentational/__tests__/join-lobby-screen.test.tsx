@@ -5,6 +5,7 @@ import type { LobbyPreview } from '@/features/game/types/game.types'
 
 const PREVIEW: LobbyPreview = {
   gameId: 'g1',
+  code: 'ABCDEF',
   mode: 'GAUNTLET',
   hostDisplayName: 'host',
   abilitySource: 'RANDOM',
