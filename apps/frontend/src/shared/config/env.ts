@@ -18,6 +18,17 @@ const envSchema = z.object({
   // React Query persister's buster (query-provider.tsx) so a new build
   // never rehydrates a persisted cache shaped for an older one.
   EXPO_PUBLIC_BUILD_ID: z.string().default('dev'),
+  // Renders the /dev-login screen (see features/auth's dev-login-container)
+  // - a local-only stand-in for Google sign-in, backed by the equally
+  // dev-only POST /auth/dev-login (apps/backend's DEV_AUTH_BYPASS). Only
+  // ever "true" in docker-compose.dev.yml's build args; unset/anything else
+  // means the route redirects straight to /login. This flag only controls
+  // whether the UI renders - the backend route being unreachable outside
+  // dev is the real defense (see config.Load's boot guard).
+  EXPO_PUBLIC_DEV_AUTH: z
+    .string()
+    .optional()
+    .transform((raw) => raw === 'true'),
 })
 
 const parsed = envSchema.safeParse({
@@ -28,6 +39,7 @@ const parsed = envSchema.safeParse({
   EXPO_PUBLIC_SOCKET_URL: process.env.EXPO_PUBLIC_SOCKET_URL,
   EXPO_PUBLIC_WEB_ORIGIN: process.env.EXPO_PUBLIC_WEB_ORIGIN,
   EXPO_PUBLIC_BUILD_ID: process.env.EXPO_PUBLIC_BUILD_ID,
+  EXPO_PUBLIC_DEV_AUTH: process.env.EXPO_PUBLIC_DEV_AUTH,
 })
 
 if (!parsed.success) {

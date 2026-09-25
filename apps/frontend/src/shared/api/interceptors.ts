@@ -15,7 +15,7 @@ type ConfigWithEtagKey = InternalAxiosRequestConfig & { __etagCacheKey?: string 
 // cycle, so a 401 on the retried request itself is never retried again.
 type ConfigWithRetryFlag = InternalAxiosRequestConfig & { __retried?: boolean }
 
-const AUTH_ROUTES = ['/auth/google', '/auth/refresh', '/auth/logout']
+const AUTH_ROUTES = ['/auth/google', '/auth/dev-login', '/auth/refresh', '/auth/logout']
 // A 401 from one of the auth routes themselves is either an invalid refresh
 // token or a failed login - never a case where silently refreshing and
 // retrying could help, and retrying /auth/refresh on its own 401 would
