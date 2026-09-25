@@ -11,6 +11,7 @@ import {
   revealDurationMs,
   revealSpinCycles,
   revealTimeline,
+  seekRevealTimeline,
   shouldReveal,
   type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
@@ -78,6 +79,7 @@ function live(overrides: Partial<LiveMatchState> = {}): LiveMatchState {
     revealedAssignmentSeq: 0,
     assignedRoundIndex: null,
     revealEndsAt: null,
+    revealStartedAt: null,
     revealReadyCount: null,
     revealReadyTotal: null,
     summaryEndsAt: null,
@@ -291,5 +293,68 @@ describe('revealDurationMs', () => {
     const relaxed = revealDurationMs('g1', 0, [...mangas], players, 'RELAXED')
     expect(swift).toBeLessThan(normal)
     expect(normal).toBeLessThan(relaxed)
+  })
+})
+
+// seekRevealTimeline is what fixes a device that mounts the reveal late (a
+// slow device, a laggy STATE, a catalog still loading) landing on phase 0
+// and playing out of step with everyone else - it must land wherever the
+// server's own window says "now" actually is.
+describe('seekRevealTimeline', () => {
+  const phases = [
+    { durationMs: 100 },
+    { durationMs: 200 },
+    { durationMs: 300 },
+  ]
+  const localTotalMs = 600
+
+  it('starts at phase 0 with no offset when the reveal starts right on time', () => {
+    const seek = seekRevealTimeline(phases, localTotalMs, 1_000, 1_600, 1_000)
+    expect(seek).toEqual({ scale: 1, startIndex: 0, offsetIntoPhaseMs: 0 })
+  })
+
+  it('lands mid-phase when now is already past that phase boundary', () => {
+    // window [1000, 1600] matches localTotalMs 1:1 (scale 1). now=1150 is
+    // 150ms in - past phase 0 (100ms) and 50ms into phase 1 (200ms).
+    const seek = seekRevealTimeline(phases, localTotalMs, 1_000, 1_600, 1_150)
+    expect(seek).toEqual({ scale: 1, startIndex: 1, offsetIntoPhaseMs: 50 })
+  })
+
+  it('scales every phase by the server window / local total ratio', () => {
+    // Server only left a 300ms window for a 600ms local timeline - half
+    // speed. now === revealStartedAt, so still phase 0 with no offset.
+    const seek = seekRevealTimeline(phases, localTotalMs, 1_000, 1_300, 1_000)
+    expect(seek.scale).toBeCloseTo(0.5)
+    expect(seek.startIndex).toBe(0)
+  })
+
+  it('clamps to the last phase (fully elapsed) when now is at or past revealEndsAt', () => {
+    const seek = seekRevealTimeline(phases, localTotalMs, 1_000, 1_600, 5_000)
+    expect(seek.startIndex).toBe(phases.length - 1)
+    // Clamped to the last phase's own (scaled) duration, not left unbounded -
+    // "already fully through it", never past it.
+    expect(seek.offsetIntoPhaseMs).toBe(phases[phases.length - 1].durationMs)
+  })
+
+  it('falls back to remainingMs/localTotalMs when revealStartedAt is unknown (reconnect gap)', () => {
+    const seek = seekRevealTimeline(phases, localTotalMs, null, 1_600, 1_300)
+    expect(seek.scale).toBeCloseTo(300 / 600)
+    // No revealStartedAt means elapsedMs defaults to 0 - starts at phase 0
+    // rather than guessing a mid-phase position with nothing to seek from.
+    expect(seek.startIndex).toBe(0)
+    expect(seek.offsetIntoPhaseMs).toBe(0)
+  })
+
+  it('falls back to scale 1 when neither timestamp is known', () => {
+    const seek = seekRevealTimeline(phases, localTotalMs, null, null, 1_000)
+    expect(seek).toEqual({ scale: 1, startIndex: 0, offsetIntoPhaseMs: 0 })
+  })
+
+  it('returns the zero-value seek for an empty timeline', () => {
+    expect(seekRevealTimeline([], 0, 1_000, 1_600, 1_200)).toEqual({
+      scale: 1,
+      startIndex: 0,
+      offsetIntoPhaseMs: 0,
+    })
   })
 })

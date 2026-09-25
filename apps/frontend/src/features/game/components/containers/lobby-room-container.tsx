@@ -156,6 +156,8 @@ export function LobbyRoomContainer() {
     markRevealed: socket.markAssignmentRevealed,
     sendRevealReady: commands.revealReady,
     revealEndsAt: socket.live.revealEndsAt,
+    revealStartedAt: socket.live.revealStartedAt,
+    stillAssigning: snapshot?.state === 'ASSIGNING',
   })
 
   // Computed unconditionally for the same reason as revealMangas/revealActive
@@ -579,6 +581,7 @@ export function LobbyRoomContainer() {
         revealParticipantIndex={loadoutReveal.participantIndex}
         revealSlotIndex={loadoutReveal.slotIndex}
         revealTotalSlots={loadoutReveal.totalSlots}
+        revealScale={loadoutReveal.scale}
         isRevealing={loadoutReveal.isRevealing}
         onSkipReveal={loadoutReveal.skip}
         onSummaryReady={commands.summaryReady}

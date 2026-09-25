@@ -1,4 +1,8 @@
-import { hasAllLoadouts, revealSlotKinds, type LoadoutSlotKind } from '@/features/game/lib/match-rules'
+import {
+  hasAllLoadouts,
+  revealSlotKinds,
+  type LoadoutSlotKind,
+} from '@/features/game/lib/match-rules'
 import type { LiveMatchState } from '@/features/game/stores/game-socket.store'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 import type { Manga, RevealSpeed } from '@/shared/contracts/enums'
@@ -56,13 +60,7 @@ export const REVEAL_SPEED_MULTIPLIER: Record<RevealSpeed, number> = {
 }
 
 export type RevealPhaseKind =
-  | 'intro'
-  | 'playerIntro'
-  | 'narrator'
-  | 'spin'
-  | 'land'
-  | 'playerOutro'
-  | 'outro'
+  'intro' | 'playerIntro' | 'narrator' | 'spin' | 'land' | 'playerOutro' | 'outro'
 
 // A single tick of the sorteo timeline. `participant` indexes into the
 // reveal's own player order (join order, i.e. snapshot.participants);
@@ -167,7 +165,8 @@ export function revealSpinCycles(
 
 function slotHoldMs(slot: LoadoutSlotKind, player: RevealPlayer): number {
   if (slot === 'stand') return player.hasStand ? REVEAL_HOLD_STAND_MS : REVEAL_HOLD_EMPTY_MS
-  if (slot === 'devilFruit') return player.hasDevilFruit ? REVEAL_HOLD_FRUIT_MS : REVEAL_HOLD_EMPTY_MS
+  if (slot === 'devilFruit')
+    return player.hasDevilFruit ? REVEAL_HOLD_FRUIT_MS : REVEAL_HOLD_EMPTY_MS
   return REVEAL_HOLD_SCALAR_MS
 }
 
@@ -194,7 +193,10 @@ export function revealTimeline(
   ]
 
   players.forEach((player, pi) => {
-    phases.push({ phase: { kind: 'playerIntro', participant: pi }, durationMs: scaled(REVEAL_PLAYER_INTRO_MS) })
+    phases.push({
+      phase: { kind: 'playerIntro', participant: pi },
+      durationMs: scaled(REVEAL_PLAYER_INTRO_MS),
+    })
     const slots = playerSlots(mangas, player)
     slots.forEach((slot, si) => {
       phases.push({
@@ -211,11 +213,82 @@ export function revealTimeline(
         durationMs: scaled(slotHoldMs(slot, player)),
       })
     })
-    phases.push({ phase: { kind: 'playerOutro', participant: pi }, durationMs: scaled(REVEAL_PLAYER_OUTRO_MS) })
+    phases.push({
+      phase: { kind: 'playerOutro', participant: pi },
+      durationMs: scaled(REVEAL_PLAYER_OUTRO_MS),
+    })
   })
 
   phases.push({ phase: { kind: 'outro' }, durationMs: scaled(REVEAL_OUTRO_MS) })
   return phases
+}
+
+// RevealSeek is where a client's local reveal timeline should actually be
+// right now, computed against the server's own revealStartedAt/revealEndsAt
+// window instead of always starting the timeline over at phase 0 and merely
+// stretching/squeezing the WHOLE thing to fit whatever time is left (the old
+// behavior - see useLoadoutReveal's history). A client that mounts the
+// reveal late (a slow device, a laggy STATE, or the catalog still loading
+// when the sorteo started) lands on the phase the server is actually in,
+// instead of playing its own full timeline out of step with everyone else's.
+export type RevealSeek = {
+  /** How much the local timeline's own phase durations must be
+   * stretched/squeezed to fit the server's actual window - unchanged from
+   * the pre-seek behavior when both revealStartedAt/revealEndsAt are known;
+   * falls back to fitting just the remaining time (revealEndsAt - now) when
+   * revealStartedAt isn't available yet (a reconnect that hasn't received
+   * it), and to 1 (unscaled) when neither is known. */
+  scale: number
+  /** Index into `phases` the timeline should already be showing. */
+  startIndex: number
+  /** How far into that phase's OWN (scaled) duration the timeline already
+   * is - 0 for a client that starts right on time. */
+  offsetIntoPhaseMs: number
+}
+
+// seekRevealTimeline is pure and reads `now` as a parameter (never Date.now()
+// itself) so it can be called both from useLoadoutReveal's render-time reset
+// (React's "adjust state when a derived key changes" pattern) and from its
+// scheduling effect without either call being an impure Date.now() read
+// buried in a computation - see useLoadoutReveal's own doc for why that
+// distinction matters here.
+export function seekRevealTimeline(
+  phases: { durationMs: number }[],
+  localTotalMs: number,
+  revealStartedAt: number | null,
+  revealEndsAt: number | null,
+  now: number
+): RevealSeek {
+  if (phases.length === 0) return { scale: 1, startIndex: 0, offsetIntoPhaseMs: 0 }
+
+  const window =
+    revealStartedAt !== null && revealEndsAt !== null
+      ? Math.max(0, revealEndsAt - revealStartedAt)
+      : null
+  const remainingMs = revealEndsAt !== null ? Math.max(0, revealEndsAt - now) : null
+  const scale =
+    window !== null && localTotalMs > 0
+      ? window / localTotalMs
+      : remainingMs !== null && localTotalMs > 0
+        ? remainingMs / localTotalMs
+        : 1
+
+  const elapsedMs = revealStartedAt !== null ? Math.max(0, now - revealStartedAt) : 0
+
+  let cumulative = 0
+  for (let i = 0; i < phases.length; i++) {
+    const durationMs = phases[i].durationMs * scale
+    const isLast = i === phases.length - 1
+    if (elapsedMs < cumulative + durationMs || isLast) {
+      return {
+        scale,
+        startIndex: i,
+        offsetIntoPhaseMs: Math.min(durationMs, Math.max(0, elapsedMs - cumulative)),
+      }
+    }
+    cumulative += durationMs
+  }
+  return { scale, startIndex: phases.length - 1, offsetIntoPhaseMs: 0 }
 }
 
 // revealDurationMs is the total sorteo duration for a reveal - the same
