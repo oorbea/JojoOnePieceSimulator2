@@ -60,7 +60,7 @@ describe('PowerRevealCard', () => {
     ).toBeTruthy()
   })
 
-  // 2026-09-25 "algo esta pasando" evolution reveal.
+  // 2026-09-25 "algo está pasando" evolution reveal.
   it('shows the evolving message instead of the description/skills during evolvePhase="evolving"', async () => {
     await renderWithProviders(
       <PowerRevealCard
@@ -70,11 +70,16 @@ describe('PowerRevealCard', () => {
         participantName="jotaro"
         onSkip={jest.fn()}
         evolvePhase="evolving"
-        evolveMessage="Algo esta pasando... tu stand esta evolucionando!"
+        evolveMessage="Algo está pasando... ¡tu stand está evolucionando!"
       />
     )
 
-    expect(screen.getByText('Algo esta pasando... tu stand esta evolucionando!')).toBeTruthy()
+    // MangaVerdictText stacks several copies of its own text on native (the
+    // comic-book outline trick, see its own doc) - getAllByText, not
+    // getByText, since RNTL's getByText throws on more than one match.
+    expect(
+      screen.getAllByText('Algo está pasando... ¡tu stand está evolucionando!').length
+    ).toBeGreaterThan(0)
     expect(screen.getByText('Silver Chariot')).toBeTruthy()
     expect(
       screen.queryByText(
