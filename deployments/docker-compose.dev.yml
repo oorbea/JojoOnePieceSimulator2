@@ -9,7 +9,21 @@ services:
   backend:
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
+    environment:
+      # Mounts POST /api/v1/auth/dev-login (see AuthEndpoints.Routes) - a
+      # local-only stand-in for Google sign-in so several test accounts can
+      # be logged into at once in separate tabs. Deliberately only set here,
+      # never in docker-compose.yml/.prod.yml - config.Load also refuses to
+      # boot if this is ever true alongside a prod-shaped
+      # AUTH_COOKIE_SECURE/CORS_ALLOWED_ORIGINS. Set DEV_AUTH_BYPASS=false in
+      # your local .env to opt back out.
+      DEV_AUTH_BYPASS: "${DEV_AUTH_BYPASS:-true}"
 
   frontend:
     ports:
       - "${FRONTEND_PORT:-3000}:80"
+    build:
+      args:
+        # Renders the /dev-login screen - see backend's DEV_AUTH_BYPASS just
+        # above. Dev-only for the same reason.
+        EXPO_PUBLIC_DEV_AUTH: "${EXPO_PUBLIC_DEV_AUTH:-true}"
