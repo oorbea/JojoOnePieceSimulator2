@@ -10,6 +10,7 @@ import { GlowText } from '@/shared/components/presentational/glow-text'
 import { ImageLightbox } from '@/shared/components/presentational/image-lightbox'
 import { LazyImage, type LazyImageState } from '@/shared/components/presentational/lazy-image'
 import { a11yProps } from '@/shared/lib/a11y'
+import type { QueueLane } from '@/shared/lib/image-queue'
 
 export type PowerBlockProps = {
   /** Medium rendition shown in the art well - callers should pass
@@ -30,6 +31,17 @@ export type PowerBlockProps = {
   /** Taller art area for the sorteo's own full-screen reveal card (owner
    * request, 2026-08-30) - LoadoutModal keeps the original 160. */
   artHeight?: number
+  /** LazyImage's queue lane - the sorteo reveal card passes 'hero' (the
+   * single foreground image on screen) so it never waits behind the reel's
+   * orphaned slots after it unmounts (2026-09-25 fix, see image-queue.ts's
+   * QueueLane doc). LoadoutModal leaves this at the 'grid' default. */
+  priorityHint?: QueueLane
+  /** A low-res placeholder shown while `picture` loads - the sorteo reveal
+   * card passes the stand/fruit's already-cached thumbSource() so the art
+   * appears instantly and sharpens into the cardSource() rendition, instead
+   * of a blank Skeleton (2026-09-25 fix). Falls back to LazyImage's own lqip
+   * behaviour (undefined) for every other caller. */
+  placeholderUri?: string | null
   children?: React.ReactNode
 }
 
@@ -51,6 +63,8 @@ export function PowerBlock({
   skills,
   fallbackLabel,
   artHeight = 160,
+  priorityHint = 'grid',
+  placeholderUri,
   children,
 }: PowerBlockProps) {
   const { t } = useTranslation()
@@ -71,8 +85,10 @@ export function PowerBlock({
         >
           <LazyImage
             uri={picture ?? null}
+            lqip={placeholderUri}
             height={artHeight}
             contentPosition={contentPosition}
+            priorityHint={priorityHint}
             retryToken={retryToken}
             onStateChange={setImageState}
             fallback={<Sparkles size={36} color="$standPurple" />}
