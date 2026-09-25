@@ -5,6 +5,7 @@ import { secureStorage } from '@/shared/lib/secure-storage'
 import { refreshSession } from '@/shared/api/refresh'
 import { postLogout } from '@/features/auth/api/auth.api'
 import { REFRESH_TOKEN_KEY } from '@/shared/api/refresh-token-key'
+import { clearDevRefreshToken } from '@/shared/api/dev-refresh-token'
 import { fromUserResponse, type SessionUser } from '@/shared/stores/session-user'
 import { clearPersistedQueryCache } from '@/shared/stores/query-cache-purge'
 
@@ -75,6 +76,8 @@ export const useSessionStore = create<SessionState>((set) => ({
     } finally {
       if (Platform.OS !== 'web') {
         await secureStorage.removeItem(REFRESH_TOKEN_KEY).catch(() => undefined)
+      } else {
+        clearDevRefreshToken()
       }
       // Another user's profile/lobby data must not linger in the TanStack
       // Query cache (in-memory or its AsyncStorage/localStorage-persisted

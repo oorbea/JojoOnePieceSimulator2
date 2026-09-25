@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 import { env } from '@/shared/config/env'
 import { secureStorage } from '@/shared/lib/secure-storage'
 import { REFRESH_TOKEN_KEY } from '@/shared/api/refresh-token-key'
+import { getDevRefreshToken, setDevRefreshToken } from '@/shared/api/dev-refresh-token'
 import { fromUserResponse, type SessionUser } from '@/shared/stores/session-user'
 import type { LoginResponse } from '@/shared/contracts/dto'
 
@@ -36,10 +37,19 @@ async function doRefresh(): Promise<RefreshResult | null> {
   try {
     const headers: Record<string, string> = { 'X-JOPS-Refresh': '1' }
 
+    // A dev-login session (see dev-refresh-token.ts) lives in this tab's own
+    // sessionStorage, not the shared refresh cookie - checked first so a dev
+    // session in this tab is never silently overridden by whatever the
+    // browser-wide cookie currently holds (e.g. another tab's Google login).
+    const devToken = Platform.OS === 'web' ? getDevRefreshToken() : null
+
     if (Platform.OS !== 'web') {
       const stored = await secureStorage.getItem(REFRESH_TOKEN_KEY)
       if (!stored) return null
       headers['X-Refresh-Token'] = stored
+      headers['X-Refresh-Token-Transport'] = 'header'
+    } else if (devToken) {
+      headers['X-Refresh-Token'] = devToken
       headers['X-Refresh-Token-Transport'] = 'header'
     }
 
@@ -49,6 +59,8 @@ async function doRefresh(): Promise<RefreshResult | null> {
 
     if (Platform.OS !== 'web' && data.refreshToken) {
       await secureStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+    } else if (devToken && data.refreshToken) {
+      setDevRefreshToken(data.refreshToken)
     }
 
     return { accessToken: data.accessToken, user: fromUserResponse(data.user) }
