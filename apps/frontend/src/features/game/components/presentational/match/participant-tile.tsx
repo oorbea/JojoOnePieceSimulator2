@@ -69,7 +69,7 @@ export function ParticipantTile({
       {...a11yProps(viewA11yLabel, 'button')}
     >
       <ParticipantAvatar participant={participant} size={AVATAR_SIZE} isSelf={isSelf} />
-      <GlowText level="label" fontSize="$1" numberOfLines={1}>
+      <GlowText level="label" color="$panelText" fontSize="$1" numberOfLines={1}>
         {participant.displayName}
       </GlowText>
     </YStack>
