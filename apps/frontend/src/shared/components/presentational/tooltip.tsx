@@ -141,8 +141,19 @@ export function useHoverTrigger(opts?: HoverTriggerOptions) {
         // preceding user gesture. Wrapped in try/catch - `:focus-visible`
         // support is universal in current browsers, but this must never
         // throw and swallow the hover path on an older engine.
-        onFocus: (e: { target?: EventTarget | null }) => {
-          const target = e?.target as (Element & { matches?: (s: string) => boolean }) | undefined
+        // Typed `unknown`, not RN's `NativeSyntheticEvent<TargetedEvent>`
+        // (whose `target` is a numeric node handle) - triggerProps is spread
+        // onto both a native-shaped `Pressable` (tooltip.test.tsx) and
+        // Tamagui's web components (GlossButton, channel-bar, ...), whose
+        // own `onFocus` expects a real DOM `FocusEvent`. `unknown` is
+        // trivially assignable to either specific event type, so this
+        // satisfies both without lying about which one it actually gets.
+        onFocus: (e: unknown) => {
+          // On web react-native-web hands through the real DOM event, whose
+          // `.target` is what `:focus-visible` needs `.matches()` from.
+          const target = (e as { target?: unknown } | undefined)?.target as
+            | (Element & { matches?: (s: string) => boolean })
+            | undefined
           try {
             if (target?.matches && !target.matches(':focus-visible')) return
           } catch {
