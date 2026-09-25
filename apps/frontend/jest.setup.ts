@@ -55,6 +55,28 @@ jest.mock('react-native-reanimated', () => {
   const withTiming = (toValue: number) => toValue
   const withRepeat = (animation: number) => animation
   const withDelay = (_delay: number, animation: number) => animation
+  // withSequence: real reanimated animates through every value in turn;
+  // mocked the same way withTiming/withRepeat are - worklets run
+  // synchronously, so a shared value just needs to end up at *a* concrete
+  // number, not actually tween through the sequence. Last value wins,
+  // matching where the animation would settle once real timers fired.
+  const withSequence = (...animations: number[]) => animations[animations.length - 1]
+  // Easing: only the identity fns components actually call are needed here
+  // (see this mock's own doc) - modifiers just return their input curve
+  // unevaluated, since withTiming/withSequence above never actually invoke
+  // the easing function, only pass it through.
+  const identity = (curve: unknown) => curve
+  const easing = {
+    linear: (t: number) => t,
+    quad: (t: number) => t,
+    cubic: (t: number) => t,
+    ease: (t: number) => t,
+    out: identity,
+    in: identity,
+    inOut: identity,
+    back: (_s?: number) => (t: number) => t,
+    bezier: () => (t: number) => t,
+  }
   const interpolate = (value: number, input: number[], output: number[]) => {
     const [inMin, inMax] = [input[0], input[input.length - 1]]
     const [outMin, outMax] = [output[0], output[output.length - 1]]
@@ -72,13 +94,14 @@ jest.mock('react-native-reanimated', () => {
       Image: RN.Image,
       createAnimatedComponent: (Component: unknown) => Component,
     },
-    Easing: { linear: (t: number) => t },
+    Easing: easing,
     useSharedValue,
     useAnimatedStyle,
     useReducedMotion: () => false,
     withTiming,
     withRepeat,
     withDelay,
+    withSequence,
     interpolate,
     runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
     cancelAnimation: () => undefined,

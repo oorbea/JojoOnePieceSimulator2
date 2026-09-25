@@ -1542,12 +1542,17 @@ func revealDurationFor(g *game.Game) time.Duration {
 	players := make([]game.RevealPlayer, 0, len(g.Participants()))
 	for _, p := range g.Participants() {
 		loadout := p.Loadout()
+		standEvolutionSteps := 0
+		if loadout != nil && loadout.Stand() != nil {
+			standEvolutionSteps = loadout.Stand().EvolutionDepth()
+		}
 		players = append(players, game.RevealPlayer{
-			HasStand:           loadout != nil && loadout.Stand() != nil,
-			HasDevilFruit:      loadout != nil && loadout.DevilFruit() != nil,
-			HasArmamentHaki:    loadout != nil && loadout.ArmamentHaki() != enums.HakiNone,
-			HasObservationHaki: loadout != nil && loadout.ObservationHaki() != enums.HakiNone,
-			HasConquerorHaki:   loadout != nil && loadout.ConquerorHaki() != enums.HakiNone,
+			HasStand:            loadout != nil && loadout.Stand() != nil,
+			HasDevilFruit:       loadout != nil && loadout.DevilFruit() != nil,
+			HasArmamentHaki:     loadout != nil && loadout.ArmamentHaki() != enums.HakiNone,
+			HasObservationHaki:  loadout != nil && loadout.ObservationHaki() != enums.HakiNone,
+			HasConquerorHaki:    loadout != nil && loadout.ConquerorHaki() != enums.HakiNone,
+			StandEvolutionSteps: standEvolutionSteps,
 		})
 	}
 	roundIndex := len(g.Rounds())

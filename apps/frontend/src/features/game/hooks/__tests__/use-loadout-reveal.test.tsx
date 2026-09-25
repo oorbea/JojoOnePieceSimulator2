@@ -4,6 +4,9 @@ import { Text } from 'react-native'
 
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import {
+  REVEAL_EVOLVE_BASE_MS,
+  REVEAL_EVOLVE_STEP_MS,
+  REVEAL_EVOLVING_MS,
   REVEAL_INTRO_MS,
   REVEAL_NARRATOR_MS,
   REVEAL_PLAYER_INTRO_MS,
@@ -11,6 +14,7 @@ import {
   REVEAL_SPIN_BASE_MS,
   revealDurationMs,
 } from '@/features/game/lib/loadout-reveal'
+import type { StandResponse } from '@/features/stands'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import type { Manga, RevealSpeed } from '@/shared/contracts/enums'
 
@@ -79,10 +83,15 @@ function Harness({
         participantIndex: result.participantIndex,
         slotIndex: result.slotIndex,
         totalSlots: result.totalSlots,
+        evolveStage: result.evolveStage,
         scale: result.scale,
       })}
     </Text>
   )
+}
+
+function stand(id: string, evolvesFrom: StandResponse | null = null): StandResponse {
+  return { id, name: id, evolvesFrom } as StandResponse
 }
 
 function readState() {
@@ -196,6 +205,35 @@ describe('useLoadoutReveal', () => {
     // duration, unaffected by RevealSpinCycles - see spinMsFor's doc).
     await advance(REVEAL_NARRATOR_MS + REVEAL_POWER_SPIN_MS + 1)
     expect(readState()).toMatchObject({ phase: 'land', participantIndex: 0, slotIndex: 0 })
+  })
+
+  it('an evolving stand inserts evolveBase/evolving/evolveStep before land, in order', async () => {
+    const mangas: Manga[] = ['JOJO']
+    const chain = stand('echoes-act3', stand('echoes-act2', stand('echoes-act1', stand('echoes'))))
+    const participants: GameParticipant[] = [
+      { ...participant('p1'), loadout: { spin: 'NONE', hamon: 'NONE', stand: chain } as never },
+    ]
+
+    await render(<Harness mangas={mangas} participants={participants} revealEndsAt={null} />)
+
+    await advance(REVEAL_INTRO_MS + REVEAL_PLAYER_INTRO_MS + REVEAL_NARRATOR_MS + 1)
+    expect(readState().phase).toBe('spin')
+
+    await advance(REVEAL_POWER_SPIN_MS + 1)
+    expect(readState()).toMatchObject({ phase: 'evolveBase', participantIndex: 0, slotIndex: 0 })
+
+    await advance(REVEAL_EVOLVE_BASE_MS + 1)
+    expect(readState().phase).toBe('evolving')
+
+    await advance(REVEAL_EVOLVING_MS + 1)
+    // 3 evolution steps -> 2 intermediate evolveStep beats, 0-indexed.
+    expect(readState()).toMatchObject({ phase: 'evolveStep', evolveStage: 0 })
+
+    await advance(REVEAL_EVOLVE_STEP_MS + 1)
+    expect(readState()).toMatchObject({ phase: 'evolveStep', evolveStage: 1 })
+
+    await advance(REVEAL_EVOLVE_STEP_MS + 1)
+    expect(readState()).toMatchObject({ phase: 'land', evolveStage: -1 })
   })
 
   it('plays every participant in turn, never in parallel', async () => {

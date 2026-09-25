@@ -55,6 +55,13 @@ export const REVEAL_OUTRO_MS = 3300
 // duration instead of REVEAL_SPIN_BASE_MS*cycles: see spinMsFor's doc for
 // why RevealSpinCycles doesn't apply to these two slots any more.
 export const REVEAL_POWER_SPIN_MS = 5000
+// REVEAL_EVOLVE_BASE_MS/REVEAL_EVOLVING_MS/REVEAL_EVOLVE_STEP_MS mirror the
+// backend's game.RevealEvolveBaseMs/RevealEvolvingMs/RevealEvolveStepMs
+// exactly (2026-09-25 "algo esta pasando" evolution reveal) - see
+// reveal.go's doc for what each beat shows.
+export const REVEAL_EVOLVE_BASE_MS = 2000
+export const REVEAL_EVOLVING_MS = 2500
+export const REVEAL_EVOLVE_STEP_MS = 1500
 
 // REVEAL_SPEED_MULTIPLIER mirrors enums.RevealSpeed's own Multiplier()
 // method (reveal_speed.go) - every reveal timing constant above is scaled
@@ -65,8 +72,22 @@ export const REVEAL_SPEED_MULTIPLIER: Record<RevealSpeed, number> = {
   SWIFT: 1.0,
 }
 
+// 'evolveBase'/'evolving'/'evolveStep' are the Stand slot's own extra beats
+// when the landed Stand evolves from something (2026-09-25) - see
+// reveal.go's evolveMs doc. They only ever appear between a stand slot's
+// 'spin' and 'land'; every other slot goes straight from 'spin' to 'land' as
+// before.
 export type RevealPhaseKind =
-  'intro' | 'playerIntro' | 'narrator' | 'spin' | 'land' | 'playerOutro' | 'outro'
+  | 'intro'
+  | 'playerIntro'
+  | 'narrator'
+  | 'spin'
+  | 'evolveBase'
+  | 'evolving'
+  | 'evolveStep'
+  | 'land'
+  | 'playerOutro'
+  | 'outro'
 
 // A single tick of the sorteo timeline. `participant` indexes into the
 // reveal's own player order (join order, i.e. snapshot.participants);
@@ -80,6 +101,12 @@ export type RevealPhase = {
   participant?: number
   slot?: number
   totalSlots?: number
+  // Only set for 'evolveStep': which INTERMEDIATE stage this is (0-based,
+  // among the steps-1 intermediate stages - the root base is 'evolveBase'/
+  // 'evolving', the final stage is the slot's own 'land'). Lets the stage
+  // pick chain[evolveStage + 1] without recomputing anything - see
+  // reveal-stage.tsx.
+  evolveStage?: number
 }
 
 // RevealPlayer is the minimal per-participant shape the timeline needs -
@@ -94,6 +121,12 @@ export type RevealPlayer = {
   hasArmamentHaki: boolean
   hasObservationHaki: boolean
   hasConquerorHaki: boolean
+  // standEvolutionSteps mirrors the backend's RevealPlayer.StandEvolutionSteps
+  // (game.Stand.EvolutionDepth(), see stand-evolution.ts's
+  // standEvolutionSteps) - 0 for a base stand or no stand at all. Optional
+  // so every existing call site/fixture that doesn't care about evolutions
+  // keeps compiling unchanged.
+  standEvolutionSteps?: number
 }
 
 // SLOT_ORDINAL mirrors the backend's RevealSlot enum ordinals exactly
@@ -262,6 +295,31 @@ export function revealTimeline(
         phase: { kind: 'spin', participant: pi, slot: si, totalSlots: slots.length },
         durationMs: scaled(spinMsFor(gameId, roundIndex, pi, slot)),
       })
+      const steps = slot === 'stand' ? (player.standEvolutionSteps ?? 0) : 0
+      if (steps > 0) {
+        phases.push({
+          phase: { kind: 'evolveBase', participant: pi, slot: si, totalSlots: slots.length },
+          durationMs: scaled(REVEAL_EVOLVE_BASE_MS),
+        })
+        phases.push({
+          phase: { kind: 'evolving', participant: pi, slot: si, totalSlots: slots.length },
+          durationMs: scaled(REVEAL_EVOLVING_MS),
+        })
+        // steps-1 INTERMEDIATE stages - the final stage gets the slot's own
+        // 'land' below instead (see evolveMs's doc).
+        for (let stage = 0; stage < steps - 1; stage++) {
+          phases.push({
+            phase: {
+              kind: 'evolveStep',
+              participant: pi,
+              slot: si,
+              totalSlots: slots.length,
+              evolveStage: stage,
+            },
+            durationMs: scaled(REVEAL_EVOLVE_STEP_MS),
+          })
+        }
+      }
       phases.push({
         phase: { kind: 'land', participant: pi, slot: si, totalSlots: slots.length },
         durationMs: scaled(slotHoldMs(slot, player)),
