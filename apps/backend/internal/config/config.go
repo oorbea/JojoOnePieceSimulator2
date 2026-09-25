@@ -41,7 +41,19 @@ const defaultRateLimitMediaPerIP = 1200
 // env vars are unset, but only take effect once CORS_ALLOWED_ORIGINS is
 // non-empty - see Load.
 var defaultCORSAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization", "X-JOPS-Refresh"}
+
+// X-Refresh-Token/X-Refresh-Token-Transport were previously native-only (see
+// auth_endpoints.go's refreshTokenHeaderName/refreshTransportHeaderName doc)
+// and so never needed CORS allowance - a native client has no browser CORS
+// preflight to satisfy. The web dev-login flow (DEV_AUTH_BYPASS) now sends
+// both cross-origin too, since a dev session has no shared refresh cookie to
+// fall back on (see dev-refresh-token.ts) - omitting them here doesn't fail
+// loudly, it just makes the browser silently reject the preflight and every
+// dev-login/refresh/logout call surfaces as an opaque "Failed to fetch".
+var defaultCORSAllowedHeaders = []string{
+	"Content-Type", "Authorization", "X-JOPS-Refresh",
+	"X-Refresh-Token", "X-Refresh-Token-Transport",
+}
 
 const defaultCORSMaxAge = 300
 const defaultHTTPCompressLevel = 5
