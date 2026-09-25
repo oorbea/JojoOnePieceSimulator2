@@ -41,7 +41,19 @@ const defaultRateLimitMediaPerIP = 1200
 // env vars are unset, but only take effect once CORS_ALLOWED_ORIGINS is
 // non-empty - see Load.
 var defaultCORSAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-var defaultCORSAllowedHeaders = []string{"Content-Type", "Authorization", "X-JOPS-Refresh"}
+
+// X-Refresh-Token/X-Refresh-Token-Transport were previously native-only (see
+// auth_endpoints.go's refreshTokenHeaderName/refreshTransportHeaderName doc)
+// and so never needed CORS allowance - a native client has no browser CORS
+// preflight to satisfy. The web dev-login flow (DEV_AUTH_BYPASS) now sends
+// both cross-origin too, since a dev session has no shared refresh cookie to
+// fall back on (see dev-refresh-token.ts) - omitting them here doesn't fail
+// loudly, it just makes the browser silently reject the preflight and every
+// dev-login/refresh/logout call surfaces as an opaque "Failed to fetch".
+var defaultCORSAllowedHeaders = []string{
+	"Content-Type", "Authorization", "X-JOPS-Refresh",
+	"X-Refresh-Token", "X-Refresh-Token-Transport",
+}
 
 const defaultCORSMaxAge = 300
 const defaultHTTPCompressLevel = 5
@@ -399,6 +411,13 @@ type Config struct {
 	// RateLimitRefreshPerIP bounds POST /auth/refresh and /auth/logout,
 	// keyed by client IP (see ratelimit.go's refreshRateLimit).
 	RateLimitRefreshPerIP int
+	// DevAuthBypass mounts POST /auth/dev-login (endpoints/local_only.go
+	// restricts it to loopback/private callers with no proxy headers) - a
+	// local-only stand-in for Google sign-in so several test accounts can be
+	// logged into at once without a real Google flow per tab. Never set
+	// outside docker-compose.dev.yml; Load refuses to boot if it's set
+	// alongside a prod-shaped AuthCookieSecure/CORSAllowedOrigins.
+	DevAuthBypass bool
 }
 
 // splitCSV splits raw on commas, trimming whitespace and dropping empty
@@ -1127,6 +1146,31 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	devAuthBypass := false
+	if raw := os.Getenv("DEV_AUTH_BYPASS"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing DEV_AUTH_BYPASS: %w", err)
+		}
+		devAuthBypass = parsed
+	}
+	// Refuse to boot rather than silently ignore a prod-looking environment
+	// with the bypass on - this is the backstop for DEV_AUTH_BYPASS ever
+	// reaching a prod-shaped .env (see docker-compose.dev.yml, which is the
+	// only place it should be set). AuthCookieSecure=true and a non-local
+	// CORS origin are both hallmarks of prod (docker-compose.prod.yml sets
+	// the latter; the former is prod's unset-falls-back-to-true default).
+	if devAuthBypass {
+		if authCookieSecure {
+			return nil, fmt.Errorf("DEV_AUTH_BYPASS=true is incompatible with AUTH_COOKIE_SECURE=true (looks like a prod environment)")
+		}
+		for _, origin := range corsAllowedOrigins {
+			if !isLocalOrigin(origin) {
+				return nil, fmt.Errorf("DEV_AUTH_BYPASS=true is incompatible with non-local CORS_ALLOWED_ORIGINS %q", origin)
+			}
+		}
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -1232,5 +1276,24 @@ func Load() (*Config, error) {
 		AuthCookieSecure:         authCookieSecure,
 		AuthCookieSameSite:       authCookieSameSite,
 		RateLimitRefreshPerIP:    rateLimitRefreshPerIP,
+		DevAuthBypass:            devAuthBypass,
 	}, nil
+}
+
+// isLocalOrigin reports whether origin is http://localhost or http://127.0.0.1,
+// optionally with a port - the only origins DEV_AUTH_BYPASS's boot guard
+// allows CORS_ALLOWED_ORIGINS to contain. Deliberately narrow (http only, no
+// other loopback spellings) since this only ever needs to match
+// docker-compose.dev.yml's own default.
+func isLocalOrigin(origin string) bool {
+	host := strings.TrimPrefix(origin, "http://")
+	if host == origin {
+		return false // not http://... at all (e.g. https://)
+	}
+	host, _, _ = strings.Cut(host, "/")
+	hostname := host
+	if h, _, ok := strings.Cut(host, ":"); ok {
+		hostname = h
+	}
+	return hostname == "localhost" || hostname == "127.0.0.1"
 }

@@ -27,6 +27,8 @@ type AuthEndpoints struct {
 	svc       *services.AuthService
 	cookieCfg CookieConfig
 	media     dto.MediaURLBuilder
+	// devAuth mirrors config.Config.DevAuthBypass - see SetDevAuthBypass.
+	devAuth bool
 }
 
 func NewAuthEndpoints(svc *services.AuthService, cookieCfg CookieConfig) *AuthEndpoints {
@@ -38,6 +40,14 @@ func (e *AuthEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
 	e.media = media
 }
 
+// SetDevAuthBypass mounts POST /auth/dev-login when devAuth is true - see
+// config.Config.DevAuthBypass and Routes' doc. Unset (false) by default, so
+// every caller that doesn't explicitly opt in (main.go, from
+// cfg.DevAuthBypass) gets the same route surface as before this existed.
+func (e *AuthEndpoints) SetDevAuthBypass(devAuth bool) {
+	e.devAuth = devAuth
+}
+
 // Routes returns the /auth sub-router. Unlike /stands, these routes are
 // public - they are how a caller obtains a token in the first place, so
 // /google gets its own (tighter, IP-keyed) rate-limit tier rather than
@@ -45,11 +55,21 @@ func (e *AuthEndpoints) SetMediaURLBuilder(media dto.MediaURLBuilder) {
 // authenticated (or header-authenticated for native clients) rather than
 // bearer-authenticated, so they sit outside RequireAuth too, behind their
 // own rate-limit tier and the requireCSRFHeader defense (see csrf.go).
+//
+// /dev-login is only mounted when SetDevAuthBypass(true) was called
+// (config.Config.DevAuthBypass, only ever set by docker-compose.dev.yml -
+// see config.Load's boot guard). It sits behind requireLocalRequest instead
+// of CSRF/bearer auth: it's how a caller with no credentials at all gets a
+// token in local dev, mirroring /google's own unauthenticated starting
+// point.
 func (e *AuthEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 	r := chi.NewRouter()
 	r.With(loginRateLimit(rateCfg)).Post("/google", Wrap(e.loginWithGoogle))
 	r.With(refreshRateLimit(rateCfg), requireCSRFHeader).Post("/refresh", Wrap(e.refresh))
 	r.With(refreshRateLimit(rateCfg), requireCSRFHeader).Post("/logout", Wrap(e.logout))
+	if e.devAuth {
+		r.With(loginRateLimit(rateCfg), requireLocalRequest).Post("/dev-login", Wrap(e.devLogin))
+	}
 	return r
 }
 
@@ -60,15 +80,14 @@ func wantsRefreshTokenInBody(r *http.Request) bool {
 	return r.Header.Get(refreshTransportHeaderName) == "header"
 }
 
-// writeLoginResponse sets the refresh-token cookie and writes status/body
-// for a LoginResult, shared by loginWithGoogle and refresh so both stay
-// consistent about the header-vs-cookie transport rule.
-func (e *AuthEndpoints) writeLoginResponse(w http.ResponseWriter, r *http.Request, status int, result *services.LoginResult) error {
-	setRefreshCookie(w, e.cookieCfg, result.RefreshToken, result.RefreshExpiresAt)
-
+// loginResponseBody builds the dto.LoginResponse shared by every /auth/*
+// success path; includeRefreshToken decides whether RefreshToken is
+// populated in the body (native clients that opted in via
+// X-Refresh-Token-Transport, or every dev-login response - see devLogin).
+func (e *AuthEndpoints) loginResponseBody(r *http.Request, status int, result *services.LoginResult, includeRefreshToken bool) (dto.LoginResponse, error) {
 	userResp, err := dto.NewUserResponse(r.Context(), result.User, e.svc.PictureURL, e.media)
 	if err != nil {
-		return err
+		return dto.LoginResponse{}, err
 	}
 
 	resp := dto.LoginResponse{
@@ -77,8 +96,21 @@ func (e *AuthEndpoints) writeLoginResponse(w http.ResponseWriter, r *http.Reques
 		ExpiresAt:   result.ExpiresAt,
 		User:        userResp,
 	}
-	if wantsRefreshTokenInBody(r) {
+	if includeRefreshToken {
 		resp.RefreshToken = result.RefreshToken
+	}
+	return resp, nil
+}
+
+// writeLoginResponse sets the refresh-token cookie and writes status/body
+// for a LoginResult, shared by loginWithGoogle and refresh so both stay
+// consistent about the header-vs-cookie transport rule.
+func (e *AuthEndpoints) writeLoginResponse(w http.ResponseWriter, r *http.Request, status int, result *services.LoginResult) error {
+	setRefreshCookie(w, e.cookieCfg, result.RefreshToken, result.RefreshExpiresAt)
+
+	resp, err := e.loginResponseBody(r, status, result, wantsRefreshTokenInBody(r))
+	if err != nil {
+		return err
 	}
 
 	writeJSON(w, status, resp)
@@ -134,6 +166,50 @@ func (e *AuthEndpoints) loginWithGoogle(w http.ResponseWriter, r *http.Request) 
 	}
 
 	return e.writeLoginResponse(w, r, status, result)
+}
+
+// devLogin godoc
+//
+//	@Summary		Log in as a local-only dev account (never available in prod)
+//	@Description	Only mounted when DEV_AUTH_BYPASS is set (docker-compose.dev.yml) and the caller is loopback/private with no proxy headers. Creates or re-authenticates "<name>@dev.invalid", setting its role from the admin flag on every call. No refresh cookie is set - the refresh token is always returned in the body, so a caller can keep it in per-tab storage (sessionStorage) instead of the shared browser-wide cookie the Google flow uses, letting several dev accounts be logged into at once in separate tabs.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		dto.DevLoginRequest	true	"dev account name and desired role"
+//	@Success		200		{object}	dto.LoginResponse	"existing dev account logged in"
+//	@Success		201		{object}	dto.LoginResponse	"new dev account registered"
+//	@Failure		400		{object}	dto.ErrorResponse
+//	@Failure		404		"route not mounted, or caller is not local"
+//	@Failure		429		{object}	dto.ErrorResponse
+//	@Router			/auth/dev-login [post]
+func (e *AuthEndpoints) devLogin(w http.ResponseWriter, r *http.Request) error {
+	var req dto.DevLoginRequest
+	if err := decode(w, r, &req); err != nil {
+		return err
+	}
+	if err := req.Validate(); err != nil {
+		return err
+	}
+
+	result, err := e.svc.LoginDev(r.Context(), req.Name, req.Admin)
+	if err != nil {
+		return err
+	}
+
+	status := http.StatusOK
+	if result.Registered {
+		status = http.StatusCreated
+	}
+
+	// Deliberately no setRefreshCookie: a dev-login session lives in the
+	// calling tab's own storage (see the doc above), never the shared,
+	// browser-wide refresh cookie the Google flow uses.
+	resp, err := e.loginResponseBody(r, status, result, true)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, status, resp)
+	return nil
 }
 
 // refresh godoc
