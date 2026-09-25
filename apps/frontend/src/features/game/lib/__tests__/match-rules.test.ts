@@ -21,6 +21,7 @@ const INITIAL_LIVE: LiveMatchState = {
   revealedAssignmentSeq: 0,
   assignedRoundIndex: null,
   revealEndsAt: null,
+  revealStartedAt: null,
   revealReadyCount: null,
   revealReadyTotal: null,
   summaryEndsAt: null,

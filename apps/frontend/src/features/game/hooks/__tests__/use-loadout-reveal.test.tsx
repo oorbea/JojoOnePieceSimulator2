@@ -45,11 +45,15 @@ function Harness({
   participants,
   speed = 'SWIFT',
   revealEndsAt,
+  revealStartedAt = null,
+  stillAssigning = true,
 }: {
   mangas: Manga[]
   participants: GameParticipant[]
   speed?: RevealSpeed
   revealEndsAt: number | null
+  revealStartedAt?: number | null
+  stillAssigning?: boolean
 }) {
   const [revealedOnce, setRevealedOnce] = useState(false)
   const active = !revealedOnce
@@ -63,6 +67,8 @@ function Harness({
     markRevealed: () => setRevealedOnce(true),
     sendRevealReady: () => {},
     revealEndsAt,
+    revealStartedAt,
+    stillAssigning,
   })
   return (
     <Text testID="state">
@@ -72,6 +78,7 @@ function Harness({
         participantIndex: result.participantIndex,
         slotIndex: result.slotIndex,
         totalSlots: result.totalSlots,
+        scale: result.scale,
       })}
     </Text>
   )
@@ -156,6 +163,8 @@ describe('useLoadoutReveal', () => {
         markRevealed: () => {},
         sendRevealReady: () => {},
         revealEndsAt: null,
+        revealStartedAt: null,
+        stillAssigning: true,
       })
       useEffect(() => {
         skipRef.current = result.skip
@@ -205,5 +214,67 @@ describe('useLoadoutReveal', () => {
 
     await advance(total)
     expect(readState().isRevealing).toBe(false)
+  })
+
+  it('stops immediately once stillAssigning flips false, however far its own timers still had left to run', async () => {
+    function StopHarness({ stillAssigning }: { stillAssigning: boolean }) {
+      const result = useLoadoutReveal({
+        gameId: 'g1',
+        roundIndex: 0,
+        mangas: ['JOJO'],
+        participants: [participant('p1')],
+        speed: 'SWIFT',
+        active: true,
+        markRevealed: () => {},
+        sendRevealReady: () => {},
+        revealEndsAt: null,
+        revealStartedAt: null,
+        stillAssigning,
+      })
+      return <Text testID="state">{JSON.stringify({ isRevealing: result.isRevealing })}</Text>
+    }
+
+    const { rerender } = await render(<StopHarness stillAssigning />)
+    expect(readState().isRevealing).toBe(true)
+
+    // Server has moved the game on to SUMMARY/VOTING - the reveal must stop
+    // right now, not whenever its own local timeline would have finished.
+    await act(async () => {
+      rerender(<StopHarness stillAssigning={false} />)
+    })
+    expect(readState().isRevealing).toBe(false)
+  })
+
+  it('seeks a late mount to the phase the server window says it should already be in, instead of always starting at phase 0', async () => {
+    const mangas: Manga[] = ['JOJO']
+    const participants = [participant('p1')]
+    const localTotal = revealDurationMs(
+      'g1',
+      0,
+      mangas,
+      [{ hasStand: false, hasDevilFruit: false, hasArmamentHaki: false, hasObservationHaki: false, hasConquerorHaki: false }],
+      'SWIFT'
+    )
+    const now = Date.now()
+    // The server armed this reveal well before this client mounted (a slow
+    // device/catalog load) - by "now" the window says we're already halfway
+    // through the timeline.
+    const revealStartedAt = now - localTotal / 2
+    const revealEndsAt = now + localTotal / 2
+
+    await render(
+      <Harness
+        mangas={mangas}
+        participants={participants}
+        revealEndsAt={revealEndsAt}
+        revealStartedAt={revealStartedAt}
+      />
+    )
+
+    // Never phase 'intro'/participantIndex -1 - the seek already lands
+    // partway through the timeline on first paint.
+    expect(readState().phase).not.toBe('intro')
+    expect(readState().participantIndex).toBeGreaterThanOrEqual(0)
+    expect(readState().scale).toBeCloseTo(1)
   })
 })
