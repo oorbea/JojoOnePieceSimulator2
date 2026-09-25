@@ -479,8 +479,8 @@ func TestNewGameStateResponse_Deadlines(t *testing.T) {
 	if resp.Game.RevealEndsAt != nil {
 		t.Errorf("RevealEndsAt = %v, want nil (only VotingEndsAt was set)", *resp.Game.RevealEndsAt)
 	}
-	if resp.Game.VotingEndsAt == nil || *resp.Game.VotingEndsAt != votingEndsAt.Format(time.RFC3339) {
-		t.Errorf("VotingEndsAt = %v, want %v", resp.Game.VotingEndsAt, votingEndsAt.Format(time.RFC3339))
+	if resp.Game.VotingEndsAt == nil || *resp.Game.VotingEndsAt != dto.FormatWireTime(votingEndsAt) {
+		t.Errorf("VotingEndsAt = %v, want %v", resp.Game.VotingEndsAt, dto.FormatWireTime(votingEndsAt))
 	}
 
 	raw, err := json.Marshal(resp.Game)
@@ -517,8 +517,8 @@ func TestNewGameStateResponse_Deadlines(t *testing.T) {
 	if resultResp.Game.RevealEndsAt != nil || resultResp.Game.VotingEndsAt != nil {
 		t.Errorf("RevealEndsAt/VotingEndsAt should stay nil when only ResultEndsAt was set")
 	}
-	if resultResp.Game.ResultEndsAt == nil || *resultResp.Game.ResultEndsAt != resultEndsAt.Format(time.RFC3339) {
-		t.Errorf("ResultEndsAt = %v, want %v", resultResp.Game.ResultEndsAt, resultEndsAt.Format(time.RFC3339))
+	if resultResp.Game.ResultEndsAt == nil || *resultResp.Game.ResultEndsAt != dto.FormatWireTime(resultEndsAt) {
+		t.Errorf("ResultEndsAt = %v, want %v", resultResp.Game.ResultEndsAt, dto.FormatWireTime(resultEndsAt))
 	}
 	if strings.Contains(string(emptyRaw), "resultEndsAt") {
 		t.Fatalf("zero-value GameStateDeadlines marshaled resultEndsAt: %s", emptyRaw)

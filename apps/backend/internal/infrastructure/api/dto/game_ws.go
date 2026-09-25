@@ -3,6 +3,7 @@ package dto
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/application/services"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
@@ -254,10 +255,23 @@ func (p UpdateConfigPayload) Validate() (services.ConfigUpdateInput, error) {
 
 // ServerFrame is the envelope every server->client frame arrives in.
 // RequestID is only set on an ERROR frame replying to a specific command.
+// ServerTime is this process's own clock at the instant the frame was
+// marshalled (see NewServerFrame) - every frame carries one, not just the
+// timed ones, so a client can keep sampling its clock offset from whichever
+// frames actually arrive (see shared/lib/server-clock.ts) instead of only
+// the five that carry a deadline.
 type ServerFrame struct {
-	Type      string `json:"type"`
-	RequestID string `json:"requestId,omitempty"`
-	Payload   any    `json:"payload,omitempty"`
+	Type       string `json:"type"`
+	RequestID  string `json:"requestId,omitempty"`
+	ServerTime string `json:"serverTime" ts:"datetime"`
+	Payload    any    `json:"payload,omitempty"`
+}
+
+// NewServerFrame builds a ServerFrame stamped with the current instant. The
+// sole constructor for the type - every call site uses it instead of a
+// literal so ServerTime can never be forgotten.
+func NewServerFrame(frameType, requestID string, payload any) ServerFrame {
+	return ServerFrame{Type: frameType, RequestID: requestID, ServerTime: FormatWireTime(time.Now()), Payload: payload}
 }
 
 // Server frame types. The eleven domain-event names are reused verbatim
@@ -373,9 +387,16 @@ type HostReassignedPayload struct {
 // to fit whatever time remains until this instant, rather than trusting a
 // transported duration - so hub-delivery latency degrades pacing, never
 // desyncs "reveal looks done" from "voting is actually open".
+// RevealStartedAt is the instant GameService armed this reveal's timer
+// (closesAt minus the reveal window) - a client uses it to seek its locally-
+// computed reveal timeline to wherever the server actually is right now,
+// instead of always starting that timeline over from phase zero and merely
+// stretching/squeezing it to fit whatever time is left (see
+// features/game/hooks/use-loadout-reveal.ts).
 type LoadoutsAssignedPayload struct {
-	RoundIndex int    `json:"roundIndex"`
-	ClosesAt   string `json:"closesAt" ts:"datetime"`
+	RoundIndex      int    `json:"roundIndex"`
+	ClosesAt        string `json:"closesAt" ts:"datetime"`
+	RevealStartedAt string `json:"revealStartedAt" ts:"datetime"`
 }
 
 // RoundResolvedPayload's closesAt is the RESOLVING phase's display
