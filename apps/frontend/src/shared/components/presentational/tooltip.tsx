@@ -128,7 +128,40 @@ export function useHoverTrigger(opts?: HoverTriggerOptions) {
     ? {
         onHoverIn: scheduleShow,
         onHoverOut: hide,
-        onFocus: scheduleShow,
+        // Not just `scheduleShow` - a plain `onFocus` fires identically for
+        // a real Tab keypress AND for any unrelated `.focus()` call some
+        // effect makes for a11y reasons (e.g. ConfirmSheet focusing its
+        // confirm button on open so Tab doesn't land nowhere). That used to
+        // pop this same button's tooltip open with no hover/keyboard nav at
+        // all. `:focus-visible` is the browser's own answer to exactly this
+        // ("was this focus the result of the user actually navigating
+        // here"): true for real keyboard focus (including a focus() called
+        // synchronously inside a keydown handler, e.g. roving-group's arrow
+        // keys), false for a focus() from an async callback with no
+        // preceding user gesture. Wrapped in try/catch - `:focus-visible`
+        // support is universal in current browsers, but this must never
+        // throw and swallow the hover path on an older engine.
+        // Typed `unknown`, not RN's `NativeSyntheticEvent<TargetedEvent>`
+        // (whose `target` is a numeric node handle) - triggerProps is spread
+        // onto both a native-shaped `Pressable` (tooltip.test.tsx) and
+        // Tamagui's web components (GlossButton, channel-bar, ...), whose
+        // own `onFocus` expects a real DOM `FocusEvent`. `unknown` is
+        // trivially assignable to either specific event type, so this
+        // satisfies both without lying about which one it actually gets.
+        onFocus: (e: unknown) => {
+          // On web react-native-web hands through the real DOM event, whose
+          // `.target` is what `:focus-visible` needs `.matches()` from.
+          const target = (e as { target?: unknown } | undefined)?.target as
+            | (Element & { matches?: (s: string) => boolean })
+            | undefined
+          try {
+            if (target?.matches && !target.matches(':focus-visible')) return
+          } catch {
+            // Unsupported selector - fall through to showing, the pre-fix
+            // behaviour, rather than silently never showing on focus.
+          }
+          scheduleShow()
+        },
         onBlur: hide,
       }
     : {
