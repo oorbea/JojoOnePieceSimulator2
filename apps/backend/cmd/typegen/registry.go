@@ -13,6 +13,7 @@ import (
 // instead of silently being missing from the generated TypeScript.
 var restTypes = []any{
 	dto.GoogleLoginRequest{},
+	dto.DevLoginRequest{},
 	dto.LoginResponse{},
 	dto.UserResponse{},
 	dto.PublicUserResponse{},

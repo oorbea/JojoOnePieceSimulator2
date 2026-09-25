@@ -21,6 +21,24 @@ var usernameSanitizer = regexp.MustCompile(`[^a-z0-9_]`)
 // will try before giving up on a brand-new registration.
 const maxUsernameAttempts = 5
 
+// DevEmailDomain is the email suffix every LoginDev account is forced onto.
+// ".invalid" is reserved by RFC 2606 as never resolvable, so a dev account
+// (email "<name>@dev.invalid") can never collide with, or be mistaken for, a
+// real Google account. Refresh checks this suffix to skip the ADMIN_EMAILS
+// resync for dev accounts - their role is set explicitly at each LoginDev
+// call instead (see LoginDev's doc).
+const DevEmailDomain = "@dev.invalid"
+
+// devSubjectPrefix namespaces the synthetic Google "sub" LoginDev builds for
+// a dev account (identity.Subject = devSubjectPrefix+name), keeping it
+// visibly distinct from a real Google subject.
+const devSubjectPrefix = "dev:"
+
+// isDevEmail reports whether email belongs to the reserved dev-login domain.
+func isDevEmail(email string) bool {
+	return strings.HasSuffix(email, DevEmailDomain)
+}
+
 // LoginResult is returned by AuthService.LoginWithGoogle and
 // AuthService.Refresh.
 type LoginResult struct {
@@ -132,6 +150,53 @@ func (s *AuthService) LoginWithGoogle(ctx context.Context, rawIDToken string) (*
 	}, nil
 }
 
+// LoginDev logs the caller in as a local-only dev account, bypassing Google
+// entirely - see endpoints/local_only.go and config.Config.DevAuthBypass for
+// how this is kept out of prod. name is forced into a synthetic identity
+// (email "<name>@dev.invalid", subject "dev:<name>") so it shares
+// findOrRegister/syncExisting with the real Google flow: a repeat call with
+// the same name finds the same user via FindByGoogleSub and updates its role
+// to admin if it changed, exactly like a re-login would for a real account.
+// Unlike LoginWithGoogle, the role here is the caller's explicit choice
+// rather than an ADMIN_EMAILS lookup.
+func (s *AuthService) LoginDev(ctx context.Context, name string, admin bool) (*LoginResult, error) {
+	role := enums.Regular
+	if admin {
+		role = enums.Admin
+	}
+
+	identity := ports.GoogleIdentity{
+		Subject:       devSubjectPrefix + name,
+		Email:         name + DevEmailDomain,
+		EmailVerified: true,
+		Name:          name,
+	}
+
+	u, registered, err := s.findOrRegister(ctx, identity, role)
+	if err != nil {
+		return nil, err
+	}
+
+	token, expiresAt, err := s.tokens.Issue(u)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, refreshExpiresAt, err := s.refresh.Issue(ctx, ports.RefreshToken{UserID: u.ID(), Role: u.Role(), FamilyID: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResult{
+		User:             u,
+		AccessToken:      token,
+		ExpiresAt:        expiresAt,
+		Registered:       registered,
+		RefreshToken:     refreshToken,
+		RefreshExpiresAt: refreshExpiresAt,
+	}, nil
+}
+
 // Refresh redeems rawToken (rotating it: the returned token is a new,
 // single-use replacement in the same family) and mints a fresh access token
 // for the user it names. A replayed token surfaces as ports.ErrRefreshReuse
@@ -155,8 +220,13 @@ func (s *AuthService) Refresh(ctx context.Context, rawToken string) (*LoginResul
 	// Recompute (and, if it has drifted since the user's last login/refresh,
 	// persist) the ADMIN_EMAILS-derived role - a caller removed from
 	// ADMIN_EMAILS must be demoted on their very next refresh, not only the
-	// next time they re-authenticate with Google.
-	role := s.resolveRole(u.Email())
+	// next time they re-authenticate with Google. Dev accounts (see
+	// LoginDev) have no Google identity to resolve against ADMIN_EMAILS, so
+	// their role is left exactly as LoginDev last set it.
+	role := u.Role()
+	if !isDevEmail(u.Email()) {
+		role = s.resolveRole(u.Email())
+	}
 	if role != u.Role() {
 		if err := u.ChangeRole(role); err != nil {
 			return nil, err

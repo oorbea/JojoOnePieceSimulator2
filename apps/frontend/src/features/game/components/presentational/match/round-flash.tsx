@@ -11,9 +11,31 @@ import Animated, {
 import { YStack } from 'tamagui'
 
 import { cinematicTimeline } from '@/features/game/lib/outcome-cinematic'
-import { GlowText } from '@/shared/components/presentational/glow-text'
+import { DecayGrid } from '@/features/game/components/presentational/match/manga/decay-grid'
+import { MangaVerdictText } from '@/features/game/components/presentational/match/manga/manga-verdict-text'
+import { RadialGlow } from '@/features/game/components/presentational/match/manga/radial-glow'
+import { SpeedLines } from '@/features/game/components/presentational/match/manga/speed-lines'
 import { roundLoseSound, roundWinSound } from '@/shared/assets'
 import { useSound } from '@/shared/hooks/use-sound'
+
+// Manga JoJo × One Piece palette (owner decision, 2026-09-25 playtest
+// feedback - see ObsidianVault/game-victory-defeat-cinematic-2026-09-14.md).
+// Win: a golden radial burst over morado, with rotating speed-lines - the
+// one beat that keeps rays-from-centre, since it's a triumphant impact.
+// Lose: rojo tinta → negro with an "aura de decadencia" (a grid that only
+// holds together near the centre and dissolves into black toward the
+// edges) instead of rays - the owner was explicit a burst reads wrong for
+// a loss.
+const WIN_GLOW = [
+  { offset: '0%', color: '#F2C744' },
+  { offset: '45%', color: '#D99A1C' },
+  { offset: '100%', color: '#7A2E86' },
+]
+const LOSE_GLOW = [
+  { offset: '0%', color: '#6B1420' },
+  { offset: '70%', color: '#2C0A0D' },
+  { offset: '100%', color: '#120507' },
+]
 
 type Props = {
   visible: boolean
@@ -69,18 +91,20 @@ export function RoundFlash({ visible, outcome, reducedMotion, onDone }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
-      <YStack
-        flex={1}
-        items="center"
-        justify="center"
-        bg={outcome === 'win' ? 'rgba(242,199,68,0.9)' : 'rgba(58,10,16,0.9)'}
-      >
+      <YStack flex={1} items="center" justify="center" position="relative" overflow="hidden">
+        <RadialGlow stops={outcome === 'win' ? WIN_GLOW : LOSE_GLOW} />
+        <Animated.View
+          style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, style]}
+          pointerEvents="none"
+        >
+          {outcome === 'win' ? <SpeedLines /> : <DecayGrid />}
+        </Animated.View>
         <Animated.View style={style}>
-          <GlowText level="hero" align="center" tone="onColor">
+          <MangaVerdictText fillColor={outcome === 'win' ? '$standGold' : '$strawHatRed'}>
             {outcome === 'win'
               ? t('game.match.cinematic.roundWin')
               : t('game.match.cinematic.roundLose')}
-          </GlowText>
+          </MangaVerdictText>
         </Animated.View>
       </YStack>
     </Modal>

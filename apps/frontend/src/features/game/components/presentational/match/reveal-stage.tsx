@@ -1,21 +1,24 @@
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
+import { CaseStripReel } from '@/features/game/components/presentational/match/case-strip-reel'
 import { ParticipantAvatar } from '@/features/game/components/presentational/match/participant-avatar'
 import { PowerRevealCard } from '@/features/game/components/presentational/match/power-reveal-card'
 import { PowerRoulette } from '@/features/game/components/presentational/match/power-roulette'
 import { RevealNarrator } from '@/features/game/components/presentational/match/reveal-narrator'
 import { useRevealSpinSound } from '@/features/game/hooks/use-reveal-spin-sound'
+import { buildCaseStrip, type CaseStripCard } from '@/features/game/lib/case-strip'
 import {
   playerSlots,
   REVEAL_SLOT_ORDINAL,
   REVEAL_SPEED_MULTIPLIER,
-  REVEAL_SPIN_BASE_MS,
-  revealSpinCycles,
+  revealSlotSeed,
+  spinMsFor,
   type RevealPhaseKind,
   type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
 import type { LoadoutSlotKind } from '@/features/game/lib/match-rules'
+import { applyPoolFilter } from '@/features/game/lib/power-pool'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
@@ -23,6 +26,12 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { formatBattleIQ } from '@/shared/lib/battle-iq'
+
+// The "landed nothing" card - a Stand/DevilFruit slot that rolled NONE
+// still gets its own strip (owner decision, 2026-09-25): it reads as a
+// deliberately unremarkable grey card among the real candidates, never a
+// blank gap in the strip.
+const NONE_POWER_CARD_ID = '__none__'
 
 // One representative score per WAIS-IV band, purely cosmetic decoys for the
 // battleIQ roulette to spin through before landing on the real score -
@@ -38,6 +47,11 @@ type Props = {
   participantIndex: number
   slotIndex: number
   totalSlots: number
+  /** How much every phase's local duration is being stretched/squeezed to
+   * fit the server's actual reveal window - the roulette's own spinMs must
+   * scale by the same factor, or its spin drifts out of step with the rest
+   * of the timeline (see useLoadoutReveal's identical field). */
+  scale: number
   /** REVEAL_READY_CHANGED's own aggregate - how many of how many connected
    * humans have already marked themselves ready to skip. null before the
    * first frame for this ASSIGNING window arrives. */
@@ -61,7 +75,14 @@ const SCALAR_VALUES: Record<string, string[]> = {
   spin: ['NONE', 'BASIC', 'GOLDEN', 'INFINITE'],
   hamon: ['NONE', 'BASIC', 'ADVANCED', 'PERFECT'],
   fruitMastery: ['NONE', 'REGULAR', 'ADVANCED', 'AWAKENED'],
-  physicalForm: ['PRIVATE', 'STRONG_FISHMAN', 'MARINE_CAPTAIN', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
+  physicalForm: [
+    'PRIVATE',
+    'STRONG_FISHMAN',
+    'MARINE_CAPTAIN',
+    'VICE_ADMIRAL',
+    'YONKO_COMMANDER',
+    'YONKO_PLUS',
+  ],
   // No 'NONE' here - a haki level slot only ever appears (see playerSlots)
   // for a type the participant actually has, so it can never land on NONE
   // and the roulette shouldn't tease it as a possible outcome either.
@@ -70,7 +91,10 @@ const SCALAR_VALUES: Record<string, string[]> = {
   conquerorHaki: ['PRIVATE', 'VICE_ADMIRAL', 'YONKO_COMMANDER', 'YONKO_PLUS'],
 }
 
-const HAKI_TYPES: { field: 'armamentHaki' | 'observationHaki' | 'conquerorHaki'; i18nKey: string }[] = [
+const HAKI_TYPES: {
+  field: 'armamentHaki' | 'observationHaki' | 'conquerorHaki'
+  i18nKey: string
+}[] = [
   { field: 'armamentHaki', i18nKey: 'game.match.hakiType.armament' },
   { field: 'observationHaki', i18nKey: 'game.match.hakiType.observation' },
   { field: 'conquerorHaki', i18nKey: 'game.match.hakiType.conqueror' },
@@ -101,6 +125,7 @@ export function RevealStage({
   participantIndex,
   slotIndex,
   totalSlots,
+  scale,
   readyCount,
   readyTotal,
   onSkip,
@@ -124,27 +149,90 @@ export function RevealStage({
     hasStand: !!loadout?.stand,
     hasDevilFruit: !!loadout?.devilFruit,
     hasArmamentHaki: loadout?.armamentHaki !== undefined && loadout.armamentHaki !== 'NONE',
-    hasObservationHaki: loadout?.observationHaki !== undefined && loadout.observationHaki !== 'NONE',
+    hasObservationHaki:
+      loadout?.observationHaki !== undefined && loadout.observationHaki !== 'NONE',
     hasConquerorHaki: loadout?.conquerorHaki !== undefined && loadout.conquerorHaki !== 'NONE',
   }
-  const slotKinds = currentParticipant ? playerSlots(snapshot.config.powerMangas, currentPlayer) : []
+  const slotKinds = currentParticipant
+    ? playerSlots(snapshot.config.powerMangas, currentPlayer)
+    : []
   const currentSlot: LoadoutSlotKind | null =
     slotIndex >= 0 && slotIndex < slotKinds.length ? slotKinds[slotIndex] : null
   const spinning = phase === 'spin'
   const landed = phase === 'land'
 
   const { candidates, finalLabel } = slotFor(t, loadout, currentSlot, standNames, fruitNames)
+  const isPowerSlot = currentSlot === 'stand' || currentSlot === 'devilFruit'
 
   const speed = snapshot.config.revealSpeed
   const speedMultiplier = REVEAL_SPEED_MULTIPLIER[speed] ?? REVEAL_SPEED_MULTIPLIER.NORMAL
-  const cycles =
+  // Scaled by the SAME factor useLoadoutReveal is stretching/squeezing every
+  // other phase's duration by, or the spin finishes out of step with the
+  // narrator/land beats around it the moment the two ever disagree (a slow
+  // device, a mid-reveal reconnect that seeked into this phase, ...).
+  const spinMs =
     currentParticipant && currentSlot
-      ? revealSpinCycles(snapshot.id, snapshot.rounds.length, participantIndex, REVEAL_SLOT_ORDINAL[currentSlot])
-      : 1
-  const spinMs = REVEAL_SPIN_BASE_MS * cycles * speedMultiplier
+      ? spinMsFor(snapshot.id, snapshot.rounds.length, participantIndex, currentSlot) *
+        speedMultiplier *
+        scale
+      : 0
+  const slotSeed =
+    currentParticipant && currentSlot
+      ? revealSlotSeed(
+          snapshot.id,
+          snapshot.rounds.length,
+          participantIndex,
+          REVEAL_SLOT_ORDINAL[currentSlot]
+        )
+      : 0
 
-  const showPowerCard =
-    landed && currentParticipant !== null && (currentSlot === 'stand' || currentSlot === 'devilFruit')
+  // A plain computed value, not memoized: it's a cheap, pure build of a
+  // ~50-card array from data already in hand, and re-deriving it every
+  // render is simpler (and lint-cleaner under the React Compiler) than
+  // keeping a dependency list in sync with it.
+  const caseStrip = (() => {
+    if (!isPowerSlot || !loadout || !currentSlot) return null
+    const { stands, fruits } = applyPoolFilter(
+      standsQuery.data ?? [],
+      devilFruitsQuery.data ?? [],
+      snapshot.config.poolFilter
+    )
+    const pool: CaseStripCard[] =
+      currentSlot === 'stand'
+        ? stands.map((s) => ({
+            id: s.id,
+            label: s.name,
+            rarity: s.rarity,
+            picture: s.pictureThumb,
+          }))
+        : fruits.map((f) => ({
+            id: f.id,
+            label: f.name,
+            rarity: f.rarity,
+            picture: f.pictureThumb,
+          }))
+    const winner: CaseStripCard =
+      currentSlot === 'stand'
+        ? loadout.stand
+          ? {
+              id: loadout.stand.id,
+              label: loadout.stand.name,
+              rarity: loadout.stand.rarity,
+              picture: loadout.stand.pictureThumb,
+            }
+          : { id: NONE_POWER_CARD_ID, label: t('game.match.noStand'), rarity: 'NONE' }
+        : loadout.devilFruit
+          ? {
+              id: loadout.devilFruit.id,
+              label: loadout.devilFruit.name,
+              rarity: loadout.devilFruit.rarity,
+              picture: loadout.devilFruit.pictureThumb,
+            }
+          : { id: NONE_POWER_CARD_ID, label: t('game.match.noFruit'), rarity: 'NONE' }
+    return buildCaseStrip(pool, winner, slotSeed)
+  })()
+
+  const showPowerCard = landed && currentParticipant !== null && isPowerSlot
 
   const narratorLine = narratorLineFor(
     t,
@@ -184,18 +272,34 @@ export function RevealStage({
           minW={220}
         >
           <XStack items="center" gap="$2">
-            <ParticipantAvatar participant={currentParticipant} size={36} isSelf={currentParticipant.id === selfId} />
+            <ParticipantAvatar
+              participant={currentParticipant}
+              size={36}
+              isSelf={currentParticipant.id === selfId}
+            />
             <GlowText level="heading" numberOfLines={1}>
               {currentParticipant.displayName}
             </GlowText>
           </XStack>
-          {currentSlot && !showPowerCard ? (
+          {currentSlot && !showPowerCard && isPowerSlot && caseStrip ? (
+            <CaseStripReel
+              cards={caseStrip.cards}
+              landingIndex={caseStrip.landingIndex}
+              landingOffset={caseStrip.landingOffset}
+              spinning={spinning}
+              landed={landed}
+              reducedMotion={reducedMotion}
+              spinMs={spinMs}
+            />
+          ) : currentSlot && !showPowerCard && !isPowerSlot ? (
             <PowerRoulette
               candidates={candidates}
               finalLabel={finalLabel}
               spinning={spinning}
+              landed={landed}
               reducedMotion={reducedMotion}
               spinMs={spinMs}
+              seed={slotSeed}
             />
           ) : null}
         </GlassPanel>
@@ -219,7 +323,9 @@ export function RevealStage({
         accessibilityLabel={t('game.match.reveal.skipA11y')}
         tooltip={t('game.match.reveal.skipA11y')}
       >
-        {readyTotal ? t('game.match.reveal.readyCount', { ready: readyCount ?? 0, total: readyTotal }) : t('game.match.reveal.skip')}
+        {readyTotal
+          ? t('game.match.reveal.readyCount', { ready: readyCount ?? 0, total: readyTotal })
+          : t('game.match.reveal.skip')}
       </GlossButton>
 
       {currentParticipant ? (
@@ -249,7 +355,9 @@ function narratorLineFor(
   if (phase === 'playerIntro') return t('game.match.reveal.narrator.playerTurn', { name })
   if (!slot) return ''
   if (phase === 'narrator' || phase === 'spin') {
-    return t(`game.match.reveal.narrator.${narratorKey(slot)}.before`, { type: hakiTypeLabel(t, slot) })
+    return t(`game.match.reveal.narrator.${narratorKey(slot)}.before`, {
+      type: hakiTypeLabel(t, slot),
+    })
   }
   if (phase === 'land') {
     if (slot === 'devilFruit') {
@@ -269,12 +377,17 @@ function narratorLineFor(
     // spin/hamon have an explicit "never learned" line, matching V1's own
     // wording - every other scalar slot always has a value (its floor is
     // never "absent", e.g. physicalForm's weakest tier is still a form).
-    if ((slot === 'spin' && loadout?.spin === 'NONE') || (slot === 'hamon' && loadout?.hamon === 'NONE')) {
+    if (
+      (slot === 'spin' && loadout?.spin === 'NONE') ||
+      (slot === 'hamon' && loadout?.hamon === 'NONE')
+    ) {
       return t(`game.match.reveal.narrator.${slot}.none`, { name })
     }
     if (slot === 'hakiSet') {
       const hasAnyHaki =
-        loadout?.armamentHaki !== 'NONE' || loadout?.observationHaki !== 'NONE' || loadout?.conquerorHaki !== 'NONE'
+        loadout?.armamentHaki !== 'NONE' ||
+        loadout?.observationHaki !== 'NONE' ||
+        loadout?.conquerorHaki !== 'NONE'
       return hasAnyHaki
         ? t('game.match.reveal.narrator.haki.after', { list: finalLabel })
         : t('game.match.reveal.narrator.haki.none', { name })
@@ -333,11 +446,19 @@ function slotFor(
     return { candidates: standNames, finalLabel: loadout.stand?.name ?? t('game.match.noStand') }
   }
   if (slotKind === 'devilFruit') {
-    return { candidates: fruitNames, finalLabel: loadout.devilFruit?.name ?? t('game.match.noFruit') }
+    return {
+      candidates: fruitNames,
+      finalLabel: loadout.devilFruit?.name ?? t('game.match.noFruit'),
+    }
   }
   if (slotKind === 'hakiSet') {
-    const present = HAKI_TYPES.filter((h) => (loadout as unknown as Record<string, string>)[h.field] !== 'NONE')
-    const finalLabel = present.length === 0 ? t('game.match.hakiType.none') : present.map((h) => t(h.i18nKey)).join(', ')
+    const present = HAKI_TYPES.filter(
+      (h) => (loadout as unknown as Record<string, string>)[h.field] !== 'NONE'
+    )
+    const finalLabel =
+      present.length === 0
+        ? t('game.match.hakiType.none')
+        : present.map((h) => t(h.i18nKey)).join(', ')
     return { candidates: hakiSetCombos(t), finalLabel }
   }
 

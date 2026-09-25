@@ -981,6 +981,52 @@ func TestStartGame_RevealEndsAt_TracksThenClearsOnVotingOpen(t *testing.T) {
 	}
 }
 
+// TestStartGame_RevealStartedAt_MatchesEndsAtMinusDuration checks
+// GameService.RevealStartedAt: absent before the reveal starts, and while
+// ASSIGNING exactly RevealEndsAt minus the reveal's own duration - the pair
+// a (re)connecting client seeks its local reveal timeline against instead of
+// restarting it at phase zero (see dto.NewGameStateResponse's
+// revealStartedAt param).
+func TestStartGame_RevealStartedAt_MatchesEndsAtMinusDuration(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+
+	g, _, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if _, ok := svc.RevealStartedAt(g.ID()); ok {
+		t.Fatalf("RevealStartedAt before StartGame: want not-ok")
+	}
+
+	armedAt := deps.clock.Now()
+	g, err = svc.StartGame(context.Background(), g.ID(), g.HostID())
+	if err != nil {
+		t.Fatalf("StartGame: %v", err)
+	}
+
+	endsAt, ok := svc.RevealEndsAt(g.ID())
+	if !ok {
+		t.Fatalf("RevealEndsAt during reveal: want ok")
+	}
+	startedAt, ok := svc.RevealStartedAt(g.ID())
+	if !ok {
+		t.Fatalf("RevealStartedAt during reveal: want ok")
+	}
+	if !startedAt.Equal(armedAt) {
+		t.Fatalf("RevealStartedAt = %v, want the instant the timer was armed %v", startedAt, armedAt)
+	}
+	if want := endsAt.Sub(startedAt); want != revealDurationOf(g) {
+		t.Fatalf("RevealEndsAt - RevealStartedAt = %v, want the reveal duration %v", want, revealDurationOf(g))
+	}
+
+	advanceReveal(deps, gauntletInput().PowerMangas)
+	advanceSummary(deps)
+	if _, ok := svc.RevealStartedAt(g.ID()); ok {
+		t.Fatalf("RevealStartedAt after voting opens: want not-ok")
+	}
+}
+
 // TestAbortGame_DuringReveal_NeverOpensVoting guards the exact bug the
 // reveal delay could otherwise introduce: aborting a Game while its reveal
 // timer is still pending must cancel that timer outright, not just let it

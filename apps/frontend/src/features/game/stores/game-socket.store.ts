@@ -9,6 +9,7 @@ import type { GameResult, GameStateResponse } from '@/features/game/types/game.t
 import { useSessionStore } from '@/shared/stores/session.store'
 import { mintGameSocketTicket } from '@/shared/api/stream-tickets'
 import { toAppError } from '@/shared/api/errors'
+import { recordServerTime } from '@/shared/lib/server-clock'
 
 export type SocketStatus =
   'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'unavailable'
@@ -44,6 +45,14 @@ export type LiveMatchState = {
    * locally-computed timeline is scaled to fit whatever time remains until
    * this instant. null once voting has actually opened. */
   revealEndsAt: number | null
+  /** Epoch ms instant the reveal's own timer was armed server-side (the
+   * frame's own revealStartedAt, or adopted from a STATE frame's
+   * game.revealStartedAt for a reconnect mid-reveal) - paired with
+   * revealEndsAt so useLoadoutReveal can seek its locally-computed timeline
+   * to wherever the server actually is right now, instead of always
+   * starting it over from phase zero and merely stretching/squeezing it to
+   * fit whatever time is left. null once voting has actually opened. */
+  revealStartedAt: number | null
   /** Absolute values off the latest REVEAL_READY_CHANGED - how many of how
    * many connected humans have marked the current sorteo ready to skip
    * (see game.RevealReadyProgress). null until the first frame for this
@@ -92,6 +101,7 @@ const INITIAL_LIVE: LiveMatchState = {
   revealedAssignmentSeq: 0,
   assignedRoundIndex: null,
   revealEndsAt: null,
+  revealStartedAt: null,
   revealReadyCount: null,
   revealReadyTotal: null,
   summaryEndsAt: null,
@@ -302,13 +312,17 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
       const parsed = serverFrameSchema.safeParse(raw)
       if (!parsed.success) {
         if (__DEV__) {
-          console.error('[game-socket] dropped an unparseable frame:', z.prettifyError(parsed.error))
+          console.error(
+            '[game-socket] dropped an unparseable frame:',
+            z.prettifyError(parsed.error)
+          )
         }
         const rawType = (raw as { type?: unknown } | null)?.type
         pushFeed(typeof rawType === 'string' ? rawType : 'UNKNOWN')
         return
       }
       const frame = parsed.data
+      recordServerTime(Date.parse(frame.serverTime))
 
       switch (frame.type) {
         case SERVER_FRAME.STATE: {
@@ -324,6 +338,12 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               const revealEndsAt = Date.parse(payload.game.revealEndsAt) || null
               if (revealEndsAt !== null) {
                 live = { ...live, revealEndsAt }
+              }
+            }
+            if (live.revealStartedAt === null && payload.game.revealStartedAt) {
+              const revealStartedAt = Date.parse(payload.game.revealStartedAt) || null
+              if (revealStartedAt !== null) {
+                live = { ...live, revealStartedAt }
               }
             }
             // Same shape and reasoning as revealEndsAt above: only adopt a
@@ -473,6 +493,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               assignmentSeq: state.live.assignmentSeq + 1,
               assignedRoundIndex: payload.roundIndex,
               revealEndsAt: Date.parse(payload.closesAt) || null,
+              revealStartedAt: Date.parse(payload.revealStartedAt) || null,
               // Fresh ASSIGNING window, fresh ready set - mirrors
               // Game.AssignLoadouts resetting revealReady server-side.
               revealReadyCount: null,
@@ -490,6 +511,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               votingClosesAt: Date.parse(payload.closesAt) || null,
               tiebreak: false,
               revealEndsAt: null,
+              revealStartedAt: null,
               revealReadyCount: null,
               revealReadyTotal: null,
               summaryEndsAt: null,
@@ -516,6 +538,7 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
               votingClosesAt: Date.parse(payload.closesAt) || null,
               tiebreak: true,
               revealEndsAt: null,
+              revealStartedAt: null,
               summaryEndsAt: null,
               summaryReadyCount: null,
               summaryReadyTotal: null,

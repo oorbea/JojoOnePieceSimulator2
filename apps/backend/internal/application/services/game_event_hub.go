@@ -46,6 +46,12 @@ type GameEvent struct {
 	// rather than in the transport is what keeps the client's countdown
 	// from drifting by however long hub delivery took.
 	ClosesAt time.Time
+	// RevealStartsAt is the reveal timer's arm instant (ClosesAt minus
+	// RevealWindow), read out of GameService's revealStarts map at publish
+	// time - LOADOUTS_ASSIGNED's extra timestamp (see
+	// dto.LoadoutsAssignedPayload.RevealStartedAt). Zero for every other
+	// event.
+	RevealStartsAt time.Time
 }
 
 // GameEventHub is an in-process, single-instance pub/sub for GameEvents,
