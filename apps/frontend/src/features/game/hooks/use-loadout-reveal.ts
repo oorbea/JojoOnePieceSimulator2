@@ -131,17 +131,11 @@ export function useLoadoutReveal({
     standEvolutionSteps: standEvolutionSteps(p.loadout?.stand),
   }))
   const playersKey = players
-    .map((p) =>
-      [
-        p.hasStand,
-        p.hasDevilFruit,
-        p.hasArmamentHaki,
-        p.hasObservationHaki,
-        p.hasConquerorHaki,
-      ]
-        .map((b) => (b ? 1 : 0))
-        .concat(String(p.standEvolutionSteps))
-        .join('')
+    .map(
+      (p) =>
+        [p.hasStand, p.hasDevilFruit, p.hasArmamentHaki, p.hasObservationHaki, p.hasConquerorHaki]
+          .map((b) => (b ? 1 : 0))
+          .join('') + `:${p.standEvolutionSteps}`
     )
     .join(':')
   const phases = revealTimeline(gameId, roundIndex, mangas, players, speed)
