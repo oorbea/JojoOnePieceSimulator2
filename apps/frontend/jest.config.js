@@ -40,6 +40,9 @@ module.exports = {
         // real EventSource/document) - same naming convention, different
         // directory since it's a component, not a hook.
         '<rootDir>/src/providers/__tests__/**/*.web.test.ts?(x)',
+        // Same convention again for shared presentational components (e.g.
+        // tooltip.tsx's useHoverTrigger web-only :focus-visible branch).
+        '<rootDir>/src/shared/components/presentational/__tests__/**/*.web.test.ts?(x)',
       ],
       // jest-expo's own default only whitelists RN/Expo packages for
       // transform, keyed on the FIRST "node_modules/" segment in a path.
