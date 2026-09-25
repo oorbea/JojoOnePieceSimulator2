@@ -33,6 +33,7 @@ export function JoinLobbyScreen({
   onSubmit,
 }: Props) {
   const { t } = useTranslation()
+  const canSubmit = isCompleteCode(code) && !!preview && !joining
 
   return (
     <PageShell align="center" maxWidth={480}>
@@ -51,6 +52,11 @@ export function JoinLobbyScreen({
         autoCapitalize="characters"
         maxLength={CODE_LENGTH}
         error={previewError}
+        autoFocus
+        // Enter submits the same as the button below - guarded the same way
+        // (`canSubmit`), since a TextInput has no `disabled` to lean on the
+        // way GlossButton's onPress does.
+        onSubmitEditing={canSubmit ? onSubmit : undefined}
       />
 
       {previewLoading ? <ActivityIndicator /> : null}
@@ -81,7 +87,7 @@ export function JoinLobbyScreen({
           tone="blue"
           btnSize="lg"
           width="100%"
-          disabled={!isCompleteCode(code) || !preview || joining}
+          disabled={!canSubmit}
           onPress={onSubmit}
           accessibilityLabel={t('game.join.submit')}
         >
