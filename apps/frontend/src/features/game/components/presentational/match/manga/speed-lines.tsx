@@ -34,7 +34,14 @@ export function SpeedLines({ color = '#FFFFFF' }: { color?: string }) {
   })
 
   return (
-    <Svg viewBox="0 0 200 200" style={[FILL_STYLE]} pointerEvents="none">
+    <Svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 200 200"
+      preserveAspectRatio="xMidYMid slice"
+      style={[FILL_STYLE]}
+      pointerEvents="none"
+    >
       {rays.map((r) => (
         <Polygon key={r.key} points={r.points} fill={color} opacity={r.opacity} />
       ))}
