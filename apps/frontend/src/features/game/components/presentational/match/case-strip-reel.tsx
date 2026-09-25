@@ -119,7 +119,7 @@ export function CaseStripReel({
       <Animated.View style={[{ flexDirection: 'row' }, rowStyle]}>
         {cards.map((card, i) => (
           <YStack
-            key={i}
+            key={`${card.id}-${i}`}
             width={CARD_WIDTH}
             height={CARD_HEIGHT}
             mr={i === cards.length - 1 ? 0 : CARD_GAP}
@@ -132,6 +132,15 @@ export function CaseStripReel({
               height={CARD_HEIGHT - RARITY_BAR_HEIGHT}
               contentFit="cover"
               fallback={<Sparkles size={22} color="$standPurple" />}
+              // 'high' lane (its own longer watchdog/budget, see
+              // image-queue.ts) - the strip is only on screen for a few
+              // seconds, so it can't wait behind the app's normal 'grid'
+              // catalogue traffic. order ranks cards by distance from the
+              // landing card, so the ones the eye actually lands on/near
+              // win any contention over the far-off decoys.
+              order={Math.abs(i - landingIndex)}
+              priorityHint="high"
+              recyclingKey={card.id}
             />
             <YStack
               height={RARITY_BAR_HEIGHT}
