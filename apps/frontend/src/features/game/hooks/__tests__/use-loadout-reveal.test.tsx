@@ -7,6 +7,7 @@ import {
   REVEAL_INTRO_MS,
   REVEAL_NARRATOR_MS,
   REVEAL_PLAYER_INTRO_MS,
+  REVEAL_POWER_SPIN_MS,
   REVEAL_SPIN_BASE_MS,
   revealDurationMs,
 } from '@/features/game/lib/loadout-reveal'
@@ -190,8 +191,10 @@ describe('useLoadoutReveal', () => {
     await advance(REVEAL_INTRO_MS + REVEAL_PLAYER_INTRO_MS + 1)
     expect(readState()).toMatchObject({ phase: 'narrator', participantIndex: 0, slotIndex: 0 })
 
-    // Narrator holds, then spin (1 or 2 cycles - either way, REVEAL_SPIN_BASE_MS*2 safely overshoots into it).
-    await advance(REVEAL_NARRATOR_MS + REVEAL_SPIN_BASE_MS * 2 + 1)
+    // Narrator holds, then spin - slot 0 for a JOJO-only player is 'stand',
+    // whose spin is REVEAL_POWER_SPIN_MS now (the CS-strip's own fixed
+    // duration, unaffected by RevealSpinCycles - see spinMsFor's doc).
+    await advance(REVEAL_NARRATOR_MS + REVEAL_POWER_SPIN_MS + 1)
     expect(readState()).toMatchObject({ phase: 'land', participantIndex: 0, slotIndex: 0 })
   })
 
