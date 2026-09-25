@@ -129,6 +129,17 @@ const (
 	// only - nothing adds to it yet, so it plays no part in RevealDuration
 	// today.
 	RevealFxMaxMs = 3000
+	// RevealPowerSpinMs is the Stand/DevilFruit slots' OWN spin duration -
+	// the CS:GO-style horizontal case strip (owner decision, 2026-09-25
+	// playtest feedback) needs longer to read than the vertical roulette's
+	// RevealSpinBaseMs*RevealSpinCycles: it draws from the lobby's real
+	// (possibly large) power pool with card art, not a handful of enum
+	// values, and a strip that flew past in ~1-2s would defeat the whole
+	// point of showing more candidates. Replaces RevealSpinBaseMs*cycles
+	// for exactly these two slots (see spinMsFor); every other slot keeps
+	// the vertical roulette and its existing timing untouched. Frontend
+	// mirror: loadout-reveal.ts's REVEAL_POWER_SPIN_MS - keep both in sync.
+	RevealPowerSpinMs = 5000
 )
 
 // RevealPlayer is the minimal per-participant shape RevealDuration needs:
@@ -203,6 +214,19 @@ func RevealSpinCycles(gameID GameID, roundIndex, participantIndex int, slot Reve
 	return 2
 }
 
+// spinMsFor is how long slot's spin animation plays - RevealPowerSpinMs for
+// the two card-strip slots (Stand/DevilFruit), unaffected by
+// RevealSpinCycles (a strip's own "how many times does it lap the pool" is
+// baked into its scroll distance, not a repeat count), or
+// RevealSpinBaseMs*RevealSpinCycles for every other (vertical-roulette)
+// slot, exactly as before. See RevealPowerSpinMs's doc.
+func spinMsFor(gameID GameID, roundIndex, participantIndex int, slot RevealSlot) int {
+	if slot == RevealStand || slot == RevealDevilFruit {
+		return RevealPowerSpinMs
+	}
+	return RevealSpinBaseMs * RevealSpinCycles(gameID, roundIndex, participantIndex, slot)
+}
+
 // slotHoldMs is how long slot holds after landing for a given participant,
 // honoring RevealPlayer's HasStand/HasDevilFruit for the two block slots.
 func slotHoldMs(slot RevealSlot, player RevealPlayer) int {
@@ -239,7 +263,7 @@ func RevealDuration(gameID GameID, roundIndex int, mangas []enums.Manga, players
 	for pi, p := range players {
 		total += RevealPlayerIntroMs + RevealPlayerOutroMs
 		for _, slot := range PlayerSlots(mangas, p) {
-			spinMs := RevealSpinBaseMs * RevealSpinCycles(gameID, roundIndex, pi, slot)
+			spinMs := spinMsFor(gameID, roundIndex, pi, slot)
 			total += RevealNarratorMs + spinMs + slotHoldMs(slot, p)
 		}
 	}

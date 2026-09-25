@@ -208,3 +208,37 @@ func TestRevealDuration_SpeedOrdering(t *testing.T) {
 		t.Fatalf("RevealDuration speed ordering broken: swift=%v normal=%v relaxed=%v", swift, normal, relaxed)
 	}
 }
+
+// TestSpinMsFor_PowerSlotsUseTheFixedCSStripDuration pins the hybrid ruleta
+// redesign's split (owner decision, 2026-09-25): the Stand/DevilFruit slots'
+// CS:GO-style horizontal strip always spins for RevealPowerSpinMs,
+// regardless of RevealSpinCycles - unlike every other (vertical-roulette)
+// slot, which still varies 1x/2x RevealSpinBaseMs by participant/slot.
+func TestSpinMsFor_PowerSlotsUseTheFixedCSStripDuration(t *testing.T) {
+	id := GameID{9}
+
+	if got := spinMsFor(id, 0, 0, RevealStand); got != RevealPowerSpinMs {
+		t.Fatalf("spinMsFor(RevealStand) = %d, want RevealPowerSpinMs (%d)", got, RevealPowerSpinMs)
+	}
+	if got := spinMsFor(id, 0, 0, RevealDevilFruit); got != RevealPowerSpinMs {
+		t.Fatalf("spinMsFor(RevealDevilFruit) = %d, want RevealPowerSpinMs (%d)", got, RevealPowerSpinMs)
+	}
+
+	// A non-power slot still varies with RevealSpinCycles, never pinned to
+	// RevealPowerSpinMs.
+	found1x, found2x := false, false
+	for pi := 0; pi < 40 && !(found1x && found2x); pi++ {
+		got := spinMsFor(id, 0, pi, RevealHamon)
+		switch got {
+		case RevealSpinBaseMs:
+			found1x = true
+		case RevealSpinBaseMs * 2:
+			found2x = true
+		default:
+			t.Fatalf("spinMsFor(RevealHamon) = %d, want RevealSpinBaseMs or RevealSpinBaseMs*2", got)
+		}
+	}
+	if !found1x || !found2x {
+		t.Fatalf("spinMsFor(RevealHamon) never produced both 1x (%v) and 2x (%v) across 40 participants", found1x, found2x)
+	}
+}

@@ -55,6 +55,12 @@ type Props = {
   /** This lane's position among its siblings, purely for the landing
    * stagger below - has no bearing on which value is drawn. */
   laneIndex?: number
+  /** Seeds the reel's shuffle (reel-geometry.ts's buildReel) - a real
+   * reveal always passes the same per-(game,round,participant,slot) seed
+   * (loadout-reveal.ts's revealSlotSeed) so every device draws the
+   * identical "random" reel. Defaults to 0 (still deterministic, just not
+   * tied to any particular reveal) for callers that don't care. */
+  seed?: number
 }
 
 // A Wii Party-style vertical slot-reel: a 3-row window (landed value
@@ -73,12 +79,16 @@ export function PowerRoulette({
   reducedMotion,
   spinMs,
   laneIndex = 0,
+  seed = 0,
 }: Props) {
   const translateY = useSharedValue(0)
   const scale = useSharedValue(1)
   const flash = useSharedValue(0)
 
-  const reel = useMemo(() => buildReel(candidates, finalLabel), [candidates, finalLabel])
+  const reel = useMemo(
+    () => buildReel(candidates, finalLabel, seed),
+    [candidates, finalLabel, seed]
+  )
 
   // Resting position: the window shows items [reel.length-WINDOW_ROWS, ...,
   // reel.length-1], i.e. the FINAL label (at reel.length-2) sits in the

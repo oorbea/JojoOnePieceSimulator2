@@ -49,6 +49,12 @@ export const REVEAL_HOLD_STAND_MS = 10000
 export const REVEAL_HOLD_EMPTY_MS = 2500
 export const REVEAL_PLAYER_OUTRO_MS = 800
 export const REVEAL_OUTRO_MS = 3300
+// REVEAL_POWER_SPIN_MS mirrors the backend's game.RevealPowerSpinMs exactly
+// - the Stand/DevilFruit slots' own CS:GO-style horizontal case strip
+// (owner decision, 2026-09-25 playtest feedback) spins for this fixed
+// duration instead of REVEAL_SPIN_BASE_MS*cycles: see spinMsFor's doc for
+// why RevealSpinCycles doesn't apply to these two slots any more.
+export const REVEAL_POWER_SPIN_MS = 5000
 
 // REVEAL_SPEED_MULTIPLIER mirrors enums.RevealSpeed's own Multiplier()
 // method (reveal_speed.go) - every reveal timing constant above is scaled
@@ -139,7 +145,13 @@ export function playerSlots(mangas: Manga[], player: RevealPlayer): LoadoutSlotK
 // flavour (1 or 2 loadingScreen cycles) without needing the server to ever
 // send it. `slot` is the fixed SLOT_ORDINAL, never a position within a
 // filtered list. Keep both in sync.
-export function revealSpinCycles(
+// revealSlotHash32 is the raw FNV-1a 32 hash revealSpinCycles derives its
+// 1-or-2 flip from - split out so a second, purely frontend-only consumer
+// (revealSlotSeed, for the CS-strip/reel shuffle) can reuse the identical
+// hash without duplicating it, while revealSpinCycles itself keeps mirroring
+// the backend's game.RevealSpinCycles bit for bit (see its own doc - this
+// helper changes nothing about that computation, only extracts it).
+function revealSlotHash32(
   gameId: string,
   roundIndex: number,
   participantIndex: number,
@@ -160,7 +172,50 @@ export function revealSpinCycles(
     // it within a 32-bit result the way Go's uint32 multiplication does.
     hash = Math.imul(hash, 0x01000193) >>> 0
   }
-  return hash % 2 === 0 ? 1 : 2
+  return hash
+}
+
+export function revealSpinCycles(
+  gameId: string,
+  roundIndex: number,
+  participantIndex: number,
+  slot: number
+): number {
+  return revealSlotHash32(gameId, roundIndex, participantIndex, slot) % 2 === 0 ? 1 : 2
+}
+
+// revealSlotSeed is a deterministic per-(game,round,participant,slot) seed
+// for this slot's reel/strip shuffle (reel-geometry.ts's buildReel,
+// case-strip.ts's buildCaseStrip) - every device computes the same value
+// independently from the snapshot it already has, so two clients watching
+// the same reveal draw the identical "random" strip, without the backend
+// ever needing to send or reproduce it (unlike revealSpinCycles, this has
+// no backend counterpart to mirror - it only has to agree with itself
+// across clients). XORed with a distinct constant from revealSpinCycles'
+// own use of this hash so the two don't correlate in an obviously patterned
+// way (e.g. the strip's shuffle order tracking 1-vs-2 spin cycles).
+export function revealSlotSeed(
+  gameId: string,
+  roundIndex: number,
+  participantIndex: number,
+  slot: number
+): number {
+  return (revealSlotHash32(gameId, roundIndex, participantIndex, slot) ^ 0x9e3779b9) >>> 0
+}
+
+// spinMsFor mirrors the backend's game.spinMsFor exactly (reveal.go):
+// REVEAL_POWER_SPIN_MS for the two card-strip slots, unaffected by
+// revealSpinCycles, or REVEAL_SPIN_BASE_MS*cycles for every other
+// (vertical-roulette) slot - see REVEAL_POWER_SPIN_MS's doc.
+export function spinMsFor(
+  gameId: string,
+  roundIndex: number,
+  participantIndex: number,
+  slot: LoadoutSlotKind
+): number {
+  if (slot === 'stand' || slot === 'devilFruit') return REVEAL_POWER_SPIN_MS
+  const cycles = revealSpinCycles(gameId, roundIndex, participantIndex, REVEAL_SLOT_ORDINAL[slot])
+  return REVEAL_SPIN_BASE_MS * cycles
 }
 
 function slotHoldMs(slot: LoadoutSlotKind, player: RevealPlayer): number {
@@ -203,10 +258,9 @@ export function revealTimeline(
         phase: { kind: 'narrator', participant: pi, slot: si, totalSlots: slots.length },
         durationMs: scaled(REVEAL_NARRATOR_MS),
       })
-      const cycles = revealSpinCycles(gameId, roundIndex, pi, REVEAL_SLOT_ORDINAL[slot])
       phases.push({
         phase: { kind: 'spin', participant: pi, slot: si, totalSlots: slots.length },
-        durationMs: scaled(REVEAL_SPIN_BASE_MS * cycles),
+        durationMs: scaled(spinMsFor(gameId, roundIndex, pi, slot)),
       })
       phases.push({
         phase: { kind: 'land', participant: pi, slot: si, totalSlots: slots.length },

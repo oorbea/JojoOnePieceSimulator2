@@ -1,21 +1,24 @@
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
+import { CaseStripReel } from '@/features/game/components/presentational/match/case-strip-reel'
 import { ParticipantAvatar } from '@/features/game/components/presentational/match/participant-avatar'
 import { PowerRevealCard } from '@/features/game/components/presentational/match/power-reveal-card'
 import { PowerRoulette } from '@/features/game/components/presentational/match/power-roulette'
 import { RevealNarrator } from '@/features/game/components/presentational/match/reveal-narrator'
 import { useRevealSpinSound } from '@/features/game/hooks/use-reveal-spin-sound'
+import { buildCaseStrip, type CaseStripCard } from '@/features/game/lib/case-strip'
 import {
   playerSlots,
   REVEAL_SLOT_ORDINAL,
   REVEAL_SPEED_MULTIPLIER,
-  REVEAL_SPIN_BASE_MS,
-  revealSpinCycles,
+  revealSlotSeed,
+  spinMsFor,
   type RevealPhaseKind,
   type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
 import type { LoadoutSlotKind } from '@/features/game/lib/match-rules'
+import { applyPoolFilter } from '@/features/game/lib/power-pool'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
@@ -23,6 +26,12 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { formatBattleIQ } from '@/shared/lib/battle-iq'
+
+// The "landed nothing" card - a Stand/DevilFruit slot that rolled NONE
+// still gets its own strip (owner decision, 2026-09-25): it reads as a
+// deliberately unremarkable grey card among the real candidates, never a
+// blank gap in the strip.
+const NONE_POWER_CARD_ID = '__none__'
 
 // One representative score per WAIS-IV band, purely cosmetic decoys for the
 // battleIQ roulette to spin through before landing on the real score -
@@ -153,28 +162,77 @@ export function RevealStage({
   const landed = phase === 'land'
 
   const { candidates, finalLabel } = slotFor(t, loadout, currentSlot, standNames, fruitNames)
+  const isPowerSlot = currentSlot === 'stand' || currentSlot === 'devilFruit'
 
   const speed = snapshot.config.revealSpeed
   const speedMultiplier = REVEAL_SPEED_MULTIPLIER[speed] ?? REVEAL_SPEED_MULTIPLIER.NORMAL
-  const cycles =
+  // Scaled by the SAME factor useLoadoutReveal is stretching/squeezing every
+  // other phase's duration by, or the spin finishes out of step with the
+  // narrator/land beats around it the moment the two ever disagree (a slow
+  // device, a mid-reveal reconnect that seeked into this phase, ...).
+  const spinMs =
     currentParticipant && currentSlot
-      ? revealSpinCycles(
+      ? spinMsFor(snapshot.id, snapshot.rounds.length, participantIndex, currentSlot) *
+        speedMultiplier *
+        scale
+      : 0
+  const slotSeed =
+    currentParticipant && currentSlot
+      ? revealSlotSeed(
           snapshot.id,
           snapshot.rounds.length,
           participantIndex,
           REVEAL_SLOT_ORDINAL[currentSlot]
         )
-      : 1
-  // Scaled by the SAME factor useLoadoutReveal is stretching/squeezing every
-  // other phase's duration by, or the spin finishes out of step with the
-  // narrator/land beats around it the moment the two ever disagree (a slow
-  // device, a mid-reveal reconnect that seeked into this phase, ...).
-  const spinMs = REVEAL_SPIN_BASE_MS * cycles * speedMultiplier * scale
+      : 0
 
-  const showPowerCard =
-    landed &&
-    currentParticipant !== null &&
-    (currentSlot === 'stand' || currentSlot === 'devilFruit')
+  // A plain computed value, not memoized: it's a cheap, pure build of a
+  // ~50-card array from data already in hand, and re-deriving it every
+  // render is simpler (and lint-cleaner under the React Compiler) than
+  // keeping a dependency list in sync with it.
+  const caseStrip = (() => {
+    if (!isPowerSlot || !loadout || !currentSlot) return null
+    const { stands, fruits } = applyPoolFilter(
+      standsQuery.data ?? [],
+      devilFruitsQuery.data ?? [],
+      snapshot.config.poolFilter
+    )
+    const pool: CaseStripCard[] =
+      currentSlot === 'stand'
+        ? stands.map((s) => ({
+            id: s.id,
+            label: s.name,
+            rarity: s.rarity,
+            picture: s.pictureThumb,
+          }))
+        : fruits.map((f) => ({
+            id: f.id,
+            label: f.name,
+            rarity: f.rarity,
+            picture: f.pictureThumb,
+          }))
+    const winner: CaseStripCard =
+      currentSlot === 'stand'
+        ? loadout.stand
+          ? {
+              id: loadout.stand.id,
+              label: loadout.stand.name,
+              rarity: loadout.stand.rarity,
+              picture: loadout.stand.pictureThumb,
+            }
+          : { id: NONE_POWER_CARD_ID, label: t('game.match.noStand'), rarity: 'NONE' }
+        : loadout.devilFruit
+          ? {
+              id: loadout.devilFruit.id,
+              label: loadout.devilFruit.name,
+              rarity: loadout.devilFruit.rarity,
+              picture: loadout.devilFruit.pictureThumb,
+            }
+          : { id: NONE_POWER_CARD_ID, label: t('game.match.noFruit'), rarity: 'NONE' }
+    return buildCaseStrip(pool, winner, slotSeed)
+  })()
+
+  const showPowerCard = landed && currentParticipant !== null && isPowerSlot
 
   const narratorLine = narratorLineFor(
     t,
@@ -223,7 +281,17 @@ export function RevealStage({
               {currentParticipant.displayName}
             </GlowText>
           </XStack>
-          {currentSlot && !showPowerCard ? (
+          {currentSlot && !showPowerCard && isPowerSlot && caseStrip ? (
+            <CaseStripReel
+              cards={caseStrip.cards}
+              landingIndex={caseStrip.landingIndex}
+              landingOffset={caseStrip.landingOffset}
+              spinning={spinning}
+              landed={landed}
+              reducedMotion={reducedMotion}
+              spinMs={spinMs}
+            />
+          ) : currentSlot && !showPowerCard && !isPowerSlot ? (
             <PowerRoulette
               candidates={candidates}
               finalLabel={finalLabel}
@@ -231,6 +299,7 @@ export function RevealStage({
               landed={landed}
               reducedMotion={reducedMotion}
               spinMs={spinMs}
+              seed={slotSeed}
             />
           ) : null}
         </GlassPanel>
