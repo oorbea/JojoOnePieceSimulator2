@@ -232,5 +232,63 @@ game's own coins/currency instead. Don't build a wire format or a
 owner via brainstorming first. Once decided, the cinematic's reward chip
 reads real data instead of being cut.
 
+### Gotcha: RN `<Svg>` needs explicit width/height on web (2026-09-25)
+
+Since the manga restyle above, the round-win/lose flash and the victory/
+defeat end-of-game cinematic rendered their backgrounds at a tiny size
+(react-native-web's default replaced-element size, 300×150px) instead of
+covering the viewport. `manga/radial-glow.tsx`, `manga/decay-grid.tsx`,
+`manga/speed-lines.tsx` only set `FILL_STYLE` (absolute + top/left/right/
+bottom:0) on their `<Svg>`, with no `width`/`height` — on web an `<svg>`
+is a CSS replaced element (like `<img>`), so absolute positioning alone
+doesn't stretch it; react-native-svg's own native-only default (100% when
+`position` isn't `'absolute'`) doesn't apply here either. Fixed by adding
+`width="100%" height="100%"` to all three, `preserveAspectRatio="xMidYMid
+slice"` on `speed-lines.tsx` and `decay-grid.tsx` (crop instead of
+stretch), and a solid base `bg` on `round-flash.tsx`'s root so its
+transparent Modal never shows the page through a gap.
+
+Same investigation also found the native-only 8-copy stacked-outline
+trick in `manga-verdict-text.tsx` visibly overlapping on long titles
+("LA ESCUADRA SOBREVIVIÓ") — each copy set `l`/`t` but not `r`, so it
+shrink-wrapped to its own content width instead of the sizer's. Rewritten
+web-only to a single-paint CSS `-webkit-text-stroke` + `paint-order:
+stroke fill`, native keeps the stack now with a matching `r={-dx}`.
+
+**A live-verification follow-up caught a regression the above fix
+introduced**: capping the verdict block at `maxW="90%"` (web) /
+`maxWidth: '90%'` (native) resolves that percentage against
+`MangaVerdictText`'s immediate parent — an auto-sized (`flex: 0 0 auto`)
+`Animated.View` one level below the cinematic's full-screen root, not the
+actual viewport. Both react-native-web's CSS flexbox and RN's own Yoga
+engine collapse a percentage width against an undefined-size ancestor
+like this, so a short word like "VICTORY" measured ~131px instead of
+~90% of a 1568px window and wrapped mid-word into "VICTOR"/"Y". Fixed by
+switching to `useWindowDimensions()`-derived pixel values on both
+platforms instead of a CSS/Yoga percentage.
+
+Verified live (Chrome, Windows, 2026-09-25): round win, round lose,
+victory (with a 4-name list and a long ES title), and defeat all render
+full-bleed with clean, non-wrapping verdict text, at a ~1280×575 CSS
+viewport.
+
+**Separate, pre-existing bug found during the same verification, NOT
+caused by this fix and left unfixed (out of scope)**: `OutcomeCinematic`
+with `kind="defeat"` renders a completely empty Modal on web — no
+background, no text, nothing in the DOM, no console error. Bisected by
+isolating each piece in a throwaway test route: `RadialGlow`/`DecayGrid`/
+`SpeedLines`/`MangaVerdictText`/`GlossButton` all render fine in
+isolation, and `useSound(victoryCinematicSound)` + a second
+`useSound(nameTickSound)` together are also fine — but
+`useSound(defeatCinematicSound)` alone (the exact same hook, only
+swapping which `.wav` gets passed to `useAudioPlayer`) reproducibly blanks
+the Modal, fresh page load, every time. `defeat-full.wav`'s RIFF/WAVE
+header looks identical in shape to `victory-full.wav`'s (both PCM 16-bit
+stereo 44100Hz) and is actually the smaller of the two files, so it isn't
+simply a size/timeout issue. Root cause not found — worth a dedicated
+`expo-audio` web investigation before anyone next touches the defeat
+cinematic; round-lose's flash (`round-win.wav`/`round-lose.wav`, played
+through the same `useSound` wrapper) is unaffected.
+
 Related: [[game-frame-deadlines-2026-09-03]], [[gameplay-power-fx]],
 [[feedback_obsidian_workflow]].

@@ -15,7 +15,22 @@
 // on either platform - neither web nor native can resume a partial image
 // fetch, so aborting mid-download on a slow link is strictly worse than
 // letting it finish. Only real unmount (the caller's own cleanup) drops an
-// in-flight grant, and even then the underlying fetch isn't forcibly killed.
+// in-flight grant, and the slot itself is freed once every subscriber of
+// that grant has gone away (see "Dedupe" below) - the underlying fetch
+// isn't forcibly killed either way.
+//
+// Dedupe (2026-09-25 fix - see ObsidianVault/sorteo-strip-image-dedupe-bug-
+// 2026-09-25.md): several consumers can request the SAME uri at once (the
+// sorteo strip shows the same Stand/Devil Fruit picture on many tiles). They
+// share one queue slot and one underlying fetch, but EVERY subscriber must
+// still get its own onGrant - a caller only mounts its <Image> once notified
+// - and the slot must free as soon as the FIRST subscriber settles (loaded
+// or errored), not only once every subscriber has settled. Once one
+// subscriber's fetch has resolved, the resource is in the platform's own
+// image cache (browser HTTP cache / expo-image disk cache), so every other
+// subscriber's <Image> resolves from cache near-instantly - it does not
+// need to keep holding a concurrency slot, and the watchdog must not fire
+// on a subscriber whose image already loaded.
 
 export type ImagePriority = number
 
@@ -33,16 +48,20 @@ export type ImageHandle = {
   cancel: () => void
 }
 
+type Subscriber = {
+  onGrant: () => void
+  onTimeout: () => void
+  settled: boolean
+}
+
 type Entry = {
   key: string
   priority: ImagePriority
   lane: QueueLane
-  onGrant: () => void
-  onTimeout: () => void
   granted: boolean
-  settled: boolean
+  anySettled: boolean
   watchdog: ReturnType<typeof setTimeout> | null
-  refCount: number
+  subscribers: Set<Subscriber>
 }
 
 type QueueConfig = {
@@ -71,13 +90,19 @@ function grant(entry: Entry): void {
   inFlight.set(entry.key, entry)
   const timeoutMs = entry.lane === 'high' ? config.highLaneTimeoutMs : config.timeoutMs
   entry.watchdog = setTimeout(() => {
-    // The fetch is still technically in flight (nothing aborts it - see
-    // cancellation policy), but the slot itself is reclaimed so the rest of
-    // the grid isn't starved by one stalled/blocked request.
+    // Only the subscribers that never got a result of their own are timed
+    // out - one that already loaded/errored (anySettled) keeps its result,
+    // it must never be flipped back to 'error' just because a *different*
+    // subscriber of the same uri is still pending (e.g. a slow/blocked
+    // duplicate elsewhere on screen).
+    for (const sub of entry.subscribers) {
+      if (!sub.settled) sub.onTimeout()
+    }
     releaseSlot(entry)
-    entry.onTimeout()
   }, timeoutMs)
-  entry.onGrant()
+  // Every current subscriber gets its own onGrant - each caller mounts its
+  // own <Image> and races the platform cache independently.
+  for (const sub of entry.subscribers) sub.onGrant()
 }
 
 function releaseSlot(entry: Entry): void {
@@ -100,9 +125,9 @@ function pump(): void {
   }
 }
 
-// Dedupe by key (typically the URI): two cards racing for the same image
-// share one queue slot and one in-flight grant via refcount, and only the
-// last consumer's `cancel`/`settle` actually tears the entry down.
+// Dedupe by key (typically the URI): every caller requesting the same key
+// shares one queue slot and one in-flight grant, but each still gets its
+// own onGrant/onTimeout callback - see the module doc comment above.
 export function enqueueImage(opts: {
   key: string
   priority: ImagePriority
@@ -111,44 +136,53 @@ export function enqueueImage(opts: {
   onTimeout: () => void
 }): ImageHandle {
   const { key, priority, lane = 'grid', onGrant, onTimeout } = opts
+  const sub: Subscriber = { onGrant, onTimeout, settled: false }
+
   const existing = waiting.get(key) ?? inFlight.get(key)
   if (existing) {
-    existing.refCount += 1
-    if (existing.granted) onGrant()
+    existing.subscribers.add(sub)
+    if (existing.granted) sub.onGrant()
     else if (priority < existing.priority) existing.priority = priority
-    return handleFor(existing, onGrant)
+    return handleFor(existing, sub)
   }
 
   const entry: Entry = {
     key,
     priority,
     lane,
-    onGrant,
-    onTimeout,
     granted: false,
-    settled: false,
+    anySettled: false,
     watchdog: null,
-    refCount: 1,
+    subscribers: new Set([sub]),
   }
   waiting.set(key, entry)
   pump()
-  return handleFor(entry, onGrant)
+  return handleFor(entry, sub)
 }
 
-function handleFor(entry: Entry, ownOnGrant: () => void): ImageHandle {
+function handleFor(entry: Entry, sub: Subscriber): ImageHandle {
   let released = false
-  const release = () => {
+  const leave = () => {
     if (released) return
     released = true
-    entry.refCount -= 1
-    if (entry.refCount > 0) return
-    if (entry.granted) releaseSlot(entry)
-    else waiting.delete(entry.key)
+    entry.subscribers.delete(sub)
+    if (entry.subscribers.size === 0) {
+      if (entry.granted) releaseSlot(entry)
+      else waiting.delete(entry.key)
+    }
   }
   return {
     settle: () => {
-      entry.settled = true
-      release()
+      if (sub.settled) return
+      sub.settled = true
+      const firstSettle = !entry.anySettled
+      entry.anySettled = true
+      leave()
+      // The underlying resource is now resolved (loaded or errored) for
+      // this uri - free the concurrency slot for the rest of the queue as
+      // soon as the FIRST subscriber settles, instead of waiting for every
+      // duplicate tile to individually finish/unmount.
+      if (firstSettle && entry.granted && inFlight.has(entry.key)) releaseSlot(entry)
     },
     reprioritize: (priority) => {
       if (entry.granted) return
@@ -156,7 +190,7 @@ function handleFor(entry: Entry, ownOnGrant: () => void): ImageHandle {
     },
     cancel: () => {
       if (entry.granted) return
-      release()
+      leave()
     },
   }
 }
