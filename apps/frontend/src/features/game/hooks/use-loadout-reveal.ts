@@ -6,6 +6,7 @@ import {
   type RevealPhaseKind,
   type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
+import { standEvolutionSteps } from '@/features/game/lib/stand-evolution'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import type { Manga, RevealSpeed } from '@/shared/contracts/enums'
 import { serverNow } from '@/shared/lib/server-clock'
@@ -68,6 +69,10 @@ type Result = {
    * `totalSlots` below is carried per-phase, not a single lobby constant. */
   slotIndex: number
   totalSlots: number
+  /** Only meaningful during an 'evolveStep' phase - which INTERMEDIATE
+   * evolution stage is showing (0-based). -1 otherwise. See
+   * loadout-reveal.ts's RevealPhase.evolveStage doc. */
+  evolveStage: number
   /** How much every phase's local duration is being stretched/squeezed to
    * fit the server's actual reveal window - PowerRoulette's own spinMs must
    * be multiplied by this too (see reveal-stage.tsx), or its animation
@@ -123,11 +128,19 @@ export function useLoadoutReveal({
     hasObservationHaki:
       p.loadout?.observationHaki !== undefined && p.loadout.observationHaki !== 'NONE',
     hasConquerorHaki: p.loadout?.conquerorHaki !== undefined && p.loadout.conquerorHaki !== 'NONE',
+    standEvolutionSteps: standEvolutionSteps(p.loadout?.stand),
   }))
   const playersKey = players
     .map((p) =>
-      [p.hasStand, p.hasDevilFruit, p.hasArmamentHaki, p.hasObservationHaki, p.hasConquerorHaki]
+      [
+        p.hasStand,
+        p.hasDevilFruit,
+        p.hasArmamentHaki,
+        p.hasObservationHaki,
+        p.hasConquerorHaki,
+      ]
         .map((b) => (b ? 1 : 0))
+        .concat(String(p.standEvolutionSteps))
         .join('')
     )
     .join(':')
@@ -252,6 +265,7 @@ export function useLoadoutReveal({
       participantIndex: -1,
       slotIndex: -1,
       totalSlots: 0,
+      evolveStage: -1,
       scale: 1,
       skip: () => {},
     }
@@ -261,12 +275,14 @@ export function useLoadoutReveal({
   const participantIndex = current.phase.participant ?? -1
   const slotIndex = current.phase.slot ?? -1
   const totalSlots = current.phase.totalSlots ?? 0
+  const evolveStage = current.phase.evolveStage ?? -1
   return {
     isRevealing: true,
     phase: current.phase.kind,
     participantIndex,
     slotIndex,
     totalSlots,
+    evolveStage,
     scale: runScale,
     skip,
   }

@@ -523,6 +523,11 @@
             "before": "Una última cosa: com d'espavilat ets?",
             "after": "{{name}}, el teu coeficient de batalla és {{value}}"
           }
+        },
+        "evolution": {
+          "evolving": "Alguna cosa està passant... el teu stand està evolucionant!",
+          "step": "Continua evolucionant!",
+          "final": "EVOLUCIÓ!"
         }
       },
       "loadout": {
