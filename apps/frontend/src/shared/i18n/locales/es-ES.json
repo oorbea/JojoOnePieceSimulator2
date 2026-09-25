@@ -34,6 +34,22 @@
     "googleSignInError": "Algo ha ido mal al iniciar sesión con Google. Inténtalo de nuevo.",
     "googleNoIdToken": "Google no ha devuelto un ID token"
   },
+  "devLogin": {
+    "title": "Login de desarrollo",
+    "subtitle": "Solo en local - se salta Google por completo. Nunca disponible fuera de una build de desarrollo.",
+    "nameLabel": "Nombre de la cuenta",
+    "namePlaceholder": "p. ej. alice",
+    "nameHint": "Solo minúsculas, dígitos y guion bajo.",
+    "roleLabel": "Rol",
+    "roleRegular": "Normal",
+    "roleAdmin": "Admin",
+    "submit": "Entrar",
+    "submitting": "Entrando…",
+    "recentAccounts": "Cuentas recientes",
+    "invalidName": "Usa solo minúsculas, dígitos y guion bajo.",
+    "genericError": "No se ha podido entrar con esta cuenta de desarrollo. Inténtalo de nuevo.",
+    "backToGoogle": "Volver al inicio de sesión con Google"
+  },
   "errorFallback": {
     "title": "Algo se ha roto.",
     "fallbackMessage": "Inténtalo de nuevo, o vuelve en un rato.",
@@ -600,10 +616,11 @@
       "summaryA11y": "Resultado final de esta partida",
       "cinematic": {
         "defeatTitle": "DERROTA",
-        "victoryTitleGauntlet": "LA ESCUADRA SOBREVIVIÓ",
+        "victoryTitleGauntlet": "EL ESCUADRÓN HA SOBREVIVIDO",
         "victoryTitleVersus": "{{team}} GANA",
         "subtitleWon": "Tu equipo ha ganado esta partida.",
         "subtitleLost": "Tu equipo ha perdido esta partida.",
+        "epilogueLabel": "To Be Continued",
         "skip": "Saltar",
         "skipA11y": "Saltar la cinemática de victoria o derrota",
         "replay": "Volver a ver",

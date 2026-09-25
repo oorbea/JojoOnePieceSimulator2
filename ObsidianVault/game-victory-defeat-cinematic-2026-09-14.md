@@ -163,3 +163,74 @@ the fixed `ResultDuration`/RESOLVING pause) already existed. Pure additions:
   re-reads localStorage and swaps the first account instead of adding a
   second one). Automated tests (unit + component) are green; `/verify`'s
   Docker suite has not been run for this change yet.
+
+## Manga JoJo × One Piece restyle (owner decision, 2026-09-25 playtest)
+
+Real two-device playtest feedback: the cinematics read as "cutre" (cheap).
+Owner asked for a full visual restyle — comped first as an HTML mockup
+before touching RN, iterated with the owner, then approved. Supersedes
+this note's earlier tone description (solemn/mythic victory, crude
+anime-cinematic defeat) with a specific art direction; the **duration/
+skip/perspective/personalization/audio** decisions above are all
+unchanged and still binding.
+
+- **New tone**: manga JoJo × One Piece throughout, not generic
+  solemn/anime-cinematic. Bangers (display, thick outlined stroke) for
+  every verdict headline; Dela Gothic One for onomatopoeia (ゴゴゴ/ドン)
+  and winner-name reveals — both loaded via Google Fonts, joining the
+  existing Fredoka/Nunito pair, own `display` Tamagui font family.
+  Gradients replace the old flat-colour backgrounds: victory is
+  morado→magenta→oro (`#4B1D7A`→`#C2185B`→`#F2C744`); defeat is rojo
+  tinta→negro (`#6B1420`→`#1A0A0C`).
+- **Round-flash victory**: radial burst + rotating speed-lines (rays
+  fanning out from centre) - the one place rays-from-centre stayed, since
+  it's a triumphant beat, not a decaying one.
+- **Round-flash AND game-over defeat share one decorative treatment,
+  explicitly NOT rays-from-centre**: an "aura de decadencia" - a faint
+  grid that only holds together near the centre and dissolves into black
+  toward the edges (a radial `mask-image` over a grid pattern, not a
+  burst). Owner was explicit rays read wrong for a defeat beat; a decaying
+  grid reads as things falling apart instead of an impact.
+- **Game-over defeat epilogue**: a "To Be Continued ⟵" card (the JoJo
+  meme, verbatim in all three locales — deliberately not translated, it's
+  the reference) slides in during the epilogue cross-fade, over a sepia-
+  filtered freeze frame with a double-line frame border.
+- **i18n**: only `game.result.cinematic.victoryTitleGauntlet` actually
+  changed text (gender fix, unrelated to the restyle) - ES
+  "LA ESCUADRA SOBREVIVIÓ" → "EL ESCUADRÓN HA SOBREVIVIDO", CA
+  "L'ESQUADRA HA SOBREVISCUT" → "L'ESQUADRÓ HA SOBREVISCUT". EN unchanged
+  ("THE SQUAD SURVIVED" was already gender-neutral). Every other cinematic
+  string (`roundWin`/`roundLose`/`defeatTitle`/`victoryTitleVersus`/
+  `subtitleWon`/`subtitleLost`) keeps its existing copy in all three
+  locales - the restyle is visual only. "To Be Continued" needs a NEW key
+  (doesn't exist yet), same literal string in all three locales.
+- Mockup (comps, not production code) was reviewed and approved by the
+  owner as an Artifact before any RN implementation - see the plan file if
+  it still exists locally.
+
+### TODO: MVP chip - NOT implemented, blocked on a real vote
+
+The mockup showed an illustrative "MVP: {{name}}" chip on the victory
+cinematic. This is **not real data** - the game domain has no MVP concept
+today. Owner's decision: MVP will be its OWN dedicated vote round, held
+**after the match result is decided**, exclusively for picking MVP -not
+a side-computation from existing vote/round data. This needs actual
+design work before implementation (a new post-game `GameState`? a
+lightweight ballot reusing the existing `Ballot`/`CastVote` machinery
+scoped to "vote for a participant, not an option"? does it block
+`Rematch`/the result screen, or run alongside it?) - raise these with the
+owner via brainstorming before writing any code, per
+[[feedback_obsidian_workflow]]. Once a winner is decided, the cinematic's
+MVP chip reads real data instead of being cut.
+
+### TODO: "+XXX" reward chip - NOT implemented, format undecided
+
+The mockup showed an illustrative "+320 XP" chip. Owner has not decided
+what this currency actually is - possibly not XP at all, possibly the
+game's own coins/currency instead. Don't build a wire format or a
+`GameResultResponse` field for this until that's decided - raise with the
+owner via brainstorming first. Once decided, the cinematic's reward chip
+reads real data instead of being cut.
+
+Related: [[game-frame-deadlines-2026-09-03]], [[gameplay-power-fx]],
+[[feedback_obsidian_workflow]].

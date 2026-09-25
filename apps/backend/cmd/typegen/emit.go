@@ -419,6 +419,8 @@ func emitCommandUnion(reg map[string]*structInfo) string {
 		b.WriteString("  z.object({\n")
 		fmt.Fprintf(&b, "    type: z.literal(CLIENT_COMMAND.%s),\n", constKey(spec.Type))
 		b.WriteString("    requestId: z.string().optional(),\n")
+		// Client commands carry no serverTime - only server frames do (see
+		// emitFrameUnion).
 		if spec.Payload == nil {
 			b.WriteString("    payload: z.object({}).optional(),\n")
 		} else {
@@ -450,6 +452,10 @@ func emitFrameUnion(reg map[string]*structInfo) string {
 		b.WriteString("  z.object({\n")
 		fmt.Fprintf(&b, "    type: z.literal(SERVER_FRAME.%s),\n", constKey(spec.Type))
 		b.WriteString("    requestId: z.string().optional(),\n")
+		// serverTime is dto.ServerFrame's own clock-sample field (see its
+		// doc) - every frame carries it, so it's written here rather than
+		// added to each individual payload struct.
+		b.WriteString("    serverTime: z.iso.datetime({ offset: true }),\n")
 		if spec.Payload == nil {
 			b.WriteString("    payload: z.object({}).optional(),\n")
 		} else {

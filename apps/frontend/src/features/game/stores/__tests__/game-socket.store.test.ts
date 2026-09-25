@@ -58,8 +58,26 @@ class FakeWebSocket {
   }
 
   receive(frame: unknown) {
-    this.onmessage?.({ data: JSON.stringify(frame) })
+    this.onmessage?.({ data: JSON.stringify(withServerDefaults(frame)) })
   }
+}
+
+// Every real ServerFrame carries serverTime, and a real LOADOUTS_ASSIGNED
+// payload carries revealStartedAt alongside closesAt (see
+// dto.NewServerFrame/dto.LoadoutsAssignedPayload on the backend) - the
+// store's serverFrameSchema now requires both. Filling them in here, rather
+// than at every one of this file's `ws.receive({...})` call sites, keeps
+// each test's frame literal focused on what it actually exercises.
+function withServerDefaults(frame: unknown): unknown {
+  if (typeof frame !== 'object' || frame === null) return frame
+  const f = frame as Record<string, unknown>
+  const serverTime = typeof f.serverTime === 'string' ? f.serverTime : new Date().toISOString()
+  if (f.type === 'LOADOUTS_ASSIGNED' && typeof f.payload === 'object' && f.payload !== null) {
+    const payload = f.payload as Record<string, unknown>
+    if (typeof payload.revealStartedAt === 'string') return { ...f, serverTime }
+    return { ...f, serverTime, payload: { ...payload, revealStartedAt: payload.closesAt ?? serverTime } }
+  }
+  return { ...f, serverTime }
 }
 
 // WebSocket.OPEN is read by store.send() as a bare global - stub it so the
@@ -318,6 +336,62 @@ describe('useGameSocketStore', () => {
     expect(useGameSocketStore.getState().live.revealEndsAt).toBe(revealEndsAtBefore)
   })
 
+  it("LOADOUTS_ASSIGNED sets revealStartedAt from the frame's own revealStartedAt - the pair useLoadoutReveal seeks its timeline against", async () => {
+    await attach('g1')
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    ws.receive({
+      type: 'LOADOUTS_ASSIGNED',
+      payload: {
+        roundIndex: 0,
+        closesAt: '2100-01-01T00:00:20.000Z',
+        revealStartedAt: '2100-01-01T00:00:05.000Z',
+      },
+    })
+
+    expect(useGameSocketStore.getState().live.revealStartedAt).toBe(
+      Date.parse('2100-01-01T00:00:05.000Z')
+    )
+  })
+
+  it('STATE adopts game.revealStartedAt when no reveal is already tracked (reconnect mid-sorteo)', async () => {
+    await attach('g1')
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    ws.receive({
+      type: 'STATE',
+      payload: validState({ revealStartedAt: '2100-01-01T00:00:05.000Z' }),
+    })
+
+    expect(useGameSocketStore.getState().live.revealStartedAt).toBe(
+      Date.parse('2100-01-01T00:00:05.000Z')
+    )
+  })
+
+  it('STATE does not override an already-tracked revealStartedAt from LOADOUTS_ASSIGNED', async () => {
+    await attach('g1')
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+    ws.receive({
+      type: 'LOADOUTS_ASSIGNED',
+      payload: {
+        roundIndex: 0,
+        closesAt: '2100-01-01T00:00:18.000Z',
+        revealStartedAt: '2100-01-01T00:00:03.000Z',
+      },
+    })
+    const revealStartedAtBefore = useGameSocketStore.getState().live.revealStartedAt
+
+    ws.receive({
+      type: 'STATE',
+      payload: validState({ revealStartedAt: '2100-01-01T00:00:09.000Z' }),
+    })
+
+    expect(useGameSocketStore.getState().live.revealStartedAt).toBe(revealStartedAtBefore)
+  })
+
   it('bumps assignmentSeq to 2 across two assignment frames', async () => {
     await attach('g1')
     const ws = FakeWebSocket.instances[0]
@@ -346,6 +420,7 @@ describe('useGameSocketStore', () => {
     expect(live.votingClosesAt).toBe(Date.parse('2100-01-01T00:00:10.000Z'))
     expect(live.tiebreak).toBe(false)
     expect(live.revealEndsAt).toBeNull()
+    expect(live.revealStartedAt).toBeNull()
   })
 
   it('TIEBREAK_OPENED populates live the same way with tiebreak true', async () => {
@@ -412,6 +487,7 @@ describe('useGameSocketStore', () => {
       revealedAssignmentSeq: 0,
       assignedRoundIndex: null,
       revealEndsAt: null,
+      revealStartedAt: null,
       revealReadyCount: null,
       revealReadyTotal: null,
       summaryEndsAt: null,

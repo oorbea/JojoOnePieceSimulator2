@@ -263,6 +263,9 @@ func (e *GameEndpoints) respondState(w http.ResponseWriter, r *http.Request, g *
 	if t, ok := e.svc.RevealEndsAt(g.ID()); ok {
 		deadlines.RevealEndsAt = &t
 	}
+	if t, ok := e.svc.RevealStartedAt(g.ID()); ok {
+		deadlines.RevealStartedAt = &t
+	}
 	if t, ok := e.svc.VotingEndsAt(g.ID()); ok {
 		deadlines.VotingEndsAt = &t
 	}

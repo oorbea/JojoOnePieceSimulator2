@@ -34,6 +34,22 @@
     "googleSignInError": "Something went wrong signing in with Google. Try again.",
     "googleNoIdToken": "Google did not return an ID token"
   },
+  "devLogin": {
+    "title": "Dev login",
+    "subtitle": "Local-only - skips Google entirely. Never available outside a dev build.",
+    "nameLabel": "Account name",
+    "namePlaceholder": "e.g. alice",
+    "nameHint": "Lowercase letters, digits and underscore only.",
+    "roleLabel": "Role",
+    "roleRegular": "Regular",
+    "roleAdmin": "Admin",
+    "submit": "Log in",
+    "submitting": "Logging in…",
+    "recentAccounts": "Recent accounts",
+    "invalidName": "Use only lowercase letters, digits and underscore.",
+    "genericError": "Couldn't log in as this dev account. Try again.",
+    "backToGoogle": "Back to Google sign-in"
+  },
   "errorFallback": {
     "title": "Something broke.",
     "fallbackMessage": "Try again, or come back in a bit.",
@@ -604,6 +620,7 @@
         "victoryTitleVersus": "{{team}} WINS",
         "subtitleWon": "Your team won this match.",
         "subtitleLost": "Your team lost this match.",
+        "epilogueLabel": "To Be Continued",
         "skip": "Skip",
         "skipA11y": "Skip the victory or defeat cinematic",
         "replay": "Watch again",

@@ -31,6 +31,7 @@ export type KickPayload = z.infer<typeof kickPayloadSchema>
 export const loadoutsAssignedPayloadSchema = z.object({
   roundIndex: z.number().int(),
   closesAt: z.iso.datetime({ offset: true }),
+  revealStartedAt: z.iso.datetime({ offset: true }),
 })
 export type LoadoutsAssignedPayload = z.infer<typeof loadoutsAssignedPayloadSchema>
 
@@ -314,131 +315,157 @@ export const serverFrameSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal(SERVER_FRAME.STATE),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: gameStateResponseSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.PLAYER_JOINED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: playerJoinedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.PLAYER_LEFT),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: playerLeftPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.HOST_REASSIGNED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: hostReassignedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.GAME_STARTED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: z.object({}).optional(),
   }),
   z.object({
     type: z.literal(SERVER_FRAME.LOADOUTS_ASSIGNED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: loadoutsAssignedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.VOTING_OPENED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: votingOpenedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.VOTE_CAST),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: voteCastPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.TIEBREAK_OPENED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: tiebreakOpenedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.ROUND_RESOLVED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: roundResolvedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.GAME_FINISHED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: gameFinishedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.GAME_ABORTED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: gameAbortedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.ERROR),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: errorResponseSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.RESYNC_REQUIRED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: resyncRequiredPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.TEAM_CHANGED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: teamChangedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.PLAYER_KICKED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: playerKickedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.LOBBY_LOCK_CHANGED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: lobbyLockChangedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.CONFIG_UPDATED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: z.object({}).optional(),
   }),
   z.object({
     type: z.literal(SERVER_FRAME.REVEAL_READY_CHANGED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: revealReadyChangedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.SUMMARY_OPENED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: summaryOpenedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.SUMMARY_READY_CHANGED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: summaryReadyChangedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.REMATCH_READY),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: rematchReadyPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.PLAYER_DISCONNECTED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: playerDisconnectedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.PLAYER_RECONNECTED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: playerReconnectedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.PLAYER_ABANDONED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: playerAbandonedPayloadSchema,
   }),
   z.object({
     type: z.literal(SERVER_FRAME.JOIN_CODE_REGENERATED),
     requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
     payload: z.object({}).optional(),
   }),
 ])

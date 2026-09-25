@@ -27,6 +27,12 @@ export const characterTranslationsResponseSchema = z.object({
 })
 export type CharacterTranslationsResponse = z.infer<typeof characterTranslationsResponseSchema>
 
+export const devLoginRequestSchema = z.object({
+  name: z.string(),
+  admin: z.boolean(),
+})
+export type DevLoginRequest = z.infer<typeof devLoginRequestSchema>
+
 export const devilFruitResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -483,6 +489,7 @@ export const gameSnapshotResponseSchema = z.object({
   rounds: z.array(gameRoundResponseSchema),
   result: gameResultResponseSchema.optional(),
   revealEndsAt: z.iso.datetime({ offset: true }).optional(),
+  revealStartedAt: z.iso.datetime({ offset: true }).optional(),
   votingEndsAt: z.iso.datetime({ offset: true }).optional(),
   resultEndsAt: z.iso.datetime({ offset: true }).optional(),
   summaryEndsAt: z.iso.datetime({ offset: true }).optional(),

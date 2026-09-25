@@ -36,6 +36,7 @@ type Props = {
   revealParticipantIndex: number
   revealSlotIndex: number
   revealTotalSlots: number
+  revealScale: number
   isRevealing: boolean
   onSkipReveal: () => void
   onSummaryReady: () => void
@@ -62,6 +63,7 @@ export function MatchScreen({
   revealParticipantIndex,
   revealSlotIndex,
   revealTotalSlots,
+  revealScale,
   isRevealing,
   onSkipReveal,
   onSummaryReady,
@@ -121,6 +123,7 @@ export function MatchScreen({
           participantIndex={revealParticipantIndex}
           slotIndex={revealSlotIndex}
           totalSlots={revealTotalSlots}
+          scale={revealScale}
           readyCount={live.revealReadyCount}
           readyTotal={live.revealReadyTotal}
           onSkip={onSkipReveal}

@@ -36,13 +36,31 @@ type Props = {
   candidates: string[]
   finalLabel: string
   /** true while this slot's ruleta should be spinning (the 'spin' phase);
-   * false once it should show finalLabel at rest (the 'land' phase). */
+   * false during BOTH the 'narrator' phase (before the spin starts) and the
+   * 'land' phase (after it ends) - see `landed` for telling those two
+   * apart. */
   spinning: boolean
+  /** true once this slot has actually landed (the 'land' phase) - false
+   * during 'narrator', when nothing has spun yet. Without this, the reel
+   * had nothing to distinguish "hasn't spun yet" from "already landed" and
+   * defaulted to resting on finalLabel in both cases - the real answer sat
+   * there in full view throughout the narrator beat, before the spin even
+   * started, arguably the single biggest thing that made this reel feel
+   * fake (see ObsidianVault's playtest notes: "siempre aparece primero la
+   * opción que va a tocar"). Now the idle-before-spin state shows the reel's
+   * own top row instead. */
+  landed: boolean
   reducedMotion: boolean
   spinMs: number
   /** This lane's position among its siblings, purely for the landing
    * stagger below - has no bearing on which value is drawn. */
   laneIndex?: number
+  /** Seeds the reel's shuffle (reel-geometry.ts's buildReel) - a real
+   * reveal always passes the same per-(game,round,participant,slot) seed
+   * (loadout-reveal.ts's revealSlotSeed) so every device draws the
+   * identical "random" reel. Defaults to 0 (still deterministic, just not
+   * tied to any particular reveal) for callers that don't care. */
+  seed?: number
 }
 
 // A Wii Party-style vertical slot-reel: a 3-row window (landed value
@@ -57,15 +75,20 @@ export function PowerRoulette({
   candidates,
   finalLabel,
   spinning,
+  landed,
   reducedMotion,
   spinMs,
   laneIndex = 0,
+  seed = 0,
 }: Props) {
   const translateY = useSharedValue(0)
   const scale = useSharedValue(1)
   const flash = useSharedValue(0)
 
-  const reel = useMemo(() => buildReel(candidates, finalLabel), [candidates, finalLabel])
+  const reel = useMemo(
+    () => buildReel(candidates, finalLabel, seed),
+    [candidates, finalLabel, seed]
+  )
 
   // Resting position: the window shows items [reel.length-WINDOW_ROWS, ...,
   // reel.length-1], i.e. the FINAL label (at reel.length-2) sits in the
@@ -74,7 +97,10 @@ export function PowerRoulette({
 
   useEffect(() => {
     if (reducedMotion) {
-      translateY.value = restY
+      // Still no motion, but still no early answer either: rest on the top
+      // row until actually landed, exactly like the non-reduced-motion idle
+      // branch below - see `landed`'s doc.
+      translateY.value = landed ? restY : 0
       scale.value = 1
       flash.value = 0
       return
@@ -102,16 +128,24 @@ export function PowerRoulette({
           withTiming(restY, { duration: catchMs, easing: Easing.out(Easing.quad) })
         )
       )
-    } else {
+    } else if (landed) {
       translateY.value = restY
       scale.value = withSequence(
         withTiming(1.16, { duration: 130 }),
         withSpring(1, { damping: 7, stiffness: 220 })
       )
       flash.value = withSequence(withTiming(1, { duration: 140 }), withTiming(0, { duration: 460 }))
+    } else {
+      // Idle, before the spin has even started (the 'narrator' phase) -
+      // rest on the reel's own top row, NOT restY (finalLabel's row). See
+      // `landed`'s doc: showing the answer here is the bug this branch
+      // exists to not reintroduce.
+      translateY.value = 0
+      scale.value = 1
+      flash.value = 0
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- translateY/scale/flash are stable shared values, not reactive deps
-  }, [spinning, reducedMotion, restY, spinMs, laneIndex])
+  }, [spinning, landed, reducedMotion, restY, spinMs, laneIndex])
 
   // translateY-only: applied to the inner scrolling strip.
   const reelStyle = useAnimatedStyle(() => ({

@@ -650,7 +650,7 @@ func TestBuildEventFrame_TerminalFrames_ResendStateAndCarryParticipants(t *testi
 		},
 	}
 
-	frameType, payload, resendState := buildEventFrame(game.GameFinished{Result: result}, 30*time.Second, 0, 0, time.Time{})
+	frameType, payload, resendState := buildEventFrame(game.GameFinished{Result: result}, 30*time.Second, 0, 0, time.Time{}, time.Time{})
 	if frameType != dto.FrameGameFinished {
 		t.Fatalf("frameType = %q, want %q", frameType, dto.FrameGameFinished)
 	}
@@ -673,7 +673,7 @@ func TestBuildEventFrame_TerminalFrames_ResendStateAndCarryParticipants(t *testi
 		t.Fatalf("participant[1] = %+v, want it flagged as a bot", got.Result.Participants[1])
 	}
 
-	_, _, abortedResend := buildEventFrame(game.GameAborted{Reason: "host left"}, 30*time.Second, 0, 0, time.Time{})
+	_, _, abortedResend := buildEventFrame(game.GameAborted{Reason: "host left"}, 30*time.Second, 0, 0, time.Time{}, time.Time{})
 	if !abortedResend {
 		t.Fatal("GAME_ABORTED resendState = false, want true (aborted games land on the result screen too)")
 	}
@@ -724,19 +724,19 @@ func TestBuildEventFrame_TimedFrames_UseStampedClosesAt(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			frameType, payload, _ := buildEventFrame(tc.evt, window, window, window, stamped)
+			frameType, payload, _ := buildEventFrame(tc.evt, window, window, window, stamped, time.Time{})
 			if frameType != tc.wantFrame {
 				t.Fatalf("frameType = %q, want %q", frameType, tc.wantFrame)
 			}
-			if got, want := tc.closesAt(payload), stamped.Format(time.RFC3339); got != want {
+			if got, want := tc.closesAt(payload), dto.FormatWireTime(stamped); got != want {
 				t.Fatalf("closesAt = %q, want the stamped deadline %q", got, want)
 			}
 		})
 
 		t.Run(tc.name+"_zero_falls_back", func(t *testing.T) {
 			before := time.Now()
-			_, payload, _ := buildEventFrame(tc.evt, window, window, window, time.Time{})
-			got, err := time.Parse(time.RFC3339, tc.closesAt(payload))
+			_, payload, _ := buildEventFrame(tc.evt, window, window, window, time.Time{}, time.Time{})
+			got, err := time.Parse(time.RFC3339Nano, tc.closesAt(payload))
 			if err != nil {
 				t.Fatalf("parsing fallback closesAt: %v", err)
 			}
@@ -753,7 +753,7 @@ func TestBuildEventFrame_VoteCast_CarriesHumanVoteProgress(t *testing.T) {
 		RoundIndex: 2, ParticipantID: pid, Option: "SURVIVE",
 		HumanVotesCast: 1, HumanVoters: 3,
 	}
-	frameType, payload, resendState := buildEventFrame(evt, 30*time.Second, 0, 0, time.Time{})
+	frameType, payload, resendState := buildEventFrame(evt, 30*time.Second, 0, 0, time.Time{}, time.Time{})
 
 	if frameType != dto.FrameVoteCast {
 		t.Fatalf("frameType = %q, want %q", frameType, dto.FrameVoteCast)
@@ -781,7 +781,7 @@ func TestBuildEventFrame_VoteCast_StaysAnonymous(t *testing.T) {
 		RoundIndex: 0, ParticipantID: pid, Option: "FALL",
 		HumanVotesCast: 1, HumanVoters: 1,
 	}
-	_, payload, _ := buildEventFrame(evt, 30*time.Second, 0, 0, time.Time{})
+	_, payload, _ := buildEventFrame(evt, 30*time.Second, 0, 0, time.Time{}, time.Time{})
 
 	raw, err := json.Marshal(payload)
 	if err != nil {
