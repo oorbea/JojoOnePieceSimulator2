@@ -27,6 +27,12 @@ export const characterTranslationsResponseSchema = z.object({
 })
 export type CharacterTranslationsResponse = z.infer<typeof characterTranslationsResponseSchema>
 
+export const devLoginRequestSchema = z.object({
+  name: z.string(),
+  admin: z.boolean(),
+})
+export type DevLoginRequest = z.infer<typeof devLoginRequestSchema>
+
 export const devilFruitResponseSchema = z.object({
   id: z.string(),
   name: z.string(),

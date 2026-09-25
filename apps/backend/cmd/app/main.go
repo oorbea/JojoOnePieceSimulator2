@@ -279,6 +279,10 @@ func main() {
 		SameSite: authCookieSameSite,
 	})
 	authEndpoints.SetMediaURLBuilder(mediaURLs)
+	if cfg.DevAuthBypass {
+		authEndpoints.SetDevAuthBypass(true)
+		log.Printf("WARNING: DEV_AUTH_BYPASS is enabled - POST /api/v1/auth/dev-login is mounted for loopback/private callers. NEVER enable this in prod (config.Load already refuses to boot with a prod-shaped AUTH_COOKIE_SECURE/CORS_ALLOWED_ORIGINS alongside it).")
+	}
 
 	userService := services.NewUserService(userRepo, pictures, imageProcessor, pictureWorker, picturePolicy)
 	userEndpoints := endpoints.NewUserEndpoints(userService)
