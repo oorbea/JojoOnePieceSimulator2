@@ -39,6 +39,7 @@ export type {
   CharacterTranslationRequest,
   CharacterTranslationResponse,
   CharacterTranslationsResponse,
+  DevLoginRequest,
   DevilFruitResponse,
   DevilFruitPageResponse,
   FieldError,
