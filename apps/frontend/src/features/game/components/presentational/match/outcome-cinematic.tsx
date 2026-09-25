@@ -12,10 +12,30 @@ import Animated, {
 import { YStack } from 'tamagui'
 
 import { cinematicTimeline } from '@/features/game/lib/outcome-cinematic'
+import { DecayGrid } from '@/features/game/components/presentational/match/manga/decay-grid'
+import { MangaVerdictText } from '@/features/game/components/presentational/match/manga/manga-verdict-text'
+import { RadialGlow } from '@/features/game/components/presentational/match/manga/radial-glow'
+import { SpeedLines } from '@/features/game/components/presentational/match/manga/speed-lines'
+import { TbcArrow } from '@/features/game/components/presentational/match/manga/tbc-arrow'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { defeatCinematicSound, nameTickSound, victoryCinematicSound } from '@/shared/assets'
 import { useSound } from '@/shared/hooks/use-sound'
+
+// Manga JoJo × One Piece palette (owner decision, 2026-09-25 playtest
+// feedback - see ObsidianVault/game-victory-defeat-cinematic-2026-09-14.md).
+// Same "aura de decadencia, never rays" rule as round-flash.tsx: defeat's
+// fracture beat reveals a decaying grid, never a burst.
+const VICTORY_GLOW = [
+  { offset: '0%', color: '#F2C744', opacity: 0.55 },
+  { offset: '60%', color: '#C2185B' },
+  { offset: '100%', color: '#4B1D7A' },
+]
+const DEFEAT_GLOW = [
+  { offset: '0%', color: '#3A0A0D', opacity: 0.6 },
+  { offset: '55%', color: '#1A0A0C' },
+  { offset: '100%', color: '#0C0405' },
+]
 
 type Props = {
   kind: 'victory' | 'defeat'
@@ -167,6 +187,13 @@ export function OutcomeCinematic({ kind, title, subtitle, names, reducedMotion, 
   const silenceStyle = useAnimatedStyle(() => ({ opacity: silence.value * 0.5 }))
   const sealStyle = useAnimatedStyle(() => ({ opacity: seal.value * 0.3 }))
   const epilogueStyle = useAnimatedStyle(() => ({ opacity: epilogue.value }))
+  // The "To Be Continued" card slides in from the right as the epilogue
+  // cross-fade rises - same shared value as epilogueStyle (transform/
+  // opacity only, no new timing), so it never needs its own timer.
+  const tbcStyle = useAnimatedStyle(() => ({
+    opacity: epilogue.value,
+    transform: [{ translateX: (1 - epilogue.value) * 40 }],
+  }))
 
   const handleSkip = () => {
     if (!canSkip) return
@@ -191,6 +218,11 @@ export function OutcomeCinematic({ kind, title, subtitle, names, reducedMotion, 
         position="relative"
         overflow="hidden"
       >
+        {/* Static base wash - morado/magenta/oro for victory, rojo tinta/
+            negro for defeat. Never animated itself; the impact/fracture/
+            ink beats below layer on top of it. */}
+        <RadialGlow stops={kind === 'victory' ? VICTORY_GLOW : DEFEAT_GLOW} />
+
         {/* Impact flash / breath of light - a bright pulse at t=0. */}
         <Animated.View
           style={[
@@ -207,22 +239,18 @@ export function OutcomeCinematic({ kind, title, subtitle, names, reducedMotion, 
           pointerEvents="none"
         />
 
-        {/* Fracture (defeat: desaturated crack tone) / dawn (victory: gold
-            wash rising behind the verdict). */}
+        {/* Fracture (defeat: an "aura de decadencia" - a grid that only
+            holds together near the centre and dissolves into black toward
+            the edges, deliberately not rays radiating outward) / dawn
+            (victory: rotating speed-lines behind the verdict). Same
+            opacity driver as before the restyle - only the graphic
+            changed, never the timing. */}
         <Animated.View
-          style={[
-            {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: kind === 'defeat' ? '#2A2A2E' : '#7A5A0F',
-            },
-            fractureStyle,
-          ]}
+          style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, fractureStyle]}
           pointerEvents="none"
-        />
+        >
+          {kind === 'victory' ? <SpeedLines /> : <DecayGrid />}
+        </Animated.View>
 
         {kind === 'defeat' ? (
           <Animated.View
@@ -262,13 +290,9 @@ export function OutcomeCinematic({ kind, title, subtitle, names, reducedMotion, 
 
         <Animated.View style={verdictStyle}>
           <YStack items="center" gap="$3" px="$5">
-            <GlowText
-              level="hero"
-              align="center"
-              color={kind === 'defeat' ? '$strawHatRed' : '$standGold'}
-            >
+            <MangaVerdictText fillColor={kind === 'defeat' ? '$strawHatRed' : '$standGold'}>
               {title}
-            </GlowText>
+            </MangaVerdictText>
             {subtitle ? (
               <GlowText level="heading" align="center" tone="onColor">
                 {subtitle}
@@ -285,6 +309,7 @@ export function OutcomeCinematic({ kind, title, subtitle, names, reducedMotion, 
                 level="label"
                 tone="onColor"
                 align="center"
+                fontFamily="$mangaAccent"
                 opacity={reducedMotion || index < revealedCount ? 1 : 0}
               >
                 {name}
@@ -325,6 +350,15 @@ export function OutcomeCinematic({ kind, title, subtitle, names, reducedMotion, 
           ]}
           pointerEvents="none"
         />
+
+        {kind === 'defeat' ? (
+          <Animated.View
+            style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, tbcStyle]}
+            pointerEvents="none"
+          >
+            <TbcArrow />
+          </Animated.View>
+        ) : null}
 
         <YStack position="absolute" b="$5" r="$5">
           <GlossButton

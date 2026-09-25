@@ -616,10 +616,11 @@
       "summaryA11y": "Resultat final d'aquesta partida",
       "cinematic": {
         "defeatTitle": "DERROTA",
-        "victoryTitleGauntlet": "L'ESQUADRA HA SOBREVISCUT",
+        "victoryTitleGauntlet": "L'ESQUADRÓ HA SOBREVISCUT",
         "victoryTitleVersus": "{{team}} GUANYA",
         "subtitleWon": "El teu equip ha guanyat aquesta partida.",
         "subtitleLost": "El teu equip ha perdut aquesta partida.",
+        "epilogueLabel": "To Be Continued",
         "skip": "Saltar",
         "skipA11y": "Saltar la cinemàtica de victòria o derrota",
         "replay": "Tornar a veure",

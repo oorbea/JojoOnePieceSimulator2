@@ -620,6 +620,7 @@
         "victoryTitleVersus": "{{team}} WINS",
         "subtitleWon": "Your team won this match.",
         "subtitleLost": "Your team lost this match.",
+        "epilogueLabel": "To Be Continued",
         "skip": "Skip",
         "skipA11y": "Skip the victory or defeat cinematic",
         "replay": "Watch again",

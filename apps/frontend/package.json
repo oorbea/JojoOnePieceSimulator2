@@ -4,6 +4,8 @@
   "packageManager": "pnpm@11.18.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/bangers": "^0.4.1",
+    "@expo-google-fonts/dela-gothic-one": "^0.4.1",
     "@expo-google-fonts/fredoka": "^0.4.1",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/metro-runtime": "~57.0.7",
