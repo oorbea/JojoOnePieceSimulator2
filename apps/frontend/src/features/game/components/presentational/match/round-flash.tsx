@@ -91,7 +91,14 @@ export function RoundFlash({ visible, outcome, reducedMotion, onDone }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
-      <YStack flex={1} items="center" justify="center" position="relative" overflow="hidden">
+      <YStack
+        flex={1}
+        items="center"
+        justify="center"
+        position="relative"
+        overflow="hidden"
+        bg={outcome === 'win' ? '#7A2E86' : '#120507'}
+      >
         <RadialGlow stops={outcome === 'win' ? WIN_GLOW : LOSE_GLOW} />
         <Animated.View
           style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }, style]}

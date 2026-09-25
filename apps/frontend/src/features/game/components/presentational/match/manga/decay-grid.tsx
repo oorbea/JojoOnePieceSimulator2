@@ -47,9 +47,11 @@ export function DecayGrid() {
 
   return (
     <Svg
+      width="100%"
+      height="100%"
       viewBox={`0 0 ${COLS * CELL} ${ROWS * CELL}`}
       style={[FILL_STYLE]}
-      preserveAspectRatio="none"
+      preserveAspectRatio="xMidYMid slice"
       pointerEvents="none"
     >
       {/* Gradient/mask defs as direct Svg children (no <Defs> wrapper) -
