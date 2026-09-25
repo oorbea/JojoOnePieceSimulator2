@@ -1,4 +1,4 @@
-import { Platform, View } from 'react-native'
+import { Platform, useWindowDimensions, View } from 'react-native'
 
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { asToken } from '@/shared/lib/tamagui-token'
@@ -50,10 +50,17 @@ function responsiveFontSize(text: string): '$11' | '$9' | '$7' {
 }
 
 // Caps the verdict block at 90% of the viewport so a long title never runs
-// edge-to-edge or past it - percentage-based (not `vw`) so it works
-// identically on native, where the wrapping Modal/YStack is already full
-// width.
-const MAX_WIDTH = '90%'
+// edge-to-edge or past it. Deliberately NOT a CSS/Yoga percentage: this
+// component's immediate parent is an auto-sized (`flex: 0 0 auto` /
+// shrink-to-fit) Animated.View one level down from the cinematic's
+// full-screen root - a percentage `maxWidth` there resolves against that
+// AUTO-sized ancestor, not the actual screen, which collapses circularly
+// (verified live: a 7-char "VICTORY" measured ~131px wide instead of ~90%
+// of a 1568px window, wrapping mid-word into "VICTOR"/"Y"). Both
+// react-native-web's CSS flexbox and RN's own Yoga engine have this same
+// percentage-on-undefined-size-parent ambiguity, so `useWindowDimensions`-
+// derived pixel values are used instead on both platforms.
+const MAX_WIDTH_FRACTION = 0.9
 
 // MangaVerdictText is the sorteo cinematics' own outlined verdict headline
 // ("¡VICTORIA!" / "DERROTA" / "EL ESCUADRÓN HA SOBREVIVIDO") - Bangers
@@ -82,6 +89,8 @@ export function MangaVerdictText({
   const size = asToken<'$11'>(fontSize ?? responsiveFontSize(children))
   const fill = asToken<'$panelText'>(fillColor)
   const stroke = asToken<'$panelText'>(strokeColor)
+  const { width: windowWidth } = useWindowDimensions()
+  const maxWidthPx = windowWidth * MAX_WIDTH_FRACTION
 
   if (Platform.OS === 'web') {
     return (
@@ -90,13 +99,13 @@ export function MangaVerdictText({
         fontSize={size}
         align={align}
         color={fill}
-        maxW={MAX_WIDTH}
         style={{
           // Web-only CSS (react-native-web's style types already allow
           // arbitrary CSS properties, so no `as any`/ts-expect-error is
           // needed) - passed through to the DOM untouched.
           WebkitTextStroke: `2px ${strokeColor}`,
           paintOrder: 'stroke fill',
+          maxWidth: maxWidthPx,
         }}
       >
         {children}
@@ -109,7 +118,7 @@ export function MangaVerdictText({
       style={{
         position: 'relative',
         alignItems: align === 'center' ? 'center' : 'flex-start',
-        maxWidth: MAX_WIDTH,
+        maxWidth: maxWidthPx,
       }}
     >
       <GlowText level="display" fontSize={size} align={align} opacity={0}>
