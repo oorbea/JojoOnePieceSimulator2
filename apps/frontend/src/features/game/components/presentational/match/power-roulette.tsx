@@ -63,7 +63,7 @@ type Props = {
   seed?: number
 }
 
-// A Wii Party-style vertical slot-reel: a 3-row window (landed value
+// A Wii Party-style vertical slot-reel: a WINDOW_ROWS-row window (landed value
 // centered, its neighbours bleeding into a soft top/bottom fade) scrolls a
 // strip of candidate labels past, overshoots slightly past the real answer,
 // then catches on it with two bounded withTiming legs (never a physics
@@ -194,7 +194,7 @@ export function PowerRoulette({
               position: 'absolute',
               left: 0,
               right: 0,
-              top: ITEM_HEIGHT,
+              top: ITEM_HEIGHT * Math.floor(WINDOW_ROWS / 2),
               height: ITEM_HEIGHT,
               borderTopWidth: 1,
               borderBottomWidth: 1,
