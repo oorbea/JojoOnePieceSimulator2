@@ -34,6 +34,22 @@
     "googleSignInError": "Alguna cosa ha anat malament en iniciar sessió amb Google. Torna-ho a provar.",
     "googleNoIdToken": "Google no ha retornat cap ID token"
   },
+  "devLogin": {
+    "title": "Inici de sessió de desenvolupament",
+    "subtitle": "Només en local - es salta Google del tot. Mai disponible fora d'una build de desenvolupament.",
+    "nameLabel": "Nom del compte",
+    "namePlaceholder": "p. ex. alice",
+    "nameHint": "Només minúscules, dígits i guió baix.",
+    "roleLabel": "Rol",
+    "roleRegular": "Normal",
+    "roleAdmin": "Admin",
+    "submit": "Entra",
+    "submitting": "Entrant…",
+    "recentAccounts": "Comptes recents",
+    "invalidName": "Fes servir només minúscules, dígits i guió baix.",
+    "genericError": "No s'ha pogut entrar amb aquest compte de desenvolupament. Torna-ho a provar.",
+    "backToGoogle": "Torna a l'inici de sessió amb Google"
+  },
   "errorFallback": {
     "title": "Alguna cosa s'ha trencat.",
     "fallbackMessage": "Torna-ho a provar, o torna d'aquí una estona.",
