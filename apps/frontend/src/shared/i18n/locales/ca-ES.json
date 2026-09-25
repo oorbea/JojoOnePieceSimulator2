@@ -598,8 +598,8 @@
     "result": {
       "title": "Resultat final",
       "winnerTeam": "Guanya {{team}}",
-      "survived": "L'escamot ha sobreviscut",
-      "fell": "L'escamot ha caigut",
+      "survived": "L'esquadró ha sobreviscut",
+      "fell": "L'esquadró ha caigut",
       "aborted": "Partida cancel·lada",
       "abortedNotice": "L'amfitrió va cancel·lar aquesta partida abans d'acabar-la.",
       "roundsPlayed": "{{count}} ronda(es) jugada(es)",
