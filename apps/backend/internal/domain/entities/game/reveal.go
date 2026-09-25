@@ -129,6 +129,26 @@ const (
 	// only - nothing adds to it yet, so it plays no part in RevealDuration
 	// today.
 	RevealFxMaxMs = 3000
+	// RevealEvolveBaseMs is how long the reveal holds on a landed Stand's
+	// ROOT base form before the "algo esta pasando" evolution beat starts
+	// (2026-09-25, owner request - see ObsidianVault's V1 reference,
+	// github.com/oorbea/JoJoOnePiece_Simulator's main.cc: this reproduces
+	// its "tu stand es <familia>" beat before the phase roll). Only played
+	// when the landed Stand's EvolutionDepth() > 0 - a base stand's own
+	// RevealHoldStandMs is completely unaffected.
+	RevealEvolveBaseMs = 2000
+	// RevealEvolvingMs is the suspense beat itself - the base stand's card
+	// shakes/glows while the "Algo esta pasando... Tu stand esta
+	// evolucionando!" message plays (owner decision, 2026-09-25: "Menacing +
+	// flash" style).
+	RevealEvolvingMs = 2500
+	// RevealEvolveStepMs is each INTERMEDIATE evolution stage's own hold (a
+	// flash, then that stage's card) - a chain with d ancestors plays d-1 of
+	// these (the last, FINAL stage instead gets the stand's normal
+	// RevealHoldStandMs, per the owner's "step through every stage"
+	// decision). Zero for a one-step evolution (e.g. Chariot Requiem: base
+	// then straight to the final stage's own RevealHoldStandMs).
+	RevealEvolveStepMs = 1500
 	// RevealPowerSpinMs is the Stand/DevilFruit slots' OWN spin duration -
 	// the CS:GO-style horizontal case strip (owner decision, 2026-09-25
 	// playtest feedback) needs longer to read than the vertical roulette's
@@ -157,6 +177,13 @@ type RevealPlayer struct {
 	HasArmamentHaki    bool
 	HasObservationHaki bool
 	HasConquerorHaki   bool
+	// StandEvolutionSteps is the landed Stand's powers.Stand.EvolutionDepth()
+	// - 0 for a base stand (today's behaviour, unaffected) or one that
+	// doesn't apply (HasStand false). > 0 makes RevealDuration add the
+	// "algo esta pasando" evolution beat to the Stand slot (2026-09-25).
+	// Frontend mirror: loadout-reveal.ts's RevealPlayer.standEvolutionSteps
+	// - keep both in sync.
+	StandEvolutionSteps int
 }
 
 // PlayerSlots is RevealSlots(mangas) further filtered down to the slots
@@ -246,6 +273,21 @@ func slotHoldMs(slot RevealSlot, player RevealPlayer) int {
 	}
 }
 
+// evolveMs is the extra time the Stand slot needs when the landed Stand
+// evolves from something (steps > 0): a hold on the root base
+// (RevealEvolveBaseMs), the suspense beat (RevealEvolvingMs), and one
+// RevealEvolveStepMs per INTERMEDIATE stage (steps-1 of them - the final
+// stage instead gets the slot's own normal slotHoldMs, unaffected). Zero for
+// every other slot and for a non-evolving Stand (steps == 0), so
+// RevealDuration is unchanged from before this feature in both those cases.
+// Frontend mirror: loadout-reveal.ts's evolveMs - keep both in sync.
+func evolveMs(slot RevealSlot, player RevealPlayer) int {
+	if slot != RevealStand || player.StandEvolutionSteps <= 0 {
+		return 0
+	}
+	return RevealEvolveBaseMs + RevealEvolvingMs + RevealEvolveStepMs*(player.StandEvolutionSteps-1)
+}
+
 // RevealDuration is how long the reveal overlay plays for a lobby with the
 // given mangas and players (in reveal order), at the given speed, before
 // GameService opens voting. Deliberately NOT a pure function of mangas
@@ -264,7 +306,7 @@ func RevealDuration(gameID GameID, roundIndex int, mangas []enums.Manga, players
 		total += RevealPlayerIntroMs + RevealPlayerOutroMs
 		for _, slot := range PlayerSlots(mangas, p) {
 			spinMs := spinMsFor(gameID, roundIndex, pi, slot)
-			total += RevealNarratorMs + spinMs + slotHoldMs(slot, p)
+			total += RevealNarratorMs + spinMs + evolveMs(slot, p) + slotHoldMs(slot, p)
 		}
 	}
 	scaled := float64(total) * speed.Multiplier()

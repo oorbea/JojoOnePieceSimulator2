@@ -523,6 +523,11 @@
             "before": "One last thing - just how sharp are you?",
             "after": "{{name}}, your battle IQ is {{value}}"
           }
+        },
+        "evolution": {
+          "evolving": "Something's happening... your stand is evolving!",
+          "step": "It keeps evolving!",
+          "final": "EVOLUTION!"
         }
       },
       "loadout": {

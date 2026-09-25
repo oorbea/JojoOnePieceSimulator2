@@ -3,7 +3,10 @@ import { XStack, YStack } from 'tamagui'
 
 import { CaseStripReel } from '@/features/game/components/presentational/match/case-strip-reel'
 import { ParticipantAvatar } from '@/features/game/components/presentational/match/participant-avatar'
-import { PowerRevealCard } from '@/features/game/components/presentational/match/power-reveal-card'
+import {
+  PowerRevealCard,
+  type EvolvePhase,
+} from '@/features/game/components/presentational/match/power-reveal-card'
 import { PowerRoulette } from '@/features/game/components/presentational/match/power-roulette'
 import { RevealNarrator } from '@/features/game/components/presentational/match/reveal-narrator'
 import { useRevealSpinSound } from '@/features/game/hooks/use-reveal-spin-sound'
@@ -19,6 +22,7 @@ import {
 } from '@/features/game/lib/loadout-reveal'
 import type { LoadoutSlotKind } from '@/features/game/lib/match-rules'
 import { applyPoolFilter } from '@/features/game/lib/power-pool'
+import { standEvolutionChain, standEvolutionSteps } from '@/features/game/lib/stand-evolution'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
@@ -48,6 +52,9 @@ type Props = {
   participantIndex: number
   slotIndex: number
   totalSlots: number
+  /** Only meaningful during an 'evolveStep' phase - see useLoadoutReveal's
+   * own doc. -1 otherwise. */
+  evolveStage: number
   /** How much every phase's local duration is being stretched/squeezed to
    * fit the server's actual reveal window - the roulette's own spinMs must
    * scale by the same factor, or its spin drifts out of step with the rest
@@ -126,6 +133,7 @@ export function RevealStage({
   participantIndex,
   slotIndex,
   totalSlots,
+  evolveStage,
   scale,
   readyCount,
   readyTotal,
@@ -161,6 +169,37 @@ export function RevealStage({
     slotIndex >= 0 && slotIndex < slotKinds.length ? slotKinds[slotIndex] : null
   const spinning = phase === 'spin'
   const landed = phase === 'land'
+  // The full ancestor chain, root-first (see stand-evolution.ts). A
+  // non-evolving stand is a single-element chain (itself), so every
+  // downstream lookup below works unchanged whether or not this loadout's
+  // Stand actually evolves from anything.
+  const standChain = loadout?.stand ? standEvolutionChain(loadout.stand) : []
+  const standSteps = loadout?.stand ? standEvolutionSteps(loadout.stand) : 0
+  const isEvolvePhase = phase === 'evolveBase' || phase === 'evolving' || phase === 'evolveStep'
+  // Which stage of standChain the current phase shows: the root during
+  // evolveBase/evolving, chain[evolveStage + 1] for each intermediate
+  // evolveStep, and the FINAL stage (== loadout.stand itself) once landed -
+  // see reveal.go's evolveMs / loadout-reveal.ts's revealTimeline doc.
+  const evolveDisplayStand =
+    currentSlot === 'stand' && standChain.length > 0
+      ? phase === 'evolveBase' || phase === 'evolving'
+        ? standChain[0]
+        : phase === 'evolveStep'
+          ? standChain[Math.min(evolveStage + 1, standChain.length - 1)]
+          : standChain[standChain.length - 1]
+      : undefined
+  const evolvePhase: EvolvePhase | undefined =
+    currentSlot === 'stand' && standSteps > 0
+      ? phase === 'evolveBase'
+        ? 'base'
+        : phase === 'evolving'
+          ? 'evolving'
+          : phase === 'evolveStep'
+            ? 'step'
+            : phase === 'land'
+              ? 'final'
+              : undefined
+      : undefined
 
   const { candidates, finalLabel } = slotFor(t, loadout, currentSlot, standNames, fruitNames)
   const isPowerSlot = currentSlot === 'stand' || currentSlot === 'devilFruit'
@@ -212,14 +251,19 @@ export function RevealStage({
             rarity: f.rarity,
             picture: thumbSource(f) ?? undefined,
           }))
+    // The strip lands on the ROOT base of an evolving stand's chain, never
+    // the final landed form directly - the "algo esta pasando" evolution
+    // beats (evolveBase/evolving/evolveStep) take over from there to reveal
+    // the actual result (2026-09-25, see standChain's doc above).
+    const standWinnerSource = standChain[0] ?? loadout.stand
     const winner: CaseStripCard =
       currentSlot === 'stand'
-        ? loadout.stand
+        ? standWinnerSource
           ? {
-              id: loadout.stand.id,
-              label: loadout.stand.name,
-              rarity: loadout.stand.rarity,
-              picture: thumbSource(loadout.stand) ?? undefined,
+              id: standWinnerSource.id,
+              label: standWinnerSource.name,
+              rarity: standWinnerSource.rarity,
+              picture: thumbSource(standWinnerSource) ?? undefined,
             }
           : { id: NONE_POWER_CARD_ID, label: t('game.match.noStand'), rarity: 'NONE' }
         : loadout.devilFruit
@@ -233,7 +277,8 @@ export function RevealStage({
     return buildCaseStrip(pool, winner, slotSeed)
   })()
 
-  const showPowerCard = landed && currentParticipant !== null && isPowerSlot
+  const showPowerCard =
+    (landed || isEvolvePhase) && currentParticipant !== null && isPowerSlot
 
   const narratorLine = narratorLineFor(
     t,
@@ -333,10 +378,12 @@ export function RevealStage({
         <PowerRevealCard
           visible={showPowerCard}
           kind={currentSlot === 'stand' ? 'stand' : 'devilFruit'}
-          stand={loadout?.stand}
-          devilFruit={loadout?.devilFruit}
+          stand={currentSlot === 'stand' ? (evolveDisplayStand ?? loadout?.stand) : undefined}
+          devilFruit={currentSlot === 'devilFruit' ? loadout?.devilFruit : undefined}
           participantName={currentParticipant.displayName}
           onSkip={onSkip}
+          evolvePhase={evolvePhase}
+          reducedMotion={reducedMotion}
         />
       ) : null}
     </GlassPanel>

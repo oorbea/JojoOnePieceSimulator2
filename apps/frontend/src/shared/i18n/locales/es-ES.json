@@ -523,6 +523,11 @@
             "before": "Una última cosa: ¿cuán agudo eres?",
             "after": "{{name}}, tu coeficiente de batalla es {{value}}"
           }
+        },
+        "evolution": {
+          "evolving": "Algo está pasando... ¡tu stand está evolucionando!",
+          "step": "¡Sigue evolucionando!",
+          "final": "¡EVOLUCIÓN!"
         }
       },
       "loadout": {

@@ -82,3 +82,26 @@ func (s *Stand) Potential() enums.StandStat {
 func (s *Stand) EvolvesFrom() *Stand {
 	return s.evolvesFrom
 }
+
+// EvolutionDepth is how many ancestors this Stand has - 0 for a base stand
+// with no evolvesFrom, 1 for a one-step evolution (e.g. Chariot Requiem),
+// and so on for a multi-stage family (e.g. Echoes ACT3 has 3). Used by
+// game.RevealDuration/RevealPlayer to size the sorteo's "algo esta pasando"
+// evolution reveal (2026-09-25) - mirrored on the frontend by
+// stand-evolution.ts's standEvolutionSteps, keep both in sync. The
+// self-evolution DB constraint (stands_no_self_evolution) and the mapper's
+// own cycle check (stand_mapper.go) mean this can't loop in practice; it's
+// still bounded defensively rather than trusted blindly.
+func (s *Stand) EvolutionDepth() int {
+	depth := 0
+	seen := map[string]struct{}{}
+	for cur := s.evolvesFrom; cur != nil; cur = cur.evolvesFrom {
+		id := cur.ID().String()
+		if _, ok := seen[id]; ok {
+			break
+		}
+		seen[id] = struct{}{}
+		depth++
+	}
+	return depth
+}
