@@ -17,6 +17,13 @@ export const GlowText = styled(SizableText, {
       hero: { fontSize: '$11', fontFamily: '$heading' },
       title: { fontSize: '$9', fontFamily: '$heading' },
       heading: { fontSize: '$7', fontFamily: '$heading' },
+      // The manga cinematics' own verdict-headline face (Bangers) - see
+      // manga-verdict-text.tsx, which is what actually uses this level (a
+      // thick-outlined stack of copies, never this bare level directly for
+      // a real verdict). Bigger textShadowRadius than the default: Bangers
+      // is already loud, but round-flash/outcome-cinematic sit over a busy
+      // gradient+decorative-layer background, not a plain glass panel.
+      display: { fontSize: '$11', fontFamily: '$display', textShadowRadius: 6 },
       label: {
         fontSize: '$4',
         fontFamily: '$body',

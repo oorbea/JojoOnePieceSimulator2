@@ -1,3 +1,5 @@
+import { Bangers_400Regular } from '@expo-google-fonts/bangers'
+import { DelaGothicOne_400Regular } from '@expo-google-fonts/dela-gothic-one'
 import { Fredoka_500Medium, Fredoka_600SemiBold } from '@expo-google-fonts/fredoka'
 import { Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito'
 import { useFonts } from 'expo-font'
@@ -16,6 +18,13 @@ export function TamaguiProvider({ children }: { children: React.ReactNode }) {
     Fredoka_600SemiBold,
     Nunito_500Medium,
     Nunito_700Bold,
+    // The manga JoJo × One Piece cinematics' own display face (owner
+    // decision, 2026-09-25 playtest feedback) - see ObsidianVault/
+    // game-victory-defeat-cinematic-2026-09-14.md. Bangers for verdict
+    // headlines, Dela Gothic One for onomatopoeia/winner names (it also
+    // covers katakana, unlike Bangers).
+    Bangers_400Regular,
+    DelaGothicOne_400Regular,
   })
 
   // Web fonts ship via the CSS emitted by @tamagui/metro-plugin
