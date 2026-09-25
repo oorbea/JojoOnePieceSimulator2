@@ -26,6 +26,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { formatBattleIQ } from '@/shared/lib/battle-iq'
+import { thumbSource } from '@/shared/lib/picture-source'
 
 // The "landed nothing" card - a Stand/DevilFruit slot that rolled NONE
 // still gets its own strip (owner decision, 2026-09-25): it reads as a
@@ -203,13 +204,13 @@ export function RevealStage({
             id: s.id,
             label: s.name,
             rarity: s.rarity,
-            picture: s.pictureThumb,
+            picture: thumbSource(s) ?? undefined,
           }))
         : fruits.map((f) => ({
             id: f.id,
             label: f.name,
             rarity: f.rarity,
-            picture: f.pictureThumb,
+            picture: thumbSource(f) ?? undefined,
           }))
     const winner: CaseStripCard =
       currentSlot === 'stand'
@@ -218,7 +219,7 @@ export function RevealStage({
               id: loadout.stand.id,
               label: loadout.stand.name,
               rarity: loadout.stand.rarity,
-              picture: loadout.stand.pictureThumb,
+              picture: thumbSource(loadout.stand) ?? undefined,
             }
           : { id: NONE_POWER_CARD_ID, label: t('game.match.noStand'), rarity: 'NONE' }
         : loadout.devilFruit
@@ -226,7 +227,7 @@ export function RevealStage({
               id: loadout.devilFruit.id,
               label: loadout.devilFruit.name,
               rarity: loadout.devilFruit.rarity,
-              picture: loadout.devilFruit.pictureThumb,
+              picture: thumbSource(loadout.devilFruit) ?? undefined,
             }
           : { id: NONE_POWER_CARD_ID, label: t('game.match.noFruit'), rarity: 'NONE' }
     return buildCaseStrip(pool, winner, slotSeed)

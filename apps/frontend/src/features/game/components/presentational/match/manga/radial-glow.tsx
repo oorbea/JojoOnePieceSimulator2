@@ -24,7 +24,7 @@ export function RadialGlow({
   r?: string
 }) {
   return (
-    <Svg style={[FILL_STYLE]} pointerEvents="none">
+    <Svg width="100%" height="100%" style={[FILL_STYLE]} pointerEvents="none">
       <RadialGradient id="glow" cx={cx} cy={cy} r={r} gradientUnits="objectBoundingBox">
         {stops.map((s, i) => (
           <Stop key={i} offset={s.offset} stopColor={s.color} stopOpacity={s.opacity ?? 1} />

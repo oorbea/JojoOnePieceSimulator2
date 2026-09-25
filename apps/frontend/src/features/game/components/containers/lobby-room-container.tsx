@@ -23,6 +23,7 @@ import {
 } from '@/features/game/lib/config-form'
 import { formatCode } from '@/features/game/lib/game-code'
 import { useGameInvite } from '@/features/game/hooks/use-game-invite'
+import { usePowerPoolPrefetch } from '@/features/game/hooks/use-power-pool-prefetch'
 import { buildInviteUrl } from '@/features/game/lib/invite-url'
 import { startGate } from '@/features/game/lib/lobby-rules'
 import { shouldReveal } from '@/features/game/lib/loadout-reveal'
@@ -110,6 +111,12 @@ export function LobbyRoomContainer() {
   const snapshot = socket.snapshot ?? detail.data?.game ?? null
   const you = socket.you ?? detail.data?.you ?? null
   const reducedMotion = useReducedMotion()
+
+  // Warms the sorteo strip's images well before ASSIGNING - see
+  // use-power-pool-prefetch.ts. Also covers Versus's ReassignsEachRound
+  // (the pool can change every round), since it re-fires whenever the
+  // filtered candidate set actually changes.
+  usePowerPoolPrefetch(snapshot, standsQuery, devilFruitsQuery)
 
   // Defined unconditionally (before the !snapshot early return below) so
   // useMatchHotkeys - itself called before that same return, hooks can't be
