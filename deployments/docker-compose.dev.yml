@@ -24,6 +24,12 @@ services:
       # disabled here: a local delete must never remove an object prod
       # still serves. Never set in docker-compose.yml/.prod.yml.
       STORAGE_DISABLE_DELETE: "${STORAGE_DISABLE_DELETE:-true}"
+      # Read by goose's ENVSUB at migration-apply time (not by compose) -
+      # db/migrations/00017_seed_catalog_*.sql onwards gate their full
+      # catalogue insert on this. Only ever true here and in
+      # docker-compose.test.yml; prod always gets the translations-only
+      # path (see that migration's own comment).
+      SEED_CATALOG_FULL: "${SEED_CATALOG_FULL:-true}"
 
   frontend:
     ports:

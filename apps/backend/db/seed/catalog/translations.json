@@ -1,6 +1,1703 @@
 {
-  "stands": {},
-  "devil_fruits": {},
+  "stands": {
+    "Hermit purple": {
+      "en-GB": {
+        "description": "User: Joseph Joestar\n\nPurple vines: Manifests as a cluster of thorny, purple-coloured stems or vines that sprout from Joseph's hands.\n\nConnection to Hamon: Its plant-like form reflects the vital Hamon energy Joseph mastered in his youth.\n\nTarot inspiration: Represents the tarot card The Hermit, symbolising introspection and meditation.",
+        "skills": [
+          "Psychography (Partial Divination)",
+          "Thorned whip",
+          "Induce Hamon",
+          "Swing like Spider-Man"
+        ],
+        "source_hash": "96a9a5d66984d9a07b4a4d658abde7badefc209646e384803b6eb4305c55e49c"
+      },
+      "ca-ES": {
+        "description": "Usuari: Joseph Joestar\n\nEnfiladisses porpres: Es manifesta com un conjunt de tiges o enfiladisses espinoses de color porpra que broten de les mans d'en Joseph.\n\nConnexió amb l'Hamon: La seva forma de planta reflecteix l'energia vital de l'Hamon que en Joseph va dominar en la seva joventut.\n\nInspiració del tarot: Representa la carta del tarot L'Ermità (The Hermit), que simbolitza la introspecció i la meditació.",
+        "skills": [
+          "Psicografia (Endevinació Parcial)",
+          "Fuet d'espines",
+          "Induir hamon",
+          "Balancejar-se com Spiderman"
+        ],
+        "source_hash": "96a9a5d66984d9a07b4a4d658abde7badefc209646e384803b6eb4305c55e49c"
+      }
+    },
+    "Magician’s Red": {
+      "en-GB": {
+        "description": "User: Mohammed Avdol\n\nMain power: Generates and manipulates extremely powerful fire that obeys Avdol's will completely.\n\nAppearance: A humanoid spirit with a bird's head.\n\nReference: Represents the tarot card \"The Magician\"",
+        "skills": [
+          "Crossfire Hurricane",
+          "Crossfire Special (surround enemy)",
+          "Redirect fire trajectory",
+          "Red Bind (whip)"
+        ],
+        "source_hash": "5b625dfc34c8ef1ff51d0d3a48dd13934de5e5c451a4a83224548046ac481a19"
+      },
+      "ca-ES": {
+        "description": "Usuari: Mohammed Avdol\n\nPoder principal: Genera i manipula un foc molt potent que obeeix completament la voluntat d'Avdol.\n\nAparença: És un esperit humanoide amb cap d'au.\n\nReferència: Representa la carta de tarot \"El Mag\"",
+        "skills": [
+          "Crossfire Hurricane",
+          "Crossfire Special (envoltar l'enemic)",
+          "Canviar la trajectòria del foc",
+          "Red Bind (fuet)"
+        ],
+        "source_hash": "5b625dfc34c8ef1ff51d0d3a48dd13934de5e5c451a4a83224548046ac481a19"
+      }
+    },
+    "Star Platinum": {
+      "en-GB": {
+        "description": "User: Jotaro Kujo\n\nStar Platinum is a short-range Stand, with a basic range of only 2 metres from its user's body, but with incredible strength, speed and precision.",
+        "skills": [
+          "Super Strength",
+          "Super Speed",
+          "Self-Preservation",
+          "Precision",
+          "Enhanced Vision",
+          "Star Finger"
+        ],
+        "source_hash": "dfc66eb260af114aca3e829a6ff226d0d76d25f2eaa8b43d06ed4817af95df1f"
+      },
+      "ca-ES": {
+        "description": "Usuari: Jotaro Kujo\n\nStar Platinum és un Stand de curt abast, amb un abast bàsic de només 2 metres del cos del seu usuari, però amb una força, velocitat i precisió increïbles.",
+        "skills": [
+          "Súper Força",
+          "Súper Velocitat",
+          "Autoconservació",
+          "Precisió",
+          "Visió Millorada",
+          "Star Finger"
+        ],
+        "source_hash": "dfc66eb260af114aca3e829a6ff226d0d76d25f2eaa8b43d06ed4817af95df1f"
+      }
+    },
+    "Star Platinum: The World": {
+      "en-GB": {
+        "description": "User: Jotaro Kujo\n\nStar Platinum is a short-range Stand, with a basic range of only 2 metres from its user's body, but with incredible strength, speed and precision.\n\nTime Stop: Allows the user to freeze the flow of time for everyone except himself.\nTime limit: At his peak power (Stardust Crusaders), Jotaro can stop time for a maximum of 5 seconds.",
+        "skills": [
+          "Stop Time",
+          "Super Strength",
+          "Super Speed",
+          "Self-Preservation",
+          "Precision",
+          "Enhanced Vision",
+          "Star Finger"
+        ],
+        "source_hash": "0e0547529df9715bb95aedf69373ac6edf46713cea7416074301adadec5da9be"
+      },
+      "ca-ES": {
+        "description": "Usuari: Jotaro Kujo\n\nStar Platinum és un Stand de curt abast, amb un abast bàsic de només 2 metres del cos del seu usuari, però amb una força, velocitat i precisió increïbles.\n\nAturada del temps: Permet a l'usuari congelar el flux del temps per a tothom excepte per a ell mateix.\nLímit de temps: En la seva màxima potència (Stardust Crusaders), en Jotaro pot aturar el temps durant un màxim de 5 segons.",
+        "skills": [
+          "Aturar el temps",
+          "Súper Força",
+          "Súper Velocitat",
+          "Autoconservació",
+          "Precisió",
+          "Visió Millorada",
+          "Star Finger"
+        ],
+        "source_hash": "0e0547529df9715bb95aedf69373ac6edf46713cea7416074301adadec5da9be"
+      }
+    }
+  },
+  "devil_fruits": {
+    "Awa Awa no mi": {
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari produir i controlar una escuma i bombolles de sabó denses des del seu cos, capaces de netejar la brutícia, les toxines i fins i tot la força física i l'energia.",
+        "skills": [
+          "Transformació \"Suau-Suau\" (Neteja de Poder): L'escuma de sabó pot allisar les asprors del cos d'una persona, deixant la seva pell completament polida, lliscosa i suau. Això elimina tota la fricció i la força muscular, deixant les víctimes incapaces de mantenir-se dretes, empunyar armes o lluitar amb eficàcia.",
+          "Barreres i Construccions de Sabó: L'usuari pot transformar bombolles en murs defensius, escuts d'escuma densa (Soap Sheep) o projectils ofensius de bombolles per atacar objectius a distància.",
+          "Utilitat de Neteja: L'escuma pot netejar ràpidament la brutícia, el verí o substàncies nocives de superfícies o persones."
+        ],
+        "source_hash": "de88f84b35c9ea05af4282d148ffe81f0e9f60e2669e13308762e6ff2cb96b6f"
+      }
+    },
+    "Baku Baku no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario comer absolutamente cualquier cosa —incluyendo material orgánico, metal, armas, madera, veneno e incluso seres vivos o a sí mismo— y digerirlo por completo sin sufrir daño alguno.",
+        "skills": [
+          "Integración de Armas: Si el usuario come cañones, pistolas o espadas, sus extremidades y torso pueden transformarse en artillería y armas blancas funcionales.",
+          "Asimilación de Materiales: Comer minerales o metales raros le permite sintetizar materiales completamente nuevos.",
+          "Autoconsumo (Adelgazamiento): El usuario puede comerse su propio cuerpo para remodelar su complexión física, como consumir el exceso de grasa para volverse delgado y ágil.",
+          "Fusión Humana: El usuario puede tragarse a dos o más personas simultáneamente y combinarlas en un único luchador fusionado dentro de su estómago."
+        ],
+        "source_hash": "51aac53537f5f49d2bdba6528c9b2fe99da4f12e9fe1dd4517bbefa26d4dd34c"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari menjar absolutament qualsevol cosa —incloent-hi material orgànic, metall, armes, fusta, verí i fins i tot éssers vius o a si mateix— i digerir-ho completament sense patir cap dany.",
+        "skills": [
+          "Integració d'Armes: Si l'usuari menja canons, pistoles o espases, les seves extremitats i el tors es poden transformar en artilleria i armes blanques funcionals.",
+          "Assimilació de Materials: Menjar minerals o metalls rars li permet sintetitzar materials completament nous.",
+          "Autoconsum (Aprimament): L'usuari es pot menjar el seu propi cos per remodelar la seva complexió física, com ara consumir l'excés de greix per tornar-se prim i àgil.",
+          "Fusió Humana: L'usuari pot engolir dues o més persones simultàniament i combinar-les en un únic lluitador fusionat dins del seu estómac."
+        ],
+        "source_hash": "51aac53537f5f49d2bdba6528c9b2fe99da4f12e9fe1dd4517bbefa26d4dd34c"
+      }
+    },
+    "Bara Bara no mi": {
+      "es-ES": {
+        "description": "Esta fruta otorga al usuario la capacidad de dividir su cuerpo en múltiples piezas y controlarlas mientras levitan por el aire, convirtiéndolo efectivamente en un \"Humano Corte-Corte\".",
+        "skills": [
+          "Inmunidad a Ataques Cortantes: El usuario es completamente inmune a ser cortado, rebanado o troceado. Cualquier ataque cortante (incluso el de espadachines de talla mundial) simplemente divide el cuerpo del usuario en piezas sin causarle ningún daño.",
+          "División Corporal y Levitación: El usuario puede desprender a voluntad extremidades o partes del cuerpo y hacerlas volar libremente dentro de un radio específico alrededor de sus pies.",
+          "Sorpresa y Evasión: Dividir partes del cuerpo permite al usuario golpear a los enemigos desde ángulos inesperados, desprender las manos para agarrar objetivos lejanos, o esquivar golpes físicos entrantes separando su cuerpo justo antes del impacto."
+        ],
+        "source_hash": "47b0b9956acb8c15f5b5424942013bc4e2b5281285cffd477319825295d770ca"
+      },
+      "ca-ES": {
+        "description": "Aquesta fruita atorga a l'usuari la capacitat de dividir el seu cos en múltiples peces i controlar-les mentre leviten per l'aire, convertint-lo efectivament en un \"Humà Talla-Talla\".",
+        "skills": [
+          "Immunitat als Atacs Tallants: L'usuari és completament immune a ser tallat, trossejat o esbocinat. Qualsevol atac tallant (fins i tot el d'espadatxins de categoria mundial) simplement divideix el cos de l'usuari en peces sense causar-li cap dany.",
+          "Divisió Corporal i Levitació: L'usuari pot desprendre's a voluntat d'extremitats o parts del cos i fer-les volar lliurement dins d'un radi específic al voltant dels seus peus.",
+          "Sorpresa i Evasió: Dividir parts del cos permet a l'usuari colpejar els enemics des d'angles inesperats, desprendre les mans per agafar objectius llunyans, o esquivar cops físics entrants separant el seu cos just abans de l'impacte."
+        ],
+        "source_hash": "47b0b9956acb8c15f5b5424942013bc4e2b5281285cffd477319825295d770ca"
+      }
+    },
+    "Batto Batto no mi: Model Vampire": {
+      "es-ES": {
+        "description": "Permite al usuario hacer brotar grandes alas similares a las de un murciélago y colmillos afilados, otorgándole un vuelo silencioso y la capacidad de sumir instantáneamente a sus objetivos en un sueño profundo mordiéndoles el cuello y bebiendo su sangre.",
+        "skills": [
+          "Sedación por Succión de Sangre: La maniobra de combate principal de la usuaria consiste en morder a los objetivos en el cuello con sus colmillos retráctiles. En lugar de limitarse a infligir daño físico, beber la sangre de la víctima la deja inconsciente casi al instante, sorteando las defensas físicas y las armaduras habituales.",
+          "Vuelo Alado y Sigilo: Su transformación invoca unas grandes alas membranosas y oscuras desde su espalda sin requerir una alteración corporal completa, otorgándole un movimiento aéreo silencioso y veloz, además de la capacidad de posarse."
+        ],
+        "source_hash": "738d27c1888be878067736277c77e5370e685fb3144fddc0853e261b718f92d2"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuària fer brotar unes grans ales semblants a les d'un ratpenat i ullals esmolats, atorgant-li un vol silenciós i la capacitat de submergir instantàniament els seus objectius en un son profund mossegant-los el coll i bevent-ne la sang.",
+        "skills": [
+          "Sedació per Succió de Sang: La maniobra de combat principal de la usuària consisteix a mossegar els objectius al coll amb els seus ullals retràctils. En comptes de limitar-se a infligir dany físic, beure la sang de la víctima la deixa inconscient gairebé a l'instant, esquivant les defenses físiques i les armadures habituals.",
+          "Vol Alat i Sigil: La seva transformació invoca unes grans ales membranoses i fosques des de la seva esquena sense requerir una alteració corporal completa, atorgant-li un moviment aeri silenciós i veloç, a més de la capacitat de posar-se."
+        ],
+        "source_hash": "738d27c1888be878067736277c77e5370e685fb3144fddc0853e261b718f92d2"
+      }
+    },
+    "Bomu Bomu no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario hacer estallar cualquier parte de su cuerpo a voluntad sin sufrir ningún daño por sus propias detonaciones.",
+        "skills": [
+          "Arsenal Explosivo: El usuario puede detonar cualquier parte de su cuerpo —desde extremidades hasta el aliento, el sudor, el cabello e incluso los mocos secos— convirtiendo cada parte de sí mismo en un proyectil o un arma.",
+          "Inmunidad a las Explosiones: Quien come la fruta se vuelve completamente inmune a todas las explosiones externas, deflagraciones y ondas de choque.",
+          "Ataques Cuerpo a Cuerpo Mejorados: Al provocar explosiones localizadas en el momento del impacto, el usuario puede aumentar drásticamente la fuerza de sus golpes físicos (como puñetazos o patadas explosivas)."
+        ],
+        "source_hash": "d72043c35d8ddf34cb2e5218509e68d4ec1ffc0db03ba6c56e7112073d72de09"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari fer esclatar qualsevol part del seu cos a voluntat sense patir cap dany per les seves pròpies detonacions.",
+        "skills": [
+          "Arsenal Explosiu: L'usuari pot detonar qualsevol part del seu cos —des d'extremitats fins a l'alè, la suor, els cabells i fins i tot els mocs secs— convertint cada part de si mateix en un projectil o una arma.",
+          "Immunitat a les Explosions: Qui menja la fruita esdevé completament immune a totes les explosions externes, deflagracions i ones expansives.",
+          "Atacs Cos a Cos Millorats: En provocar explosions localitzades en el moment de l'impacte, l'usuari pot augmentar dràsticament la força dels seus cops físics (com ara puntades o cops de puny explosius)."
+        ],
+        "source_hash": "d72043c35d8ddf34cb2e5218509e68d4ec1ffc0db03ba6c56e7112073d72de09"
+      }
+    },
+    "Doru Doru no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario producir y manipular grandes cantidades de cera de vela desde su cuerpo. Esta cera surge en forma líquida, puede moldearse en cualquier forma y luego se endurece al instante.",
+        "skills": [
+          "Dureza Similar al Acero: Una vez que la cera se solidifica, se vuelve tan dura como el acero, lo que la hace útil tanto para defensas impenetrables como para armas afiladas y letales.",
+          "Artesanía Versátil: El usuario puede construir sobre la marcha una amplia variedad de objetos, incluyendo llaves, grilletes, armaduras de batalla gigantes, muros y hojas afiladas.",
+          "Creación de Fuego: El usuario puede prender fuego a la cera de su cabeza o a los objetos construidos, usando llamas abiertas para potenciar sus ataques o iluminar zonas oscuras."
+        ],
+        "source_hash": "bd2bf5031db3010946a6f41f201975ad70b2d98c6e1bc7d8427a16a68498a9a9"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari produir i manipular grans quantitats de cera de vela des del seu cos. Aquesta cera sorgeix en forma líquida, es pot modelar amb qualsevol forma i tot seguit s'endureix a l'instant.",
+        "skills": [
+          "Duresa Similar a l'Acer: Un cop la cera es solidifica, esdevé tan dura com l'acer, cosa que la fa útil tant per a defenses impenetrables com per a armes esmolades i letals.",
+          "Artesania Versàtil: L'usuari pot construir sobre la marxa una àmplia varietat d'objectes, incloent-hi claus, grillons, armadures de batalla gegants, murs i fulles esmolades.",
+          "Creació de Foc: L'usuari pot encendre la cera del seu cap o els objectes construïts, fent servir flames obertes per potenciar els atacs o il·luminar zones fosques."
+        ],
+        "source_hash": "bd2bf5031db3010946a6f41f201975ad70b2d98c6e1bc7d8427a16a68498a9a9"
+      }
+    },
+    "Fude Fude no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario materializar tinta en materia física real, convirtiendo cualquier cosa que dibuje en entidades u objetos vivos y funcionales.",
+        "skills": [
+          "Materialización Artística: Cualquier cosa pintada por el usuario —ya sean animales, armas, comida o herramientas— salta de la superficie del dibujo como una creación física con funcionalidad real (por ejemplo, los pájaros dibujados pueden volar, la comida dibujada puede comerse).",
+          "Autoclonación y Señuelos: El usuario puede pintar clones perfectos, a tamaño real, de sí mismo o de otras personas, que se mueven, hablan y actúan de forma independiente. Estos clones son prácticamente indistinguibles de la persona real hasta que sufren daños graves.",
+          "Disfraz y Cambio de Apariencia: El usuario puede pintar rasgos faciales realistas, armaduras o ropa directamente sobre sí mismo o sus aliados para crear disfraces convincentes.",
+          "Lluvia de Tinta y Ofensiva a Distancia (Nubes de Tinta): El usuario puede disparar chorros de tinta hacia el cielo para crear nubes de tormenta oscuras que hacen llover afiladas flechas de tinta en forma de aguja (Sumigumo) sobre una amplia área."
+        ],
+        "source_hash": "117964ecc805e37788dbc8d1e34d8d3628f0cddf5223ce4ae9e91b2df6760d15"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari materialitzar tinta en matèria física real, convertint qualsevol cosa que dibuixi en entitats o objectes vius i funcionals.",
+        "skills": [
+          "Materialització Artística: Qualsevol cosa pintada per l'usuari —ja siguin animals, armes, menjar o eines— salta de la superfície del dibuix com una creació física amb funcionalitat real (per exemple, els ocells dibuixats poden volar, el menjar dibuixat es pot menjar).",
+          "Autoclonació i Senyalets: L'usuari pot pintar clons perfectes, a mida real, de si mateix o d'altres persones, que es mouen, parlen i actuen de manera independent. Aquests clons són pràcticament indistingibles de la persona real fins que pateixen danys greus.",
+          "Disfressa i Canvi d'Aparença: L'usuari pot pintar trets facials realistes, armadures o roba directament sobre si mateix o els seus aliats per crear disfresses convincents.",
+          "Pluja de Tinta i Ofensiva a Distància (Núvols de Tinta): L'usuari pot disparar raigs de tinta cap al cel per crear núvols de tempesta foscos que fan ploure fletxes de tinta esmolades en forma d'agulla (Sumigumo) sobre una àmplia zona."
+        ],
+        "source_hash": "117964ecc805e37788dbc8d1e34d8d3628f0cddf5223ce4ae9e91b2df6760d15"
+      }
+    },
+    "Gasu Gasu no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en varios tipos de gases químicos y mezclas de vapor a voluntad.",
+        "skills": [
+          "Agotamiento de Oxígeno y Asfixia: Una de las técnicas pasivas más peligrosas de la fruta es Karakuni (Mundo Vacío). Caesar puede eliminar por completo el oxígeno dentro de un radio específico a su alrededor, provocando que cualquiera dentro del perímetro se asfixie y pierda el conocimiento en cuestión de segundos, sin importar su fuerza física o sus defensas.",
+          "Gas Venenoso: Emite toxinas nerviosas letales y nubes venenosas (Gastanet) que corroen los pulmones y la piel.",
+          "Gas Inflamable y Explosivo: Llena una zona con gas volátil y combustible, para luego prenderlo y provocar enormes explosiones termobáricas (Gastille).",
+          "Alucinógenos y Anestésicos: Produce gases que inducen sueño, desorientación o parálisis.",
+          "Intangibilidad y Vuelo: Como Logia gaseosa, los ataques físicos que no usan Haki atraviesan sin daño el cuerpo de nube de Caesar. Puede comprimir o expandir su forma gaseosa para volar por el cielo o colarse por pequeñas grietas, tuberías y cerraduras.",
+          "Absorción y Fusión de Gas: El usuario puede absorber nubes de gas externas para aumentar drásticamente su tamaño, masa y potencia."
+        ],
+        "source_hash": "90cbf6bd0aa982b347494b98286cd39135dee66620c2d43292c44706b854a265"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en diversos tipus de gasos químics i barreges de vapor a voluntat.",
+        "skills": [
+          "Esgotament d'Oxigen i Asfíxia: Una de les tècniques passives més perilloses de la fruita és Karakuni (Món Buit). En Caesar pot eliminar completament l'oxigen dins d'un radi específic al seu voltant, fent que qualsevol persona dins del perímetre s'asfixiï i perdi el coneixement en qüestió de segons, independentment de la seva força física o defenses.",
+          "Gas Verinós: Emet toxines nervioses letals i núvols verinosos (Gastanet) que corroeixen els pulmons i la pell.",
+          "Gas Inflamable i Explosiu: Omple una zona amb gas volàtil i combustible, per després encendre'l i provocar enormes explosions termobàriques (Gastille).",
+          "Al·lucinògens i Anestèsics: Produeix gasos que indueixen son, desorientació o paràlisi.",
+          "Intangibilitat i Vol: Com a Logia gasosa, els atacs físics que no fan servir Haki travessen sense dany el cos de núvol d'en Caesar. Pot comprimir o expandir la seva forma gasosa per volar pel cel o esmunyir-se per petites esquerdes, canonades i panys.",
+          "Absorció i Fusió de Gas: L'usuari pot absorbir núvols de gas externs per augmentar dràsticament la seva mida, massa i potència."
+        ],
+        "source_hash": "90cbf6bd0aa982b347494b98286cd39135dee66620c2d43292c44706b854a265"
+      }
+    },
+    "Gomu Gomu no mi": {
+      "es-ES": {
+        "description": "La fruta convierte permanentemente el cuerpo del usuario en goma, permitiendo que cada parte de su estructura física —músculos, huesos, piel y órganos internos— se estire y se comprima a voluntad.",
+        "skills": [
+          "Inmunidad a la Fuerza Contundente: Los puñetazos, patadas, caídas e impactos no cortantes convencionales apenas causan daño, ya que el cuerpo de goma absorbe sin sufrir las ondas de choque físicas y las hace rebotar.",
+          "Aislamiento Eléctrico: Como la goma es un aislante natural, el usuario es completamente inmune a los ataques eléctricos y a los rayos.",
+          "Impulso Cinético (Gears 2–4): El usuario puede estirar sus extremidades hacia atrás para lanzar ataques a distancia de gran velocidad (Gum-Gum Pistol), bombear sangre a alta presión para aumentar la velocidad (Gear 2nd), inflar los huesos para asestar golpes aplastantes (Gear 3rd), o comprimir el tejido muscular con Haki para lograr una movilidad y una fuerza explosivas (Gear 4th)."
+        ],
+        "source_hash": "7b8caf32abd23c2ad7494db45a6b615e0395d8db5ed24ccbc3cf2bed872068a3"
+      },
+      "ca-ES": {
+        "description": "La fruita converteix permanentment el cos de l'usuari en goma, permetent que cada part de la seva estructura física —músculs, ossos, pell i òrgans interns— s'estiri i es comprimeixi a voluntat.",
+        "skills": [
+          "Immunitat a la Força Contundent: Els cops de puny, puntades, caigudes i impactes no tallants convencionals amb prou feines causen dany, ja que el cos de goma absorbeix sense patir les ones de xoc físiques i les fa rebotar.",
+          "Aïllament Elèctric: Com que la goma és un aïllant natural, l'usuari és completament immune als atacs elèctrics i als llamps.",
+          "Impuls Cinètic (Gears 2–4): L'usuari pot estirar les seves extremitats cap enrere per llançar atacs a distància de gran velocitat (Gum-Gum Pistol), bombejar sang a alta pressió per augmentar la velocitat (Gear 2nd), inflar els ossos per assestar cops aixafadors (Gear 3rd), o comprimir el teixit muscular amb Haki per aconseguir una mobilitat i una força explosives (Gear 4th)."
+        ],
+        "source_hash": "7b8caf32abd23c2ad7494db45a6b615e0395d8db5ed24ccbc3cf2bed872068a3"
+      }
+    },
+    "Goro Goro no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en electricidad y rayos a voluntad.",
+        "skills": [
+          "Ataques Dirigidos: Invocar enormes rayos desde el cielo (El Thor).",
+          "Manifestaciones Bestiales: Dar forma a la electricidad para crear halcones, dragones o lobos gigantes (Hino, Vari, Mamu).",
+          "Destrucción Masiva: Combinar sus poderes con nubes de tormenta flotantes para arrasar una isla entera (Raigo).",
+          "Electro-Radar: Al combinar sus poderes eléctricos con el Kenbunshoku Haki (Haki de la Observación / Mantra), Enel puede captar ondas electromagnéticas que viajan por el aire. Esto le permite escuchar conversaciones y localizar posiciones en toda una isla.",
+          "Desfibrilación / Autorresucitación: Si su corazón deja de latir por daño físico letal, el usuario puede reiniciarlo automáticamente aplicándose una descarga que lo devuelve a la vida."
+        ],
+        "source_hash": "f95eb2b24ed5533e0562308a431392177a8a4a4cece66ca3377862337a099f09"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en electricitat i llamps a voluntat.",
+        "skills": [
+          "Atacs Dirigits: Invocar enormes llamps des del cel (El Thor).",
+          "Manifestacions Bestials: Donar forma a l'electricitat per crear falcons, dracs o llops gegants (Hino, Vari, Mamu).",
+          "Destrucció Massiva: Combinar els seus poders amb núvols de tempesta flotants per arrasar una illa sencera (Raigo).",
+          "Electro-Radar: En combinar els seus poders elèctrics amb el Kenbunshoku Haki (Haki de l'Observació / Mantra), Enel pot captar ones electromagnètiques que viatgen per l'aire. Això li permet escoltar converses i localitzar posicions en tota una illa.",
+          "Desfibril·lació / Autoressurrecció: Si el seu cor deixa de bategar per un dany físic letal, l'usuari pot reiniciar-lo automàticament aplicant-se una descàrrega que el torna a la vida."
+        ],
+        "source_hash": "f95eb2b24ed5533e0562308a431392177a8a4a4cece66ca3377862337a099f09"
+      }
+    },
+    "Gura Gura no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario generar potentes vibraciones y ondas de choque capaces de propagarse por cualquier medio, incluyendo la tierra, el agua e incluso el propio aire.",
+        "skills": [
+          "Fractura del Aire y Terremotos: El usuario puede invocar ondas de choque tan intensas que agrietan físicamente el aire a su alrededor, provocando enormes temblores sísmicos en el suelo capaces de derrumbar paisajes, fortalezas e islas enteras.",
+          "Generación de Tsunamis (Shima Yurashi): Liberando ondas sísmicas bajo el agua o literalmente agarrando e inclinando el mar/entorno, el usuario puede desencadenar tsunamis colosales capaces de engullir flotas enteras y bases navales.",
+          "Infusión Vibracional (Kabuto Wari): El usuario puede concentrar burbujas de onda de choque localizadas alrededor de sus puños, pies o armas (como el Murakumogiri de Barbablanca). Estos golpes concentrados infligen un daño contundente catastrófico a quemarropa que destroza armaduras y sortea las defensas externas para dañar los órganos internos."
+        ],
+        "source_hash": "c7ddb468345e5bbf594640a3260ad63c4a779b7afe044af201eab963466eca62"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari generar potents vibracions i ones de xoc capaces de propagar-se per qualsevol medi, incloent la terra, l'aigua i fins i tot el mateix aire.",
+        "skills": [
+          "Fractura de l'Aire i Terratrèmols: L'usuari pot invocar ones de xoc tan intenses que esquerden físicament l'aire al seu voltant, provocant enormes tremolors sísmiques al terra capaces d'ensorrar paisatges, fortaleses i illes senceres.",
+          "Generació de Tsunamis (Shima Yurashi): Alliberant ones sísmiques sota l'aigua o literalment agafant i inclinant el mar/entorn, l'usuari pot desencadenar tsunamis colossals capaços d'engolir flotes senceres i bases navals.",
+          "Infusió Vibracional (Kabuto Wari): L'usuari pot concentrar bombolles d'ona de xoc localitzades al voltant dels seus punys, peus o armes (com el Murakumogiri de Barbablanca). Aquests cops concentrats infligeixen un dany contundent catastròfic a boca de canó que destrossa armadures i esquiva les defenses externes per danyar els òrgans interns."
+        ],
+        "source_hash": "c7ddb468345e5bbf594640a3260ad63c4a779b7afe044af201eab963466eca62"
+      }
+    },
+    "Hana Hana no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario hacer brotar copias de cualquier parte del cuerpo —normalmente manos y ojos— desde cualquier superficie dentro de su campo de visión, incluyendo suelo firme, paredes, objetos e incluso los cuerpos de otras personas vivas.",
+        "skills": [
+          "Ensamblaje Multiextremidades: El usuario puede hacer brotar docenas, cientos o incluso miles de extremidades a la vez. Puede combinarlas para crear construcciones más grandes, como manos gigantes, piernas, alas para vuelos cortos o clones de cuerpo completo.",
+          "Agarre y Sometimiento a Larga Distancia: Destaca por incapacitar a los oponentes al instante desde la distancia, haciendo brotar brazos directamente sobre sus cuerpos para dislocarles las articulaciones, estrangularlos o desarmarlos.",
+          "Recopilación de Información: Al hacer brotar ojos u oídos en lugares lejanos u ocultos, el usuario puede espiar conversaciones y explorar zonas con seguridad.",
+          "Vuelo Temporal: Al hacer brotar cientos de manos en su espalda dispuestas como grandes alas, el usuario puede planear y volar durante unos 5 segundos. Ideal para escapar de caídas altas o cruzar huecos peligrosos.",
+          "Redes de Seguridad: Hace brotar brazos entrelazados para atrapar con seguridad a aliados que caen.",
+          "Escaleras y Cuerdas: Forma cadenas humanas o escaleras con extremidades para que los aliados puedan trepar."
+        ],
+        "source_hash": "bb299bea2d3ab9ecc2c49d2120ca8a934f7dd99695f1b552c9eb351f2a0cad42"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari fer brotar còpies de qualsevol part del cos —normalment mans i ulls— des de qualsevol superfície dins del seu camp de visió, incloent terra ferm, parets, objectes i fins i tot els cossos d'altres persones vives.",
+        "skills": [
+          "Muntatge Multiextremitats: L'usuari pot fer brotar dotzenes, centenars o fins i tot milers d'extremitats alhora. Pot combinar-les per crear construccions més grans, com mans gegants, cames, ales per a vols curts o clons de cos sencer.",
+          "Agafament i Submissió a Llarga Distància: Destaca per incapacitar els oponents a l'instant des de la distància, fent brotar braços directament sobre els seus cossos per dislocar-los les articulacions, escanyar-los o desarmar-los.",
+          "Recopilació d'Informació: En fer brotar ulls o orelles en llocs llunyans o amagats, l'usuari pot espiar converses i explorar zones amb seguretat.",
+          "Vol Temporal: En fer brotar centenars de mans a l'esquena disposades com grans ales, l'usuari pot planejar i volar durant uns 5 segons. Ideal per escapar de caigudes altes o creuar buits perillosos.",
+          "Xarxes de Seguretat: Fa brotar braços entrellaçats per atrapar amb seguretat aliats que cauen.",
+          "Escales i Cordes: Forma cadenes humanes o escales amb extremitats perquè els aliats hi puguin enfilar-se."
+        ],
+        "source_hash": "bb299bea2d3ab9ecc2c49d2120ca8a934f7dd99695f1b552c9eb351f2a0cad42"
+      }
+    },
+    "Hebi Hebi no mi: Model Anaconda": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse a voluntad en un híbrido de anaconda o en una anaconda gigante completa, obteniendo una inmensa fuerza de constricción, flexibilidad y fisiología serpentina.",
+        "skills": [
+          "Fuerza de Constricción Aplastante: Como anaconda, la fruta enfatiza la pura masa muscular y la fuerza de sujeción en lugar del veneno. La usuaria puede enroscar su enorme cuerpo serpentino alrededor de sus objetivos para triturarles los huesos, la armadura y los órganos internos.",
+          "Construcciones de Cabello Serpiente (Hebidance): Al combinar su transformación Zoan con una técnica física de alto nivel, Sandersonia puede convertir su cabello en grandes cabezas de serpiente vivas (Hebidance / Danza de la Serpiente). Estas serpientes de cabello pueden golpear objetivos, morder o inmovilizar enemigos de forma independiente.",
+          "Flexibilidad Evasiva: Su cola y su cuerpo pueden doblarse, retorcerse y deslizarse rápidamente por el campo de batalla para esquivar los golpes entrantes."
+        ],
+        "source_hash": "de1047a26741fa1fe504716e88f7837757506e0c38c4f493523debece892c716"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se a voluntat en un híbrid d'anaconda o en una anaconda gegant completa, obtenint una immensa força de constricció, flexibilitat i fisiologia serpentina.",
+        "skills": [
+          "Força de Constricció Aixafadora: Com a anaconda, la fruita emfatitza la pura massa muscular i la força de subjecció en lloc del verí. L'usuària pot enroscar el seu enorme cos serpentí al voltant dels objectius per esmicolar-los els ossos, l'armadura i els òrgans interns.",
+          "Construccions de Cabell Serp (Hebidance): En combinar la seva transformació Zoan amb una tècnica física d'alt nivell, Sandersonia pot convertir els seus cabells en grans caps de serp vius (Hebidance / Dansa de la Serp). Aquestes serps de cabell poden colpejar objectius, mossegar o immobilitzar enemics de manera independent.",
+          "Flexibilitat Evasiva: La seva cua i el seu cos es poden doblegar, retòrcer i lliscar ràpidament pel camp de batalla per esquivar els cops entrants."
+        ],
+        "source_hash": "de1047a26741fa1fe504716e88f7837757506e0c38c4f493523debece892c716"
+      }
+    },
+    "Hebi Hebi no mi: Model King Cobra": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse a voluntad en una cobra real completa o en un híbrido humano-cobra real.",
+        "skills": [
+          "Escupitajo de Veneno Corrosivo: Puede escupir grandes chorros de veneno mortal (Escupitajo de Serpiente / Veneno Pesado). Este veneno es lo bastante potente como para derretir piedra, acero y armadura al contacto.",
+          "Percepción Térmica y Flexibilidad: Le otorga una percepción del calor similar a la de las serpientes para rastrear objetivos, además de una flexibilidad corporal extrema.",
+          "Generación de Fuego: Al combinar el control de su cuerpo con técnicas de serpiente, la usuaria puede prender fuego a su cuerpo o cabello (técnicas Salamandra).",
+          "Cola Prensil: En su forma híbrida, su cola funciona como un poderoso látigo o herramienta de constricción capaz de triturar huesos."
+        ],
+        "source_hash": "e4749e645721e8b88d07230560be4e85fbf4680c904ee63faaa0ecdada3770bc"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se a voluntat en una cobra reial completa o en un híbrid humà-cobra reial.",
+        "skills": [
+          "Escopinada de Verí Corrosiu: Pot escopir grans dolls de verí mortal (Escopinada de Serp / Verí Pesat). Aquest verí és prou potent com per fondre pedra, acer i armadura en contacte.",
+          "Percepció Tèrmica i Flexibilitat: Li atorga una percepció de la calor semblant a la de les serps per rastrejar objectius, a més d'una flexibilitat corporal extrema.",
+          "Generació de Foc: En combinar el control del seu cos amb tècniques de serp, l'usuària pot encendre el seu cos o cabell en flames (tècniques Salamandra).",
+          "Cua Prènsil: En la seva forma híbrida, la seva cua funciona com un potent làtig o eina de constricció capaç de triturar ossos."
+        ],
+        "source_hash": "e4749e645721e8b88d07230560be4e85fbf4680c904ee63faaa0ecdada3770bc"
+      }
+    },
+    "Hebi Hebi no mi: Model Yamata no Orochi": {
+      "es-ES": {
+        "description": "Basada en la legendaria serpiente-dragón de ocho cabezas de la mitología japonesa, esta fruta otorga al usuario la capacidad de transformarse en una serpiente masiva de ocho cabezas o en una forma híbrida de ocho cabezas.",
+        "skills": [
+          "Forma Bestial (Yamata no Orochi Completo): Se transforma en una serpiente imponente y multicéfala con ocho largos cuellos, colmillos afilados y escamas de aspecto dracónico.",
+          "Forma Híbrida: La parte inferior del cuerpo o el torso del usuario hace brotar múltiples cuellos y cabezas de serpiente largas, mientras conserva extremidades humanoides para el combate cuerpo a cuerpo.",
+          "Conciencia Independiente de las Cabezas: Cada una de las ocho cabezas puede actuar, morder y hablar de forma independiente, permitiendo al usuario ver ángulos circundantes y atacar a varios objetivos simultáneamente.",
+          "Supervivencia a la Decapitación: Al tener ocho cabezas distintas, el usuario puede sobrevivir a una decapitación. Una sola decapitación solo corta una de las ocho cabezas, dejando con vida al resto de cabezas y al usuario.",
+          "Ocho Oportunidades Extra: Para matar permanentemente al usuario, los enemigos deben cortar las ocho cabezas una por una. Durante la Incursión en Onigashima, Orochi sobrevivió a múltiples decapitaciones fatales (a manos de Kaido y los Akazaya Nueve) antes de que finalmente le cortaran su última cabeza."
+        ],
+        "source_hash": "928fe967c000b9e10700b012216cd92626519a58f89908a3458c168f7c75cbab"
+      },
+      "ca-ES": {
+        "description": "Basada en la llegendària serp-drac de vuit caps de la mitologia japonesa, aquesta fruita atorga a l'usuari la capacitat de transformar-se en una serp massiva de vuit caps o en una forma híbrida de vuit caps.",
+        "skills": [
+          "Forma Bestial (Yamata no Orochi Complet): Es transforma en una serp imponent i multicèfala amb vuit colls llargs, ullals esmolats i escates d'aspecte dracònic.",
+          "Forma Híbrida: La part inferior del cos o el tors de l'usuari fa brotar múltiples colls i caps de serp llargs, mentre conserva extremitats humanoides per al combat cos a cos.",
+          "Consciència Independent dels Caps: Cadascun dels vuit caps pot actuar, mossegar i parlar de manera independent, la qual cosa permet a l'usuari veure angles del voltant i atacar diversos objectius simultàniament.",
+          "Supervivència a la Decapitació: En tenir vuit caps diferenciats, l'usuari pot sobreviure a una decapitació. Una sola decapitació només talla un dels vuit caps, deixant amb vida la resta de caps i l'usuari.",
+          "Vuit Oportunitats Extra: Per matar permanentment l'usuari, els enemics han de tallar els vuit caps un per un. Durant la Incursió a Onigashima, Orochi va sobreviure a múltiples decapitacions fatals (a mans de Kaido i els Akazaya Nou) abans que finalment li tallessin l'últim cap."
+        ],
+        "source_hash": "928fe967c000b9e10700b012216cd92626519a58f89908a3458c168f7c75cbab"
+      }
+    },
+    "Hie Hie no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en hielo, además de congelar objetos y seres vivos al instante.",
+        "skills": [
+          "Objetivos Vivos: Los enemigos congelados por el usuario quedan suspendidos en animación; aunque frágiles, pueden sobrevivir si se los descongela con cuidado, pero destrozarlos mientras están congelados provoca la muerte.",
+          "Escala Masiva: El usuario puede congelar al instante enormes extensiones de mar abierto durante semanas, permitiendo que la gente camine sobre ellas o que él mismo circule directamente sobre el mar en su bicicleta (el Carro de Aokiji).",
+          "Construcciones de Hielo: El usuario puede fabricar armas de hielo puro, como espadas (Sable de Hielo), tridentes (Bloque de Hielo: Pico de Faisán) o lanzas.",
+          "Sustitución Protésica: Tras perder su pierna izquierda en su duelo contra Akainu en Punk Hazard, Kuzan usa constantemente sus poderes de hielo para crear una pierna protésica plenamente funcional."
+        ],
+        "source_hash": "d0689a42eff2ce8fa1a6babc770fd8ae5169ebe7861261f070c4aee11ac58243"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en gel, a més de congelar objectes i éssers vius a l'instant.",
+        "skills": [
+          "Objectius Vius: Els enemics congelats per l'usuari queden suspesos en animació; encara que fràgils, poden sobreviure si es descongelen amb cura, però esmicolar-los mentre estan congelats provoca la mort.",
+          "Escala Massiva: L'usuari pot congelar a l'instant enormes extensions de mar obert durant setmanes, permetent que la gent hi camini a sobre o que ell mateix circuli directament sobre el mar amb la seva bicicleta (el Carro d'Aokiji).",
+          "Construccions de Gel: L'usuari pot fabricar armes de gel pur, com sabres (Sabre de Gel), tridents (Bloc de Gel: Bec de Faisà) o llances.",
+          "Substitució Protètica: Després de perdre la seva cama esquerra en el seu duel contra Akainu a Punk Hazard, Kuzan utilitza constantment els seus poders de gel per crear una cama protètica totalment funcional."
+        ],
+        "source_hash": "d0689a42eff2ce8fa1a6babc770fd8ae5169ebe7861261f070c4aee11ac58243"
+      }
+    },
+    "Hito Hito no mi": {
+      "es-ES": {
+        "description": "Su poder principal otorga a un animal o entidad no humana los rasgos, la forma física y la inteligencia de alto nivel de un ser humano. Si un humano comiera esta fruta, se volvería más «humano».",
+        "skills": [
+          "Heavy Point (Forma Humana): Una forma humanoide grande, de aspecto gorilesco, con una musculatura enorme, apta para levantar grandes pesos y para el combate cuerpo a cuerpo.",
+          "Brain Point (Forma Híbrida): Una forma pequeña, similar a una mascota, entre tanuki y reno, que maximiza las capacidades cognitivas, el enfoque médico y la estrategia de combate (Scope).",
+          "Walk Point (Forma Bestial): La forma original de reno de Chopper, ideal para desplazarse a alta velocidad y para rastrear por el olfato."
+        ],
+        "source_hash": "e1f02f33ce5c146bfe0d73dcc9b45650753fdea020c9fcf3f609049e32b2e8c0"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a un animal o entitat no humana els trets, la forma física i la intel·ligència d'alt nivell d'un ésser humà. Si un humà mengés aquesta fruita, es tornaria més «humà».",
+        "skills": [
+          "Heavy Point (Forma Humana): Una forma humanoide gran, d'aspecte goril·lesc, amb una musculatura enorme, apta per aixecar grans pesos i per al combat cos a cos.",
+          "Brain Point (Forma Híbrida): Una forma petita, semblant a una mascota, entre tanuki i ren, que maximitza les capacitats cognitives, l'enfocament mèdic i l'estratègia de combat (Scope).",
+          "Walk Point (Forma Bestial): La forma original de ren d'en Chopper, ideal per desplaçar-se a alta velocitat i per rastrejar per l'olfacte."
+        ],
+        "source_hash": "e1f02f33ce5c146bfe0d73dcc9b45650753fdea020c9fcf3f609049e32b2e8c0"
+      }
+    },
+    "Hito Hito no mi: Model Daibutsu": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un imponente Daibutsu (Gran Buda) dorado, con un inmenso poder físico y capacidad de generar ondas de choque.",
+        "skills": [
+          "Transformación Colosal Dorada: Al transformarse, el usuario se convierte en una entidad gigantesca con forma de estatua de oro reluciente. En esta forma, el tamaño, la masa muscular y la resistencia del usuario aumentan exponencialmente, permitiéndole soportar artillería pesada y golpes físicos directos de luchadores de primer nivel sin inmutarse.",
+          "Daño Masivo en Área: Un solo empujón con la palma libera una onda expansiva comprimida capaz de rivalizar fácilmente con el poder destructivo de los temblores de la Gura Gura no Mi de Barbablanca."
+        ],
+        "source_hash": "1ffad8d5d29db7d9bd26b5036f51ee8e088e70fe9d750611a12ff52ecd798632"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un imponent Daibutsu (Gran Buda) daurat, amb un immens poder físic i capacitat de generar ones de xoc.",
+        "skills": [
+          "Transformació Col·lossal Daurada: En transformar-se, l'usuari es converteix en una entitat gegantina amb forma d'estàtua d'or resplendent. En aquesta forma, la mida, la massa muscular i la resistència de l'usuari augmenten exponencialment, permetent-li suportar artilleria pesada i cops físics directes de lluitadors de primer nivell sense immutar-se.",
+          "Dany Massiu en Àrea: Un sol cop de palmell allibera una ona expansiva comprimida capaç de rivalitzar fàcilment amb el poder destructiu dels tremolors de la Gura Gura no Mi de Barbablanca."
+        ],
+        "source_hash": "1ffad8d5d29db7d9bd26b5036f51ee8e088e70fe9d750611a12ff52ecd798632"
+      }
+    },
+    "Hito Hito no mi: Model Nika": {
+      "es-ES": {
+        "description": "La fruta encarna al legendario «Dios Sol» Nika, una figura venerada en la antigüedad como un guerrero de la liberación que trajo sonrisas, alegría y libertad a esclavos y cautivos.",
+        "skills": [
+          "Clasificación Zoan Mítica: A diferencia de las frutas Zoan estándar, que convierten al usuario en un animal real, esta fruta le permite transformarse en una figura legendaria de aspecto divino con un cuerpo físico similar al de la goma.",
+          "Fisiología de Goma: Los puñetazos, balas y caídas comunes rebotan sin causar daño.",
+          "Compresibilidad Cinética: Al estirar y contraer bruscamente sus extremidades, el usuario genera una velocidad y una fuerza inmensas.",
+          "Libertad «Ridícula»: Descrita como el poder más ridículo del mundo, permite al usuario estirar, manipular y moldear su cuerpo de formas surrealistas y caricaturescas, limitadas únicamente por su imaginación.",
+          "Engomado del Entorno: El usuario puede convertir el entorno no vivo —como tierra firme, paredes de hormigón, baldosas o incluso rayos— en goma elástica.",
+          "Distorsión Orgánica: El usuario puede aplicar propiedades de goma a oponentes vivos al contactar con ellos, haciendo que los ojos, las caras o los cuerpos de los enemigos se estiren de forma absurda al recibir un golpe.",
+          "Tambores de la Liberación: El latido del corazón del usuario cambia a un ritmo poderoso conocido como los Tambores de la Liberación, que restaura su energía, potencia su fuerza física y vuelve su cabello y su ropa completamente blancos, rodeados por una especie de faja de vapor parecida a un hagoromo de nubes."
+        ],
+        "source_hash": "271c6a76fdd9bc508ded7b1b92b35cab868539f30125508e498cb849dd91072d"
+      },
+      "ca-ES": {
+        "description": "La fruita encarna el llegendari «Déu Sol» Nika, una figura venerada en l'antiguitat com un guerrer de l'alliberament que va portar somriures, alegria i llibertat a esclaus i captius.",
+        "skills": [
+          "Classificació Zoan Mítica: A diferència de les fruites Zoan estàndard, que converteixen l'usuari en un animal real, aquesta fruita li permet transformar-se en una figura llegendària d'aspecte diví amb un cos físic semblant al del cautxú.",
+          "Fisiologia de Cautxú: Els cops de puny, les bales i les caigudes habituals reboten sense causar mal.",
+          "Compressibilitat Cinètica: En estirar i contreure bruscament les seves extremitats, l'usuari genera una velocitat i una força immenses.",
+          "Llibertat «Ridícula»: Descrita com el poder més ridícul del món, permet a l'usuari estirar, manipular i modelar el seu cos de formes surrealistes i caricaturesques, limitades únicament per la seva imaginació.",
+          "Engomament de l'Entorn: L'usuari pot convertir l'entorn no viu —com terra ferma, parets de formigó, rajoles o fins i tot llamps— en cautxú elàstic.",
+          "Distorsió Orgànica: L'usuari pot aplicar propietats de cautxú a oponents vius en contactar-hi, fent que els ulls, les cares o els cossos dels enemics s'estirin de manera absurda en rebre un cop.",
+          "Tambors de l'Alliberament: El batec del cor de l'usuari canvia a un ritme poderós conegut com els Tambors de l'Alliberament, que li restaura l'energia, li potencia la força física i li torna els cabells i la roba completament blancs, envoltats per una mena de faixa de vapor semblant a un hagoromo de núvols."
+        ],
+        "source_hash": "271c6a76fdd9bc508ded7b1b92b35cab868539f30125508e498cb849dd91072d"
+      }
+    },
+    "Hobi Hobi no mi": {
+      "es-ES": {
+        "description": "Su poder principal otorga al usuario la capacidad de convertir a personas vivas en juguetes con un simple contacto físico, borrando al mismo tiempo todo recuerdo público de la existencia de esa persona.",
+        "skills": [
+          "Transformación en Juguete: Al entrar en contacto físico con la mano del usuario, un objetivo vivo se transforma instantáneamente en un juguete viviente (como un cascanueces, un soldadito de plomo o un osito de peluche).",
+          "Esclavitud por Contrato: El usuario puede formar un contrato verbal vinculante con el juguete recién transformado, obligándolo a obedecer cualquier orden sin dudar, incluso en contra de su propia voluntad.",
+          "Juventud Perpetua: Comer la fruta detiene de inmediato y para siempre el envejecimiento físico del usuario, dejándolo congelado en la edad física que tenía al consumirla (Sugar dejó de envejecer a los 10 años)."
+        ],
+        "source_hash": "25beb20089e9842719df4648ea38ec79f0b6b380d3541028a350dd4ba7065796"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a l'usuari la capacitat de convertir persones vives en joguines amb un simple contacte físic, alhora que esborra tot record públic de l'existència d'aquesta persona.",
+        "skills": [
+          "Transformació en Joguina: En entrar en contacte físic amb la mà de l'usuari, un objectiu viu es transforma instantàniament en una joguina vivent (com un trencanous, un soldadet de plom o un osset de peluix).",
+          "Esclavitud per Contracte: L'usuari pot formar un contracte verbal vinculant amb la joguina acabada de transformar, obligant-la a obeir qualsevol ordre sense dubtar, fins i tot contra la seva pròpia voluntat.",
+          "Joventut Perpètua: Menjar la fruita atura de seguida i per sempre l'envelliment físic de l'usuari, deixant-lo congelat en l'edat física que tenia en consumir-la (Sugar va deixar d'envellir als 10 anys)."
+        ],
+        "source_hash": "25beb20089e9842719df4648ea38ec79f0b6b380d3541028a350dd4ba7065796"
+      }
+    },
+    "Horo Horo no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario crear y controlar fantasmas (hollows) con una variedad de efectos únicos, tanto destructivos como alteradores del estado de ánimo.",
+        "skills": [
+          "Hollows Negativos (Drenaje de Voluntad): El usuario puede enviar figuras fantasmales que atraviesan directamente los cuerpos de los oponentes. Cualquiera que sea tocado por estos fantasmas se ve abrumado al instante por una depresión severa, autodesprecio y pérdida de la moral, cayendo de rodillas y perdiendo todas las ganas de luchar.",
+          "Hollows Explosivos (Mini-Hollows y Hollows Especiales): El usuario puede generar fantasmas diminutos o enormes que se adhieren a enemigos u objetos y detonan a su orden, causando explosiones conmocionadoras de gran impacto.",
+          "Proyección Astral: El usuario puede separar su alma de su cuerpo físico para formar una copia espectral e intangible. En esta forma, puede volar a través de paredes, cambiar de tamaño, comunicarse y permanecer inmune a los ataques físicos."
+        ],
+        "source_hash": "932293b9d759081b906f9c28d026dbc8c7c6957539ef87de5d81961c18ef5927"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari crear i controlar fantasmes (hollows) amb una varietat d'efectes únics, tant destructius com alteradors de l'estat d'ànim.",
+        "skills": [
+          "Hollows Negatius (Drenatge de Voluntat): L'usuari pot enviar figures fantasmals que travessen directament els cossos dels oponents. Qualsevol que sigui tocat per aquests fantasmes queda aclaparat a l'instant per una depressió severa, autodespreci i pèrdua de la moral, caient de genolls i perdent totes les ganes de lluitar.",
+          "Hollows Explosius (Mini-Hollows i Hollows Especials): L'usuari pot generar fantasmes minúsculs o enormes que s'enganxen a enemics o objectes i detonen a la seva ordre, causant explosions commocionants de gran impacte.",
+          "Projecció Astral: L'usuari pot separar la seva ànima del seu cos físic per formar una còpia espectral i intangible. En aquesta forma, pot volar a través de parets, canviar de mida, comunicar-se i romandre immune als atacs físics."
+        ],
+        "source_hash": "932293b9d759081b906f9c28d026dbc8c7c6957539ef87de5d81961c18ef5927"
+      }
+    },
+    "Inu Inu no mi: Model Dachshund": {
+      "es-ES": {
+        "description": "Permite que un objeto o ser vivo se transforme en un dachshund completo o en un estado híbrido de dachshund.",
+        "skills": [
+          "Bombas Estornudadas: Como Lassoo es un híbrido viviente de perro y arma de fuego que sufre resfriados constantes, cada vez que estornuda dispara por el hocico una pesada bomba de béisbol explosiva con temporizador."
+        ],
+        "source_hash": "b8190206d2ca1fd78ed12955de163dd6b2a5cddbb2c96298383a82cb83ab085d"
+      },
+      "ca-ES": {
+        "description": "Permet que un objecte o ésser viu es transformi en un dachshund complet o en un estat híbrid de dachshund.",
+        "skills": [
+          "Bombes Esternudades: Com que Lassoo és un híbrid vivent de gos i arma de foc que pateix constipats constants, cada vegada que esternuda dispara pel morro una pesada bomba de beisbol explosiva amb temporitzador."
+        ],
+        "source_hash": "b8190206d2ca1fd78ed12955de163dd6b2a5cddbb2c96298383a82cb83ab085d"
+      }
+    },
+    "Inu Inu no mi: Model Jackal": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse a voluntad en un híbrido humano-chacal o en un chacal completo, otorgándole velocidad canina, agilidad e instintos de combate predatorios.",
+        "skills": [
+          "Agilidad y velocidad mejoradas: En su forma híbrida, el usuario adquiere extremidades largas y esbeltas y una fisiología canina ligera, lo que le permite saltar grandes distancias, esquivar golpes rápidos y moverse con gran agilidad.",
+          "Agresividad Zoan carnívora: Al ser una Zoan carnívora, esta fruta proporciona un mayor aumento de la fuerza física y de los instintos de combate en comparación con los tipos Zoan herbívoros."
+        ],
+        "source_hash": "4f021b155d0a97d8493274aed225896e6cfeb2150de02c0595846a4abf2b5b25"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se a voluntat en un híbrid humà-xacal o en un xacal complet, atorgant-li velocitat canina, agilitat i instints de combat predadors.",
+        "skills": [
+          "Agilitat i velocitat millorades: En la seva forma híbrida, l'usuari adquireix extremitats llargues i esveltes i una fisiologia canina lleugera, cosa que li permet saltar grans distàncies, esquivar cops ràpids i moure's amb gran agilitat.",
+          "Agressivitat Zoan carnívora: En ser una Zoan carnívora, aquesta fruita proporciona un augment més gran de la força física i dels instints de combat en comparació amb els tipus Zoan herbívors."
+        ],
+        "source_hash": "4f021b155d0a97d8493274aed225896e6cfeb2150de02c0595846a4abf2b5b25"
+      }
+    },
+    "Inu Inu no mi: Model Kyubi-no-kitsune": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un mítico zorro de nueve colas o en un híbrido humano-zorro, otorgándole mejoras físicas junto con una capacidad de metamorfosis impecable.",
+        "skills": [
+          "Disfraz completo: A diferencia de las ilusiones ópticas estándar, la transformación imita al objetivo hasta en su ropa y presencia física, engañando sin esfuerzo a sus allegados.",
+          "Copia por contacto: Al tocar físicamente a un objetivo, el usuario puede almacenar permanentemente su apariencia para transformarse en él más tarde a voluntad.",
+          "Forma colosal de nueve colas: En su forma bestial completa, el usuario se convierte en un zorro gigantesco con nueve colas tupidas y esponjosas, capaces de aplastar a sus oponentes o de arrasar grandes áreas."
+        ],
+        "source_hash": "71259f304b9bc190e8b405528b6c22f8eaa1152638fa0fc83c2b1875caa8e7ef"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un mític guineu de nou cues o en un híbrid humà-guineu, atorgant-li millores físiques juntament amb una capacitat de metamorfosi impecable.",
+        "skills": [
+          "Disfressa completa: A diferència de les il·lusions òptiques estàndard, la transformació imita l'objectiu fins i tot en la seva roba i presència física, enganyant sense esforç els seus coneguts propers.",
+          "Còpia per contacte: En tocar físicament un objectiu, l'usuari pot emmagatzemar permanentment la seva aparença per transformar-s'hi més endavant a voluntat.",
+          "Forma colossal de nou cues: En la seva forma bestial completa, l'usuari es converteix en un guineu gegantí amb nou cues espesses i esponjoses, capaces d'aixafar els oponents o d'escombrar grans àrees."
+        ],
+        "source_hash": "71259f304b9bc190e8b405528b6c22f8eaa1152638fa0fc83c2b1875caa8e7ef"
+      }
+    },
+    "Inu Inu no mi: Model Okuchi no Makami": {
+      "es-ES": {
+        "description": "Basada en el O-Kuchi no Makami, un espíritu lobuno sagrado de la mitología japonesa venerado como una deidad guardiana divina. En la historia, Kaidou señala que este lobo es considerado el espíritu protector del País de Wano.",
+        "skills": [
+          "Forma bestial: Transformación completa en un mítico lobo blanco, esbelto y majestuoso, con capacidades físicas increíbles.",
+          "Forma híbrida: Fusiona rasgos de lobo (pelaje, dientes afilados, orejas, cola y garras) con el cuerpo humanoide del usuario, optimizando tanto la destreza con armas como el poder animal. En este estado, una estela sagrada en forma de nube llameante cubre los hombros del usuario.",
+          "Aliento glacial (Namuji Hyoho): Dispara intensas corrientes de escarcha bajo cero directamente desde la boca, con la potencia suficiente para enfrentarse en igualdad de condiciones al Boro Breath (Aliento Explosivo) de Kaidou.",
+          "Armadura de hielo (Kagami Mountain): Permite al usuario recubrir su cuerpo con una gruesa capa de hielo, que actúa como armadura para absorber daño físico y elemental de gran intensidad.",
+          "Ataques de escarcha: Impregna armas y ataques físicos con energía congelante para inmovilizar o congelar a los oponentes al contacto."
+        ],
+        "source_hash": "7209776865e7f61f970f817cbfea270f1098a6ffac2d6128202c074c30ac3b2a"
+      },
+      "ca-ES": {
+        "description": "Basada en l'O-Kuchi no Makami, un esperit llop sagrat de la mitologia japonesa venerat com una deïtat guardiana divina. A la història, Kaidou assenyala que aquest llop és considerat l'esperit protector del País de Wano.",
+        "skills": [
+          "Forma bestial: Transformació completa en un mític llop blanc, esvelt i majestuós, amb capacitats físiques increïbles.",
+          "Forma híbrida: Fusiona trets de llop (pelatge, dents afilades, orelles, cua i urpes) amb el cos humanoide de l'usuari, optimitzant tant la destresa amb armes com el poder animal. En aquest estat, una estela sagrada en forma de núvol flamejant cobreix les espatlles de l'usuari.",
+          "Alè glacial (Namuji Hyoho): Dispara intenses corrents de gebre sota zero directament des de la boca, amb la potència suficient per enfrontar-se en igualtat de condicions al Boro Breath (Alè Explosiu) de Kaidou.",
+          "Armadura de gel (Kagami Mountain): Permet a l'usuari recobrir el seu cos amb una gruixuda capa de gel, que actua com a armadura per absorbir dany físic i elemental d'alta intensitat.",
+          "Atacs de gebre: Impregna armes i atacs físics amb energia congelant per immobilitzar o congelar els oponents en contacte."
+        ],
+        "source_hash": "7209776865e7f61f970f817cbfea270f1098a6ffac2d6128202c074c30ac3b2a"
+      }
+    },
+    "Inu Inu no mi: Model Wolf": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse a voluntad en un híbrido humano-lobo o en un lobo completo, obteniendo colmillos afilados, instintos predatorios y velocidad y fuerza físicas mejoradas.",
+        "skills": [
+          "Garras y colmillos afiladísimos: Permiten ataques letales de corte y mordisco.",
+          "Velocidad y reflejos predatorios: Aumentan la agilidad, la distancia de salto y la aceleración.",
+          "Shigan (Pistola de Dedo) mejorado: Sus garras de lobo alargadas convierten sus embestidas de Shigan en golpes afilados y penetrantes de garra (Gekkou).",
+          "Rankyaku (Patada Tempestad) mejorado: Sus piernas más largas en forma híbrida aumentan el alcance y el poder de corte de las patadas que cortan el aire."
+        ],
+        "source_hash": "7cc4d9b472ea8554e2cda6957d59bfb6f1ede16295d4292e59d43740cd1212ab"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se a voluntat en un híbrid humà-llop o en un llop complet, obtenint ullals afilats, instints predadors i velocitat i força físiques millorades.",
+        "skills": [
+          "Urpes i ullals esmolats com navalles: Permeten atacs letals de tall i mossegada.",
+          "Velocitat i reflexos predadors: Augmenten l'agilitat, la distància de salt i l'acceleració.",
+          "Shigan (Pistola de Dit) millorat: Les seves urpes de llop allargades converteixen les seves envestides de Shigan en cops afilats i penetrants de garra (Gekkou).",
+          "Rankyaku (Puntada de Tempesta) millorat: Les seves cames més llargues en forma híbrida augmenten l'abast i el poder de tall de les puntades que tallen l'aire."
+        ],
+        "source_hash": "7cc4d9b472ea8554e2cda6957d59bfb6f1ede16295d4292e59d43740cd1212ab"
+      }
+    },
+    "Ito Ito no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario crear y manipular hilos extremadamente resistentes y afilados como cuchillas desde su cuerpo, principalmente desde sus manos y yemas de los dedos.",
+        "skills": [
+          "Titiritero (Parásito): El usuario puede sujetar hilos invisibles a los cuerpos de las personas, controlando sus movimientos como marionetas en contra de su voluntad.",
+          "Poder de corte afilado: Los hilos pueden ser tan finos como un hilo de coser, pero lo bastante afilados como para cortar piedra sólida, acero e incluso meteoritos sin esfuerzo.",
+          "Desplazamiento aéreo (Sky Knight): Sujetando hilos a las nubes del cielo, el usuario puede balancearse por el aire a gran velocidad, volando en la práctica sobre grandes extensiones de océano abierto.",
+          "Primeros auxilios internos: El usuario puede usar hilos internamente para suturar órganos y vasos sanguíneos dañados, actuando como un sistema de reparación médica de emergencia para sobrevivir a heridas mortales.",
+          "Sobrecalentamiento y clones: El usuario puede disparar látigos de hilo de alta densidad que generan un calor intenso (Overheat) o tejer clones autónomos de hilo (Black Knight) que pueden luchar de forma independiente.",
+          "Transmutación del entorno: Puede extender su poder hacia el exterior, transformando instantáneamente el entorno no vivo —como el suelo, los edificios y las calles— en enormes corrientes de hilos controlables.",
+          "Jaula de pájaros: El usuario puede desplegar una inmensa cúpula de muros de hilo indestructibles y afilados como cuchillas sobre toda una isla. La jaula se contrae lentamente con el tiempo, cortando todo a su paso y bloqueando cualquier señal de comunicación fuera del perímetro."
+        ],
+        "source_hash": "4e80c03ad7106f95d9d3f3334cd0e0fd4446ff0a3f14d679ba2550ee9ef0b251"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari crear i manipular fils extremadament resistents i esmolats com fulles des del seu cos, principalment des de les seves mans i les puntes dels dits.",
+        "skills": [
+          "Titellaire (Paràsit): L'usuari pot subjectar fils invisibles als cossos de les persones, controlant els seus moviments com a titelles en contra de la seva voluntat.",
+          "Poder de tall esmolat: Els fils poden ser tan fins com un fil de cosir, però prou esmolats per tallar pedra sòlida, acer i fins i tot meteorits sense esforç.",
+          "Desplaçament aeri (Sky Knight): En subjectar fils als núvols del cel, l'usuari pot gronxar-se per l'aire a gran velocitat, volant a la pràctica sobre grans extensions d'oceà obert.",
+          "Primers auxilis interns: L'usuari pot fer servir fils internament per suturar òrgans i vasos sanguinis danyats, actuant com un sistema de reparació mèdica d'emergència per sobreviure a ferides mortals.",
+          "Sobreescalfament i clons: L'usuari pot disparar fuets de fil d'alta densitat que generen una calor intensa (Overheat) o teixir clons autònoms de fil (Black Knight) que poden lluitar de manera independent.",
+          "Transmutació de l'entorn: Pot estendre el seu poder cap a l'exterior, transformant instantàniament l'entorn no viu —com el terra, els edificis i els carrers— en enormes corrents de fils controlables.",
+          "Gàbia d'ocells: L'usuari pot desplegar una immensa cúpula de murs de fil indestructibles i esmolats com fulles sobre tota una illa. La gàbia es contrau lentament amb el temps, tallant-ho tot al seu pas i bloquejant qualsevol senyal de comunicació fora del perímetre."
+        ],
+        "source_hash": "4e80c03ad7106f95d9d3f3334cd0e0fd4446ff0a3f14d679ba2550ee9ef0b251"
+      }
+    },
+    "Jiki Jiki no mi": {
+      "es-ES": {
+        "description": "Su poder principal otorga al usuario la capacidad de crear y manipular fuerzas magnéticas, convirtiendo su cuerpo en un electroimán humano viviente capaz de atraer y repeler metales.",
+        "skills": [
+          "Atracción y repulsión de metal: El usuario puede atraer instantáneamente hacia sí grandes cantidades de metal, armas, chatarra de hierro y artillería pesada, o repeler a gran velocidad los proyectiles metálicos entrantes.",
+          "Ensamblaje de construcciones: Al ensamblar chatarra sobre su cuerpo, el usuario puede formar extremidades colosales, una armadura robótica gigante, monstruos mecánicos multiarticulados (Punk Gibson) o armas masivas construidas con chatarra, como un cañón electromagnético de riel (Damned Punk).",
+          "Blindaje defensivo de chatarra: El usuario puede reunir densos muros de hierro y acero a su alrededor para absorber ataques físicos de gran impacto o balas de cañón.",
+          "Asignar: El usuario puede asignar polaridad magnética (Norte o Sur) a seres vivos u objetos no metálicos con solo tocarlos.",
+          "Trampas de atracción magnética (Punk Crash): Una vez asignada la polaridad magnética a un oponente o superficie, la chatarra y las estructuras de hierro circundantes se precipitan violentamente hacia el objetivo, atrapándolo o aplastándolo bajo toneladas de metal."
+        ],
+        "source_hash": "44ec8ba001c50c3f678426b914c39598d4bda3a9b7f97a5d98baeffee7b4e83a"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a l'usuari la capacitat de crear i manipular forces magnètiques, convertint el seu cos en un electroimant humà vivent capaç d'atreure i repel·lir metalls.",
+        "skills": [
+          "Atracció i repulsió de metall: L'usuari pot atreure instantàniament cap a si mateix grans quantitats de metall, armes, ferralla de ferro i artilleria pesant, o repel·lir a gran velocitat els projectils metàl·lics entrants.",
+          "Muntatge de construccions: En muntar ferralla sobre el seu cos, l'usuari pot formar extremitats colossals, una armadura robòtica gegant, monstres mecànics multiarticulats (Punk Gibson) o armes massives construïdes amb ferralla, com un canó electromagnètic de rail (Damned Punk).",
+          "Blindatge defensiu de ferralla: L'usuari pot reunir murs densos de ferro i acer al seu voltant per absorbir atacs físics de gran impacte o bales de canó.",
+          "Assignar: L'usuari pot assignar polaritat magnètica (Nord o Sud) a éssers vius o objectes no metàl·lics tan sols tocant-los.",
+          "Trampes d'atracció magnètica (Punk Crash): Un cop assignada la polaritat magnètica a un oponent o superfície, la ferralla i les estructures de ferro del voltant es precipiten violentament cap a l'objectiu, atrapant-lo o aixafant-lo sota tones de metall."
+        ],
+        "source_hash": "44ec8ba001c50c3f678426b914c39598d4bda3a9b7f97a5d98baeffee7b4e83a"
+      }
+    },
+    "Kage Kage no mi": {
+      "es-ES": {
+        "description": "Su poder principal otorga al usuario la capacidad de manifestar, manipular y separar sombras como entidades físicas y tangibles.",
+        "skills": [
+          "Doppelman (Sombra autónoma): El usuario puede manifestar su propia sombra en una entidad semilíquida e indestructible que lucha en su nombre. La sombra puede transformarse en hojas de arma, enjambres de murciélagos o escudos.",
+          "Intercambio de sombra (Doppelman Switch): El usuario puede intercambiar instantáneamente su posición física con la de su sombra en cualquier momento, lo que hace extremadamente difícil acertarle con golpes directos.",
+          "Extracción de sombra: Usando unas tijeras especiales, el usuario puede cortar físicamente la sombra de una persona y separarla de su cuerpo. La sombra robada conserva los rasgos de personalidad, las habilidades de combate y las técnicas de su propietario original.",
+          "Creación de zombis: Al insertar una sombra robada en un cadáver, el usuario crea un soldado zombi obediente que posee los rasgos físicos del cadáver y las habilidades de combate del propietario de la sombra.",
+          "Consumo de sombras (Shadow's Asgard): El usuario puede absorber sombras robadas directamente en su propio cuerpo físico para obtener aumentos masivos de tamaño físico, fuerza bruta y poder."
+        ],
+        "source_hash": "2cdaa645898734c0a6ff77a15f8528a237b9df8ec9f2b1d54f8fcd4071ee12c0"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a l'usuari la capacitat de manifestar, manipular i separar ombres com a entitats físiques i tangibles.",
+        "skills": [
+          "Doppelman (Ombra autònoma): L'usuari pot manifestar la seva pròpia ombra en una entitat semilíquida i indestructible que lluita en el seu nom. L'ombra pot transformar-se en fulles d'arma, eixams de ratpenats o escuts.",
+          "Intercanvi d'ombra (Doppelman Switch): L'usuari pot intercanviar instantàniament la seva posició física amb la de la seva ombra en qualsevol moment, cosa que fa extremadament difícil encertar-lo amb cops directes.",
+          "Extracció d'ombra: Fent servir unes tisores especials, l'usuari pot tallar físicament l'ombra d'una persona i separar-la del seu cos. L'ombra robada conserva els trets de personalitat, les habilitats de combat i les tècniques del seu propietari original.",
+          "Creació de zombis: En inserir una ombra robada en un cadàver, l'usuari crea un soldat zombi obedient que posseeix els trets físics del cadàver i les habilitats de combat del propietari de l'ombra.",
+          "Consum d'ombres (Shadow's Asgard): L'usuari pot absorbir ombres robades directament dins el seu propi cos físic per obtenir augments massius de mida física, força bruta i poder."
+        ],
+        "source_hash": "2cdaa645898734c0a6ff77a15f8528a237b9df8ec9f2b1d54f8fcd4071ee12c0"
+      }
+    },
+    "Kame Kame no mi": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en una tortuga o en un híbrido de tortuga, otorgándole un caparazón excepcionalmente duro que proporciona una cobertura defensiva casi impenetrable.",
+        "skills": [
+          "Desviación de balas y explosivos: El usuario puede retraer la cabeza, los brazos y las piernas dentro de su caparazón para anular por completo el daño entrante, desviando sin esfuerzo fuego automático pesado, balas de cañón y ráfagas de ametralladora.",
+          "Dureza superior al diamante: Según Pekoms, su caparazón de tortuga es más duro que el acero o el diamante, lo que hace que los ataques físicos estándar sean ineficaces sin Haki avanzado o técnicas especializadas perforantes de armadura."
+        ],
+        "source_hash": "6f7fa8007158b0db35b56828dbaef1c0e96fba2f3f3d89ce4448c2a6aa82d299"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en una tortuga o en un híbrid de tortuga, atorgant-li una closca excepcionalment dura que proporciona una cobertura defensiva gairebé impenetrable.",
+        "skills": [
+          "Desviació de bales i explosius: L'usuari pot retreure el cap, els braços i les cames dins la seva closca per anul·lar completament el dany entrant, desviant sense esforç foc automàtic pesant, bales de canó i ràfegues de metralladora.",
+          "Duresa superior al diamant: Segons Pekoms, la seva closca de tortuga és més dura que l'acer o el diamant, cosa que fa que els atacs físics estàndard siguin ineficaços sense Haki avançat o tècniques especialitzades perforants d'armadura."
+        ],
+        "source_hash": "6f7fa8007158b0db35b56828dbaef1c0e96fba2f3f3d89ce4448c2a6aa82d299"
+      }
+    },
+    "Kiro Kiro no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario alterar drásticamente su peso a voluntad, entre 1 kilogramo y 10.000 kilogramos (aprox. entre 2,2 y 22.000 libras / 11 toneladas), sin cambiar su tamaño físico ni la forma de su cuerpo.",
+        "skills": [
+          "Flotación ligera como una pluma: Al reducir su peso hasta 1 kg, el usuario se vuelve lo bastante ligero como para flotar por el aire sobre corrientes de viento (a menudo usando un paraguas para dirigirse).",
+          "Aplastamiento corporal: Saltando por encima de un objetivo y aumentando instantáneamente su peso hasta 10.000 kg, el usuario puede aplastar a sus oponentes bajo una fuerza gravitatoria masiva.",
+          "Restablecimiento instantáneo de peso: El usuario puede alternar libremente su peso en pleno ataque para maniobrar con rapidez antes de asestar un golpe contundente."
+        ],
+        "source_hash": "c0884ce8c5f53699b0496df23e9454d686a7afea1385cd61dbcd346dc6efbcba"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari alterar dràsticament el seu pes a voluntat, entre 1 quilogram i 10.000 quilograms (aprox. entre 2,2 i 22.000 lliures / 11 tones), sense canviar la seva mida física ni la forma del seu cos.",
+        "skills": [
+          "Flotació lleugera com una ploma: En reduir el seu pes fins a 1 kg, l'usuari esdevé prou lleuger per flotar per l'aire sobre corrents de vent (sovint fent servir un paraigua per dirigir-se).",
+          "Aixafament corporal: Saltant per sobre d'un objectiu i augmentant instantàniament el seu pes fins a 10.000 kg, l'usuari pot aixafar els oponents sota una força gravitatòria massiva.",
+          "Restabliment instantani de pes: L'usuari pot alternar lliurement el seu pes en ple atac per maniobrar amb rapidesa abans d'assestar un cop contundent."
+        ],
+        "source_hash": "c0884ce8c5f53699b0496df23e9454d686a7afea1385cd61dbcd346dc6efbcba"
+      }
+    },
+    "Kumo Kumo no mi: Model Rosamygale Grauvogeli": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse a voluntad en una araña migalomorfa prehistórica y ancestral (Rosamygale grauvogeli) o en un híbrido de araña, otorgándole ataques venenosos, manipulación de telarañas pegajosas y locomoción por techos.",
+        "skills": [
+          "Atrapamiento: Sus telarañas son lo bastante fuertes como para inmovilizar a luchadores poderosos como Sanji y Nico Robin, impidiendo el movimiento físico y anulando las vías de escape.",
+          "Trampas de fuego: Puede prender fuego a sus telarañas pegajosas usando su arma llameante (Wanyudo) o ataques incendiarios para convertir los campos de batalla en infiernos (Maria Net / Oiran Dori).",
+          "Aguijones venenosos y colmillos ponzoñosos: Su forma de araña presenta colmillos afilados y venenosos, y puntas de patas que segregan veneno neurotóxico, causando dolor severo y daño a los órganos de quienes quedan atrapados en sus telarañas.",
+          "Forma similar a un centauro: Su torso humano emerge completamente intacto de la cabeza/cefalotórax de la araña. Esto le permite conservar su hermosa apariencia humana mientras utiliza las ocho patas gigantes de araña para desplazarse, atrapar y combatir."
+        ],
+        "source_hash": "47fc954da7160f85c2f805fdc6db391e7bc15c0631c95eaacbd297559dc9d09a"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se a voluntat en una aranya migalomorfa prehistòrica i ancestral (Rosamygale grauvogeli) o en un híbrid d'aranya, atorgant-li atacs verinosos, manipulació de teranyines enganxoses i locomoció per sostres.",
+        "skills": [
+          "Atrapament: Les seves teranyines són prou fortes per immobilitzar lluitadors poderosos com Sanji i Nico Robin, impedint el moviment físic i anul·lant les vies d'escapament.",
+          "Trampes de foc: Pot calar foc a les seves teranyines enganxoses fent servir la seva arma flamejant (Wanyudo) o atacs incendiaris per convertir els camps de batalla en inferns (Maria Net / Oiran Dori).",
+          "Fibló verinós i ullals metzinosos: La seva forma d'aranya presenta ullals afilats i verinosos, i puntes de potes que segreguen verí neurotòxic, causant dolor sever i dany als òrgans de qui queda atrapat en les seves teranyines.",
+          "Forma semblant a un centaure: El seu tors humà emergeix completament intacte del cap/cefalotòrax de l'aranya. Això li permet conservar la seva bella aparença humana mentre fa servir les vuit potes gegants d'aranya per desplaçar-se, atrapar i combatre."
+        ],
+        "source_hash": "47fc954da7160f85c2f805fdc6db391e7bc15c0631c95eaacbd297559dc9d09a"
+      }
+    },
+    "Magu Magu no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en magma a voluntad, con un poder ofensivo declarado oficialmente entre los más altos de todo el mundo.",
+        "skills": [
+          "Poder de fusión letal: A diferencia de muchos ataques que hacen retroceder a los oponentes, el magma atraviesa directamente carne y hueso, causando daño interno mortal.",
+          "Construcciones volcánicas: El usuario puede moldear el magma en forma de cabezas de sabueso gigantes (Inugami Guren) o disparar puños gigantes de magma hacia el cielo para que caigan como una lluvia de meteoritos (Ryusei Kazan).",
+          "La Magu Magu no Mi es canónicamente superior por naturaleza a la Mera Mera no Mi (la Fruta Llama-Llama). Como el magma arde de forma significativamente más caliente y densa que el fuego, puede sofocar las llamas e infligir daño físico a un usuario Logia de tipo fuego sin necesidad de Haki.",
+          "Alteración del terreno: El uso prolongado de la fruta puede reescribir permanentemente el clima y la geografía de una isla."
+        ],
+        "source_hash": "2e1568cefa6f050520ed6cf3a80fdfdfd13adfad2cffd520c33f2aa392852ebf"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en magma a voluntat, amb un poder ofensiu declarat oficialment entre els més alts de tot el món.",
+        "skills": [
+          "Poder de fusió letal: A diferència de molts atacs que fan recular els oponents, el magma travessa directament carn i os, causant dany intern mortal.",
+          "Construccions volcàniques: L'usuari pot modelar el magma en forma de caps de gos gegants (Inugami Guren) o disparar punys gegants de magma cap al cel perquè caiguin com una pluja de meteorits (Ryusei Kazan).",
+          "La Magu Magu no Mi és canònicament superior per naturalesa a la Mera Mera no Mi (la Fruita Flama-Flama). Com que el magma crema d'una manera significativament més calenta i densa que el foc, pot sufocar les flames i infligir dany físic a un usuari Logia de tipus foc sense necessitat de Haki.",
+          "Alteració del terreny: L'ús prolongat de la fruita pot reescriure permanentment el clima i la geografia d'una illa."
+        ],
+        "source_hash": "2e1568cefa6f050520ed6cf3a80fdfdfd13adfad2cffd520c33f2aa392852ebf"
+      }
+    },
+    "Mane Mane no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario transformarse en un clon físico de cualquier persona cuyo rostro haya tocado con su mano derecha.",
+        "skills": [
+          "Réplica física exacta: La transformación es una coincidencia absoluta, copiando el rostro, la forma corporal, la altura, la edad, la voz e incluso los defectos físicos (como cicatrices o mala vista) del objetivo.",
+          "Almacenamiento de rostros en la memoria: En cuanto el usuario toca el rostro de una persona con su mano derecha, la apariencia física de esa persona queda registrada permanentemente en su memoria. Puede cambiar entre las formas físicas guardadas de forma instantánea en cualquier momento.",
+          "Reversión: Tocarse el propio rostro con la mano izquierda cancela instantáneamente la transformación, devolviendo al usuario a su apariencia original.",
+          "Infiltración y espionaje: Es una de las herramientas de sigilo más eficaces de la serie, ya que permite al usuario hacerse pasar por funcionarios de alto rango, guardias o reyes."
+        ],
+        "source_hash": "a617eb7d0b8612a9289332c1dbe68451733f29f91f02454d359fa026ea9faa6a"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari transformar-se en un clon físic de qualsevol persona el rostre de la qual hagi tocat amb la seva mà dreta.",
+        "skills": [
+          "Rèplica física exacta: La transformació és una coincidència absoluta, copiant el rostre, la forma corporal, l'alçada, l'edat, la veu i fins i tot els defectes físics (com cicatrius o mala vista) de l'objectiu.",
+          "Emmagatzematge de rostres a la memòria: Tan aviat com l'usuari toca el rostre d'una persona amb la seva mà dreta, l'aparença física d'aquesta persona queda enregistrada permanentment a la seva memòria. Pot canviar entre les formes físiques desades de manera instantània en qualsevol moment.",
+          "Reversió: Tocar-se el propi rostre amb la mà esquerra cancel·la instantàniament la transformació, retornant l'usuari a la seva aparença original.",
+          "Infiltració i espionatge: És una de les eines de sigil més eficaces de la sèrie, ja que permet a l'usuari fer-se passar per funcionaris d'alt rang, guardes o reis."
+        ],
+        "source_hash": "a617eb7d0b8612a9289332c1dbe68451733f29f91f02454d359fa026ea9faa6a"
+      }
+    },
+    "Mera Mera no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar todo su cuerpo en fuego a voluntad.",
+        "skills": [
+          "Cañones y balas de fuego: El usuario puede disparar bolas de fuego concentradas o proyectiles de llama de fuego rápido (Hiken / Higan).",
+          "Columnas masivas de llamas: El usuario puede invocar gigantescas bolas de fuego similares a un sol (Dai Enkai: Entei) o crear muros de fuego para atrapar a sus enemigos.",
+          "Movilidad y propulsión: Al expulsar fuego desde los pies o la parte inferior del cuerpo, el usuario puede volar por el aire, moverse a gran velocidad o propulsar vehículos (como la balsa Striker de Ace)."
+        ],
+        "source_hash": "5980a47941c7ea2c6b4b0d6bafe4754df96ee4a50911b275915efc2d82214847"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar tot el seu cos en foc a voluntat.",
+        "skills": [
+          "Canons i bales de foc: L'usuari pot disparar boles de foc concentrades o projectils de flama de foc ràpid (Hiken / Higan).",
+          "Columnes massives de flames: L'usuari pot invocar gegantines boles de foc semblants a un sol (Dai Enkai: Entei) o crear murs de foc per atrapar els seus enemics.",
+          "Mobilitat i propulsió: En expulsar foc des dels peus o la part inferior del cos, l'usuari pot volar per l'aire, moure's a gran velocitat o propulsar vehicles (com la barca Striker d'Ace)."
+        ],
+        "source_hash": "5980a47941c7ea2c6b4b0d6bafe4754df96ee4a50911b275915efc2d82214847"
+      }
+    },
+    "Mero Mero no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario petrificar a sus objetivos convirtiéndolos en piedra sólida, transformando en arma los sentimientos de atracción, deseo o afecto que sienten hacia el usuario.",
+        "skills": [
+          "Rayo de Petrificación (Mero Mero Mellow): El usuario forma un corazón con las manos y dispara un rayo con forma de corazón. Cualquiera que albergue el más mínimo pensamiento de atracción o deseo hacia el usuario queda al instante convertido en piedra sólida.",
+          "Petrificación por Contacto Físico (Perfume Femur): El usuario puede patear a sus oponentes para petrificar el punto exacto de contacto en el impacto, haciendo que las zonas petrificadas se hagan añicos como el cristal, sin importar si el oponente siente atracción o no.",
+          "Proyectiles a Distancia (Pistol Kiss y Slave Arrow): El usuario puede lanzar besos con forma de corazón como proyectiles o construir un arco de energía gigante para lanzar una lluvia de flechas petrificantes, convirtiendo en piedra tanto a seres vivos como a objetos inanimados (como los cyborgs Pacifista o las balas de cañón).",
+          "Reversión Absoluta: Solo el usuario actual de la fruta puede revertir el efecto de petrificación. Si el usuario muere o la fruta pasa a un nuevo propietario, las víctimas petrificadas permanecen convertidas en piedra para siempre."
+        ],
+        "source_hash": "b49950fa00c6879def3def9b1b8a377b9eeba6319bbc084ae6712b77f276b4ad"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari petrificar els seus objectius convertint-los en pedra sòlida, transformant en arma els sentiments d'atracció, desig o afecte que senten cap a l'usuari.",
+        "skills": [
+          "Raig de Petrificació (Mero Mero Mellow): L'usuari forma un cor amb les mans i dispara un raig amb forma de cor. Qualsevol que albergui el més mínim pensament d'atracció o desig cap a l'usuari queda a l'instant convertit en pedra sòlida.",
+          "Petrificació per Contacte Físic (Perfume Femur): L'usuari pot bombardejar els seus oponents amb puntades per petrificar el punt exacte de contacte en l'impacte, fent que les zones petrificades es facin miques com el vidre, sense importar si l'oponent sent atracció o no.",
+          "Projectils a Distància (Pistol Kiss i Slave Arrow): L'usuari pot llançar petons amb forma de cor com a projectils o construir un arc d'energia gegant per abocar una pluja de fletxes petrificants, convertint en pedra tant éssers vius com objectes inanimats (com els ciborgs Pacifista o les bales de canó).",
+          "Reversió Absoluta: Només l'usuari actual de la fruita pot revertir l'efecte de petrificació. Si l'usuari mor o la fruita passa a un nou propietari, les víctimes petrificades romanen convertides en pedra per sempre."
+        ],
+        "source_hash": "b49950fa00c6879def3def9b1b8a377b9eeba6319bbc084ae6712b77f276b4ad"
+      }
+    },
+    "Mochi Mochi no mi": {
+      "es-ES": {
+        "description": "Su poder principal concede al usuario la capacidad de crear, controlar y transformar todo su cuerpo en mochi (un pastel de arroz japonés pegajoso).",
+        "skills": [
+          "Intangibilidad tipo Logia (Paramecia Especial): A diferencia de las frutas Paramecia normales, la Mochi Mochi no Mi permite que el cuerpo del usuario se comporte como una Logia elemental. Los golpes físicos, cortes y balas atraviesan directamente el cuerpo de mochi del usuario o son absorbidos por él sin causarle daño.",
+          "Atrapamiento Adhesivo: El mochi que se produce es extremadamente denso, blando y pegajoso. Los enemigos o armas que golpean al usuario pueden quedar permanentemente atascados en la masa, inmovilizándolos por completo.",
+          "Cambio de Forma y Extensión: El usuario puede estirar, expandir o remodelar partes de su cuerpo en enormes puños de masa, tentáculos, armas con pinchos o construcciones de múltiples extremidades.",
+          "Densidad Comprimida (Unstoppable Donut): Al hacer girar y endurecer el mochi con el Busoshoku Haki, el usuario puede asestar una fuerza contundente aplastante que rivaliza o supera a los golpes de tipo goma."
+        ],
+        "source_hash": "94bb15de7f1d64c3bf35ccd5f5eb9f0e674fa15fc600649a06b7fd92fc4cca70"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal concedeix a l'usuari la capacitat de crear, controlar i transformar tot el seu cos en mochi (un pastís d'arròs japonès enganxós).",
+        "skills": [
+          "Intangibilitat tipus Logia (Paramecia Especial): A diferència de les fruites Paramecia normals, la Mochi Mochi no Mi permet que el cos de l'usuari es comporti com una Logia elemental. Els cops físics, talls i bales travessen directament el cos de mochi de l'usuari o hi són absorbits sense causar-li mal.",
+          "Atrapament Adhesiu: El mochi que es produeix és extremadament dens, tou i enganxós. Els enemics o armes que colpegen l'usuari poden quedar permanentment enganxats a la massa, immobilitzant-los completament.",
+          "Canvi de Forma i Extensió: L'usuari pot estirar, expandir o remodelar parts del seu cos en enormes punys de massa, tentacles, armes amb pues o construccions de múltiples extremitats.",
+          "Densitat Comprimida (Unstoppable Donut): En fer girar i endurir el mochi amb el Busoshoku Haki, l'usuari pot assestar una força contundent aclaparadora que rivalitza o supera els cops de tipus goma."
+        ],
+        "source_hash": "94bb15de7f1d64c3bf35ccd5f5eb9f0e674fa15fc600649a06b7fd92fc4cca70"
+      }
+    },
+    "Mogu Mogu no mi": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un topo o en un híbrido de topo, otorgándole el poder de excavar a través de tierra sólida, roca y suelo a una velocidad increíble.",
+        "skills": [
+          "Redes de Túneles Subterráneos: Puede crear enormes redes subterráneas para moverse completamente indetectado bajo los pies de los enemigos.",
+          "Emboscadas y Trampas: Permite al usuario arrastrar a los oponentes bajo tierra agarrándolos por los tobillos, llevándolos a trampas de fosos o dejándolos inmovilizados.",
+          "Garras de Excavación Letales: Tanto en forma completa de topo como en forma híbrida, las manos del usuario se convierten en garras densas y alargadas capaces de atravesar muros de piedra y asestar potentes ataques cortantes en el combate cuerpo a cuerpo (Mogu Mogu Claw)."
+        ],
+        "source_hash": "dd98459184cfdf6985fb8b624bedf2af470dec5026409d96f13b084228d0baa7"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un talp o en un híbrid de talp, atorgant-li el poder de excavar a través de terra sòlida, roca i sòl a una velocitat increïble.",
+        "skills": [
+          "Xarxes de Túnels Subterranis: Pot crear enormes xarxes subterrànies per moure's completament indetectat sota els peus dels enemics.",
+          "Emboscades i Trampes: Permet a l'usuari arrossegar els oponents sota terra agafant-los pels turmells, portant-los a trampes de fossos o deixant-los immobilitzats.",
+          "Urpes d'Excavació Letals: Tant en forma completa de talp com en forma híbrida, les mans de l'usuari es converteixen en urpes denses i allargades capaces de travessar murs de pedra i assestar potents atacs tallants en el combat cos a cos (Mogu Mogu Claw)."
+        ],
+        "source_hash": "dd98459184cfdf6985fb8b624bedf2af470dec5026409d96f13b084228d0baa7"
+      }
+    },
+    "Moku Moku no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar todo su cuerpo en humo a voluntad.",
+        "skills": [
+          "Captura y Atrapamiento: El usuario puede alterar la densidad y el espesor de su humo para agarrar, atar o asfixiar a varios enemigos simultáneamente.",
+          "Vuelo y Propulsión: El usuario puede convertir la parte inferior de su cuerpo en humo para levitar, volar o impulsarse a gran velocidad tanto por tierra como por el cielo."
+        ],
+        "source_hash": "c495d1f0fd7c3896c158235c81a5cfd12608ad1e44256b544d38751c06bf2c43"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar tot el seu cos en fum a voluntat.",
+        "skills": [
+          "Captura i Atrapament: L'usuari pot alterar la densitat i el gruix del seu fum per agafar, lligar o asfixiar diversos enemics simultàniament.",
+          "Vol i Propulsió: L'usuari pot convertir la part inferior del seu cos en fum per levitar, volar o impulsar-se a gran velocitat tant per terra com pel cel."
+        ],
+        "source_hash": "c495d1f0fd7c3896c158235c81a5cfd12608ad1e44256b544d38751c06bf2c43"
+      }
+    },
+    "Mori Mori no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en vegetación vegetal y forestal a voluntad, actuando como la fuente literal de la vida misma.",
+        "skills": [
+          "Intangibilidad Orgánica y Regeneración: Como usuario de una Logia, los ataques físicos no reforzados con Haki atraviesan el cuerpo vegetal de Ryokugyu. Incluso si su caparazón de madera o sus formas de árbol-monstruo son quemados o completamente destrozados, puede hacer brotar al instante un nuevo cuerpo a partir de un pequeño brote o semilla nacida del suelo.",
+          "Absorción de Nutrientes y Deshidratación: El usuario puede extender raíces y enredaderas afiladas desde sus dedos y extremidades para atravesar a sus objetivos. Al hacer contacto, estas raíces actúan como bombas líquidas que extraen todos los fluidos, nutrientes y energía directamente de los oponentes, dejándolos completamente demacrados mientras restauran la energía del usuario.",
+          "Reforestación Instantánea: Allá por donde camina Ryokugyu, brotan espontáneamente a su paso hierba exuberante, flores, raíces gigantes y árboles, convirtiendo terrenos áridos o campos de batalla arrasados en densos bosques.",
+          "Transformación en Árbol-Monstruo Gigante: Puede fusionarse con la vegetación para transformarse en un monstruo de madera gigantesco, de varios pisos de altura, similar a un ent (Kyōrai Zō).",
+          "Vuelo: Al hacer crecer una flor que gira rápidamente en su espalda, Ryokugyu puede usarla como la hélice de un helicóptero para volar a través de vastos océanos."
+        ],
+        "source_hash": "e843b623be6d69d906c7e6ec8ca433ef1dc2f04f55983a85bbb65774ee7ffd07"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en vegetació vegetal i forestal a voluntat, actuant com la font literal de la vida mateixa.",
+        "skills": [
+          "Intangibilitat Orgànica i Regeneració: Com a usuari d'una Logia, els atacs físics no reforçats amb Haki travessen el cos vegetal de Ryokugyu. Fins i tot si la seva closca de fusta o les seves formes d'arbre-monstre són cremades o completament destrossades, pot fer brotar a l'instant un nou cos a partir d'un petit brot o llavor nascuda del terra.",
+          "Absorció de Nutrients i Deshidratació: L'usuari pot estendre arrels i enfiladisses esmolades des dels seus dits i extremitats per travessar els seus objectius. En fer contacte, aquestes arrels actuen com a bombes líquides que extreuen tots els fluids, nutrients i energia directament dels oponents, deixant-los completament demacrats mentre restauren l'energia de l'usuari.",
+          "Reforestació Instantània: Allà on camina Ryokugyu, broten espontàniament al seu pas herba exuberant, flors, arrels gegants i arbres, convertint terrenys àrids o camps de batalla arrasats en boscos densos.",
+          "Transformació en Arbre-Monstre Gegant: Pot fusionar-se amb la vegetació per transformar-se en un monstre de fusta gegantí, de diversos pisos d'alçada, similar a un ent (Kyōrai Zō).",
+          "Vol: En fer créixer una flor que gira ràpidament a la seva esquena, Ryokugyu pot usar-la com l'hèlix d'un helicòpter per volar a través de vastos oceans."
+        ],
+        "source_hash": "e843b623be6d69d906c7e6ec8ca433ef1dc2f04f55983a85bbb65774ee7ffd07"
+      }
+    },
+    "Mushi Mushi no mi: Model Kabutomushi": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse a voluntad en un híbrido de escarabajo rinoceronte o en un escarabajo rinoceronte completo, otorgándole vuelo, un caparazón exoesquelético acorazado y una inmensa fuerza de empuje basada en su cuerno.",
+        "skills": [
+          "Cabezazos Devastadores: El usuario puede utilizar su enorme cuerno de escarabajo (Kabuto Head) para embestir a sus objetivos, volteando, lanzando o arrasando con oponentes pesados y defensas fortificadas con facilidad.",
+          "Aumento de Fuerza Proporcional: Potencia la capacidad base de levantar peso y empujar del usuario mucho más allá de los estándares habituales de un Zoan en relación con su tamaño.",
+          "Defensa de Exoesqueleto Acorazado: La transformación equipa al usuario con un caparazón de quitina oscuro y endurecido. Este caparazón de insecto actúa como una armadura corporal natural, desviando sin esfuerzo cortes básicos de espada, disparos de arma de fuego e impactos físicos contundentes.",
+          "Vuelo y Maniobrabilidad Aérea: Tras las duras cubiertas de las alas (élitros), la fruta proporciona alas membranosas funcionales que permiten un vuelo a gran velocidad, posibilitando embestidas aéreas rápidas y súbitas cargas en picado."
+        ],
+        "source_hash": "90e74c41cb86f1827f4553d2d8de3e6b04e74717ab266c3fee5b8f6651b9c629"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se a voluntat en un híbrid d'escarabat rinoceront o en un escarabat rinoceront complet, atorgant-li vol, una closca exoesquelètica blindada i una immensa força d'embestida basada en la seva banya.",
+        "skills": [
+          "Cops de Cap Devastadors: L'usuari pot utilitzar la seva enorme banya d'escarabat (Kabuto Head) per envestir els seus objectius, capgirant, llançant o arrasant oponents pesants i defenses fortificades amb facilitat.",
+          "Augment de Força Proporcional: Potencia la capacitat base d'aixecar pes i empènyer de l'usuari molt més enllà dels estàndards habituals d'un Zoan en relació amb la seva mida.",
+          "Defensa d'Exosquelet Blindat: La transformació equipa l'usuari amb una closca de quitina fosca i endurida. Aquesta closca d'insecte actua com una armadura corporal natural, desviant sense esforç talls bàsics d'espasa, trets d'arma de foc i impactes físics contundents.",
+          "Vol i Maniobrabilitat Aèria: Rere les dures cobertes de les ales (èlitres), la fruita proporciona ales membranoses funcionals que permeten un vol a gran velocitat, possibilitant envestides aèries ràpides i sobtades càrregues en picat."
+        ],
+        "source_hash": "90e74c41cb86f1827f4553d2d8de3e6b04e74717ab266c3fee5b8f6651b9c629"
+      }
+    },
+    "Mushi Mushi no mi: Model Suzumebachi": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse a voluntad en un híbrido de avispón o en un avispón gigante completo, otorgándole vuelo a gran velocidad, un aguijón venenoso y rasgos insectoides.",
+        "skills": [
+          "Vuelo a Gran Velocidad y Maniobrabilidad Aérea: La fruta otorga cuatro alas membranosas de insecto, permitiendo patrones de vuelo extremadamente rápidos, bruscos y erráticos. Esto hace que resulte difícil apuntar o seguir al usuario en pleno combate.",
+          "Daño Perforante: Capaz de asestar rápidos ataques de puñalada en el combate cuerpo a cuerpo."
+        ],
+        "source_hash": "6c15250e5ad94ebe9a1ed3ecb48e13068884e57a17ae1f81f545bc56efcd1d0a"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se a voluntat en un híbrid de vespa o en una vespa gegant completa, atorgant-li vol a gran velocitat, un fibló verinós i trets insectoides.",
+        "skills": [
+          "Vol a Gran Velocitat i Maniobrabilitat Aèria: La fruita atorga quatre ales membranoses d'insecte, permetent patrons de vol extremadament ràpids, bruscos i erràtics. Això fa que sigui difícil apuntar o seguir l'usuari en ple combat.",
+          "Dany Perforant: Capaç d'assestar ràpids atacs de punyalada en el combat cos a cos."
+        ],
+        "source_hash": "6c15250e5ad94ebe9a1ed3ecb48e13068884e57a17ae1f81f545bc56efcd1d0a"
+      }
+    },
+    "Neko Neko no mi: Model Leopard": {
+      "es-ES": {
+        "description": "Su poder principal concede al usuario la capacidad de transformarse en un leopardo completo o en un híbrido humano-leopardo, potenciando drásticamente sus estadísticas de combate físico, agilidad, reflejos e instintos depredadores.",
+        "skills": [
+          "Forma Bestia (Leopardo Completo): Convierte al usuario en un enorme leopardo cuadrúpedo, maximizando su velocidad de esprint, flexibilidad y capacidad de rastreo sigiloso.",
+          "Forma Híbrida (Humano-Bestia): Combina la constitución humana con rasgos de leopardo, creando un depredador bípedo alto y muy musculoso, con garras, colmillos, pelaje moteado y cola.",
+          "Ventaja de los Zoan Carnívoros: Como señala Chopper, las frutas Zoan carnívoras son inherentemente más feroces y depredadoras en batalla comparadas con las herbívoras, otorgando instintos agresivos y herramientas físicas afiladas (garras, poder de mordisco) diseñadas específicamente para matar en combate cuerpo a cuerpo.",
+          "Compresión de Retorno Vital (Seimei Kikan): Usando técnicas de artes marciales, Lucci puede manipular la estructura de su cuerpo en forma híbrida para crear una forma más pequeña y esbelta (Kami-e Bushin) que sacrifica potencia muscular en bruto a cambio de un movimiento extremo y a gran velocidad.",
+          "Estadísticas Enormemente Potenciadas por el Despertar: Otorga inmensas mejoras en la fuerza física, la velocidad de movimiento, el tiempo de reacción y una recuperación/regeneración excepcionalmente rápida del daño físico.",
+          "Pistola de Dedo (Shigan): Las afiladas garras de leopardo transforman los golpes perforantes habituales en cortes letales y afilados como cuchillas.",
+          "Patada Tempestad (Rankyaku): La fuerza incrementada de las piernas genera cuchillas de aire cortantes capaces de atravesar barcos de hierro y piedra sólidos.",
+          "Rokuogan: Combinado con la enorme musculatura física de la forma híbrida o despertada, este ataque de onda de choque definitivo inflige destructivo daño interno a quemarropa."
+        ],
+        "source_hash": "943fd62b60e8c2e2f71ddf0a975367e0866429ad1d3b729560fd64de7e2502be"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal concedeix a l'usuari la capacitat de transformar-se en un lleopard complet o en un híbrid humà-lleopard, potenciant dràsticament les seves estadístiques de combat físic, agilitat, reflexos i instints depredadors.",
+        "skills": [
+          "Forma Bèstia (Lleopard Complet): Converteix l'usuari en un enorme lleopard quadrúpede, maximitzant la seva velocitat d'esprint, flexibilitat i capacitat de rastreig sigil·lós.",
+          "Forma Híbrida (Humà-Bèstia): Combina la constitució humana amb trets de lleopard, creant un depredador bípede alt i molt musculós, amb urpes, ullals, pelatge tacat i cua.",
+          "Avantatge dels Zoan Carnívors: Com assenyala Chopper, les fruites Zoan carnívores són inherentment més ferotges i depredadores en batalla comparades amb les herbívores, atorgant instints agressius i eines físiques esmolades (urpes, poder de mossegada) dissenyades específicament per matar en combat cos a cos.",
+          "Compressió de Retorn Vital (Seimei Kikan): Fent servir tècniques d'arts marcials, Lucci pot manipular l'estructura del seu cos en forma híbrida per crear una forma més petita i esvelta (Kami-e Bushin) que sacrifica potència muscular bruta a canvi d'un moviment extrem i a gran velocitat.",
+          "Estadístiques Enormement Potenciades pel Despertar: Atorga immenses millores en la força física, la velocitat de moviment, el temps de reacció i una recuperació/regeneració excepcionalment ràpida del mal físic.",
+          "Pistola de Dit (Shigan): Les esmolades urpes de lleopard transformen els cops perforants habituals en talls letals i afilats com fulles.",
+          "Puntada de Tempesta (Rankyaku): La força incrementada de les cames genera fulles d'aire tallants capaces de travessar vaixells de ferro i pedra sòlids.",
+          "Rokuogan: Combinat amb l'enorme musculatura física de la forma híbrida o despertada, aquest atac d'ona de xoc definitiu infligeix destructiu mal intern a boca de canó."
+        ],
+        "source_hash": "943fd62b60e8c2e2f71ddf0a975367e0866429ad1d3b729560fd64de7e2502be"
+      }
+    },
+    "Neko Neko no mi: Model Saber-Toothed Tiger": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un híbrido de tigre dientes de sable o en un tigre dientes de sable prehistórico completo, otorgándole una inmensa fuerza física ancestral y una letalidad depredadora.",
+        "skills": [
+          "Tamaño y Alcance Enormes: En sus formas de bestia completa e híbrida, el usuario crece hasta un tamaño colosal, con enormes zarpas, un pellejo grueso y una mordida devastadora.",
+          "Colmillos de Sable Gigantes: Largos caninos en forma de espada capaces de atravesar con facilidad armaduras de acero, escamas de dragón y hueso denso.",
+          "Shigan de Colmillo (Cañón de Dedo Diente): Utiliza sus colmillos de sable gigantes o sus garras para disparar ondas de choque perforantes (Gara Sugi / Fang Flash) a distancia.",
+          "Tobobu Mejorado (Colmillo Volador): Dispara cortes de aire con forma de cuchilla directamente desde sus fauces, usando sus poderosos músculos del cuello y sus largos colmillos.",
+          "Tekkai y Rankyaku: Su denso pellejo de Zoan Antiguo convierte el Tekkai en una defensa casi impenetrable, mientras que sus largas patas felinas amplifican el arco cortante de los ataques Rankyaku."
+        ],
+        "source_hash": "26254290dc4c5b456392d40520641b3b8e446df3d28ba4d4b529667cb6f48ec0"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un híbrid de tigre dents de sabre o en un tigre dents de sabre prehistòric complet, atorgant-li una immensa força física ancestral i una letalitat depredadora.",
+        "skills": [
+          "Mida i Abast Enormes: En les seves formes de bèstia completa i híbrida, l'usuari creix fins a una mida colossal, amb enormes potes, una pell gruixuda i una mossegada devastadora.",
+          "Ullals de Sabre Gegants: Llargs canins en forma d'espasa capaços de travessar amb facilitat armadures d'acer, escates de drac i os dens.",
+          "Shigan d'Ullal (Canó de Dit Dent): Utilitza els seus ullals de sabre gegants o les seves urpes per disparar ones de xoc perforants (Gara Sugi / Fang Flash) a distància.",
+          "Tobobu Millorat (Ullal Volador): Dispara talls d'aire amb forma de fulla directament des de les seves fauces, fent servir els seus poderosos músculs del coll i els seus llargs ullals.",
+          "Tekkai i Rankyaku: La seva densa pell de Zoan Antic converteix el Tekkai en una defensa gairebé impenetrable, mentre que les seves llargues potes felines amplifiquen l'arc tallant dels atacs Rankyaku."
+        ],
+        "source_hash": "26254290dc4c5b456392d40520641b3b8e446df3d28ba4d4b529667cb6f48ec0"
+      }
+    },
+    "Nikyu Nikyu no mi": {
+      "es-ES": {
+        "description": "Su poder principal otorga al usuario almohadillas permanentes similares a las de un oso en las palmas de las manos, que conceden la capacidad absoluta de repeler todo lo que tocan a velocidades extremadamente altas.",
+        "skills": [
+          "Desviación Absoluta: El usuario puede desviar al instante ataques físicos, golpes cuerpo a cuerpo, tajos de armas, proyectiles elementales, rayos láser e incluso conceptos intangibles como la presión del aire.",
+          "Viaje Ultrarrápido / Envío por Desviación: Repeliendo a un objetivo (o a sí mismo) hacia el aire a velocidades cercanas a la de la luz, el usuario puede lanzar al instante a las personas a través de vastas distancias oceánicas hasta destinos específicos. El vuelo dura exactamente tres días y tres noches, envuelto en una burbuja protectora con forma de zarpa.",
+          "Ondas de Choque de Aire Comprimido (Pad Ho y Ursus Shock): El usuario puede repeler el propio aire para disparar ondas de choque de presión de alta velocidad capaces de perforar armaduras. Comprimiendo enormes volúmenes de aire en una pequeña burbuja con forma de zarpa y liberándolo después, crea una colosal explosión de onda de choque a quemarropa (Ursus Shock).",
+          "Extracción de Dolor y Fatiga: El usuario puede empujar físicamente todo el dolor, la fatiga y el daño acumulados fuera del cuerpo de una persona, materializándolos en una burbuja roja con forma de zarpa. El dolor transferido puede infligirse a otra persona o ser absorbido por otro individuo.",
+          "Recuerdos y Emociones: El usuario puede repeler y separar físicamente sus propios recuerdos o pensamientos de su cerebro, almacenándolos en una burbuja tangible y flotante."
+        ],
+        "source_hash": "a00ffd0a0dba703d108e6c1645d05d84c0f4e34a033db23d893dfb1b6e9e3a3c"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a l'usuari coixinets permanents similars als d'un ós als palmells de les mans, que concedeixen la capacitat absoluta de repel·lir tot allò que toquen a velocitats extremadament altes.",
+        "skills": [
+          "Desviació Absoluta: L'usuari pot desviar a l'instant atacs físics, cops cos a cos, talls d'armes, projectils elementals, raigs làser i fins i tot conceptes intangibles com la pressió de l'aire.",
+          "Viatge Ultraràpid / Enviament per Desviació: Repel·lint un objectiu (o a si mateix) cap a l'aire a velocitats properes a la de la llum, l'usuari pot llançar a l'instant persones a través de vastes distàncies oceàniques fins a destinacions específiques. El vol dura exactament tres dies i tres nits, envoltat d'una bombolla protectora amb forma de zarpa.",
+          "Ones de Xoc d'Aire Comprimit (Pad Ho i Ursus Shock): L'usuari pot repel·lir el mateix aire per disparar ones de xoc de pressió d'alta velocitat capaces de perforar armadures. En comprimir enormes volums d'aire en una petita bombolla amb forma de zarpa i alliberar-lo després, crea una colossal explosió d'ona de xoc a boca de canó (Ursus Shock).",
+          "Extracció de Dolor i Fatiga: L'usuari pot empènyer físicament tot el dolor, la fatiga i el mal acumulats fora del cos d'una persona, materialitzant-los en una bombolla vermella amb forma de zarpa. El dolor transferit pot infligir-se a una altra persona o ser absorbit per un altre individu.",
+          "Records i Emocions: L'usuari pot repel·lir i separar físicament els seus propis records o pensaments del seu cervell, emmagatzemant-los en una bombolla tangible i flotant."
+        ],
+        "source_hash": "a00ffd0a0dba703d108e6c1645d05d84c0f4e34a033db23d893dfb1b6e9e3a3c"
+      }
+    },
+    "Nui Nui no mi": {
+      "es-ES": {
+        "description": "Su poder principal permite al usuario coser cualquier cosa entre sí usando una aguja y un hilo invisible e irrompible que la fruta genera.",
+        "skills": [
+          "Costura de Materia: El usuario puede coser sin costuras seres vivos, objetos o superficies entre sí. Puede inmovilizar a sus oponentes cosiendo su ropa o sus cuerpos al suelo sólido, a paredes o incluso a otras personas.",
+          "Perforación Indolora: La aguja y el hilo penetran el tejido vivo al instante sin causar dolor físico ni derramar sangre, permitiendo al usuario inmovilizar a los enemigos antes de que siquiera se den cuenta de que han sido capturados.",
+          "Descosido (Liberación): El usuario puede deshacer sus puntadas en cualquier momento, liberando al instante todo aquello que estuviera unido sin dejar cicatrices ni daños permanentes."
+        ],
+        "source_hash": "cfc148354e73d134665022431d2ed7d4a4517e5e58a52d60bc3296592e8ece5b"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a l'usuari cosir qualsevol cosa entre si fent servir una agulla i un fil invisible i irrompible que la fruita genera.",
+        "skills": [
+          "Costura de Matèria: L'usuari pot cosir sense costures éssers vius, objectes o superfícies entre si. Pot immobilitzar els seus oponents cosint la seva roba o els seus cossos al terra sòlid, a parets o fins i tot a altres persones.",
+          "Perforació Indolora: L'agulla i el fil penetren el teixit viu a l'instant sense causar dolor físic ni vessar sang, permetent a l'usuari immobilitzar els enemics abans fins i tot que se n'adonin que han estat capturats.",
+          "Descosit (Alliberament): L'usuari pot desfer les seves puntades en qualsevol moment, alliberant a l'instant tot allò que estigués unit sense deixar cicatrius ni danys permanents."
+        ],
+        "source_hash": "cfc148354e73d134665022431d2ed7d4a4517e5e58a52d60bc3296592e8ece5b"
+      }
+    },
+    "Numa Numa no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en barro y cenagal, funcionando como un pantano líquido sin fondo.",
+        "skills": [
+          "Cenagal Sin Fondo: Cualquier persona u objeto que caiga en el barro del usuario se hunde sin remedio en un literal \"pantano sin fondo\" y no puede escapar por sí mismo.",
+          "Asfixia: Los combatientes enemigos engullidos por el barro se ven privados de oxígeno y pueden ser fácilmente asfixiados hasta la sumisión.",
+          "Ocultación de Arsenal: Puede sacar armas ocultas —como ametralladoras Gatling, guadañas, cañones o dinamita— directamente de su cuerpo en cualquier momento."
+        ],
+        "source_hash": "2d58d1c48c3d76a6fd7913063675444837739e581db27c04b11c9e72fb34fd31"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en fang i sorral, funcionant com un pantà líquid sense fons.",
+        "skills": [
+          "Sorral Sense Fons: Qualsevol persona o objecte que caigui al fang de l'usuari s'enfonsa sense remei en un literal \"pantà sense fons\" i no pot escapar-ne per si mateix.",
+          "Asfíxia: Els combatents enemics engolits pel fang es veuen privats d'oxigen i poden ser fàcilment asfixiats fins a la submissió.",
+          "Ocultació d'Arsenal: Pot treure armes amagades —com metralladores Gatling, dalles, canons o dinamita— directament del seu cos en qualsevol moment."
+        ],
+        "source_hash": "2d58d1c48c3d76a6fd7913063675444837739e581db27c04b11c9e72fb34fd31"
+      }
+    },
+    "Ori Ori no mi": {
+      "es-ES": {
+        "description": "Otorga al usuario la capacidad de generar barrotes de acero irrompibles directamente desde su cuerpo, inmovilizando o enjaulando al instante a cualquiera que pase a través de ellos o entre en contacto físico con ella.",
+        "skills": [
+          "Inmovilización Instantánea por Contacto: Cuando la usuaria desliza sus brazos o extremidades a través de un oponente, su cuerpo materializa grilletes de hierro sólido a su alrededor en el momento del contacto."
+        ],
+        "source_hash": "efcbb1fc5a60b0133c9605206bc2d66ac46ebed76352d8cf8395cf701d493b27"
+      },
+      "ca-ES": {
+        "description": "Atorga a l'usuari la capacitat de generar barrots d'acer irrompibles directament des del seu cos, immobilitzant o engabiant a l'instant qualsevol que passi a través seu o entri en contacte físic amb ella.",
+        "skills": [
+          "Immobilització Instantània per Contacte: Quan la usuària llisca els braços o les extremitats a través d'un oponent, el seu cos materialitza grillons de ferro sòlid al seu voltant en el moment del contacte."
+        ],
+        "source_hash": "efcbb1fc5a60b0133c9605206bc2d66ac46ebed76352d8cf8395cf701d493b27"
+      }
+    },
+    "Pika Pika no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en luz a voluntad, otorgándole una velocidad casi inigualable y una capacidad energética extrema.",
+        "skills": [
+          "Patadas a la Velocidad de la Luz: Kizaru convierte sus piernas en luz para asestar golpes cinéticos cargados de masa y velocidad lumínica.",
+          "Reflejo de Espejo: Emitiendo rayos que rebotan en superficies reflectantes, el usuario puede teletransportarse al instante a lo largo de trayectorias de luz para flanquear a sus enemigos (Yata no Kagami).",
+          "Intangibilidad: Como usuario Logia, los golpes físicos, los tajos de espada y los proyectiles de artillería atraviesan inofensivamente la forma de luz de Kizaru, dejando huecos amarillos brillantes que se recomponen de inmediato.",
+          "Cargas Láser: El usuario puede disparar rayos de luz perforantes desde las yemas de los dedos o los pies que provocan enormes explosiones térmicas al impactar.",
+          "Constructos de Luz: Kizaru puede solidificar la luz en armas, como una espada larga y afilada de luz pura (Ame no Murakumo).",
+          "Ataques en Andanada: El usuario puede ascender por los aires y bombardear un área inmensa con miles de partículas de luz destructivas (Yasakani no Magatama)."
+        ],
+        "source_hash": "cc25495dc5769af44c52ce9999debc176e01192c820284a99ed9ff002f1a3f9a"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en llum a voluntat, atorgant-li una velocitat gairebé inigualable i una capacitat energètica extrema.",
+        "skills": [
+          "Puntades a la Velocitat de la Llum: Kizaru converteix les seves cames en llum per assestar cops cinètics carregats de massa i velocitat lumínica.",
+          "Reflex de Mirall: Emetent raigs que reboten en superfícies reflectants, l'usuari pot teletransportar-se a l'instant al llarg de trajectòries de llum per flanquejar els enemics (Yata no Kagami).",
+          "Intangibilitat: Com a usuari Logia, els cops físics, les ganivetades d'espasa i els projectils d'artilleria travessen inofensivament la forma de llum de Kizaru, deixant buits grocs brillants que es recomponen immediatament.",
+          "Càrregues Làser: L'usuari pot disparar raigs de llum perforants des de les puntes dels dits o els peus que provoquen enormes explosions tèrmiques en impactar.",
+          "Constructes de Llum: Kizaru pot solidificar la llum en armes, com una espasa llarga i esmolada de llum pura (Ame no Murakumo).",
+          "Atacs en Ràfega: L'usuari pot ascendir pels aires i bombardejar una àrea immensa amb milers de partícules de llum destructives (Yasakani no Magatama)."
+        ],
+        "source_hash": "cc25495dc5769af44c52ce9999debc176e01192c820284a99ed9ff002f1a3f9a"
+      }
+    },
+    "Ryu Ryu no mi: Model Allosaurus": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un híbrido de alosaurio o en un alosaurio prehistórico completo, otorgándole un poder de mordida devastador, una gruesa placa de blindaje y una inmensa fuerza física ancestral.",
+        "skills": [
+          "Mordida y Fuerza de Mandíbula Prehistóricas: En su forma bestial completa, el usuario se transforma en un dinosaurio terópodo gigantesco. Su enorme estructura mandibular ejerce una fuerza de mordida aplastante capaz de desgarrar el acero, romper huesos y atravesar blindaje militar con facilidad.",
+          "Recuperación Mejorada: Permite al usuario recuperarse rápidamente de traumatismos físicos contundentes y golpes elementales intensos durante batallas prolongadas.",
+          "Pisoteo de Peso Pesado: Su pesada cola y sus gruesas patas pueden asestar coletazos y pisotones capaces de romper huesos, arrasando con grupos enteros de infantería."
+        ],
+        "source_hash": "e6479e6a67ab57c8d51b489d6fa063fb8ed0cea482201f11447f4dfed6d888e6"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un híbrid d'al·losaure o en un al·losaure prehistòric complet, atorgant-li un poder de mossegada devastador, una gruixuda placa de blindatge i una immensa força física ancestral.",
+        "skills": [
+          "Mossegada i Força de Mandíbula Prehistòriques: En la seva forma bestial completa, l'usuari es transforma en un dinosaure teròpode gegantí. La seva enorme estructura mandibular exerceix una força de mossegada aixafadora capaç d'esquinçar l'acer, trencar ossos i travessar blindatge militar amb facilitat.",
+          "Recuperació Millorada: Permet a l'usuari recuperar-se ràpidament de traumatismes físics contundents i cops elementals intensos durant batalles prolongades.",
+          "Trepitjada de Pes Pesant: La seva pesada cua i les seves gruixudes potes poden assestar cop de cua i trepitjades capaces de trencar ossos, escombrant grups sencers d'infanteria."
+        ],
+        "source_hash": "e6479e6a67ab57c8d51b489d6fa063fb8ed0cea482201f11447f4dfed6d888e6"
+      }
+    },
+    "Ryu Ryu no mi: Model Brachiosaurus": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un híbrido de braquiosaurio o en un braquiosaurio prehistórico completo, otorgándole un tamaño físico colosal, un peso extremo, un poder aplastante y una intensa resistencia de Zoan Ancestral.",
+        "skills": [
+          "Bombas Braquio y Pisotones Pesados: Saltando desde grandes alturas en su forma bestial, el usuario puede aplastar a sus objetivos bajo miles de toneladas de peso corporal, una maniobra lo bastante potente como para dejar fuera de combate temporalmente a una Big Mom amnésica (Brachio Bomber).",
+          "Constricción Rompehuesos: El usuario puede enrollar su cuello y cola alargados alrededor de los enemigos para aplastar sus cuerpos, alegando que la presión es lo bastante inmensa como para quebrar incluso a maestros avanzados del Haki de Armadura.",
+          "Alta Resistencia: El usuario encaja con facilidad golpes físicos pesados, tajos y ráfagas elementales, sacudiéndose traumatismos contundentes que derrotarían al instante a luchadores normales.",
+          "Braquio-Serpiente-us: El usuario expulsa por completo su cabeza, su largo cuello y su cola directamente fuera de su cuerpo principal, convirtiéndose en una gigantesca 'serpiente braquiosaurio' viviente.",
+          "Bloqueo de Constricción: El torso-serpiente se enrosca con fuerza alrededor del enemigo para aplastarle las costillas y los órganos internos."
+        ],
+        "source_hash": "362477f6b0696f23282aacac47de7585221b8b8f6371c1dcd95a977c02a938c7"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un híbrid de braquiosaure o en un braquiosaure prehistòric complet, atorgant-li una mida física colossal, un pes extrem, un poder aixafador i una intensa resistència de Zoan Ancestral.",
+        "skills": [
+          "Bombes Braquio i Trepitjades Pesants: Saltant des de grans alçades en la seva forma bestial, l'usuari pot aixafar els seus objectius sota milers de tones de pes corporal, una maniobra prou potent com per deixar fora de combat temporalment una Big Mom amnèsica (Brachio Bomber).",
+          "Constricció Trencaossos: L'usuari pot enrotllar el seu coll i cua allargats al voltant dels enemics per aixafar-los el cos, afirmant que la pressió és prou immensa com per trencar fins i tot mestres avançats del Haki d'Armadura.",
+          "Alta Resistència: L'usuari encaixa amb facilitat cops físics pesants, ganivetades i ràfegues elementals, sacsejant-se traumatismes contundents que derrotarien a l'instant lluitadors normals.",
+          "Braquio-Serp-us: L'usuari expulsa completament el seu cap, el seu coll llarg i la seva cua directament fora del seu cos principal, convertint-se en una gegantina 'serp braquiosaure' vivent.",
+          "Bloqueig de Constricció: El tors-serp s'enrosca amb força al voltant de l'enemic per aixafar-li les costelles i els òrgans interns."
+        ],
+        "source_hash": "362477f6b0696f23282aacac47de7585221b8b8f6371c1dcd95a977c02a938c7"
+      }
+    },
+    "Ryu Ryu no mi: Model Nidhöggr": {
+      "es-ES": {
+        "description": "Originalmente devorada por el legendario \"Dios Guerrero\", esta fruta se considera un tesoro nacional en Elbaph y fue protegida durante siglos por Ragnir. Finalmente fue consumida por Loki hace 14 años, tras conseguir domar a Ragnir.",
+        "skills": [
+          "Forma Bestial: Transforma por completo al usuario en un dragón oscuro masivo y aterrador, con escamas oscuras, alas inmensas, garras afiladas y una cola serpentina hecha para la destrucción.",
+          "Forma Híbrida: Fusiona la movilidad humana con rasgos de dragón —haciendo brotar alas de dragón oscuro, garras afiladísimas, una armadura de escamas, colmillos y una cola—, maximizando el poder en combate cuerpo a cuerpo.",
+          "Aliento de Veneno y Corrosión: Inspirado en la asociación de Níðhöggr con el veneno y los cadáveres, el usuario puede emitir un aliento de dragón letal y corrosivo capaz de fundir armaduras, erosionar defensas y envenenar a los objetivos al contacto.",
+          "Raíces de la Decadencia y Manipulación de la Tierra: Reflejando a Níðhöggr royendo las raíces del Árbol del Mundo, la fruta permite al usuario canalizar energía oscura a través del suelo para debilitar estructuras, descomponer materia viva o provocar temblores de tierra."
+        ],
+        "source_hash": "e9b913d6684e25f3340a9224498473200cef98a8754db3dbe7dec063c1fc5719"
+      },
+      "ca-ES": {
+        "description": "Originàriament devorada pel llegendari \"Déu Guerrer\", aquesta fruita es considera un tresor nacional a Elbaph i va ser protegida durant segles per Ragnir. Finalment va ser consumida per Loki fa 14 anys, després d'aconseguir domar Ragnir.",
+        "skills": [
+          "Forma Bestial: Transforma completament l'usuari en un drac fosc massiu i esfereïdor, amb escates fosques, ales immenses, urpes esmolades i una cua serpentina feta per a la destrucció.",
+          "Forma Híbrida: Fusiona la mobilitat humana amb trets de drac —fent brotar ales de drac fosc, urpes esmoladíssimes, una armadura d'escates, ullals i una cua—, maximitzant el poder en combat cos a cos.",
+          "Alè de Verí i Corrosió: Inspirat en l'associació de Níðhöggr amb el verí i els cadàvers, l'usuari pot emetre un alè de drac letal i corrosiu capaç de fondre armadures, erosionar defenses i enverinar els objectius en contacte.",
+          "Arrels de la Decadència i Manipulació de la Terra: Reflectint Níðhöggr rosegant les arrels de l'Arbre del Món, la fruita permet a l'usuari canalitzar energia fosca a través del terra per debilitar estructures, descompondre matèria viva o provocar tremolors de terra."
+        ],
+        "source_hash": "e9b913d6684e25f3340a9224498473200cef98a8754db3dbe7dec063c1fc5719"
+      }
+    },
+    "Ryu Ryu no mi: Model Pachycephalosaurus": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un híbrido de paquicefalosaurio o en un paquicefalosaurio prehistórico completo, otorgándole un cráneo abovedado extraordinariamente grueso, un poder de cabezazo extremo y resistencia de Zoan Ancestral.",
+        "skills": [
+          "Ulti-Meteo (Ulti Meteor): Ulti sujeta a un objetivo con las manos para inmovilizarlo, salta por los aires y estrella su cabeza abovedada directamente contra la de su rival. El puro impacto cinético genera ondas de choque localizadas capaces de agrietar piedra, resquebrajar blindajes y romper el cráneo del oponente.",
+          "Sinergia de Haki: Reforzando con Haki de Armadura (Busoshoku Haki) su denso cráneo de dinosaurio, eleva su cabezazo a un golpe letal similar a un cañonazo, capaz de tambalear incluso a luchadores de alto nivel como Monkey D. Luffy.",
+          "Tenacidad Implacable: Ulti recibió golpes a quemarropa de Luffy, un rayo sorpresa de Nami, un ataque combinado de Yamato y un ataque combinado a plena potencia de Big Mom (Maser Cannon), y aun así se levantó una y otra vez para seguir luchando.",
+          "Combate Híbrido Agresivo: En su forma híbrida, Ulti conserva su rápida locomoción humana mientras gana garras de dinosaurio, una cola musculosa y su estructura craneal reforzada, convirtiéndola en una luchadora de cuerpo a cuerpo extremadamente agresiva de corto alcance."
+        ],
+        "source_hash": "23d98df4f34e2462ec151316d535fa86469b4e4130696aef0322aaf9b7f42cf6"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un híbrid de paquicefalosaure o en un paquicefalosaure prehistòric complet, atorgant-li un crani abovedat extraordinàriament gruixut, un poder de cop de cap extrem i resistència de Zoan Ancestral.",
+        "skills": [
+          "Ulti-Meteo (Ulti Meteor): Ulti agafa un objectiu amb les mans per immobilitzar-lo, salta pels aires i estampa el seu cap abovedat directament contra el del rival. El pur impacte cinètic genera ones de xoc localitzades capaces d'esquerdar pedra, trencar blindatges i trencar el crani de l'oponent.",
+          "Sinergia de Haki: Reforçant amb Haki d'Armadura (Busoshoku Haki) el seu dens crani de dinosaure, eleva el seu cop de cap a un atac letal semblant a una canonada, capaç de fer trontollar fins i tot lluitadors d'alt nivell com Monkey D. Luffy.",
+          "Tenacitat Implacable: Ulti va rebre cops a boca de canó de Luffy, un llamp sorpresa de Nami, un atac combinat de Yamato i un atac combinat a plena potència de Big Mom (Maser Cannon), i tot i així es va aixecar una vegada i una altra per seguir lluitant.",
+          "Combat Híbrid Agressiu: En la seva forma híbrida, Ulti conserva la seva ràpida locomoció humana mentre guanya urpes de dinosaure, una cua musculosa i la seva estructura cranial reforçada, convertint-la en una lluitadora de cos a cos extremadament agressiva de curt abast."
+        ],
+        "source_hash": "23d98df4f34e2462ec151316d535fa86469b4e4130696aef0322aaf9b7f42cf6"
+      }
+    },
+    "Ryu Ryu no mi: Model Pteranodon": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un híbrido de pteranodonte o en un pteranodonte prehistórico completo, otorgándole velocidades de vuelo extremas, un inmenso impacto aéreo y una piel resistente.",
+        "skills": [
+          "Empuje Contra Barcos: Su pura fuerza cinética y su envergadura son lo bastante fuertes como para derribar él solo el gigantesco buque insignia de Big Mom, el Queen Mama Chanter, desde lo alto de la Cascada de Wano.",
+          "Cuchillas Aladas Afiladas: Los bordes de sus alas de aspecto correoso actúan como enormes cuchillas rígidas capaces de cortar piedra, metal y cascos de barco en pleno vuelo.",
+          "Tempura Udon (Snort Rubber): El usuario estira hacia atrás como una honda la cresta orientada hacia atrás de su cabeza, tensando su rostro antes de soltarlo para lanzar su cabeza hacia delante. Esto dispara un golpe de pico a alta velocidad, similar a un láser (Imperial Deep Stinger), que se mueve demasiado rápido para percibirlo y puede perforar limpiamente roca y metal."
+        ],
+        "source_hash": "7c79672b41a83046138ddb59dcd3700a1518a8b0271a7014130fc0aac2bad4e6"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un híbrid de pteranodont o en un pteranodont prehistòric complet, atorgant-li velocitats de vol extremes, un immens impacte aeri i una pell resistent.",
+        "skills": [
+          "Empenta Contra Vaixells: La seva pura força cinètica i la seva envergadura són prou fortes com per fer caure ell sol el gegantí vaixell insígnia de Big Mom, el Queen Mama Chanter, des de dalt de la Cascada de Wano.",
+          "Fulles Alades Esmolades: Les vores de les seves ales d'aspecte coriaci actuen com a enormes fulles rígides capaces de tallar pedra, metall i cascos de vaixell en ple vol.",
+          "Tempura Udon (Snort Rubber): L'usuari estira cap enrere com un tirador la cresta orientada cap enrere del seu cap, tensant el seu rostre abans d'alliberar-lo per llançar el cap cap endavant. Això dispara un cop de bec a alta velocitat, semblant a un làser (Imperial Deep Stinger), que es mou massa ràpid per percebre'l i pot perforar netament roca i metall."
+        ],
+        "source_hash": "7c79672b41a83046138ddb59dcd3700a1518a8b0271a7014130fc0aac2bad4e6"
+      }
+    },
+    "Ryu Ryu no mi: Model Spinosaurus": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un híbrido de espinosaurio o en un espinosaurio prehistórico completo, otorgándole un tamaño físico masivo, garras afiladísimas, un poder de mordida inmenso y una extrema resistencia de Zoan Ancestral.",
+        "skills": [
+          "Mordiscos Aplastantes: Sus mandíbulas alargadas ejercen una fuerza de sujeción pura capaz de morder a través de edificios, estructuras de piedra y oponentes blindados.",
+          "Vela Masiva y Coletazos: Su pesada y musculosa cola puede barrer a múltiples oponentes a la vez, mientras que su largo hocico le da un alcance de golpeo mayor en comparación con los terópodos estándar.",
+          "Alta Tolerancia al Daño",
+          "Recuperación y Resistencia de Zoan Ancestral"
+        ],
+        "source_hash": "eb053559853d9f16ed1e6b822b701b7ae1a02c2c19e2c187ef83db6766fabaf7"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un híbrid d'espinosaure o en un espinosaure prehistòric complet, atorgant-li una mida física massiva, urpes esmoladíssimes, un poder de mossegada immens i una resistència extrema de Zoan Ancestral.",
+        "skills": [
+          "Mossegades Aixafadores: Les seves mandíbules allargades exerceixen una força de subjecció pura capaç de mossegar a través d'edificis, estructures de pedra i oponents blindats.",
+          "Vela Massiva i Cops de Cua: La seva pesada i musculosa cua pot escombrar múltiples oponents alhora, mentre que el seu llarg musell li dona un abast de cop més gran en comparació amb els teròpodes estàndard.",
+          "Alta Tolerància al Dany",
+          "Recuperació i Resistència de Zoan Ancestral"
+        ],
+        "source_hash": "eb053559853d9f16ed1e6b822b701b7ae1a02c2c19e2c187ef83db6766fabaf7"
+      }
+    },
+    "Ryu Ryu no mi: Model Triceratops": {
+      "es-ES": {
+        "description": "Permite al usuario transformarse en un híbrido de triceratops o en un triceratops prehistórico completo, otorgándole tres enormes cuernos faciales, un denso collar defensivo y un inmenso impulso de carga.",
+        "skills": [
+          "Cargas de Corneada: Una carga a plena velocidad de Sasaki puede atravesar gruesas planchas de acero, fortificaciones de hormigón y el gigantesco mecha de batalla de Franky (General Franky).",
+          "Defensa Frontal: Su gran collar óseo en el cuello actúa como un escudo pesado, desviando disparos directos, tajos de espada y proyectiles de artillería desde el frente.",
+          "Rápida Regeneración de Resistencia: Permite a Sasaki encajar explosivos pesados y golpes físicos mientras se recupera rápidamente para volver a entrar en batalla."
+        ],
+        "source_hash": "33b63dfd64d44ef2e09200c94b29b9931a05160ed994d8560873ead7afc71957"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari transformar-se en un híbrid de triceratops o en un triceratops prehistòric complet, atorgant-li tres enormes banyes facials, un dens coll defensiu i un immens impuls de càrrega.",
+        "skills": [
+          "Càrregues de Cornada: Una càrrega a plena velocitat de Sasaki pot travessar gruixudes planxes d'acer, fortificacions de formigó i el gegantí mecha de batalla de Franky (General Franky).",
+          "Defensa Frontal: El seu gran coll ossi al voltant del coll actua com un escut pesant, desviant trets directes, ganivetades d'espasa i projectils d'artilleria des del davant.",
+          "Ràpida Regeneració de Resistència: Permet a Sasaki encaixar explosius pesants i cops físics mentre es recupera ràpidament per tornar a entrar en batalla."
+        ],
+        "source_hash": "33b63dfd64d44ef2e09200c94b29b9931a05160ed994d8560873ead7afc71957"
+      }
+    },
+    "Sara Sara no mi: Model Axolotl": {
+      "es-ES": {
+        "description": "Su poder principal otorga a quien la consume la capacidad de transformarse en un ajolote completo o en un híbrido humano-ajolote, adquiriendo rasgos anfibios y una fisiología de criatura acuática.",
+        "skills": [
+          "Rasgos Anfibios: Otorga características de ajolote como branquias externas con volantes, movimiento cuadrúpedo y una flexibilidad física de tipo acuático.",
+          "Propiedades Regenerativas de Ajolote: En el mundo real, los ajolotes son famosos por regenerar extremidades y órganos. En One Piece, este rasgo permitió que el cuerpo gelatinoso de Smiley se recompusiera y volviera a coserse a sí mismo cuando era partido por ataques físicos."
+        ],
+        "source_hash": "e52df2e0c67c7053d63360a687da26b05b3bcbe7467caaacf5b614f48cabe0fa"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a qui la consumeix la capacitat de transformar-se en un axolot complet o en un híbrid humà-axolot, adquirint trets amfibis i una fisiologia de criatura aquàtica.",
+        "skills": [
+          "Trets Amfibis: Atorga característiques d'axolot com brànquies externes amb volants, moviment quadrúpede i una flexibilitat física de tipus aquàtic.",
+          "Propietats Regeneratives d'Axolot: Al món real, els axolots són famosos per regenerar extremitats i òrgans. A One Piece, aquest tret va permetre que el cos gelatinós de Smiley es recomposés i es tornés a cosir a si mateix quan era partit per atacs físics."
+        ],
+        "source_hash": "e52df2e0c67c7053d63360a687da26b05b3bcbe7467caaacf5b614f48cabe0fa"
+      }
+    },
+    "Sube Sube no mi": {
+      "es-ES": {
+        "description": "La Sube Sube no Mi es una Fruta del Diablo que vuelve el cuerpo del usuario liso y resbaladizo, lo que a su vez hace que la mayoría de ataques y objetos se deslicen sobre su cuerpo, protegiéndolo de daño en la mayoría de las situaciones.",
+        "skills": [
+          "Eliminación de la Fricción: El usuario puede deslizarse sobre las superficies como un patinador sobre hielo a gran velocidad —incluso descalzo— eliminando por completo la fricción de su piel o de las plantas de sus pies.",
+          "Transformación Física: Como efecto secundario, la fruta elimina todo el peso sobrante, las imperfecciones de la piel y los rasgos ásperos, dejando al usuario con una piel impecable y tersa y una complexión notablemente más esbelta."
+        ],
+        "source_hash": "4136bb7fd3bcdfd43bc3a995ef0f0fd15a01e7b57cd937c9a3b75b59cec2bc0a"
+      },
+      "ca-ES": {
+        "description": "La Sube Sube no Mi és una Fruita del Diable que fa que el cos de l'usuari sigui llis i lliscós, la qual cosa fa que la majoria d'atacs i objectes rellisquin sobre el seu cos, protegint-lo de mal en la majoria de situacions.",
+        "skills": [
+          "Eliminació de la Fricció: L'usuari pot lliscar sobre les superfícies com un patinador sobre gel a gran velocitat —fins i tot descalç— eliminant completament la fricció de la seva pell o de les plantes dels peus.",
+          "Transformació Física: Com a efecte secundari, la fruita elimina tot el pes sobrant, les imperfeccions de la pell i els trets aspres, deixant l'usuari amb una pell impecable i tersa i una constitució notablement més esvelta."
+        ],
+        "source_hash": "4136bb7fd3bcdfd43bc3a995ef0f0fd15a01e7b57cd937c9a3b75b59cec2bc0a"
+      }
+    },
+    "Suna Suna no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en arena a voluntad.",
+        "skills": [
+          "Intangibilidad y Manipulación de Forma: Los ataques físicos atraviesan inofensivamente la forma de arena de Crocodile. Puede dispersarse en tormentas de arena para viajar largas distancias, volar o esquivar golpes entrantes abriendo huecos en su cuerpo.",
+          "Objetivos Orgánicos: Tocar a una persona la deshidrata al instante, dejándola como un pellejo reseco (Ground Death).",
+          "Entorno: El contacto prolongado con el terreno convierte roca, tierra y vegetación en arena del desierto.",
+          "Ataques de Arena Devastadores: Crocodile puede moldear la arena en cuchillas afiladísimas (Desert Spada), enormes pozos de arenas movedizas o tormentas de arena localizadas que erosionan todo a su paso."
+        ],
+        "source_hash": "2dbd47cfb2930a706fb666a6ee9ecc8b88e2b8713a67508443b5dfa9d7d12448"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en sorra a voluntat.",
+        "skills": [
+          "Intangibilitat i Manipulació de Forma: Els atacs físics travessen inofensivament la forma de sorra de Crocodile. Pot dispersar-se en tempestes de sorra per viatjar llargues distàncies, volar o esquivar cops entrants obrint forats en el seu cos.",
+          "Objectius Orgànics: Tocar una persona la deshidrata a l'instant, deixant-la com una pell resseca (Ground Death).",
+          "Entorn: El contacte prolongat amb el terreny converteix roca, terra i vegetació en sorra de desert.",
+          "Atacs de Sorra Devastadors: Crocodile pot modelar la sorra en fulles esmoladíssimes (Desert Spada), enormes pous de sorres movedisses o tempestes de sorra localitzades que erosionen tot al seu pas."
+        ],
+        "source_hash": "2dbd47cfb2930a706fb666a6ee9ecc8b88e2b8713a67508443b5dfa9d7d12448"
+      }
+    },
+    "Supa Supa no mi": {
+      "es-ES": {
+        "description": "Otorga al usuario el poder de transformar cualquier parte de su cuerpo en cuchillas de acero afiladas como navajas, además de volver todo su cuerpo tan duro como el acero.",
+        "skills": [
+          "Dureza de Acero: El cuerpo del usuario adquiere la dureza natural del acero macizo, haciéndolo prácticamente inmune a los ataques físicos estándar, las balas y las armas blancas normales.",
+          "Partes del Cuerpo Cortantes: El usuario puede convertir dedos, antebrazos, piernas, torso o pies en espadas afiladísimas o en cuchillas giratorias tipo motosierra (Spider o Sparkling Daisy)."
+        ],
+        "source_hash": "d49e99c439520bcd02fbb83c5b295bc6e5760d653930016b2b46e15dc6c6c33f"
+      },
+      "ca-ES": {
+        "description": "Atorga a l'usuari el poder de transformar qualsevol part del seu cos en fulles d'acer esmolades com navalles, a més de fer que tot el seu cos sigui tan dur com l'acer.",
+        "skills": [
+          "Duresa d'Acer: El cos de l'usuari adquireix la duresa natural de l'acer massís, fent-lo pràcticament immune als atacs físics estàndard, les bales i les armes blanques normals.",
+          "Parts del Cos Tallants: L'usuari pot convertir dits, avantbraços, cames, tors o peus en espases esmoladíssimes o en fulles giratòries tipus motoserra (Spider o Sparkling Daisy)."
+        ],
+        "source_hash": "d49e99c439520bcd02fbb83c5b295bc6e5760d653930016b2b46e15dc6c6c33f"
+      }
+    },
+    "Susu Susu no mi": {
+      "es-ES": {
+        "description": "Permite al usuario crear, controlar y transformar su cuerpo en partículas oscuras de hollín y ceniza a voluntad.",
+        "skills": [
+          "Generación de Constructos de Hollín (Enjambres de Cuervos): La aplicación característica de Karasu de esta fruta consiste en dar forma a su hollín en enjambres masivos y casi conscientes de cuervos negros.",
+          "Reconocimiento y Comunicación: Los cuervos de hollín pueden transportar mensajes, llevar aliados a hombros o desarmar enemigos simultáneamente por todo un campo de batalla.",
+          "Enjambres de Combate: Los cuervos pueden atacar en agrupaciones masivas y afiladas, arrancando armas a los soldados enemigos o acuchillando a picotazos a los oponentes.",
+          "Asfixia y Cegamiento: Dado que el hollín está compuesto por finos residuos tóxicos de carbono, dispersar densas nubes de ceniza en el aire permite a Karasu cegar a los enemigos circundantes y asfixiar a los objetivos obstruyéndoles los pulmones y las vías respiratorias."
+        ],
+        "source_hash": "0b05222c064cea1cf5b57151b78489ec81438964469e543e401c6986925286fd"
+      },
+      "ca-ES": {
+        "description": "Permet a l'usuari crear, controlar i transformar el seu cos en partícules fosques de sutge i cendra a voluntat.",
+        "skills": [
+          "Generació de Constructes de Sutge (Eixams de Corbs): L'aplicació característica de Karasu d'aquesta fruita consisteix a donar forma al seu sutge en eixams massius i gairebé conscients de corbs negres.",
+          "Reconeixement i Comunicació: Els corbs de sutge poden transportar missatges, portar aliats a l'esquena o desarmar enemics simultàniament per tot un camp de batalla.",
+          "Eixams de Combat: Els corbs poden atacar en agrupacions massives i esmolades, arrencant armes als soldats enemics o acoltellant a becades els oponents.",
+          "Asfíxia i Enlluernament: Com que el sutge està compost per fins residus tòxics de carboni, dispersar núvols densos de cendra a l'aire permet a Karasu encegar els enemics circumdants i asfixiar els objectius obstruint-los els pulmons i les vies respiratòries."
+        ],
+        "source_hash": "0b05222c064cea1cf5b57151b78489ec81438964469e543e401c6986925286fd"
+      }
+    },
+    "Tama Tama no mi": {
+      "es-ES": {
+        "description": "Otorga a quien la consume una composición corporal similar a la de un huevo, que le permite evolucionar de forma continua hacia formas aviares cada vez más fuertes cada vez que sufre daño fatal o grave en combate.",
+        "skills": [
+          "Vizconde Hiyoko (Forma de Polluelo): Se activa cuando la forma de huevo de Tamago es cortada o aplastada. Eclosiona convirtiéndose en un polluelo gigante que empuña dos cuchillos, ganando mayor velocidad y agresividad en combate.",
+          "Conde Niwatori (Forma de Gallo): Se activa cuando el Vizconde Hiyoko sufre daño fatal. Eclosiona convirtiéndose en un poderoso hombre-gallo, alcanzando su máxima fuerza física, velocidad y resistencia.",
+          "Bucle de Resurrección Infinito: Si el Conde Niwatori es finalmente derrotado, su cuerpo vuelve a la forma base de huevo del Barón Tamago, reiniciando todo el ciclo y volviéndolo prácticamente inmortal gracias a la resurrección en combate.",
+          "Escalada de Estadísticas: Cada forma progresiva (Huevo → Polluelo → Gallo) se vuelve considerablemente más rápida, fuerte y letal que el estado anterior."
+        ],
+        "source_hash": "146b177ab908d8b9d7318a1366d3c3f1cbe890ce4511244cff3568ab70eec9ae"
+      },
+      "ca-ES": {
+        "description": "Atorga a qui la consumeix una composició corporal semblant a la d'un ou, que li permet evolucionar de manera contínua cap a formes aviàries cada cop més fortes cada vegada que pateix un dany fatal o greu en combat.",
+        "skills": [
+          "Vescomte Hiyoko (Forma de Pollet): S'activa quan la forma d'ou de Tamago és tallada o esclafada. Eclosiona i es converteix en un pollet gegant que empunya dos ganivets, guanyant més velocitat i agressivitat en combat.",
+          "Comte Niwatori (Forma de Gall): S'activa quan el Vescomte Hiyoko rep un dany fatal. Eclosiona i es converteix en un poderós home-gall, assolint la seva màxima força física, velocitat i resistència.",
+          "Bucle de Ressurrecció Infinit: Si el Comte Niwatori acaba sent derrotat, el seu cos torna a la forma base d'ou del Baró Tamago, reiniciant tot el cicle i fent-lo pràcticament immortal gràcies a la ressurrecció en combat.",
+          "Escalada d'Estadístiques: Cada forma progressiva (Ou → Pollet → Gall) esdevé considerablement més ràpida, forta i letal que l'estat anterior."
+        ],
+        "source_hash": "146b177ab908d8b9d7318a1366d3c3f1cbe890ce4511244cff3568ab70eec9ae"
+      }
+    },
+    "Toge Toge no mi": {
+      "es-ES": {
+        "description": "Otorga a quien la consume el poder de transformar cualquier parte de su cuerpo en púas metálicas afiladas y sólidas, capaces de perforar piedra, acero y carne.",
+        "skills": [
+          "Apuñalar y Perforar: Las púas pueden alargarse varios metros al instante para empalar a los oponentes o atraparlos contra paredes (Dedo Aguijón / Doble Aguijón).",
+          "Escalar Paredes y Locomoción: La usuaria puede hacer surgir púas en las plantas de los pies o en las rodillas para caminar por paredes, aferrarse a techos o anclarse durante fuertes vientos y ondas expansivas.",
+          "Potenciación Muscular (Acupuntura de Púas): Clavándose sus propias púas en puntos de presión específicos, puede realizar la Acupuntura de Púas (Toge Acupuncture). Esta técnica desencadena una descarga de adrenalina que aumenta drásticamente su masa muscular, otorgándole una fuerza física sobrehumana y una velocidad mejorada."
+        ],
+        "source_hash": "915fcd7ea3e848d23b3e2e0d15eba0d301f9e870fd2ceb43aa890d6a7470d3e8"
+      },
+      "ca-ES": {
+        "description": "Atorga a qui la consumeix el poder de transformar qualsevol part del seu cos en punxes metàl·liques afilades i sòlides, capaces de perforar pedra, acer i carn.",
+        "skills": [
+          "Apunyalar i Perforar: Les punxes poden allargar-se diversos metres a l'instant per empalar els oponents o atrapar-los contra parets (Dit Fibló / Doble Fibló).",
+          "Escalar Parets i Locomoció: La usuària pot fer sorgir punxes a les plantes dels peus o als genolls per caminar per parets, aferrar-se a sostres o ancorar-se durant vents forts i ones expansives.",
+          "Potenciació Muscular (Acupuntura de Punxes): Clavant-se les seves pròpies punxes en punts de pressió específics, pot realitzar l'Acupuntura de Punxes (Toge Acupuncture). Aquesta tècnica desencadena una descàrrega d'adrenalina que augmenta dràsticament la seva massa muscular, atorgant-li una força física sobrehumana i una velocitat millorada."
+        ],
+        "source_hash": "915fcd7ea3e848d23b3e2e0d15eba0d301f9e870fd2ceb43aa890d6a7470d3e8"
+      }
+    },
+    "Tori Tori no mi: Model Hawk": {
+      "es-ES": {
+        "description": "Permite a quien la consume transformarse a voluntad en un híbrido de halcón o en un halcón completo, otorgándole vuelo aéreo de alta velocidad, garras afiladas y atributos físicos mejorados.",
+        "skills": [
+          "Forma Híbrida: Conserva un cuerpo humanoide con rasgos de ave, alas y garras afiladas, lo que permite empuñar armas (como espadas o pistolas) junto con acrobacias aéreas.",
+          "Golpes Letales: El pico afilado y las garras pueden cortar armaduras o agarrar objetos pesados mientras está en pleno vuelo.",
+          "Movilidad Aérea y Vuelo de Alta Velocidad: El usuario puede volar a velocidades increíbles, lo que resulta ideal para el reconocimiento aéreo, el transporte rápido y los descensos sorpresa."
+        ],
+        "source_hash": "c0bcc5613c21735c5388cb7684c445a24a9bf6ab617ba9d89882a042298588ba"
+      },
+      "ca-ES": {
+        "description": "Permet a qui la consumeix transformar-se a voluntat en un híbrid de falcó o en un falcó complet, atorgant-li vol aeri d'alta velocitat, urpes afilades i atributs físics millorats.",
+        "skills": [
+          "Forma Híbrida: Conserva un cos humanoide amb trets d'au, ales i urpes afilades, cosa que permet empunyar armes (com espases o pistoles) juntament amb acrobàcies aèries.",
+          "Cops Letals: El bec afilat i les urpes poden tallar armadures o agafar objectes pesants mentre és en ple vol.",
+          "Mobilitat Aèria i Vol d'Alta Velocitat: L'usuari pot volar a velocitats increïbles, cosa que el fa ideal per al reconeixement aeri, el transport ràpid i els descensos sorpresa."
+        ],
+        "source_hash": "c0bcc5613c21735c5388cb7684c445a24a9bf6ab617ba9d89882a042298588ba"
+      }
+    },
+    "Tori Tori no mi: Model Phoenix": {
+      "es-ES": {
+        "description": "Su poder principal otorga a quien la consume la capacidad de transformarse en un legendario Fénix de llamas azules o en un híbrido humano-fénix, combinando las mejoras de estadísticas propias de una fruta Zoan con las propiedades de vuelo y autorregeneración de una criatura Mítica.",
+        "skills": [
+          "Forma Bestia (Fénix Completo): Se transforma por completo en un ave majestuosa e imponente hecha de brillantes llamas cian y amarillas.",
+          "Forma Híbrida (Humano-Fénix): Transforma sus extremidades (convirtiendo los brazos en alas de fuego o las piernas en garras afiladas, por ejemplo) mientras conserva un cuerpo humanoide para el combate aéreo de alta velocidad.",
+          "Llamas del Renacimiento (Llamas Azules): La fruta genera unas llamas azules especiales que no queman ni se propagan como el fuego ordinario. En cambio, estas llamas poseen extraordinarias propiedades curativas y regenerativas.",
+          "Autorregeneración Instantánea: Cualquier daño físico que sufre el usuario, ya sea por cortes, balas, cañonazos o ataques elementales, es curado al instante por las llamas azules en cuanto se produce, lo que lo vuelve casi inmortal en combate.",
+          "Curar a Otros (再生の炎 - Saisei no Honō): El usuario puede extender sus llamas azules sobre sus aliados para acelerar su proceso de curación natural, tratar heridas y curar enfermedades (aunque el efecto curativo en otros es menos potente que en el propio usuario).",
+          "Desviación de Ondas Expansivas (Fuzan no Aza): La densidad de las llamas azules puede moldearse en barreras físicas de ondas expansivas para bloquear ataques entrantes muy potentes, incluidas las explosiones elementales de los Almirantes.",
+          "Vuelo y Movilidad Aérea: Otorga un vuelo de alta velocidad sin esfuerzo tanto en la forma completa de ave como en la híbrida, permitiendo al usuario desplazarse por los campos de batalla y transportar aliados rápidamente."
+        ],
+        "source_hash": "85615cbf04a8ca9e5522108e838c89b0c9633a0ed5a2eb7d8632773fd0a9196a"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a qui la consumeix la capacitat de transformar-se en un llegendari Fènix de flames blaves o en un híbrid humà-fènix, combinant les millores d'estadístiques pròpies d'una fruita Zoan amb les propietats de vol i autoregeneració d'una criatura Mítica.",
+        "skills": [
+          "Forma Bèstia (Fènix Complet): Es transforma completament en una au majestuosa i imponent feta de brillants flames cian i grogues.",
+          "Forma Híbrida (Humà-Fènix): Transforma les seves extremitats (convertint els braços en ales de foc o les cames en urpes afilades, per exemple) mentre conserva un cos humanoide per al combat aeri d'alta velocitat.",
+          "Flames del Renaixement (Flames Blaves): La fruita genera unes flames blaves especials que no cremen ni es propaguen com el foc ordinari. En canvi, aquestes flames posseeixen extraordinàries propietats curatives i regeneratives.",
+          "Autoregeneració Instantània: Qualsevol dany físic que pateix l'usuari, ja sigui per talls, bales, canonades o atacs elementals, és curat a l'instant per les flames blaves tan bon punt es produeix, cosa que el fa gairebé immortal en combat.",
+          "Curar Altres (再生の炎 - Saisei no Honō): L'usuari pot estendre les seves flames blaves sobre els seus aliats per accelerar el seu procés de curació natural, tractar ferides i curar malalties (tot i que l'efecte curatiu en altres és menys potent que en el mateix usuari).",
+          "Desviació d'Ones Expansives (Fuzan no Aza): La densitat de les flames blaves es pot modelar en barreres físiques d'ones expansives per bloquejar atacs entrants molt potents, incloses les explosions elementals dels Almiralls.",
+          "Vol i Mobilitat Aèria: Atorga un vol d'alta velocitat sense esforç tant en la forma completa d'au com en la híbrida, permetent a l'usuari desplaçar-se pels camps de batalla i transportar aliats ràpidament."
+        ],
+        "source_hash": "85615cbf04a8ca9e5522108e838c89b0c9633a0ed5a2eb7d8632773fd0a9196a"
+      }
+    },
+    "Uo Uo no mi: Model Seiryu": {
+      "es-ES": {
+        "description": "La fruta se basa en el mito oriental de la carpa que nada río arriba por una cascada para convertirse en dragón. Otorga a quien la consume la capacidad de transformarse en un colosal Dragón Azur o en un potenciado híbrido humano-dragón.",
+        "skills": [
+          "Forma Bestia (Dragón Azur Completo): Se transforma en un gigantesco dragón azul de aspecto serpentino, de cientos de metros de largo, capaz de volar y de destruir cordilleras enteras con un solo ataque.",
+          "Forma Híbrida (Humano-Dragón): Combina la constitución humanoide del usuario con escamas, cuernos, cola y garras afiladas, fusionando una velocidad inmensa, un dominio de las artes marciales y atributos dracónicos en el estado definitivo para el combate cuerpo a cuerpo.",
+          "Vuelo mediante Nubes de Fuego (Homuradama): El usuario genera nubes ígneas que actúan como puntos de apoyo en el cielo. Al crear enormes cantidades de estas nubes, puede levantar y transportar por el aire masas de tierra enteras (como mover la isla de Onigashima a través del océano).",
+          "Aliento Explosivo (Boro Breath): Dispara por la boca un enorme rayo concentrado de calor y fuego capaz de vaporizar fortalezas, montañas y ruinas antiguas en cuestión de segundos.",
+          "Manipulación de Rayo y Viento: El usuario puede rugir para invocar rayos o dar un latigazo con su cola o cuernos para lanzar cuchillas de viento afiladísimas (Kaifu) que cortan limpiamente la piedra y la carne.",
+          "Dragón Ascendente: Bagua Llameante (Shoryu: Kaen Hakke): El estado ofensivo definitivo de la fruta, en el que el usuario cubre todo su cuerpo de dragón completo con un aura de fuego ultradensa y tan caliente como el sol, derritiendo todo lo que se le acerca.",
+          "Escamas Impenetrables: Las escamas del dragón actúan como una armadura biológica, haciendo al usuario prácticamente inmune a los ataques físicos convencionales, al fuego de cañón, a las cuchillas y al Haki básico.",
+          "Mejoras Extremas de Estadísticas: Al ser una Zoan Mítica, otorga extraordinarias mejoras a la fuerza física, la resistencia y la velocidad de recuperación pasiva, haciendo que el usuario sea casi imposible de derrotar en una batalla de desgaste."
+        ],
+        "source_hash": "e7921c6ae73cd45c56b913dfafa3a1256912c7c7f4ad0ef540e2d9b01096ca76"
+      },
+      "ca-ES": {
+        "description": "La fruita es basa en el mite oriental de la carpa que neda cascada amunt per convertir-se en drac. Atorga a qui la consumeix la capacitat de transformar-se en un colossal Drac Atzur o en un potenciat híbrid humà-drac.",
+        "skills": [
+          "Forma Bèstia (Drac Atzur Complet): Es transforma en un gegantí drac blau d'aspecte serpentí, de centenars de metres de llarg, capaç de volar i de destruir serralades senceres amb un sol atac.",
+          "Forma Híbrida (Humà-Drac): Combina la constitució humanoide de l'usuari amb escates, banyes, cua i urpes afilades, fusionant una velocitat immensa, un domini de les arts marcials i atributs dracònics en l'estat definitiu per al combat cos a cos.",
+          "Vol mitjançant Núvols de Foc (Homuradama): L'usuari genera núvols ígnis que actuen com a punts de suport al cel. En crear-ne quantitats enormes, pot alçar i transportar per l'aire masses de terra senceres (com moure l'illa d'Onigashima a través de l'oceà).",
+          "Alè Explosiu (Boro Breath): Dispara per la boca un enorme raig concentrat de calor i foc capaç de vaporitzar fortaleses, muntanyes i ruïnes antigues en qüestió de segons.",
+          "Manipulació de Llamp i Vent: L'usuari pot rugir per invocar llamps o donar un cop de fuet amb la cua o les banyes per llançar fulles de vent afiladíssimes (Kaifu) que tallen netament la pedra i la carn.",
+          "Drac Ascendent: Bagua Flamejant (Shoryu: Kaen Hakke): L'estat ofensiu definitiu de la fruita, en què l'usuari cobreix tot el seu cos de drac complet amb una aura de foc ultradensa i tan calenta com el sol, fonent tot allò que s'hi acosta.",
+          "Escates Impenetrables: Les escates del drac actuen com una armadura biològica, fent l'usuari pràcticament immune als atacs físics convencionals, al foc de canó, a les fulles i al Haki bàsic.",
+          "Millores Extremes d'Estadístiques: En ser una Zoan Mítica, atorga extraordinàries millores a la força física, la resistència i la velocitat de recuperació passiva, fent que l'usuari sigui gairebé impossible de derrotar en una batalla de desgast."
+        ],
+        "source_hash": "e7921c6ae73cd45c56b913dfafa3a1256912c7c7f4ad0ef540e2d9b01096ca76"
+      }
+    },
+    "Ushi Ushi no mi: Model Bison": {
+      "es-ES": {
+        "description": "Su poder principal permite a quien la consume transformarse en un bisonte o en un híbrido humano-bisonte, otorgando notables mejoras a la fuerza física bruta, la durabilidad, la velocidad y la resistencia.",
+        "skills": [
+          "Forma Bestia (Bisonte Completo): Transforma por completo al usuario en un enorme bisonte cuadrúpedo de pelaje grueso y cuernos afilados, ideal para embestidas a gran velocidad y para arrollar grupos de enemigos.",
+          "Forma Híbrida (Humano-Bestia): Combina la estatura humana con los rasgos físicos del bisonte, creando una bestia bípeda corpulenta con pezuñas, cabeza bovina, cuernos y una musculatura superior extremadamente desarrollada.",
+          "Físico Potenciado: Al ser una fruta de tipo Zoan, amplifica notablemente los atributos físicos, otorgando una fuerza bruta inmensa para abrumar a los oponentes, una piel gruesa que absorbe los impactos contundentes y una resistencia mejorada para el combate prolongado.",
+          "Ataques de Embestida a Alta Velocidad (Fiddle Banjo): En forma híbrida o de bestia completa, el usuario puede lanzarse a velocidades increíbles hacia un objetivo, usando el impulso y sus duros cuernos para empalar o destrozar formaciones enemigas.",
+          "Resistencia al Frío: La gruesa capa de pelaje que otorga la transformación en bisonte protege de forma natural al usuario de condiciones de frío extremo, resultando excepcionalmente eficaz en entornos invernales como la Isla Drum."
+        ],
+        "source_hash": "4011be788b8673f690542c1110a27f365ac3cc18e34362f3c15c573a6c2b230a"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal permet a qui la consumeix transformar-se en un bisó o en un híbrid humà-bisó, atorgant notables millores a la força física bruta, la durabilitat, la velocitat i la resistència.",
+        "skills": [
+          "Forma Bèstia (Bisó Complet): Transforma completament l'usuari en un enorme bisó quadrúpede de pèl gruixut i banyes afilades, ideal per a envestides a gran velocitat i per esclafar grups d'enemics.",
+          "Forma Híbrida (Humà-Bèstia): Combina l'estatura humana amb els trets físics del bisó, creant una bèstia bípede corpulenta amb peülles, cap boví, banyes i una musculatura superior extremadament desenvolupada.",
+          "Físic Potenciat: En ser una fruita de tipus Zoan, amplifica notablement els atributs físics, atorgant una força bruta immensa per aclaparar els oponents, una pell gruixuda que absorbeix els impactes contundents i una resistència millorada per al combat prolongat.",
+          "Atacs d'Envestida a Alta Velocitat (Fiddle Banjo): En forma híbrida o de bèstia completa, l'usuari pot llançar-se a velocitats increïbles cap a un objectiu, fent servir l'impuls i les seves dures banyes per empalar o destrossar formacions enemigues.",
+          "Resistència al Fred: La gruixuda capa de pèl que atorga la transformació en bisó protegeix de manera natural l'usuari de condicions de fred extrem, cosa que la fa excepcionalment eficaç en entorns hivernals com l'Illa Drum."
+        ],
+        "source_hash": "4011be788b8673f690542c1110a27f365ac3cc18e34362f3c15c573a6c2b230a"
+      }
+    },
+    "Ushi Ushi no mi: Model Giraffe": {
+      "es-ES": {
+        "description": "Su poder principal otorga a quien la consume la capacidad de transformarse en una jirafa completa o en un híbrido humano-jirafa, proporcionando notables mejoras al alcance físico, la palanca mecánica, la fuerza física bruta y la durabilidad.",
+        "skills": [
+          "Forma Bestia (Jirafa Completa): Transforma por completo al usuario en una enorme jirafa cuadrúpeda de cuello largo y patas largas.",
+          "Forma Híbrida (Humano-Bestia): Combina la estatura humana con los rasgos de la jirafa, creando una criatura bípeda alta, robusta y de forma angular, con un largo cuello cuadrado, pies con pezuñas y extremidades alargadas.",
+          "Alcance Inmenso y Palanca Mecánica: El largo cuello y las extremidades extendidas proporcionan un alcance extraordinario para el combate cercano y para golpes de área envolventes.",
+          "Retracción de Cuello y Compresión de Pistón (Kama Kirin): Al retraer su largo cuello hacia el torso mediante el control muscular, el usuario puede disparar su cabeza hacia afuera como un pistón de acero o una lanza de alta velocidad.",
+          "Híbrido Despertado Aerodinámico: Tras el despertar, el usuario conserva el control total de su mente mientras se transforma en una forma híbrida más esbelta y oscura, envuelta por una faja flotante de llamas o nubes negras (hagoromo).",
+          "Pistola de Nariz (Bigan): Al infundir Busoshoku Haki en su endurecida y angulosa nariz de jirafa, el usuario convierte su largo cuello en un pesado ariete perforante.",
+          "Fuerza Centrífuga Cortante Masiva (Kiri Shigure y Amanedachi): Al girar su largo cuello y su cuerpo a velocidades extremas, el usuario puede lanzar una cuchilla de aire circular de 360 grados capaz de cortar limpiamente enormes torres y fortalezas de piedra."
+        ],
+        "source_hash": "31c019830b2716109691146328a511fa86468d4d6ccffc02790de1ad0fe2258d"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a qui la consumeix la capacitat de transformar-se en una girafa completa o en un híbrid humà-girafa, proporcionant notables millores a l'abast físic, la palanca mecànica, la força física bruta i la durabilitat.",
+        "skills": [
+          "Forma Bèstia (Girafa Completa): Transforma completament l'usuari en una enorme girafa quadrúpede de coll llarg i potes llargues.",
+          "Forma Híbrida (Humà-Bèstia): Combina l'estatura humana amb els trets de la girafa, creant una criatura bípede alta, robusta i de forma angular, amb un coll llarg i quadrat, peus amb peülles i extremitats allargades.",
+          "Abast Immens i Palanca Mecànica: El coll llarg i les extremitats esteses proporcionen un abast extraordinari per al combat cos a cos i per a cops d'àrea envoltants.",
+          "Retracció de Coll i Compressió de Pistó (Kama Kirin): En retreure el seu llarg coll cap al tors mitjançant el control muscular, l'usuari pot disparar el seu cap cap enfora com un pistó d'acer o una llança d'alta velocitat.",
+          "Híbrid Despertat Aerodinàmic: Després del despertar, l'usuari conserva el control total de la seva ment mentre es transforma en una forma híbrida més esvelta i fosca, embolcallada per una faixa flotant de flames o núvols negres (hagoromo).",
+          "Pistola de Nas (Bigan): En infondre Busoshoku Haki al seu endurit i angulós nas de girafa, l'usuari converteix el seu llarg coll en un pesat ariet perforant.",
+          "Força Centrífuga Tallant Massiva (Kiri Shigure i Amanedachi): En fer girar el seu llarg coll i el seu cos a velocitats extremes, l'usuari pot llançar una fulla d'aire circular de 360 graus capaç de tallar netament enormes torres i fortaleses de pedra."
+        ],
+        "source_hash": "31c019830b2716109691146328a511fa86468d4d6ccffc02790de1ad0fe2258d"
+      }
+    },
+    "Uta Uta no mi": {
+      "es-ES": {
+        "description": "Su poder principal otorga a quien la consume la capacidad de transportar la conciencia de cualquiera que la escuche cantar a una dimensión de realidad virtual conocida como Uta World.",
+        "skills": [
+          "Uta World (Dimensión Virtual): Cuando la gente escucha el canto del usuario, sus mentes son arrastradas a una realidad alternativa controlada completamente por el usuario, mientras sus cuerpos físicos en el mundo real caen en un sueño profundo.",
+          "Distorsión de la Realidad en Uta World: Dentro de Uta World, el usuario posee una omnipotencia casi divina. Puede doblegar la realidad a su voluntad: manifestar armas gigantes, cambiar de ropa, generar comida, hacer aparecer notas musicales flotantes como ataques y controlar el paisaje sin esfuerzo.",
+          "Manipulación Corporal en el Mundo Real: El usuario puede controlar como marionetas los cuerpos físicos dormidos de sus víctimas en el mundo real, obligándolos a atacar o moverse según su voluntad.",
+          "Invocar a Totamusica: Al cantar una partitura antigua específica, el usuario puede invocar a Totamusica, una colosal entidad demoníaca que existe simultáneamente tanto en el mundo real como en Uta World, y que requiere ataques coordinados en ambas dimensiones para ser derrotada."
+        ],
+        "source_hash": "c2062135eeb41fca533711e716db2529cd1f8e4eaee630c5d4e1d61a56624386"
+      },
+      "ca-ES": {
+        "description": "El seu poder principal atorga a qui la consumeix la capacitat de transportar la consciència de qualsevol que la senti cantar a una dimensió de realitat virtual coneguda com a Uta World.",
+        "skills": [
+          "Uta World (Dimensió Virtual): Quan la gent sent el cant de l'usuari, les seves ments són arrossegades a una realitat alternativa controlada completament per l'usuari, mentre els seus cossos físics en el món real cauen en un son profund.",
+          "Distorsió de la Realitat a Uta World: Dins d'Uta World, l'usuari posseeix una omnipotència gairebé divina. Pot doblegar la realitat al seu gust: manifestar armes gegants, canviar de roba, generar menjar, fer aparèixer notes musicals flotants com a atacs i controlar el paisatge sense esforç.",
+          "Manipulació Corporal al Món Real: L'usuari pot controlar com a titelles els cossos físics adormits de les seves víctimes al món real, obligant-los a atacar o moure's segons la seva voluntat.",
+          "Invocar Totamusica: En cantar una partitura antiga específica, l'usuari pot invocar Totamusica, una colossal entitat demoníaca que existeix simultàniament tant al món real com a Uta World, i que requereix atacs coordinats en ambdues dimensions per ser derrotada."
+        ],
+        "source_hash": "c2062135eeb41fca533711e716db2529cd1f8e4eaee630c5d4e1d61a56624386"
+      }
+    },
+    "Yami Yami no mi": {
+      "es-ES": {
+        "description": "Permite a quien la consume crear, controlar y transformarse en oscuridad, la cual funciona como un agujero negro con una fuerza gravitatoria infinita.",
+        "skills": [
+          "Anulación de Poderes de Fruta del Diablo: La habilidad más peligrosa de la fruta: al establecer contacto físico con otro usuario de una Fruta del Diablo, Barbanegra anula por completo sus habilidades. A diferencia del Haki (que permite golpear el cuerpo real), la Yami Yami no Mi desactiva activamente los poderes del objetivo mientras se mantenga el contacto, obligando a usuarios Logia, Paramecia y Zoan a luchar como humanos normales.",
+          "Infiltración y Aplastamiento: Barbanegra puede extender la oscuridad por el suelo, engullendo ciudades enteras o ejércitos en un vacío infinito (Agujero Negro).",
+          "Aplastar y Expulsar: Cualquier cosa engullida por la oscuridad puede ser aplastada por intensas fuerzas gravitatorias y expulsada a gran velocidad (Liberación).",
+          "Atracción: El usuario puede atraer objetivos directamente hacia su mano a distancia (Kurouzu / Espiral Negra)."
+        ],
+        "source_hash": "a1500c5cf944d35e058c536baf9e24ffe79ba6313006c5000c86c45405a97ecf"
+      },
+      "ca-ES": {
+        "description": "Permet a qui la consumeix crear, controlar i transformar-se en foscor, la qual funciona com un forat negre amb una força gravitatòria infinita.",
+        "skills": [
+          "Anul·lació de Poders de Fruita del Diable: L'habilitat més perillosa de la fruita: en establir contacte físic amb un altre usuari d'una Fruita del Diable, Barbanegra anul·la completament les seves habilitats. A diferència del Haki (que permet colpejar el cos real), la Yami Yami no Mi desactiva activament els poders de l'objectiu mentre es mantingui el contacte, obligant els usuaris Logia, Paramecia i Zoan a lluitar com a humans normals.",
+          "Infiltració i Aixafament: Barbanegra pot estendre la foscor pel terra, engolint ciutats senceres o exèrcits en un buit infinit (Forat Negre).",
+          "Aixafar i Expulsar: Qualsevol cosa engolida per la foscor pot ser aixafada per intenses forces gravitatòries i expulsada a gran velocitat (Alliberament).",
+          "Atracció: L'usuari pot atreure objectius directament cap a la seva mà a distància (Kurouzu / Espiral Negra)."
+        ],
+        "source_hash": "a1500c5cf944d35e058c536baf9e24ffe79ba6313006c5000c86c45405a97ecf"
+      }
+    },
+    "Yomi Yomi no mi": {
+      "es-ES": {
+        "description": "Su poder fundamental otorga al alma de quien la consume una segunda vida, permitiéndole regresar del inframundo tras sufrir su primera muerte física.",
+        "skills": [
+          "Resurrección: Tras la muerte inicial del usuario, su alma regresa desde el más allá para habitar de nuevo su cuerpo. Incluso si el cuerpo se ha descompuesto hasta quedar reducido a un esqueleto antes de que el alma lo encuentre, el usuario permanece completamente vivo y funcional.",
+          "Frío del Inframundo (Chill Soul): El usuario puede canalizar el frío glacial del inframundo a través de la energía de su alma e infundirlo en armas, desatando poderosos ataques cortantes de hielo que congelan a los enemigos de dentro hacia afuera.",
+          "Dominio de las Almas: Como la fruta otorga autoridad sobre las almas, el usuario puede dañar, manipular o directamente destruir almas artificiales y constructos de alma (como los Chess Homies de Big Mom).",
+          "Energía del Alma y Proyección Astral: El usuario puede separar su alma de su cuerpo para atravesar paredes sólidas, explorar zonas sin ser detectado y permanecer completamente inmune a los ataques físicos en esta forma espectral."
+        ],
+        "source_hash": "9e5e40c669d62bc5e9d2545793ae587a18ae8dc3589821ef261dccac72099866"
+      },
+      "ca-ES": {
+        "description": "El seu poder fonamental atorga a l'ànima de qui la consumeix una segona vida, permetent-li tornar de l'inframón després de patir la seva primera mort física.",
+        "skills": [
+          "Ressurrecció: Després de la mort inicial de l'usuari, la seva ànima torna des de l'altra vida per habitar de nou el seu cos. Fins i tot si el cos s'ha descompost fins a quedar reduït a un esquelet abans que l'ànima el trobi, l'usuari roman completament viu i funcional.",
+          "Fred de l'Inframón (Chill Soul): L'usuari pot canalitzar el fred glacial de l'inframón a través de l'energia de la seva ànima i infondre'l en armes, desfermant poderosos atacs tallants de gel que congelen els enemics de dins cap enfora.",
+          "Domini de les Ànimes: Com que la fruita atorga autoritat sobre les ànimes, l'usuari pot danyar, manipular o destruir directament ànimes artificials i constructes d'ànima (com els Chess Homies de Big Mom).",
+          "Energia de l'Ànima i Projecció Astral: L'usuari pot separar la seva ànima del seu cos per travessar parets sòlides, explorar zones sense ser detectat i romandre completament immune als atacs físics en aquesta forma espectral."
+        ],
+        "source_hash": "9e5e40c669d62bc5e9d2545793ae587a18ae8dc3589821ef261dccac72099866"
+      }
+    },
+    "Yuki Yuki no mi": {
+      "es-ES": {
+        "description": "Permite a quien la consume crear, controlar y transformar su cuerpo en nieve a voluntad.",
+        "skills": [
+          "Defensa y Barreras de Nieve: Monet puede construir gruesos muros sólidos de nieve endurecida (Kamakura) capaces de resistir golpes físicos contundentes.",
+          "Intangibilidad: Los ataques entrantes que no usan Haki atraviesan sin causar daño su forma de nieve pulverulenta, permitiéndole recomponer su cuerpo a voluntad.",
+          "Hipotermia e Inducción del Sueño: Al rodear a sus objetivos con densas tormentas de nieve (Yuki Rabi), el usuario reduce la temperatura del aire circundante. El frío extremo sume a las víctimas en una congelación profunda, causando parálisis, hipotermia grave y, finalmente, la muerte a medida que desciende su temperatura corporal."
+        ],
+        "source_hash": "07dbff236b83a9894dfcd379266b4a3a0b6393bf5f6e823952da606eff58be6f"
+      },
+      "ca-ES": {
+        "description": "Permet a qui la consumeix crear, controlar i transformar el seu cos en neu a voluntat.",
+        "skills": [
+          "Defensa i Barreres de Neu: Monet pot construir gruixuts murs sòlids de neu endurida (Kamakura) capaços de resistir cops físics contundents.",
+          "Intangibilitat: Els atacs entrants que no fan servir Haki travessen sense causar dany la seva forma de neu polvoritzada, permetent-li recompondre el seu cos a voluntat.",
+          "Hipotèrmia i Inducció del Son: En envoltar els seus objectius amb denses tempestes de neu (Yuki Rabi), l'usuari redueix la temperatura de l'aire circumdant. El fred extrem submergeix les víctimes en una congelació profunda, causant paràlisi, hipotèrmia greu i, finalment, la mort a mesura que baixa la seva temperatura corporal."
+        ],
+        "source_hash": "07dbff236b83a9894dfcd379266b4a3a0b6393bf5f6e823952da606eff58be6f"
+      }
+    },
+    "Zou Zou no mi": {
+      "es-ES": {
+        "description": "Permite a quien la consume (u objeto que la contenga) transformarse a voluntad en un elefante completo o en un estado híbrido de elefante.",
+        "skills": [
+          "Alcance Flexible: En su forma híbrida, la hoja de la espada se extiende hasta convertirse en una gigantesca trompa de elefante afiladísima. Spandam puede blandir la espada con normalidad, mientras la hoja se flexiona, se alarga y golpea a los objetivos desde ángulos imprevisibles.",
+          "Peso Inmenso y Poder de Pisoteo: En su forma de elefante completo, Funkfreed adquiere toda la masa, la gruesa piel y el poder aplastante de un elefante colosal, aplastando fácilmente a sus oponentes bajo sus patas.",
+          "Colmillos y Hoja Reforzados de Acero: Como la base de la fruta era una espada de alta calidad, los colmillos y la trompa del elefante siguen hechos de acero afiladísimo, permitiendo letales embestidas y cortes."
+        ],
+        "source_hash": "7d5a99c86a6ce5a9c501ecbe38bc7f38a54fa625536cf877176473a55e23680d"
+      },
+      "ca-ES": {
+        "description": "Permet a qui la consumeix (o objecte que la contingui) transformar-se a voluntat en un elefant complet o en un estat híbrid d'elefant.",
+        "skills": [
+          "Abast Flexible: En la seva forma híbrida, la fulla de l'espasa s'estén fins a convertir-se en una gegantina trompa d'elefant afiladíssima. Spandam pot brandir l'espasa amb normalitat, mentre la fulla es flexiona, s'allarga i colpeja els objectius des d'angles imprevisibles.",
+          "Pes Immens i Poder d'Esclafament: En la seva forma d'elefant complet, Funkfreed adquireix tota la massa, la pell gruixuda i el poder aixafador d'un elefant colossal, esclafant fàcilment els seus oponents sota les seves potes.",
+          "Ullals i Fulla Reforçats d'Acer: Com que la base de la fruita era una espasa d'alta qualitat, els ullals i la trompa de l'elefant continuen sent d'acer afiladíssim, cosa que permet letals envestides i talls."
+        ],
+        "source_hash": "7d5a99c86a6ce5a9c501ecbe38bc7f38a54fa625536cf877176473a55e23680d"
+      }
+    },
+    "Zou Zou no mi: Model Mammoth": {
+      "es-ES": {
+        "description": "Permite a quien la consume transformarse a voluntad en un híbrido de mamut o en un mamut prehistórico completo, otorgando un tamaño físico abrumador, un poder destructivo y una durabilidad extrema.",
+        "skills": [
+          "Pisoteo a Escala de Ciudad: Un solo golpe con la trompa de mamut del usuario, o unos pocos pasos, pueden arrasar calles enteras, edificios urbanos y defensas fortificadas.",
+          "Colmillos Masivos: Gigantescos colmillos prehistóricos curvados capaces de perforar armaduras pesadas, muros de piedra y buques de guerra.",
+          "Resistencia Implacable: Jack luchó sin parar durante 5 días y 5 noches contra los líderes Mink (Inuarashi y Nekomamushi) sin detenerse ni a descansar ni a comer.",
+          "Piel Gruesa: El denso pelaje y la gruesa piel aíslan al usuario frente a ataques físicos pesados, golpes de arma blanca y condiciones ambientales extremas."
+        ],
+        "source_hash": "ddf93da2efcf323f054355e0b9c05d2c6bcf7f8df8b8a51e5830a2a875aeeb42"
+      },
+      "ca-ES": {
+        "description": "Permet a qui la consumeix transformar-se a voluntat en un híbrid de mamut o en un mamut prehistòric complet, atorgant una mida física aclaparadora, un poder destructiu i una durabilitat extrema.",
+        "skills": [
+          "Esclafament a Escala de Ciutat: Un sol cop amb la trompa de mamut de l'usuari, o uns pocs passos, poden arrasar carrers sencers, edificis urbans i defenses fortificades.",
+          "Ullals Massius: Gegantins ullals prehistòrics corbats capaços de perforar armadures pesants, murs de pedra i vaixells de guerra.",
+          "Resistència Implacable: Jack va lluitar sense parar durant 5 dies i 5 nits contra els líders Mink (Inuarashi i Nekomamushi) sense aturar-se ni a descansar ni a menjar.",
+          "Pell Gruixuda: El dens pèl i la pell gruixuda aïllen l'usuari davant atacs físics pesants, cops d'arma blanca i condicions ambientals extremes."
+        ],
+        "source_hash": "ddf93da2efcf323f054355e0b9c05d2c6bcf7f8df8b8a51e5830a2a875aeeb42"
+      }
+    }
+  },
   "jojo_characters": {},
   "one_piece_characters": {}
 }
