@@ -10,7 +10,7 @@ import { GlowText } from './glow-text'
 type LocaleTabsProps = {
   value: Locale
   onChange: (locale: Locale) => void
-  // A single Locale for Stand/Devil Fruit's "only en-GB is mandatory" rule;
+  // A single Locale for Stand/Devil Fruit's "only es-ES is mandatory" rule;
   // an array for Stage's "every locale is mandatory" rule (see the vault's
   // game-stage-content.md) - pass SUPPORTED_LOCALES to star every tab.
   requiredLocale: Locale | Locale[]

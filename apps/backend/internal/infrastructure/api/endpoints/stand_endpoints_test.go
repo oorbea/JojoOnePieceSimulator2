@@ -444,7 +444,7 @@ func validStandBody(name string) map[string]any {
 	return map[string]any{
 		"name": name,
 		"translations": map[string]any{
-			"en-GB": map[string]any{
+			"es-ES": map[string]any{
 				"description": name + " description",
 				"skills":      []string{"punch", "dash"},
 			},
@@ -956,7 +956,7 @@ func TestListStands_SearchByDescription(t *testing.T) {
 	h := newTestServer()
 
 	body := validStandBody("Silver Chariot")
-	body["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "a rapier-wielding stand"
+	body["translations"].(map[string]any)["es-ES"].(map[string]any)["description"] = "a rapier-wielding stand"
 	doRequest(t, h, http.MethodPost, "/api/v1/stands", body)
 	doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody("Star Platinum"))
 
@@ -1172,7 +1172,7 @@ func TestUpdateStand(t *testing.T) {
 	id := created["id"].(string)
 
 	updateBody := validStandBody("Silver Chariot")
-	updateBody["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "updated description"
+	updateBody["translations"].(map[string]any)["es-ES"].(map[string]any)["description"] = "updated description"
 	rec := doRequest(t, h, http.MethodPut, "/api/v1/stands/"+id, updateBody)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())

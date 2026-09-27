@@ -38,19 +38,19 @@ describe('fromTranslationsResponse', () => {
 
 describe('powerTranslationsFormSchema', () => {
   const valid = {
-    'en-GB': { description: 'A stand', skills: ['Punch'] },
-    'es-ES': { description: '', skills: [] },
+    'es-ES': { description: 'Un stand', skills: ['Puñetazo'] },
+    'en-GB': { description: '', skills: [] },
     'ca-ES': { description: '', skills: [] },
   }
 
-  it('accepts en-GB filled and the other locales entirely blank', () => {
+  it('accepts es-ES filled and the other locales entirely blank', () => {
     expect(powerTranslationsFormSchema.safeParse(valid).success).toBe(true)
   })
 
-  it('rejects en-GB entirely blank', () => {
+  it('rejects es-ES entirely blank', () => {
     const result = powerTranslationsFormSchema.safeParse({
       ...valid,
-      'en-GB': { description: '', skills: [] },
+      'es-ES': { description: '', skills: [] },
     })
     expect(result.success).toBe(false)
   })
@@ -58,7 +58,7 @@ describe('powerTranslationsFormSchema', () => {
   it('rejects a locale with a description but no skills (half-filled)', () => {
     const result = powerTranslationsFormSchema.safeParse({
       ...valid,
-      'es-ES': { description: 'Un stand', skills: [] },
+      'en-GB': { description: 'A stand', skills: [] },
     })
     expect(result.success).toBe(false)
     if (!result.success) {

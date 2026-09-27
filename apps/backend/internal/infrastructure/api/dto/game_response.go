@@ -143,7 +143,7 @@ type StageTextResolver func(ctx context.Context, id game.StageID) (string, error
 
 // PowerTextResolver is StageTextResolver's analogue for a loadout's
 // Stand/DevilFruit: a live Game's Loadout freezes its Stand/DevilFruit at
-// whatever locale RepoPowerPool drew them in (en-GB - see
+// whatever locale RepoPowerPool drew them in (es-ES - see
 // infrastructure/game/repo_power_pool.go), since the Game is one instance
 // shared by every participant. This resolver re-derives the description and
 // skills per viewer at serialization time instead, bound by the caller (see
@@ -524,7 +524,7 @@ func newGameStageResponse(ctx context.Context, s game.Stage, resolvePicture Pict
 
 // newGameLoadoutResponse builds a GameLoadoutResponse for one viewer.
 // resolveStandText/resolveFruitText override the Stand/DevilFruit's
-// description+skills - RepoPowerPool freezes those to en-GB when the
+// description+skills - RepoPowerPool freezes those to es-ES when the
 // loadout was drawn (see repo_power_pool.go), so without this override
 // every viewer would see the loadout's power text in English regardless of
 // their own configured language.

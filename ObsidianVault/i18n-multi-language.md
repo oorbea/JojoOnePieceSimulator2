@@ -17,6 +17,24 @@ error codes, and structured/localized per-field validation `details` are
 all done and verified (unit + integration tests, real Postgres, full
 frontend suite). No known gaps left.
 
+**2026-09-27: the mandatory/default locale changed from `en-GB` to
+`es-ES`** — see [[catalog-seed-from-prod]] for why (prod's Stands were
+only reliably correct in Spanish) and for the rest of that day's work.
+Everywhere this note says "`en-GB` is mandatory"/"ends in `en-GB`" below
+now reads `es-ES`; kept as written for the historical reasoning, not
+re-edited line by line. Concretely:
+`enums.DefaultLocale = EsES` (backend, `Locale`'s iota/wire order is
+untouched — see that const's doc), `FallbackChain` now
+`ca-ES→es-ES`, `en-GB→es-ES`, `es-ES→es-ES` (no longer ending in en-GB),
+`dto/translation_request.go` requires `es-ES`, and the frontend's
+`DEFAULT_LOCALE`/`SUPPORTED_LOCALES` (`shared/i18n`) follow suit — es-ES
+is now the starred admin tab and first in the list. The UI's own default
+language moved too (not just content) — a fresh install and an
+unresolved `Accept-Language`/`?lang` now land on `es-ES`, per the owner's
+call. `db/migrations/00018_default_locale_es.sql` flips `users.language`'s
+column default and backfills `es-ES` from `en-GB` for any translation
+that still only had the old mandatory locale.
+
 ## Scope
 
 Three locales: `en-GB`, `es-ES`, `ca-ES`. Two independent things get

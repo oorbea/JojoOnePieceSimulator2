@@ -7,10 +7,16 @@ import enGB from '@/shared/i18n/locales/en-GB.json'
 import esES from '@/shared/i18n/locales/es-ES.json'
 import type { Locale } from '@/shared/contracts/enums'
 
-// Every supported locale, in the same order as the backend's
-// enums.Locales() (apps/backend .../domain/enums/locale.go).
-export const SUPPORTED_LOCALES: Locale[] = ['en-GB', 'es-ES', 'ca-ES']
-export const DEFAULT_LOCALE: Locale = 'en-GB'
+// Every supported locale. es-ES first (not the backend's enums.Locales()
+// order, which stays en-GB/es-ES/ca-ES for its own ordinal reasons - see
+// that function's doc) since this drives the admin translation tabs' order,
+// and es-ES is now the starred/required one - see DEFAULT_LOCALE.
+export const SUPPORTED_LOCALES: Locale[] = ['es-ES', 'en-GB', 'ca-ES']
+// The mandatory content locale (mirrors the backend's enums.DefaultLocale)
+// and the default UI language for a fresh install/unrecognized device
+// locale - changed from en-GB to es-ES on 2026-09-27, see
+// ObsidianVault/i18n-multi-language.md.
+export const DEFAULT_LOCALE: Locale = 'es-ES'
 
 // Language names stay in their own language regardless of the active UI
 // locale (endonyms) - the standard convention for a language picker, so a

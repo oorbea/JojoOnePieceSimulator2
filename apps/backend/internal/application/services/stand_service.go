@@ -52,7 +52,7 @@ func (p PicturePolicy) allows(contentType string) bool {
 
 // StandInput carries every field needed to create or update a Stand, so
 // CreateStand/UpdateStand take one argument instead of a long positional
-// list. Translations must always include enums.EnGB - callers validate this
+// list. Translations must always include enums.DefaultLocale - callers validate this
 // before it reaches the service (see dto.StandRequest.Validate).
 type StandInput struct {
 	EvolvesFrom   *powers.PowerID
@@ -107,7 +107,7 @@ func (s *StandService) CreateStand(ctx context.Context, input StandInput) (*powe
 // persists it, keeping its original id and its picture (set separately via
 // SetStandPicture, not through this JSON body).
 func (s *StandService) UpdateStand(ctx context.Context, id powers.PowerID, input StandInput) (*powers.Stand, error) {
-	existing, err := s.standRepo.FindByID(ctx, id, enums.EnGB)
+	existing, err := s.standRepo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (s *StandService) UpdateStand(ctx context.Context, id powers.PowerID, input
 }
 
 func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input StandInput) (*powers.Stand, error) {
-	primary := input.Translations[enums.EnGB]
+	primary := input.Translations[enums.DefaultLocale]
 	skills := primary.Skills
 	power, err := powers.NewPower(id, input.Name, primary.Description, input.Rarity, &skills, input.Picture)
 	if err != nil {
@@ -146,7 +146,7 @@ func (s *StandService) saveStand(ctx context.Context, id powers.PowerID, input S
 
 	var evolvesFromStand *powers.Stand
 	if input.EvolvesFrom != nil {
-		evolvesFromStand, err = s.standRepo.FindByID(ctx, *input.EvolvesFrom, enums.EnGB)
+		evolvesFromStand, err = s.standRepo.FindByID(ctx, *input.EvolvesFrom, enums.DefaultLocale)
 		if err != nil {
 			return nil, err
 		}
@@ -210,7 +210,7 @@ func (s *StandService) StandTranslations(ctx context.Context, id powers.PowerID)
 // there forever, silently eating into the storage cap. Mirrors
 // UserService.DeleteAvatar's delete-after-write, log-on-error pattern.
 func (s *StandService) DeleteStand(ctx context.Context, id powers.PowerID) error {
-	stand, err := s.standRepo.FindByID(ctx, id, enums.EnGB)
+	stand, err := s.standRepo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (s *StandService) DeleteStand(ctx context.Context, id powers.PowerID) error
 // Stand still carries the previous picture/thumbnail keys (or none, on a
 // first upload) - the worker publishes the new ones once it finishes.
 func (s *StandService) SetStandPicture(ctx context.Context, id powers.PowerID, pic ports.Picture) (*powers.Stand, error) {
-	stand, err := s.standRepo.FindByID(ctx, id, enums.EnGB)
+	stand, err := s.standRepo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return nil, err
 	}

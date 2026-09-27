@@ -346,6 +346,28 @@ func TestDelete_UsesRecordedProvider(t *testing.T) {
 	}
 }
 
+func TestDelete_DisabledIsNoOp(t *testing.T) {
+	r2 := newFakeBackend("r2")
+	chain, err := fallback.New(context.Background(), []fallback.Tier{
+		{Backend: r2, QuotaBytes: 0},
+	}, newFakeLedger(), 95)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	chain.SetDeleteDisabled(true)
+	ctx := context.Background()
+
+	if _, err := chain.Upload(ctx, "a", pic("hello")); err != nil {
+		t.Fatalf("Upload: %v", err)
+	}
+	if err := chain.Delete(ctx, "a"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if !r2.has("a") {
+		t.Error("delete-disabled chain must not remove the object")
+	}
+}
+
 func TestPresignGetURL_UnknownKeyDefaultsToFirstTier(t *testing.T) {
 	r2, b2 := newFakeBackend("r2"), newFakeBackend("b2")
 	chain, err := fallback.New(context.Background(), []fallback.Tier{

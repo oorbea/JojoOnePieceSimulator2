@@ -44,8 +44,8 @@ const translationContentSchema = z.object({
 })
 
 // A locale is either fully filled or fully empty - no partial overrides,
-// same rule the backend enforces in dto/translation_request.go. en-GB alone
-// is mandatory; es-ES/ca-ES may be entirely blank (then they're dropped
+// same rule the backend enforces in dto/translation_request.go. es-ES alone
+// is mandatory; en-GB/ca-ES may be entirely blank (then they're dropped
 // from the payload) but can't be half-filled.
 const optionalTranslationContentSchema = z.object({
   description: z.string().max(1000, 'validation.descriptionTooLong'),
@@ -54,12 +54,12 @@ const optionalTranslationContentSchema = z.object({
 
 export const powerTranslationsFormSchema = z
   .object({
-    'en-GB': translationContentSchema,
-    'es-ES': optionalTranslationContentSchema,
+    'es-ES': translationContentSchema,
+    'en-GB': optionalTranslationContentSchema,
     'ca-ES': optionalTranslationContentSchema,
   })
   .superRefine((value, ctx) => {
-    for (const locale of ['es-ES', 'ca-ES'] as const) {
+    for (const locale of ['en-GB', 'ca-ES'] as const) {
       const content = value[locale]
       const hasDescription = content.description.trim().length > 0
       const hasSkills = content.skills.length > 0

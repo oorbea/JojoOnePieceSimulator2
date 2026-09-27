@@ -135,7 +135,7 @@ type DeleteCharacterTranslationsParams struct {
 }
 
 // Deletes translation rows for locales no longer present in an update
-// request (en-GB can never be deleted this way - callers must not pass it).
+// request (es-ES can never be deleted this way - callers must not pass it).
 func (q *Queries) DeleteCharacterTranslations(ctx context.Context, arg DeleteCharacterTranslationsParams) error {
 	_, err := q.db.Exec(ctx, deleteCharacterTranslations, arg.CharacterID, arg.Locales)
 	return err
@@ -1093,7 +1093,7 @@ type UpsertCharacterTranslationParams struct {
 	Description string
 }
 
-// Upserts a single locale's description for a character. Only en-GB is
+// Upserts a single locale's description for a character. Only es-ES is
 // mandatory (like powers, unlike stages) - enforced by the application
 // layer's request validation, not here.
 func (q *Queries) UpsertCharacterTranslation(ctx context.Context, arg UpsertCharacterTranslationParams) error {
