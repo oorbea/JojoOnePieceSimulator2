@@ -19,6 +19,7 @@ import {
 import { MangaVerdictText } from '@/features/game/components/presentational/match/manga/manga-verdict-text'
 import { RadialGlow } from '@/features/game/components/presentational/match/manga/radial-glow'
 import { PowerBlock } from '@/features/game/components/presentational/match/power-block'
+import { useEvolutionStepSound } from '@/features/game/hooks/use-evolution-step-sound'
 import { revealLayout } from '@/features/game/lib/reveal-layout'
 import type { DevilFruitResponse } from '@/features/devil-fruits/types/devil-fruits.types'
 import type { StandResponse } from '@/features/stands/types/stands.types'
@@ -83,6 +84,8 @@ export function PowerRevealCard({
   const statFlexBasis = layout.statColumns === 3 ? '30%' : 72
   const isEvolving = evolvePhase === 'evolving'
   const isEvolutionLanding = evolvePhase === 'step' || evolvePhase === 'final'
+
+  useEvolutionStepSound(evolvePhase, visible)
 
   // "Menacing + flash" evolution FX (owner decision, 2026-09-25 - see
   // reveal.go's evolveMs doc): the card shakes and pulses gold with the
