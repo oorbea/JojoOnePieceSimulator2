@@ -352,13 +352,13 @@ export function StandsContainer() {
   // the active one - jump to the first one with an error on a failed
   // submit instead of leaving the user staring at a form that looks fine.
   function jumpToFirstErroredLocale(formErrors: typeof errors) {
-    const erroredLocale = (['en-GB', 'es-ES', 'ca-ES'] as const).find(
+    const erroredLocale = (['es-ES', 'en-GB', 'ca-ES'] as const).find(
       (locale) => formErrors.translations?.[locale]
     )
     if (erroredLocale) setActiveLocale(erroredLocale)
   }
 
-  const erroredLocales = (['en-GB', 'es-ES', 'ca-ES'] as const).filter(
+  const erroredLocales = (['es-ES', 'en-GB', 'ca-ES'] as const).filter(
     (locale) => errors.translations?.[locale]
   )
 

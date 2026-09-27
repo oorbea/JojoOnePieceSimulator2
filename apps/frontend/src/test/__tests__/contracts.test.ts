@@ -110,12 +110,18 @@ describe('generated contracts: every error code has an i18n key', () => {
 })
 
 describe('generated contracts: SUPPORTED_LOCALES matches the generated Locale enum', () => {
-  it('is exactly localeSchema.options, in the same order', () => {
+  // Same set, deliberately not the same order: localeSchema.options mirrors
+  // the backend's Locale iota (en-GB, es-ES, ca-ES) - fixed, since
+  // TestWireEnums_MembersAreComplete requires ascending-ordinal order and
+  // reordering it would also reorder the DB enum's stored meaning.
+  // SUPPORTED_LOCALES instead drives the admin tabs' order (es-ES first -
+  // see shared/i18n's own doc), a UI-only concern the backend doesn't share.
+  it('has exactly the same locales as localeSchema.options, any order', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { localeSchema } = require('@/shared/contracts/enums') as typeof import('@/shared/contracts/enums')
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { SUPPORTED_LOCALES } = require('@/shared/i18n') as typeof import('@/shared/i18n')
-    expect(SUPPORTED_LOCALES).toEqual(localeSchema.options)
+    expect([...SUPPORTED_LOCALES].sort()).toEqual([...localeSchema.options].sort())
   })
 })
 
