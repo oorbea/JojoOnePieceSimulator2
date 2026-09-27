@@ -10,6 +10,14 @@ import type { StandResponse } from '@/shared/contracts/dto'
 
 import { PowerRevealCard } from '../match/power-reveal-card'
 
+// PowerRevealCard now plays a sound on evolution landing (use-evolution-step-
+// sound.ts -> use-sound.ts), which pulls in expo-audio's native module -
+// unavailable under RNTL/jest. Mocked here rather than globally since this
+// is the only test file that renders a component depending on it.
+jest.mock('@/shared/hooks/use-sound', () => ({
+  useSound: () => ({ play: jest.fn(), stop: jest.fn() }),
+}))
+
 function stand(overrides: Partial<StandResponse> = {}): StandResponse {
   return {
     id: 'stand-1',
