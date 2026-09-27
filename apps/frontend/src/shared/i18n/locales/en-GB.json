@@ -674,7 +674,7 @@
     "required": "This field is required",
     "invalidValue": "Invalid value",
     "localeUnsupported": "Unsupported language",
-    "localeDefaultRequired": "English (UK) translation is required"
+    "localeDefaultRequired": "Spanish (Spain) translation is required"
   },
   "toasts": {
     "standCreated": "Stand created",

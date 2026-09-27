@@ -17,10 +17,10 @@ type TranslationRequest struct {
 
 // validateTranslations parses and validates a "translations" map shared by
 // StandRequest/DevilFruitRequest: every key must be a supported locale,
-// en-GB must be present with a non-empty description and at least one
-// skill, and every other present locale must also have a non-empty
-// description and at least one skill (a locale is either fully translated
-// or absent - no partial/blank overrides).
+// enums.DefaultLocale (es-ES) must be present with a non-empty description
+// and at least one skill, and every other present locale must also have a
+// non-empty description and at least one skill (a locale is either fully
+// translated or absent - no partial/blank overrides).
 func validateTranslations(m map[string]TranslationRequest) (ports.PowerTranslations, []FieldError) {
 	var errs []FieldError
 	out := make(ports.PowerTranslations, len(m))
@@ -43,8 +43,9 @@ func validateTranslations(m map[string]TranslationRequest) (ports.PowerTranslati
 		out[locale] = ports.PowerContent{Description: t.Description, Skills: skills}
 	}
 
-	if _, ok := out[enums.EnGB]; !ok {
-		errs = append(errs, FieldError{Field: "translations.en-GB", Code: ValLocaleDefaultRequired, Message: "translations.en-GB is required"})
+	if _, ok := out[enums.DefaultLocale]; !ok {
+		field := fmt.Sprintf("translations.%s", enums.DefaultLocale)
+		errs = append(errs, FieldError{Field: field, Code: ValLocaleDefaultRequired, Message: field + " is required"})
 	}
 
 	return out, errs
@@ -89,17 +90,17 @@ func validateStageTranslations(m map[string]StageTranslationRequest) (ports.Stag
 
 // CharacterTranslationRequest is one locale's content in a
 // JojoCharacterRequest/OnePieceCharacterRequest's "translations" map - a
-// description only, same as StageTranslationRequest, but only en-GB is
-// mandatory - the Power rule, not the Stage one.
+// description only, same as StageTranslationRequest, but only
+// enums.DefaultLocale is mandatory - the Power rule, not the Stage one.
 type CharacterTranslationRequest struct {
 	Description string `json:"description"`
 }
 
 // validateCharacterTranslations parses and validates a
 // JojoCharacterRequest/OnePieceCharacterRequest's "translations" map: every
-// key must be a supported locale, en-GB must be present with a non-empty
-// description, and any other present locale must also have a non-empty
-// description.
+// key must be a supported locale, enums.DefaultLocale (es-ES) must be
+// present with a non-empty description, and any other present locale must
+// also have a non-empty description.
 func validateCharacterTranslations(m map[string]CharacterTranslationRequest) (ports.CharacterTranslations, []FieldError) {
 	var errs []FieldError
 	out := make(ports.CharacterTranslations, len(m))
@@ -117,8 +118,9 @@ func validateCharacterTranslations(m map[string]CharacterTranslationRequest) (po
 		out[locale] = t.Description
 	}
 
-	if _, ok := out[enums.EnGB]; !ok {
-		errs = append(errs, FieldError{Field: "translations.en-GB", Code: ValLocaleDefaultRequired, Message: "translations.en-GB is required"})
+	if _, ok := out[enums.DefaultLocale]; !ok {
+		field := fmt.Sprintf("translations.%s", enums.DefaultLocale)
+		errs = append(errs, FieldError{Field: field, Code: ValLocaleDefaultRequired, Message: field + " is required"})
 	}
 
 	return out, errs

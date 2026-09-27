@@ -24,8 +24,8 @@ type characterTranslationQueries interface {
 // saveCharacterTranslations replaces characterID's character_translations
 // rows with translations wholesale - same semantics as saveTranslations
 // (power_translations.go), minus Skills (a Character has none). Callers
-// must always include en-GB in translations - deleting it would violate
-// the read-side fallback invariant that every character has an en-GB
+// must always include es-ES in translations - deleting it would violate
+// the read-side fallback invariant that every character has an es-ES
 // translation.
 func saveCharacterTranslations(ctx context.Context, q characterTranslationQueries, characterID pgtype.UUID, translations ports.CharacterTranslations) error {
 	var toDelete []string

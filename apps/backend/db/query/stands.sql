@@ -15,7 +15,7 @@ ON CONFLICT (id) DO UPDATE
 RETURNING id;
 
 -- Upserts a single locale's description/skills for a power. Callers write
--- one row per locale present in the request (en-GB is mandatory, es-ES and
+-- one row per locale present in the request (es-ES is mandatory, en-GB and
 -- ca-ES optional), never touching the other locales' rows.
 -- name: UpsertPowerTranslation :exec
 INSERT INTO power_translations (power_id, locale, description, skills)
@@ -25,7 +25,7 @@ ON CONFLICT (power_id, locale) DO UPDATE
         skills       = EXCLUDED.skills;
 
 -- Deletes translation rows for locales no longer present in an update
--- request (en-GB can never be deleted this way - callers must not pass it).
+-- request (es-ES can never be deleted this way - callers must not pass it).
 -- name: DeletePowerTranslations :exec
 DELETE FROM power_translations WHERE power_id = $1 AND locale::text = ANY (sqlc.arg('locales')::text[]);
 
@@ -79,9 +79,9 @@ WHERE id = sqlc.arg('id');
 -- chain (matched = false), so the caller can hydrate Stand.EvolvesFrom(...)
 -- without extra round trips, then discard everything but the matched row.
 -- `locales` is the requested locale's fallback chain, most specific first
--- (e.g. ['ca-ES','es-ES','en-GB']); the LATERAL join below picks the first
+-- (e.g. ['ca-ES','en-GB','es-ES']); the LATERAL join below picks the first
 -- translation row that exists in that order, so unmatched locales fall
--- back all the way to en-GB without any COALESCE juggling in Go.
+-- back all the way to es-ES without any COALESCE juggling in Go.
 -- name: GetStandRowsByName :many
 WITH RECURSIVE chain AS (SELECT p.id,
                                  p.name,

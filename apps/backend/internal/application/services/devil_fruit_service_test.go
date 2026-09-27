@@ -175,7 +175,7 @@ func newTestDevilFruit(t *testing.T, repo *fakeDevilFruitRepository, idGen *fake
 	if err != nil {
 		t.Fatalf("building devil fruit: %v", err)
 	}
-	translations := ports.PowerTranslations{enums.EnGB: {Description: name + " description", Skills: []string{"skill"}}}
+	translations := ports.PowerTranslations{enums.EsES: {Description: name + " description", Skills: []string{"skill"}}}
 	if err := repo.Save(context.Background(), fruit, translations); err != nil {
 		t.Fatalf("saving devil fruit: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestCreateDevilFruit_RejectsInvalidFruitType(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	_, err := svc.CreateDevilFruit(context.Background(), services.DevilFruitInput{
-		Name: "Bad Fruit", Translations: ports.PowerTranslations{enums.EnGB: {Description: "description", Skills: []string{"skill"}}}, Rarity: enums.Rare,
+		Name: "Bad Fruit", Translations: ports.PowerTranslations{enums.EsES: {Description: "description", Skills: []string{"skill"}}}, Rarity: enums.Rare,
 		FruitType: enums.FruitType(99),
 	})
 	if !errors.Is(err, enums.ErrInvalidFruitType) {
@@ -209,7 +209,7 @@ func TestCreateDevilFruit_ListGetFilterDelete(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	created, err := svc.CreateDevilFruit(context.Background(), services.DevilFruitInput{
-		Name: "Gomu Gomu no Mi", Translations: ports.PowerTranslations{enums.EnGB: {Description: "rubber", Skills: []string{"Gear Second"}}}, Rarity: enums.Legendary,
+		Name: "Gomu Gomu no Mi", Translations: ports.PowerTranslations{enums.EsES: {Description: "rubber", Skills: []string{"Gear Second"}}}, Rarity: enums.Legendary,
 		FruitType: enums.MythicalZoan,
 	})
 	if err != nil {
@@ -264,7 +264,7 @@ func TestUpdateDevilFruit_PreservesExistingPicture(t *testing.T) {
 	}
 
 	updated, err := svc.UpdateDevilFruit(context.Background(), fruit.ID(), services.DevilFruitInput{
-		Name: "Mera Mera no Mi", Translations: ports.PowerTranslations{enums.EnGB: {Description: "updated description", Skills: []string{"skill"}}}, Rarity: enums.Epic,
+		Name: "Mera Mera no Mi", Translations: ports.PowerTranslations{enums.EsES: {Description: "updated description", Skills: []string{"skill"}}}, Rarity: enums.Epic,
 		FruitType: enums.Logia,
 	})
 	if err != nil {

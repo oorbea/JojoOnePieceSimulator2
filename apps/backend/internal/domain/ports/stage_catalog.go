@@ -18,7 +18,7 @@ import (
 // each viewer anyway - see api/dto.NewGameStateResponse, which re-resolves
 // each Stage's description per viewer's own configured language at
 // serialize time instead. The adapter resolves Description at a fixed
-// enums.EnGB here purely so the returned Stage value satisfies its own
+// enums.DefaultLocale here purely so the returned Stage value satisfies its own
 // non-empty invariant; nothing on this path ever reads it.
 type IStageCatalog interface {
 	// Stages returns every Stage for manga, ordered by Stage.Order().

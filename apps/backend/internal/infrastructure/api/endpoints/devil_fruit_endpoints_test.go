@@ -193,7 +193,7 @@ func validDevilFruitBody(name string) map[string]any {
 	return map[string]any{
 		"name": name,
 		"translations": map[string]any{
-			"en-GB": map[string]any{
+			"es-ES": map[string]any{
 				"description": name + " description",
 				"skills":      []string{"Gear Second"},
 			},
@@ -347,7 +347,7 @@ func TestListDevilFruits_SearchByNameAndDescription(t *testing.T) {
 	h, _, _ := newDevilFruitTestServer()
 
 	body := validDevilFruitBody("Gomu Gomu no Mi")
-	body["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "turns the user into rubber"
+	body["translations"].(map[string]any)["es-ES"].(map[string]any)["description"] = "turns the user into rubber"
 	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", body)
 	doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody("Mera Mera no Mi"))
 

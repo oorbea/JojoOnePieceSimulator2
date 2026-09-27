@@ -86,16 +86,16 @@ func NewGameEndpoints(svc *services.GameService, hub *services.GameEventHub, sta
 }
 
 // viewerLocale resolves self's preferred locale from their user record,
-// defaulting to enums.EnGB for a bot (no UserID) or if the lookup fails -
+// defaulting to enums.DefaultLocale for a bot (no UserID) or if the lookup fails -
 // this must never block rendering a game state.
 func (e *GameEndpoints) viewerLocale(ctx context.Context, g *game.Game, self game.ParticipantID) enums.Locale {
 	p, ok := g.Participant(self)
 	if !ok || p.UserID() == nil {
-		return enums.EnGB
+		return enums.DefaultLocale
 	}
 	u, err := e.users.FindByID(ctx, *p.UserID())
 	if err != nil {
-		return enums.EnGB
+		return enums.DefaultLocale
 	}
 	return u.Language()
 }

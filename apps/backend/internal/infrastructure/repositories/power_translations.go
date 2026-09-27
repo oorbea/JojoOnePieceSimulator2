@@ -38,7 +38,7 @@ func searchPtr(s *string) *string {
 
 // fallbackStrings renders enums.FallbackChain(locale) as the []string the
 // generated queries expect for their `locales` parameter (most specific
-// first, always ending in en-GB).
+// first, always ending in es-ES).
 func fallbackStrings(locale enums.Locale) []string {
 	chain := enums.FallbackChain(locale)
 	out := make([]string, len(chain))
@@ -59,8 +59,8 @@ type translationQueries interface {
 // saveTranslations replaces powerID's power_translations rows with
 // translations wholesale: every locale present is upserted, every supported
 // locale absent from translations is deleted. Callers must always include
-// en-GB in translations - deleting it would violate the read-side fallback
-// invariant that every power has an en-GB translation.
+// es-ES in translations - deleting it would violate the read-side fallback
+// invariant that every power has an es-ES translation.
 func saveTranslations(ctx context.Context, q translationQueries, powerID pgtype.UUID, translations ports.PowerTranslations) error {
 	var toDelete []string
 	for _, l := range enums.Locales() {

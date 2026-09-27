@@ -674,7 +674,7 @@
     "required": "Este campo es obligatorio",
     "invalidValue": "Valor no válido",
     "localeUnsupported": "Idioma no admitido",
-    "localeDefaultRequired": "Se requiere la traducción en inglés (Reino Unido)"
+    "localeDefaultRequired": "Se requiere la traducción en español (España)"
   },
   "toasts": {
     "standCreated": "Stand creado",

@@ -12,11 +12,14 @@ import (
 
 // Migrate applies every pending goose migration embedded in the binary. It
 // opens its own database/sql connection (goose does not speak pgx directly)
-// and closes it before returning.
-func Migrate(dsn string) error {
+// and closes it before returning. It reports whether any migration actually
+// ran (the DB version changed), so a caller can invalidate caches that a
+// seed migration's raw SQL writes would otherwise bypass - see
+// cache.InvalidateCatalogNamespaces.
+func Migrate(dsn string) (applied bool, err error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return fmt.Errorf("opening migration connection: %w", err)
+		return false, fmt.Errorf("opening migration connection: %w", err)
 	}
 	defer func(db *sql.DB) {
 		err := db.Close()
@@ -29,12 +32,22 @@ func Migrate(dsn string) error {
 	defer goose.SetBaseFS(nil)
 
 	if err := goose.SetDialect("postgres"); err != nil {
-		return fmt.Errorf("setting goose dialect: %w", err)
+		return false, fmt.Errorf("setting goose dialect: %w", err)
+	}
+
+	before, err := goose.GetDBVersion(db)
+	if err != nil {
+		return false, fmt.Errorf("reading migration version: %w", err)
 	}
 
 	if err := goose.Up(db, "."); err != nil {
-		return fmt.Errorf("running migrations: %w", err)
+		return false, fmt.Errorf("running migrations: %w", err)
 	}
 
-	return nil
+	after, err := goose.GetDBVersion(db)
+	if err != nil {
+		return false, fmt.Errorf("reading migration version: %w", err)
+	}
+
+	return after != before, nil
 }

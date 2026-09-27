@@ -404,7 +404,7 @@ func TestStandRepository_Delete_NotFound(t *testing.T) {
 // TestStandRepository_Locale_ResolvesAndFallsBack proves the SQL fallback
 // chain (see the LATERAL join in db/query/stands.sql): a locale with its own
 // translation gets it; a locale without one falls through
-// enums.FallbackChain all the way to en-GB, never an empty description.
+// enums.FallbackChain all the way to es-ES, never an empty description.
 func TestStandRepository_Locale_ResolvesAndFallsBack(t *testing.T) {
 	repo := newTestRepo(t)
 	ctx := context.Background()
@@ -433,9 +433,8 @@ func TestStandRepository_Locale_ResolvesAndFallsBack(t *testing.T) {
 		t.Errorf("es-ES Description() = %q, want the es-ES translation", got.Description())
 	}
 
-	// ca-ES has no translation of its own - must fall back through es-ES to
-	// ... no, ca-ES's chain is [ca-ES, es-ES, en-GB], so it should land on
-	// es-ES's translation (the first one that exists in the chain).
+	// ca-ES has no translation of its own - its chain is [ca-ES, es-ES], so
+	// it lands directly on es-ES's translation.
 	got, err = repo.FindByID(ctx, stand.ID(), enums.CaES)
 	if err != nil {
 		t.Fatalf("FindByID ca-ES: %v", err)
@@ -444,7 +443,8 @@ func TestStandRepository_Locale_ResolvesAndFallsBack(t *testing.T) {
 		t.Errorf("ca-ES Description() = %q, want the es-ES fallback (ca-ES has no translation of its own)", got.Description())
 	}
 
-	// en-GB is the mandatory final link - always resolves, never empty.
+	// en-GB has its own translation, so it resolves to that directly - its
+	// chain is [en-GB, es-ES], but en-GB's own row wins first.
 	got, err = repo.FindByID(ctx, stand.ID(), enums.EnGB)
 	if err != nil {
 		t.Fatalf("FindByID en-GB: %v", err)

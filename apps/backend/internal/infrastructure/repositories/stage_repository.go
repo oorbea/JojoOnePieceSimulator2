@@ -33,14 +33,14 @@ var _ ports.IStageCatalog = (*StageRepository)(nil)
 var _ ports.IStageRepository = (*StageRepository)(nil)
 
 // Stages implements ports.IStageCatalog. Description is resolved at a fixed
-// enums.EnGB - see IStageCatalog's doc for why that's fine (nothing on the
+// enums.DefaultLocale - see IStageCatalog's doc for why that's fine (nothing on the
 // gameplay path ever reads it; a live match re-resolves per viewer at the
 // transport layer instead).
 func (r *StageRepository) Stages(ctx context.Context, manga enums.Manga) ([]game.Stage, error) {
 	dbManga := db.Manga(manga.String())
 	rows, err := r.queries.FilterStageRows(ctx, db.FilterStageRowsParams{
 		Manga:   &dbManga,
-		Locales: fallbackStrings(enums.EnGB),
+		Locales: fallbackStrings(enums.DefaultLocale),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing stages for manga %s: %w", manga, err)

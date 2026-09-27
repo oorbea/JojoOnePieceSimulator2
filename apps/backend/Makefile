@@ -6,7 +6,7 @@
 COMPOSE := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.dev.yml
 COMPOSE_TEST := docker compose -f ../../deployments/docker-compose.yml -f ../../deployments/docker-compose.test.yml
 
-.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down test-docker test-vips-docker test-integration-docker types types-check types-docker types-check-docker
+.PHONY: sqlc swagger migrate-up migrate-down migrate-status test test-vips db-up db-down test-docker test-vips-docker test-integration-docker types types-check types-docker types-check-docker catalog-dump-docker catalog-plan-docker catalog-generate-docker
 
 sqlc:
 	sqlc generate
@@ -80,3 +80,18 @@ test-vips-docker:
 # service name on the compose network.
 test-integration-docker:
 	$(COMPOSE_TEST) run --rm backend-test go test -tags integration ./...
+
+# cmd/catalogsync (see its doc comment and db/seed/catalog/README.md) - the
+# repeatable tool behind db/migrations/00017_seed_catalog_*.sql onwards.
+# Docker-only like everything else here (App Control), and dump needs
+# SOURCE_DATABASE_URL pointed at the DB tunnel from deployments/README.md
+# ("DB-tunnel override" section) - e.g.
+#   SOURCE_DATABASE_URL='postgres://TrolloTron:...@host.docker.internal:15432/jojo_one_piece_simulator?sslmode=disable' make catalog-dump-docker
+catalog-dump-docker:
+	$(COMPOSE_TEST) run --rm -e SOURCE_DATABASE_URL backend-test go run ./cmd/catalogsync dump
+
+catalog-plan-docker:
+	$(COMPOSE_TEST) run --rm backend-test go run ./cmd/catalogsync plan
+
+catalog-generate-docker:
+	$(COMPOSE_TEST) run --rm backend-test go run ./cmd/catalogsync generate

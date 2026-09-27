@@ -13,7 +13,7 @@ type PowerContent struct {
 
 // PowerTranslations is every locale's content for one Power, as submitted
 // by an admin create/update request or read back for an admin edit form.
-// EnGB must always be present - it is the final link of the read-side
+// DefaultLocale must always be present - it is the final link of the read-side
 // fallback chain (ca-ES -> es-ES -> en-GB) - which callers validate before
 // this ever reaches a repository.
 type PowerTranslations map[enums.Locale]PowerContent

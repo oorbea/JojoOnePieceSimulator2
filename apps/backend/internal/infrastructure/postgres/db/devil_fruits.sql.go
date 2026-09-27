@@ -210,7 +210,7 @@ type GetDevilFruitRowByIDRow struct {
 
 // Returns the devil fruit matching `id`, along with its resolved
 // description/skills. `locales` is the requested locale's fallback chain,
-// most specific first (e.g. ['ca-ES','es-ES','en-GB']) - see
+// most specific first (e.g. ['ca-ES','en-GB','es-ES']) - see
 // GetStandRowsByID in stands.sql for the same LATERAL-join pattern.
 func (q *Queries) GetDevilFruitRowByID(ctx context.Context, arg GetDevilFruitRowByIDParams) (GetDevilFruitRowByIDRow, error) {
 	row := q.db.QueryRow(ctx, getDevilFruitRowByID, arg.ID, arg.Locales)

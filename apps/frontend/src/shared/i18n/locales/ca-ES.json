@@ -674,7 +674,7 @@
     "required": "Aquest camp és obligatori",
     "invalidValue": "Valor no vàlid",
     "localeUnsupported": "Idioma no admès",
-    "localeDefaultRequired": "Cal la traducció en anglès (Regne Unit)"
+    "localeDefaultRequired": "Cal la traducció en espanyol (Espanya)"
   },
   "toasts": {
     "standCreated": "Stand creat",

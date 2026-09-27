@@ -175,7 +175,7 @@ func validOnePieceCharacterBody(name string) map[string]any {
 	return map[string]any{
 		"name": name,
 		"translations": map[string]any{
-			"en-GB": map[string]any{"description": name + " description"},
+			"es-ES": map[string]any{"description": name + " description"},
 		},
 		"rarity":          "EPIC",
 		"physicalForm":    "MARINE_CAPTAIN",

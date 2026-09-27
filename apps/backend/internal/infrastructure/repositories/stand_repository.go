@@ -31,7 +31,7 @@ func NewStandRepository(pool *pgxpool.Pool) *StandRepository {
 
 // Save upserts stand by name: the underlying powers/stands row is fully
 // replaced. translations replaces power_translations wholesale: every
-// locale present is upserted, every locale absent (except en-GB, which
+// locale present is upserted, every locale absent (except es-ES, which
 // callers must always include) is deleted. It is safe to call repeatedly
 // for the same stand (e.g. re-running seed data).
 func (r *StandRepository) Save(ctx context.Context, stand *powers.Stand, translations ports.PowerTranslations) error {

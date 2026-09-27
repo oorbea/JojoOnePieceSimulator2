@@ -96,15 +96,16 @@ func stageFilterKey(filters ports.StageFilters, locale enums.Locale) string {
 }
 
 // stageCatalogKey keys IStageCatalog.Stages, which takes no locale: the
-// adapter resolves Description at a fixed enums.EnGB, so the key is
+// adapter resolves Description at a fixed enums.DefaultLocale, so the key is
 // prefixed with that literal locale rather than skipping the locale
 // dimension - every key in this file carries one. Deliberately a different
 // key shape from stageFilterKey even when a Filter carries the same Manga
 // and nothing else: the admin filter surface and the gameplay catalogue are
-// separate contracts (see ports.IStageCatalog's doc on the fixed EnGB
-// resolution) and may diverge without one silently answering the other.
+// separate contracts (see ports.IStageCatalog's doc on the fixed
+// DefaultLocale resolution) and may diverge without one silently answering
+// the other.
 func stageCatalogKey(manga enums.Manga) string {
-	return "catalog:" + enums.EnGB.String() + ":" + manga.String()
+	return "catalog:" + enums.DefaultLocale.String() + ":" + manga.String()
 }
 
 // jojoCharacterFilterKey mirrors standFilterKey for ports.JojoCharacterFilters.

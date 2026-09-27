@@ -5,9 +5,9 @@ import type { Locale } from '@/shared/contracts/enums'
 import type { CharacterTranslationRequest } from '@/shared/contracts/dto'
 
 // Character's translations shape (description only, no skills - same as
-// Stage) but only en-GB is mandatory on write (the Power rule, not the
+// Stage) but only es-ES is mandatory on write (the Power rule, not the
 // Stage one - see dto/translation_request.go's validateCharacterTranslations).
-// Since there's only one field, es-ES/ca-ES have nothing that could be
+// Since there's only one field, en-GB/ca-ES have nothing that could be
 // "half-filled" the way Power's description+skills pair can, so no
 // superRefine is needed here - just a plain optional-string schema for the
 // two optional locales.
@@ -39,8 +39,8 @@ const optionalContentSchema = z.object({
 })
 
 export const characterTranslationsFormSchema = z.object({
-  'en-GB': requiredContentSchema,
-  'es-ES': optionalContentSchema,
+  'es-ES': requiredContentSchema,
+  'en-GB': optionalContentSchema,
   'ca-ES': optionalContentSchema,
 })
 

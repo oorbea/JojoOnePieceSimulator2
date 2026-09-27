@@ -63,7 +63,7 @@ func NewUser(
 		googlePicture: googlePicture,
 		role:          role,
 		avatarStatus:  enums.PictureNone,
-		language:      enums.EnGB,
+		language:      enums.DefaultLocale,
 		avatarFocalX:  0.5,
 		avatarFocalY:  0.5,
 	}, nil

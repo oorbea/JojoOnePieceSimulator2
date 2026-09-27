@@ -46,7 +46,7 @@ type IStageRepository interface {
 	// ordered by manga then position, description resolved for locale -
 	// the admin-facing, locale-aware counterpart to IStageCatalog.Stages
 	// (which is gameplay-facing and always resolves at a fixed
-	// enums.EnGB - see that port's doc).
+	// enums.DefaultLocale - see that port's doc).
 	Filter(ctx context.Context, filters StageFilters, locale enums.Locale) ([]game.Stage, error)
 	// Page returns up to limit+1 Stages matching filters, ordered by
 	// (manga, position, name) after `after` (nil for the first page), then

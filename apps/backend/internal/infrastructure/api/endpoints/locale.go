@@ -17,22 +17,22 @@ func withLocale(ctx context.Context, locale enums.Locale) context.Context {
 }
 
 // LocaleFromRequest returns the locale resolved by resolveLocale for r,
-// defaulting to enums.EnGB if the middleware was somehow skipped.
+// defaulting to enums.DefaultLocale if the middleware was somehow skipped.
 func LocaleFromRequest(r *http.Request) enums.Locale {
 	if locale, ok := r.Context().Value(localeContextKey{}).(enums.Locale); ok {
 		return locale
 	}
-	return enums.EnGB
+	return enums.DefaultLocale
 }
 
 // resolveLocale determines the caller's locale for read routes: an explicit
 // "?lang=" query override wins, otherwise the first supported language tag
-// in the standard Accept-Language header, otherwise enums.EnGB. It never
-// rejects a request - an unrecognized value just falls through to the
+// in the standard Accept-Language header, otherwise enums.DefaultLocale. It
+// never rejects a request - an unrecognized value just falls through to the
 // default, exactly like every other public read route.
 func resolveLocale(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		locale := enums.EnGB
+		locale := enums.DefaultLocale
 		if q := r.URL.Query().Get("lang"); q != "" {
 			if parsed, err := enums.ParseLocale(q); err == nil {
 				locale = parsed
@@ -68,5 +68,5 @@ func parseAcceptLanguage(header string) (enums.Locale, bool) {
 			return enums.CaES, true
 		}
 	}
-	return enums.EnGB, false
+	return enums.DefaultLocale, false
 }

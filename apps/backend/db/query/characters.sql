@@ -14,7 +14,7 @@ ON CONFLICT (id) DO UPDATE
         updated_at     = now()
 RETURNING id;
 
--- Upserts a single locale's description for a character. Only en-GB is
+-- Upserts a single locale's description for a character. Only es-ES is
 -- mandatory (like powers, unlike stages) - enforced by the application
 -- layer's request validation, not here.
 -- name: UpsertCharacterTranslation :exec
@@ -24,7 +24,7 @@ ON CONFLICT (character_id, locale) DO UPDATE
     SET description = EXCLUDED.description;
 
 -- Deletes translation rows for locales no longer present in an update
--- request (en-GB can never be deleted this way - callers must not pass it).
+-- request (es-ES can never be deleted this way - callers must not pass it).
 -- name: DeleteCharacterTranslations :exec
 DELETE FROM character_translations WHERE character_id = $1 AND locale::text = ANY (sqlc.arg('locales')::text[]);
 

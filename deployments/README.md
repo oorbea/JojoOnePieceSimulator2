@@ -26,8 +26,8 @@ Then point DBeaver's SSH tunnel at the server's Tailscale address and use:
 - Remote host: `127.0.0.1`
 - Remote port: `15432`
 - Database: `jojo_one_piece_simulator`
-- Username: `TrolloTron`
-- Password: `REDACTED-ROTATE-THIS`
+- Username: `POSTGRES_USER` (see the GitHub repo secret, or your local `.env`)
+- Password: `POSTGRES_PASSWORD` (same place - never commit this)
 - SSL mode: `disable`
 
 ## Production

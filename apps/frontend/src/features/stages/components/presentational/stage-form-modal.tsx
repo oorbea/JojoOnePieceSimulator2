@@ -44,7 +44,7 @@ type Props = {
 
 // Create/edit Stage form - same full-window Modal + centered glass card
 // recipe as StandFormModal, minus SkillsField (a Stage has none) and with
-// every LocaleTabs pill starred instead of just en-GB, since every locale
+// every LocaleTabs pill starred instead of just es-ES, since every locale
 // is mandatory here (see the vault's game-stage-content.md).
 export function StageFormModal({
   visible,

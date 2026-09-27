@@ -81,7 +81,7 @@ type DeletePowerTranslationsParams struct {
 }
 
 // Deletes translation rows for locales no longer present in an update
-// request (en-GB can never be deleted this way - callers must not pass it).
+// request (es-ES can never be deleted this way - callers must not pass it).
 func (q *Queries) DeletePowerTranslations(ctx context.Context, arg DeletePowerTranslationsParams) error {
 	_, err := q.db.Exec(ctx, deletePowerTranslations, arg.PowerID, arg.Locales)
 	return err
@@ -672,9 +672,9 @@ type GetStandRowsByNameRow struct {
 // chain (matched = false), so the caller can hydrate Stand.EvolvesFrom(...)
 // without extra round trips, then discard everything but the matched row.
 // `locales` is the requested locale's fallback chain, most specific first
-// (e.g. ['ca-ES','es-ES','en-GB']); the LATERAL join below picks the first
+// (e.g. ['ca-ES','en-GB','es-ES']); the LATERAL join below picks the first
 // translation row that exists in that order, so unmatched locales fall
-// back all the way to en-GB without any COALESCE juggling in Go.
+// back all the way to es-ES without any COALESCE juggling in Go.
 func (q *Queries) GetStandRowsByName(ctx context.Context, arg GetStandRowsByNameParams) ([]GetStandRowsByNameRow, error) {
 	rows, err := q.db.Query(ctx, getStandRowsByName, arg.Name, arg.Locales)
 	if err != nil {
@@ -1213,7 +1213,7 @@ type UpsertPowerTranslationParams struct {
 }
 
 // Upserts a single locale's description/skills for a power. Callers write
-// one row per locale present in the request (en-GB is mandatory, es-ES and
+// one row per locale present in the request (es-ES is mandatory, en-GB and
 // ca-ES optional), never touching the other locales' rows.
 func (q *Queries) UpsertPowerTranslation(ctx context.Context, arg UpsertPowerTranslationParams) error {
 	_, err := q.db.Exec(ctx, upsertPowerTranslation,

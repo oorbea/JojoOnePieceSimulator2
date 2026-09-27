@@ -59,7 +59,8 @@ func main() {
 		log.Fatalf("loading config: %v", err)
 	}
 
-	if err := postgres.Migrate(cfg.DatabaseURL); err != nil {
+	migrated, err := postgres.Migrate(cfg.DatabaseURL)
+	if err != nil {
 		log.Fatalf("running migrations: %v", err)
 	}
 
@@ -86,6 +87,11 @@ func main() {
 	// picture-job budget and leave every later tier's attempt an
 	// already-expired ctx to fail against - see SetPutTimeout's doc.
 	pictureStorage.SetPutTimeout(cfg.StoragePutTimeout)
+	// When this environment's storage tiers point at a bucket shared with
+	// another environment (e.g. local dev pointed at prod's R2 bucket for
+	// realistic seed data), deletes must be disabled so this environment
+	// can never remove an object another one still serves.
+	pictureStorage.SetDeleteDisabled(cfg.StorageDisableDelete)
 
 	imageProcessor, closeImaging, err := imaging.New(imaging.Config{Concurrency: 1})
 	if err != nil {
@@ -146,6 +152,14 @@ func main() {
 		// with no operational reason yet to tune it separately.
 		jojoCharacterRepo = cache.NewJojoCharacterRepository(jojoCharacterRepo, redisCache, cfg.CacheStandTTL, cfg.CacheNotFoundTTL)
 		onePieceCharacterRepo = cache.NewOnePieceCharacterRepository(onePieceCharacterRepo, redisCache, cfg.CacheStandTTL, cfg.CacheNotFoundTTL)
+
+		// A seed migration writes catalogue tables with raw SQL, bypassing
+		// every repository's own invalidate() call - flush explicitly so a
+		// cache warmed before this boot doesn't keep serving pre-seed data
+		// until its TTL expires. See InvalidateCatalogNamespaces's doc.
+		if migrated {
+			cache.InvalidateCatalogNamespaces(ctx, redisCache)
+		}
 	}
 
 	userRepository := repositories.NewUserRepository(pool)

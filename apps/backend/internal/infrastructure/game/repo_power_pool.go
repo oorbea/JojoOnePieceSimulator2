@@ -11,7 +11,7 @@ import (
 // RepoPowerPool is a ports.IGamePowerPool adapter over the existing
 // IStandRepository/IDevilFruitRepository - names, not localized
 // descriptions, are all Loadout assignment needs, so it always resolves
-// enums.EnGB regardless of the caller's own locale.
+// enums.DefaultLocale regardless of the caller's own locale.
 type RepoPowerPool struct {
 	stands      ports.IStandRepository
 	devilFruits ports.IDevilFruitRepository
@@ -25,9 +25,9 @@ func NewRepoPowerPool(stands ports.IStandRepository, devilFruits ports.IDevilFru
 var _ ports.IGamePowerPool = (*RepoPowerPool)(nil)
 
 func (p *RepoPowerPool) Stands(ctx context.Context) ([]*powers.Stand, error) {
-	return p.stands.GetAll(ctx, enums.EnGB)
+	return p.stands.GetAll(ctx, enums.DefaultLocale)
 }
 
 func (p *RepoPowerPool) DevilFruits(ctx context.Context) ([]*powers.DevilFruit, error) {
-	return p.devilFruits.GetAll(ctx, enums.EnGB)
+	return p.devilFruits.GetAll(ctx, enums.DefaultLocale)
 }

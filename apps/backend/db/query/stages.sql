@@ -147,7 +147,7 @@ WHERE id = sqlc.arg('id');
 DELETE FROM stages WHERE id = $1;
 
 -- Upserts a single locale's description for a stage. All three locales are
--- mandatory for a Stage (unlike powers, where only en-GB is) - enforced by
+-- mandatory for a Stage (unlike powers, where only es-ES is) - enforced by
 -- the application layer's request validation, not here.
 -- name: UpsertStageTranslation :exec
 INSERT INTO stage_translations (stage_id, locale, description)

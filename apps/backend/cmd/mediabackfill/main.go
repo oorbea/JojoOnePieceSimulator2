@@ -201,7 +201,7 @@ func (b *backfiller) backfillOne(mainKey, thumbKey, keyPrefix, scope string) (gr
 }
 
 func backfillStands(b *backfiller, repo *repositories.StandRepository) error {
-	stands, err := repo.GetAll(b.ctx, enums.EnGB)
+	stands, err := repo.GetAll(b.ctx, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func backfillStands(b *backfiller, repo *repositories.StandRepository) error {
 }
 
 func backfillDevilFruits(b *backfiller, repo *repositories.DevilFruitRepository) error {
-	fruits, err := repo.GetAll(b.ctx, enums.EnGB)
+	fruits, err := repo.GetAll(b.ctx, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func backfillDevilFruits(b *backfiller, repo *repositories.DevilFruitRepository)
 }
 
 func backfillStages(b *backfiller, repo *repositories.StageRepository) error {
-	stages, err := repo.List(b.ctx, enums.EnGB)
+	stages, err := repo.List(b.ctx, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func backfillStages(b *backfiller, repo *repositories.StageRepository) error {
 }
 
 func backfillJojoCharacters(b *backfiller, repo *repositories.JojoCharacterRepository) error {
-	list, err := repo.GetAll(b.ctx, enums.EnGB)
+	list, err := repo.GetAll(b.ctx, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}
@@ -373,7 +373,7 @@ func backfillJojoCharacters(b *backfiller, repo *repositories.JojoCharacterRepos
 }
 
 func backfillOnePieceCharacters(b *backfiller, repo *repositories.OnePieceCharacterRepository) error {
-	list, err := repo.GetAll(b.ctx, enums.EnGB)
+	list, err := repo.GetAll(b.ctx, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}

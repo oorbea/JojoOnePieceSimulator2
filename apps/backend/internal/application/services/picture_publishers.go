@@ -55,7 +55,7 @@ func (p *standPicturePublisher) PictureKeys(ctx context.Context, id string) (str
 	if err != nil {
 		return "", "", "", err
 	}
-	stand, err := p.repo.FindByID(ctx, powerID, enums.EnGB)
+	stand, err := p.repo.FindByID(ctx, powerID, enums.DefaultLocale)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -96,7 +96,7 @@ func (p *devilFruitPicturePublisher) PictureKeys(ctx context.Context, id string)
 	if err != nil {
 		return "", "", "", err
 	}
-	fruit, err := p.repo.FindByID(ctx, powerID, enums.EnGB)
+	fruit, err := p.repo.FindByID(ctx, powerID, enums.DefaultLocale)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -173,7 +173,7 @@ func (p *stagePicturePublisher) PictureKeys(ctx context.Context, id string) (str
 	if err != nil {
 		return "", "", "", err
 	}
-	st, err := p.repo.FindByID(ctx, stageID, enums.EnGB)
+	st, err := p.repo.FindByID(ctx, stageID, enums.DefaultLocale)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -240,7 +240,7 @@ func (p *characterPicturePublisher[T]) PictureKeys(ctx context.Context, id strin
 	if err != nil {
 		return "", "", "", err
 	}
-	c, err := p.repo.FindByID(ctx, characterID, enums.EnGB)
+	c, err := p.repo.FindByID(ctx, characterID, enums.DefaultLocale)
 	if err != nil {
 		return "", "", "", err
 	}
