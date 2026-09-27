@@ -47,7 +47,7 @@ Backend also has a caching layer for Stand repo + picture storage (ETag/Cache-Co
 
 ## Locale (i18n)
 
-`GET /stands`, `GET /devil-fruits` (list + detail) resolve `description`/`skills` per `Accept-Language` (or `?lang=` override), falling back `ca-ES → es-ES → en-GB`. Response shape unchanged. Admin-only `GET .../{id}/translations` returns every locale at once; `POST`/`PUT` bodies take a `translations` map keyed by locale instead of flat `description`/`skills` fields (`en-GB` mandatory). `name` is never translated. See [[i18n-multi-language]] for the full decision record.
+`GET /stands`, `GET /devil-fruits` (list + detail) resolve `description`/`skills` per `Accept-Language` (or `?lang=` override), falling back `ca-ES → es-ES` (or `en-GB → es-ES`) - es-ES is the mandatory default locale since 2026-09-27. Response shape unchanged. Admin-only `GET .../{id}/translations` returns every locale at once; `POST`/`PUT` bodies take a `translations` map keyed by locale instead of flat `description`/`skills` fields (`es-ES` mandatory since 2026-09-27, see [[catalog-seed-from-prod]]). `name` is never translated. See [[i18n-multi-language]] for the full decision record.
 
 ## JSON shape
 
