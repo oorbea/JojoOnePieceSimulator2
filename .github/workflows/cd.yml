@@ -105,7 +105,15 @@ jobs:
 
             PREVIOUS_COMMIT=$(git rev-parse HEAD)
             git remote set-url origin "git@github.com:${{ github.repository }}.git"
-            git pull origin main
+            # fetch + hard reset, not `git pull` - a pull assumes the
+            # server's checkout and origin/main share ancestry and can be
+            # fast-forwarded. That broke outright the one time main's
+            # history was rewritten (git filter-repo, purging a leaked
+            # secret) - "divergent branches", deploy aborted before
+            # touching anything. Resetting to exactly what's on origin is
+            # what a deploy should do anyway, rewritten history or not.
+            git fetch origin main
+            git reset --hard origin/main
 
             # Bring up the stateful services first (covers the first-ever
             # deploy, where postgres/redis don't exist yet).
