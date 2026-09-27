@@ -267,6 +267,12 @@ type Config struct {
 	// fallback.PictureStorage.SetPutTimeout. 0 disables it (each Put then
 	// runs under the picture job's own ctx, unwrapped).
 	StoragePutTimeout time.Duration
+	// StorageDisableDelete makes the picture storage chain's Delete a no-op
+	// - see fallback.PictureStorage.SetDeleteDisabled. Set in environments
+	// (e.g. local dev) whose storage tiers point at the same bucket as
+	// another environment (prod), so a local delete never removes an object
+	// prod still serves.
+	StorageDisableDelete bool
 	// B2* configure the optional Backblaze B2 tier.
 	B2Endpoint        string
 	B2Region          string
@@ -762,6 +768,15 @@ func Load() (*Config, error) {
 		storagePutTimeout = parsed
 	}
 
+	storageDisableDelete := false
+	if raw := os.Getenv("STORAGE_DISABLE_DELETE"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing STORAGE_DISABLE_DELETE: %w", err)
+		}
+		storageDisableDelete = parsed
+	}
+
 	var b2Endpoint, b2Region, b2AccessKeyID, b2SecretAccessKey, b2Bucket string
 	var b2QuotaBytes int64
 	if seenProvider["b2"] {
@@ -1186,12 +1201,12 @@ func Load() (*Config, error) {
 		CORSMaxAge:           corsMaxAge,
 		HTTPCompressLevel:    httpCompressLevel,
 
-		RateLimitEnabled:       rateLimitEnabled,
-		RateLimitWindow:        rateLimitWindow,
-		RateLimitGlobalPerIP:   rateLimitGlobalPerIP,
-		RateLimitLoginPerIP:    rateLimitLoginPerIP,
-		RateLimitReadPerUser:   rateLimitReadPerUser,
-		RateLimitWritePerUser:  rateLimitWritePerUser,
+		RateLimitEnabled:           rateLimitEnabled,
+		RateLimitWindow:            rateLimitWindow,
+		RateLimitGlobalPerIP:       rateLimitGlobalPerIP,
+		RateLimitLoginPerIP:        rateLimitLoginPerIP,
+		RateLimitReadPerUser:       rateLimitReadPerUser,
+		RateLimitWritePerUser:      rateLimitWritePerUser,
 		RateLimitTicketPerUser:     rateLimitTicketPerUser,
 		RateLimitMediaPerIP:        rateLimitMediaPerIP,
 		RateLimitInviteStatusPerIP: rateLimitInviteStatusPerIP,
@@ -1217,6 +1232,7 @@ func Load() (*Config, error) {
 		StorageQuotaThresholdPct: storageQuotaThresholdPct,
 		StorageReconcileInterval: storageReconcileInterval,
 		StoragePutTimeout:        storagePutTimeout,
+		StorageDisableDelete:     storageDisableDelete,
 
 		B2Endpoint:        b2Endpoint,
 		B2Region:          b2Region,

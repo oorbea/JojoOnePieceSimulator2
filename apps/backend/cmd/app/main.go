@@ -86,6 +86,11 @@ func main() {
 	// picture-job budget and leave every later tier's attempt an
 	// already-expired ctx to fail against - see SetPutTimeout's doc.
 	pictureStorage.SetPutTimeout(cfg.StoragePutTimeout)
+	// When this environment's storage tiers point at a bucket shared with
+	// another environment (e.g. local dev pointed at prod's R2 bucket for
+	// realistic seed data), deletes must be disabled so this environment
+	// can never remove an object another one still serves.
+	pictureStorage.SetDeleteDisabled(cfg.StorageDisableDelete)
 
 	imageProcessor, closeImaging, err := imaging.New(imaging.Config{Concurrency: 1})
 	if err != nil {

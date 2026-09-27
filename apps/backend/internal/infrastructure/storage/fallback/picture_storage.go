@@ -43,12 +43,13 @@ type usageCounter struct {
 // ordered Tier chain plus a ports.IStorageLedger recording where each key
 // actually landed.
 type PictureStorage struct {
-	tiers        []Tier
-	byName       map[string]ports.IStorageBackend
-	ledger       ports.IStorageLedger
-	thresholdPct int
-	usage        map[string]*usageCounter
-	putTimeout   time.Duration
+	tiers          []Tier
+	byName         map[string]ports.IStorageBackend
+	ledger         ports.IStorageLedger
+	thresholdPct   int
+	usage          map[string]*usageCounter
+	putTimeout     time.Duration
+	deleteDisabled bool
 }
 
 // SetPutTimeout bounds every tier's Put attempt to d, instead of letting it
@@ -61,6 +62,15 @@ type PictureStorage struct {
 // the zero value, so a chain that never calls this is unaffected.
 func (s *PictureStorage) SetPutTimeout(d time.Duration) {
 	s.putTimeout = d
+}
+
+// SetDeleteDisabled makes Delete a no-op (besides logging) when disabled is
+// true. Used when this chain's tiers are shared with another environment
+// (e.g. a local dev stack pointed at the same R2 bucket as prod) - deleting
+// a key locally must not delete the object other environments still serve.
+// The zero value (false) preserves existing behavior.
+func (s *PictureStorage) SetDeleteDisabled(disabled bool) {
+	s.deleteDisabled = disabled
 }
 
 var _ ports.IPictureStorage = (*PictureStorage)(nil)
@@ -269,6 +279,10 @@ func (s *PictureStorage) PresignGetURL(ctx context.Context, key string) (string,
 
 // Delete implements ports.IPictureStorage.
 func (s *PictureStorage) Delete(ctx context.Context, key string) error {
+	if s.deleteDisabled {
+		log.Printf("delete disabled: skipping deletion of %q", key)
+		return nil
+	}
 	obj, tracked, err := s.ledger.Get(ctx, key)
 	if err != nil {
 		return fmt.Errorf("looking up provider for %q: %w", key, err)

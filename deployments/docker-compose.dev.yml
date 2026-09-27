@@ -18,6 +18,12 @@ services:
       # AUTH_COOKIE_SECURE/CORS_ALLOWED_ORIGINS. Set DEV_AUTH_BYPASS=false in
       # your local .env to opt back out.
       DEV_AUTH_BYPASS: "${DEV_AUTH_BYPASS:-true}"
+      # Local dev's R2 bucket is the same bucket prod uses (so seeded
+      # catalog images render without copying files - see
+      # ObsidianVault/catalog-seed-from-prod.md). Deletes must therefore be
+      # disabled here: a local delete must never remove an object prod
+      # still serves. Never set in docker-compose.yml/.prod.yml.
+      STORAGE_DISABLE_DELETE: "${STORAGE_DISABLE_DELETE:-true}"
 
   frontend:
     ports:
