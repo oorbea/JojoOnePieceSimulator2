@@ -280,7 +280,7 @@ func newWorkerTestStand(t *testing.T, repo *fakeStandRepository, idGen *fakeStan
 	if err != nil {
 		t.Fatalf("building stand: %v", err)
 	}
-	translations := ports.PowerTranslations{enums.EnGB: {Description: "description", Skills: []string{"skill"}}}
+	translations := ports.PowerTranslations{enums.EsES: {Description: "description", Skills: []string{"skill"}}}
 	if err := repo.Save(context.Background(), stand, translations); err != nil {
 		t.Fatalf("saving stand: %v", err)
 	}
@@ -816,7 +816,7 @@ func newWorkerTestDevilFruit(t *testing.T, repo *fakeDevilFruitRepository, idGen
 	if err != nil {
 		t.Fatalf("building devil fruit: %v", err)
 	}
-	translations := ports.PowerTranslations{enums.EnGB: {Description: "description", Skills: []string{"skill"}}}
+	translations := ports.PowerTranslations{enums.EsES: {Description: "description", Skills: []string{"skill"}}}
 	if err := repo.Save(context.Background(), fruit, translations); err != nil {
 		t.Fatalf("saving devil fruit: %v", err)
 	}

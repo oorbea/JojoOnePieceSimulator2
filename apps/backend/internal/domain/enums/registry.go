@@ -41,6 +41,10 @@ var WireEnums = []WireEnum{
 	{"HamonLevel", []wireMember{HamonNone, HamonBasic, HamonAdvanced, HamonPerfect}},
 	{"InviteStatus", []wireMember{InviteValid, InviteExpired}},
 	{"LobbyVisibility", []wireMember{Private, Public}},
+	// Must stay in ascending ordinal order (TestWireEnums_MembersAreComplete
+	// enforces this for every registered enum) - the frontend achieves
+	// es-ES-first tab order itself (see shared/i18n's SUPPORTED_LOCALES),
+	// not via this wire order.
 	{"Locale", []wireMember{EnGB, EsES, CaES}},
 	{"Manga", []wireMember{Jojo, OnePiece}},
 	{"ParticipantKind", []wireMember{Human, Bot}},

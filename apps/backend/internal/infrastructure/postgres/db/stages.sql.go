@@ -561,7 +561,7 @@ type UpsertStageTranslationParams struct {
 }
 
 // Upserts a single locale's description for a stage. All three locales are
-// mandatory for a Stage (unlike powers, where only en-GB is) - enforced by
+// mandatory for a Stage (unlike powers, where only es-ES is) - enforced by
 // the application layer's request validation, not here.
 func (q *Queries) UpsertStageTranslation(ctx context.Context, arg UpsertStageTranslationParams) error {
 	_, err := q.db.Exec(ctx, upsertStageTranslation, arg.StageID, arg.Locale, arg.Description)

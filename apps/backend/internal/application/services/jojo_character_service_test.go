@@ -199,7 +199,7 @@ func newTestJojoCharacterViaService(t *testing.T, svc *services.JojoCharacterSer
 	t.Helper()
 	c, err := svc.CreateJojoCharacter(context.Background(), services.JojoCharacterInput{
 		Name:         name,
-		Translations: ports.CharacterTranslations{enums.EnGB: name + " description"},
+		Translations: ports.CharacterTranslations{enums.EsES: name + " description"},
 		Rarity:       enums.Rare,
 		Hamon:        enums.HamonAdvanced,
 		Spin:         enums.SpinGolden,
@@ -217,7 +217,7 @@ func TestCreateJojoCharacter_RejectsInvalidHamon(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	_, err := svc.CreateJojoCharacter(context.Background(), services.JojoCharacterInput{
-		Name: "Bad Character", Translations: ports.CharacterTranslations{enums.EnGB: "description"}, Rarity: enums.Rare,
+		Name: "Bad Character", Translations: ports.CharacterTranslations{enums.EsES: "description"}, Rarity: enums.Rare,
 		Hamon: enums.HamonLevel(99), Spin: enums.SpinGolden, BattleIQ: 100,
 	})
 	if !errors.Is(err, enums.ErrInvalidHamonLevel) {
@@ -279,7 +279,7 @@ func TestUpdateJojoCharacter_PreservesExistingPicture(t *testing.T) {
 	}
 
 	updated, err := svc.UpdateJojoCharacter(context.Background(), c.ID(), services.JojoCharacterInput{
-		Name: "Joseph Joestar", Translations: ports.CharacterTranslations{enums.EnGB: "updated description"}, Rarity: enums.Epic,
+		Name: "Joseph Joestar", Translations: ports.CharacterTranslations{enums.EsES: "updated description"}, Rarity: enums.Epic,
 		Hamon: enums.HamonPerfect, Spin: enums.SpinInfinite, BattleIQ: 200,
 	})
 	if err != nil {

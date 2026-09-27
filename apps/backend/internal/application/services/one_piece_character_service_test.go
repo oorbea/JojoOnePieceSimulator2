@@ -182,7 +182,7 @@ func newTestOnePieceCharacterViaService(t *testing.T, svc *services.OnePieceChar
 	t.Helper()
 	c, err := svc.CreateOnePieceCharacter(context.Background(), services.OnePieceCharacterInput{
 		Name:            name,
-		Translations:    ports.CharacterTranslations{enums.EnGB: name + " description"},
+		Translations:    ports.CharacterTranslations{enums.EsES: name + " description"},
 		Rarity:          enums.Epic,
 		PhysicalForm:    enums.PhysicalFormMarineCaptain,
 		ArmamentHaki:    enums.HakiViceAdmiral,
@@ -202,7 +202,7 @@ func TestCreateOnePieceCharacter_RejectsInvalidFruitMastery(t *testing.T) {
 		services.PicturePolicy{MaxBytes: 1 << 20, AllowedTypes: []string{"image/png"}})
 
 	_, err := svc.CreateOnePieceCharacter(context.Background(), services.OnePieceCharacterInput{
-		Name: "Bad Character", Translations: ports.CharacterTranslations{enums.EnGB: "description"}, Rarity: enums.Epic,
+		Name: "Bad Character", Translations: ports.CharacterTranslations{enums.EsES: "description"}, Rarity: enums.Epic,
 		PhysicalForm: enums.PhysicalFormPrivate, ArmamentHaki: enums.HakiNone, ObservationHaki: enums.HakiNone,
 		ConquerorHaki: enums.HakiNone, FruitMastery: enums.FruitMastery(99),
 	})
@@ -265,7 +265,7 @@ func TestUpdateOnePieceCharacter_PreservesExistingPicture(t *testing.T) {
 	}
 
 	updated, err := svc.UpdateOnePieceCharacter(context.Background(), c.ID(), services.OnePieceCharacterInput{
-		Name: "Nami", Translations: ports.CharacterTranslations{enums.EnGB: "updated description"}, Rarity: enums.Legendary,
+		Name: "Nami", Translations: ports.CharacterTranslations{enums.EsES: "updated description"}, Rarity: enums.Legendary,
 		PhysicalForm: enums.PhysicalFormYonkoCommander, ArmamentHaki: enums.HakiYonkoCommander, ObservationHaki: enums.HakiYonkoPlus,
 		ConquerorHaki: enums.HakiPrivate, FruitMastery: enums.FruitMasteryAwakened,
 	})

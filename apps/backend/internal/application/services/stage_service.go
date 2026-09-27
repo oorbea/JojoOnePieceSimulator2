@@ -65,7 +65,7 @@ func (s *StageService) ListStages(ctx context.Context, locale enums.Locale) ([]g
 // FilterStages returns every Stage matching the (all-optional) filters,
 // ordered by manga then position, description resolved for locale.
 // Admin-facing (locale-aware) - unrelated to IStageCatalog.Stages, which the
-// gameplay engine uses and which always resolves at a fixed enums.EnGB (see
+// gameplay engine uses and which always resolves at a fixed enums.DefaultLocale (see
 // that port's doc).
 func (s *StageService) FilterStages(ctx context.Context, filters ports.StageFilters, locale enums.Locale) ([]game.Stage, error) {
 	return s.repo.Filter(ctx, filters, locale)
@@ -99,7 +99,7 @@ func (s *StageService) CreateStage(ctx context.Context, input StageInput) (game.
 // and its picture (set separately via SetStagePicture, not through this
 // JSON body).
 func (s *StageService) UpdateStage(ctx context.Context, id game.StageID, input StageInput) (game.Stage, error) {
-	existing, err := s.repo.FindByID(ctx, id, enums.EnGB)
+	existing, err := s.repo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return game.Stage{}, err
 	}
@@ -115,7 +115,7 @@ func (s *StageService) UpdateStage(ctx context.Context, id game.StageID, input S
 }
 
 func (s *StageService) saveStage(ctx context.Context, id game.StageID, picture, pictureThumb, pictureCard, pictureLqip string, pictureStatus enums.PictureStatus, input StageInput) (game.Stage, error) {
-	description := input.Translations[enums.EnGB]
+	description := input.Translations[enums.DefaultLocale]
 	st, err := game.NewStage(id, input.Manga, input.Order, input.Name, description, picture)
 	if err != nil {
 		return game.Stage{}, err
@@ -136,7 +136,7 @@ func (s *StageService) saveStage(ctx context.Context, id game.StageID, picture, 
 // DeleteStage removes the Stage matching id, then best-effort deletes its
 // picture renditions from object storage - mirrors StandService.DeleteStand.
 func (s *StageService) DeleteStage(ctx context.Context, id game.StageID) error {
-	st, err := s.repo.FindByID(ctx, id, enums.EnGB)
+	st, err := s.repo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (s *StageService) StageTranslations(ctx context.Context, id game.StageID) (
 // PENDING without touching its currently-served renditions - identical
 // contract to StandService.SetStandPicture.
 func (s *StageService) SetStagePicture(ctx context.Context, id game.StageID, pic ports.Picture) (game.Stage, error) {
-	st, err := s.repo.FindByID(ctx, id, enums.EnGB)
+	st, err := s.repo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return game.Stage{}, err
 	}

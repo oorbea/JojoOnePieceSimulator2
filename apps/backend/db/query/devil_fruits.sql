@@ -25,7 +25,7 @@ DELETE FROM powers WHERE id = $1 AND kind = 'DEVIL_FRUIT';
 
 -- Returns the devil fruit matching `id`, along with its resolved
 -- description/skills. `locales` is the requested locale's fallback chain,
--- most specific first (e.g. ['ca-ES','es-ES','en-GB']) - see
+-- most specific first (e.g. ['ca-ES','en-GB','es-ES']) - see
 -- GetStandRowsByID in stands.sql for the same LATERAL-join pattern.
 -- name: GetDevilFruitRowByID :one
 SELECT p.id,

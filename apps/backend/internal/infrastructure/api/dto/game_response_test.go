@@ -251,7 +251,7 @@ func noStageText(_ context.Context, _ game.StageID) (string, error) { return "",
 
 // TestNewGameStateResponse_LoadoutStandText_PerViewerLocale is the
 // regression test for the sorteo backend change: RepoPowerPool freezes a
-// loadout's Stand description+skills to en-GB at draw time (see
+// loadout's Stand description+skills to es-ES at draw time (see
 // infrastructure/game/repo_power_pool.go), since a live Game is one instance
 // shared by every participant and can only ever carry one baked-in locale.
 // NewGameStateResponse must re-resolve that text per call via

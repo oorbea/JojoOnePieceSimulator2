@@ -373,7 +373,7 @@ func TestListStages_SearchByNameAndDescription(t *testing.T) {
 	h := newStageTestServer()
 
 	body := validStageBody("Phantom Blood")
-	body["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "the tale begins in Victorian England"
+	body["translations"].(map[string]any)["es-ES"].(map[string]any)["description"] = "the tale begins in Victorian England"
 	doRequest(t, h, http.MethodPost, "/api/v1/stages", body)
 	alabasta := validStageBody("Alabasta")
 	alabasta["manga"] = "ONE_PIECE"
@@ -603,7 +603,7 @@ func TestUpdateStage(t *testing.T) {
 	id := created["id"].(string)
 
 	updateBody := validStageBody("Vento Aureo")
-	updateBody["translations"].(map[string]any)["en-GB"].(map[string]any)["description"] = "updated description"
+	updateBody["translations"].(map[string]any)["es-ES"].(map[string]any)["description"] = "updated description"
 	rec := doRequest(t, h, http.MethodPut, "/api/v1/stages/"+id, updateBody)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusOK, rec.Body.String())

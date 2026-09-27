@@ -60,7 +60,7 @@ func (s *OnePieceCharacterService) CreateOnePieceCharacter(ctx context.Context, 
 }
 
 func (s *OnePieceCharacterService) UpdateOnePieceCharacter(ctx context.Context, id characters.CharacterID, input OnePieceCharacterInput) (*characters.OnePieceCharacter, error) {
-	existing, err := s.repo.FindByID(ctx, id, enums.EnGB)
+	existing, err := s.repo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (s *OnePieceCharacterService) UpdateOnePieceCharacter(ctx context.Context, 
 }
 
 func (s *OnePieceCharacterService) saveOnePieceCharacter(ctx context.Context, id characters.CharacterID, input OnePieceCharacterInput) (*characters.OnePieceCharacter, error) {
-	description := input.Translations[enums.EnGB]
+	description := input.Translations[enums.DefaultLocale]
 	character, err := characters.NewCharacter(id, enums.OnePiece, input.Name, input.Rarity, description, input.Picture)
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (s *OnePieceCharacterService) OnePieceCharacterTranslations(ctx context.Con
 }
 
 func (s *OnePieceCharacterService) DeleteOnePieceCharacter(ctx context.Context, id characters.CharacterID) error {
-	c, err := s.repo.FindByID(ctx, id, enums.EnGB)
+	c, err := s.repo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (s *OnePieceCharacterService) DeleteOnePieceCharacter(ctx context.Context, 
 }
 
 func (s *OnePieceCharacterService) SetOnePieceCharacterPicture(ctx context.Context, id characters.CharacterID, pic ports.Picture) (*characters.OnePieceCharacter, error) {
-	c, err := s.repo.FindByID(ctx, id, enums.EnGB)
+	c, err := s.repo.FindByID(ctx, id, enums.DefaultLocale)
 	if err != nil {
 		return nil, err
 	}
