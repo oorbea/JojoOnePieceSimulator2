@@ -100,4 +100,4 @@ tier's description/skills layer on the newly-unlocked ability while keeping the 
 mentioned).
 
 Related: [[catalog-seed-from-prod]], [[content-authoring-stands-devil-fruits]],
-[[i18n-multi-language]]
+[[i18n-multi-language]], [[catalog-seed-part5-stands]] (same pipeline, Part 5)
