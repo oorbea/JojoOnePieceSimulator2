@@ -22,7 +22,24 @@ Stand/Devil Fruit in by hand through the admin panel, same as always - it only c
 translations for content that already exists. The "no batch-content risk" reasoning below still
 holds for the admin-facing CRUD surface.
 
-**Why this matters for future work:** content volume grows only as fast as an admin types it in —
-there's no batch-content risk to design around (e.g. no need for import validation, dedup-on-import,
-or large-payload handling). Any feature touching Stand/DevilFruit data should assume single-record
-mutations from the admin UI as the only write path, not bulk writes.
+**Second partial exception, 2026-09-28:** [[catalog-seed-part4-stands]] added 29 brand-new Stand
+rows (Diamond is Unbreakable) via a hand-authored migration, not the admin UI — the inverse case
+from catalogsync (new content, not translation catch-up on existing content). Still
+Claude-authored-then-human-reviewed before merging, same trust model as catalogsync's own
+translation step.
+
+**Third partial exception, same day:** [[catalog-seed-part5-stands]] repeated the pattern for Part 5
+(Golden Wind), 26 more Stand rows, plus a rare third case — a hand-authored migration that also
+*fixes* an existing prod row's translations (Chariot Requiem's house-style violations), guarded the
+same admin-edit-wins way catalogsync's own translation updates are.
+
+**Fourth partial exception, same day:** [[catalog-seed-part6-stands]] repeated the pattern for Part
+6 (Stone Ocean), 26 more Stand rows including this project's first 3-tier evolution chain
+(Whitesnake → C-MOON → Made in Heaven, three independent stat charts) and its first canonically
+unnamed Stand (Boiling Water Stand). No prod-row format fix needed this round.
+
+**Why this matters for future work:** content volume grows only as fast as an admin types it in, or
+as fast as a reviewed content-migration adds it — there's no *unreviewed* batch-content risk to
+design around (e.g. no need for import validation, dedup-on-import, or large-payload handling from
+an untrusted source). Any feature touching Stand/DevilFruit data should still assume single-record
+mutations from the admin UI as the primary write path in steady state, not bulk writes.
