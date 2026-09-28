@@ -80,4 +80,5 @@ committed — plan files are ephemeral, this vault note is the durable record if
 needs revisiting).
 
 Related: [[catalog-seed-part4-stands]], [[catalog-seed-from-prod]],
-[[content-authoring-stands-devil-fruits]], [[i18n-multi-language]]
+[[content-authoring-stands-devil-fruits]], [[i18n-multi-language]], [[catalog-seed-part6-stands]]
+(same pipeline, Part 6)

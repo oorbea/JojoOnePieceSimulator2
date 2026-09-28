@@ -33,6 +33,11 @@ translation step.
 *fixes* an existing prod row's translations (Chariot Requiem's house-style violations), guarded the
 same admin-edit-wins way catalogsync's own translation updates are.
 
+**Fourth partial exception, same day:** [[catalog-seed-part6-stands]] repeated the pattern for Part
+6 (Stone Ocean), 26 more Stand rows including this project's first 3-tier evolution chain
+(Whitesnake → C-MOON → Made in Heaven, three independent stat charts) and its first canonically
+unnamed Stand (Boiling Water Stand). No prod-row format fix needed this round.
+
 **Why this matters for future work:** content volume grows only as fast as an admin types it in, or
 as fast as a reviewed content-migration adds it — there's no *unreviewed* batch-content risk to
 design around (e.g. no need for import validation, dedup-on-import, or large-payload handling from
