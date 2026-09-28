@@ -80,6 +80,30 @@ catalog-generate-docker` writes the next `NNNNN_seed_catalog_*.sql`. `db/seed/ca
 the full loop. `snapshot.json`/`pending.json`/`sources.suggested.json` are gitignored (regenerated,
 not a source of truth); `translations.json`/`sources.json` are committed.
 
+### Run #2 — 2026-09-28
+
+An admin added 30 new Stands overnight (the Part 3/4/6 Egyptian-god batch: Anubis, Atum, Bastet,
+Cream, Dark Blue Moon, Death Thirteen, Ebony Devil, Emperor, Empress, Geb, Hanged Man, Hierophant
+Green, High Priestess, Horus, Judgement, Justice, Khnum, Lovers, Osiris, Sethan, Strength, Sun,
+Tenore Sax, The Fool, The World, Tohth, Tower of Gray, Wheel of Fortune, Wonder of U, Yellow
+Temperance), all es-ES only. No new Devil Fruits or Characters this run, so `sources.json` needed no
+new confirmations — `plan` went straight to a flat 60-entry `pending.json` (30 rows × 2 target
+locales), no `sources.suggested.json` step.
+
+- Translated via 5 parallel subagents (6 stands each) instead of one big batch — kept each
+  agent's output small enough to paste back cleanly, cut wall-clock roughly 5x. Each agent got the
+  vault's own en-GB/ca-ES style examples inline in its prompt (not just "translate this") — worth
+  doing again, output matched house style (Central Catalan "en"/"la" articles, "User:"/"Usuari:"
+  header line, colon-separated skill name/explanation) without a fixup pass.
+- `db/migrations/00019_seed_catalog_20260928.sql` — same shape as 00017, `plan`/`generate` needed no
+  code changes at all. Verified live: fresh `docker compose ... dev.yml up` against the existing
+  00018 volume applied 00019 cleanly, `GET /api/v1/stands` returned the new rows in en-GB and ca-ES
+  through `dev-login` + `Accept-Language`.
+- Gotcha reconfirmed: the DB-tunnel compose override (`docker-compose.tunnel.yml`) runs **on the
+  prod server**, not the machine driving the tunnel — running it locally by mistake grabs port
+  15432 and the real SSH `-L 15432:...` tunnel then fails with "bind: Permission denied". If that
+  error shows up, check for a stray local container on that port first.
+
 ## Security note
 
 `deployments/README.md`'s DB-tunnel section has the prod Postgres password in plain text — flagged,
