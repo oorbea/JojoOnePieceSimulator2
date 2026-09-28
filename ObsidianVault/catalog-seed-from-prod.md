@@ -112,5 +112,5 @@ README in a separate change).
 
 Related: [[i18n-multi-language]], [[content-authoring-stands-devil-fruits]], [[cicd-deployment]],
 [[storage-fallback-chain]], [[media-proxy-content-addressed]], [[catalog-seed-part4-stands]],
-[[catalog-seed-part5-stands]] (both a different kind of seed migration — brand-new content, not a
-prod dump)
+[[catalog-seed-part5-stands]], [[catalog-seed-part6-stands]] (all a different kind of seed
+migration — brand-new content, not a prod dump)
