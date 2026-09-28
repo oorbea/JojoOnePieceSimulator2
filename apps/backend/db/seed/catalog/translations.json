@@ -97,6 +97,654 @@
         ],
         "source_hash": "0e0547529df9715bb95aedf69373ac6edf46713cea7416074301adadec5da9be"
       }
+    },
+    "Anubis": {
+      "en-GB": {
+        "description": "It is a Stand of autonomous possession and evolving combat memory, which makes it an almost unbeatable fencing duellist as the fight progresses.",
+        "skills": [
+          "Mental Possession via Hilt: Anubis does not need a specific living user. Anyone who unsheathes or touches the sword's hilt immediately falls under absolute mind control, becoming its puppet (it successively possessed the farmer Chaka, the barber Khan, and even Jean Pierre Polnareff).",
+          "Adaptation and Combat Memory (Selective Immunity): This is its most dangerous ability. Anubis perfectly memorises every movement, technique, speed and attack pattern of any rival it faces. Once it experiences an attack (such as Silver Chariot's thrusts or Star Platinum's punches), that same attack will never work on it again, allowing it to dodge or block it effortlessly in later exchanges.",
+          "Selective Intangibility of the Blade: It can alter the density of its steel blade to pass through solid objects (such as walls, shields or other Stands) without damaging them, managing to cut only the flesh of the target hidden behind them.",
+          "Physical Enhancement of the Wielder: It grants the possessed body superhuman reflexes, agility and physical strength, far beyond the victim's normal limits."
+        ],
+        "source_hash": "029915ae9a682a309db24a270a2ccfc41fbae95dd7d872e55635d4a5c40685f6"
+      },
+      "ca-ES": {
+        "description": "És un Stand de possessió autònoma i memòria de combat evolutiva, la qual cosa el converteix en un duelista d'esgrima gairebé invencible a mesura que avança la baralla.",
+        "skills": [
+          "Possessió Mental per Empunyadura: Anubis no necessita un usuari viu específic. Qualsevol persona que desembeini o toqui l'empunyadura de l'espasa cau immediatament sota un control mental absolut, convertint-se en la seva titella (va posseir successivament el pagès Chaka, el barber Khan i fins i tot en Jean Pierre Polnareff).",
+          "Adaptació i Memòria de Combat (Immunitat Selectiva): És la seva habilitat més perillosa. Anubis memoritza perfectament cada moviment, tècnica, velocitat i patró d'atac de qualsevol rival al qual s'enfronti. Un cop experimenta un atac (com les estocades d'en Silver Chariot o els cops de puny d'en Star Platinum), aquest mateix atac mai més tornarà a funcionar-hi, cosa que li permet esquivar-lo o bloquejar-lo sense esforç en intercanvis posteriors.",
+          "Intangibilitat Selectiva de la Fulla: Pot alterar la densitat de la seva fulla d'acer per travessar objectes sòlids (com parets, escuts o altres Stands) sense fer-los mal, aconseguint tallar únicament la carn de l'objectiu amagat al darrere.",
+          "Millora Física del Portador: Atorga al cos del posseït reflexos, agilitat i força física sobrehumanes molt superiors als límits normals de la víctima."
+        ],
+        "source_hash": "029915ae9a682a309db24a270a2ccfc41fbae95dd7d872e55635d4a5c40685f6"
+      }
+    },
+    "Atum": {
+      "en-GB": {
+        "description": "User: Telence T. D'arby\n\nLike his elder brother's Osiris, it is a Stand focused on extracting souls through challenges, but combined with direct mind reading and a fondness for video games.",
+        "skills": [
+          "Soul Reading: It can put direct or indirect questions to its opponents' minds and \"read\" the soul's answer as a simple \"Yes\" or \"No\". This ability completely ignores verbal deception, bluffs or any intent to lie on the target's part, since the soul always answers with the absolute truth.",
+          "Soul Extraction and Compression: If an opponent internally admits defeat or loses in a game or bet against Telence, Atum snatches the victim's soul at once.",
+          "Embedding in Dolls (Soul Dolls): Unlike his brother (who turned souls into poker chips), Telence inserts the captured souls into detailed dolls and puppets that he keeps in his private collection, keeping their minds conscious but trapped in inanimate bodies.",
+          "Moderate Direct Combat Capability: It has greater physical strength, speed and precision than Osiris, being able to grab or quickly interact with its surroundings and seize a Stand's arm if the situation requires it."
+        ],
+        "source_hash": "3a9d1b7f42f5b6714b7021e5f80382650f4b34747809a00d15b462a6529b31bd"
+      },
+      "ca-ES": {
+        "description": "Portador: Telence T. D'arby\n\nIgual que l'Osiris del seu germà gran, és un Stand centrat en l'extracció d'ànimes mitjançant reptes, però combinat amb la lectura mental directa i l'afició pels videojocs.",
+        "skills": [
+          "Lectura de l'Ànima (Soul Reading): Pot formular preguntes directes o indirectes a la ment dels seus oponents i \"llegir\" la resposta de l'ànima en forma d'un simple \"Sí\" o \"No\". Aquesta habilitat ignora completament l'engany verbal, els farols o les intencions de mentir de l'objectiu, ja que l'ànima sempre respon amb la veritat absoluta.",
+          "Extracció i Compressió d'Ànimes: Si un oponent admet internament la derrota o perd en un joc o aposta contra en Telence, l'Atum arrabassa l'ànima de la víctima de seguida.",
+          "Incrustació en Nines (Soul Dolls): A diferència del seu germà (que convertia les ànimes en fitxes de pòquer), en Telence introdueix les ànimes capturades dins de nines i titelles detallades que guarda a la seva col·lecció privada, mantenint les seves ments conscients però atrapades en cossos inanimats.",
+          "Capacitat de Combat Directe Moderada: Té més força, velocitat i precisió física que l'Osiris, essent capaç de subjectar o interactuar ràpidament amb l'entorn i agafar el braç d'un Stand si la situació ho requereix."
+        ],
+        "source_hash": "3a9d1b7f42f5b6714b7021e5f80382650f4b34747809a00d15b462a6529b31bd"
+      }
+    },
+    "Bastet": {
+      "en-GB": {
+        "description": "User: Mariah\n\nIt is a Stand of environmental trapping and progressive magnetisation, designed to wear down and crush its victims using the metal objects in their own surroundings.",
+        "skills": [
+          "Contact Activation: Mariah places the plug socket on a strategic surface and waits for the victim to grow curious or touch it by accident. Upon touching it, a symbolic electric shock passes into the target's body, activating the magnetic curse.",
+          "Growing Magnetisation: Once the plug has been touched, the victim's body turns into a living magnet. As time passes and the victim moves away or tries to fight, the magnetic pulling force increases exponentially.",
+          "Massive Metal Attraction: It initially attracts small objects (bottle caps, needles, watches), but quickly begins attracting massive objects (frying pans, streetlamps, road signs, vehicles and even train rails). If two people trigger the trap (as happened to Joseph Joestar and Muhammad Avdol), they end up hopelessly stuck to one another due to opposite polarity.",
+          "Incapacity for Direct Combat: Bastet cannot attack directly or throw punches; it depends entirely on the victim being crushed or impaled by the avalanche of attracted metal objects."
+        ],
+        "source_hash": "66c7644f0a892dc82e23ff8fb822f9f259f1de753a127d5e9b2630aa738475bb"
+      },
+      "ca-ES": {
+        "description": "Portadora: Mariah\n\nÉs un Stand de trampa ambiental i magnetització progressiva, dissenyat per desgastar i esclafar les seves víctimes fent servir els objectes metàl·lics del seu propi entorn.",
+        "skills": [
+          "Activació per Contacte: La Mariah col·loca l'endoll en una superfície estratègica i espera que la víctima senti curiositat o el toqui accidentalment. En tocar-lo, una descàrrega elèctrica simbòlica passa al cos de l'objectiu, activant la maledicció magnètica.",
+          "Magnetització Creixent: Un cop tocat l'endoll, el cos de la víctima es converteix en un imant vivent. A mesura que passa el temps i la víctima s'allunya o intenta lluitar, la força d'atracció magnètica augmenta de manera exponencial.",
+          "Atracció Massiva de Metall: Inicialment atrau objectes petits (taps d'ampolla, agulles, rellotges), però ràpidament comença a atraure objectes massius (paelles, fanals, senyals de trànsit, vehicles i fins i tot rails de tren). Si dues persones activen la trampa (com els va passar a en Joseph Joestar i en Muhammad Avdol), acaben enganxades irremeiablement l'una a l'altra a causa de la polaritat oposada.",
+          "Incapacitat de Combat Directe: Bastet no pot atacar de manera directa ni llançar cops de puny; depèn totalment que la víctima quedi esclafada o travessada per l'allau d'objectes metàl·lics atrets."
+        ],
+        "source_hash": "66c7644f0a892dc82e23ff8fb822f9f259f1de753a127d5e9b2630aa738475bb"
+      }
+    },
+    "Cream": {
+      "en-GB": {
+        "description": "User: Vanilla Ice\n\nIt is a Stand of spatial annihilation and absolute void, considered one of the most destructive and terrifying powers in the entire series.",
+        "skills": [
+          "Portal to the Void Dimension: The inside of Cream's mouth connects directly to a dimension of darkness and absolute void. Everything that enters its mouth or comes into contact with its throat is instantly disintegrated and erased from existence.",
+          "Annihilation Sphere Mode: Cream can devour itself and its own user (Vanilla Ice), turning into a floating, invisible sphere of pure void. In this state, the sphere advances, erasing all matter in its path (walls, floors, flesh, bones and Stands) without meeting any physical resistance whatsoever.",
+          "Invulnerability and Intangibility in Void Mode: While inside the void dimension in sphere form, neither Cream nor Vanilla Ice can be harmed by any outside physical attack, since they literally do not exist within the real dimension.",
+          "Blind Spot and Navigation Blindness: Its greatest drawback is that, when Cream turns into a void sphere, Vanilla Ice is left completely in the dark inside his own dimension and cannot see the outside world. To see where he is heading or confirm whether he has eliminated his target, Cream must stop and briefly poke his head out of the mouth, becoming exposed to counterattacks at that precise moment."
+        ],
+        "source_hash": "afe0bcbd19e8f44491c17ac4c1468f0a4b8ce576ca09000010d3261323ba3cf8"
+      },
+      "ca-ES": {
+        "description": "Portador: Vanilla Ice\n\nÉs un Stand d'aniquilació espacial i buit absolut, considerat un dels poders més destructius i esgarrifosos de tota la sèrie.",
+        "skills": [
+          "Portal a la Dimensió del Buit: L'interior de la boca de Cream connecta directament amb una dimensió de foscor i buit absolut. Tot allò que entra per la seva boca o entra en contacte amb la seva gola és desintegrat i esborrat de l'existència de manera instantània.",
+          "Mode Esfera d'Aniquilació: Cream pot devorar-se a si mateix i al seu propi usuari (en Vanilla Ice), transformant-se en una esfera flotant i invisible de buit pur. En aquest estat, l'esfera avança esborrant tota la matèria al seu pas (parets, terres, carn, ossos i Stands) sense patir cap resistència física.",
+          "Invulnerabilitat i Intangibilitat en Mode Buit: Mentre és dins de la dimensió del buit en forma d'esfera, ni Cream ni en Vanilla Ice poden ser danyats per cap atac físic exterior, ja que literalment no existeixen en la dimensió real.",
+          "Punt Cec i Ceguesa de Navegació: El seu principal desavantatge és que, quan Cream es converteix en una esfera de buit, en Vanilla Ice queda totalment a les fosques dins de la seva pròpia dimensió i no pot veure el món exterior. Per veure cap on es dirigeix o confirmar si ha eliminat el seu objectiu, Cream ha d'aturar-se i treure breument el cap fora de la boca, quedant exposat a contraatacs en aquest precís instant."
+        ],
+        "source_hash": "afe0bcbd19e8f44491c17ac4c1468f0a4b8ce576ca09000010d3261323ba3cf8"
+      }
+    },
+    "Dark Blue Moon": {
+      "en-GB": {
+        "description": "User: Fake Captain Tennille\n\nIt is a Stand specialised in aquatic combat. Although it can manifest on dry land, its true potential is unleashed when submerged underwater, where it outmatches almost any other Stand in mobility.",
+        "skills": [
+          "Aquatic Mastery: Underwater it has extreme speed and agility. It can create gigantic whirlpools by spinning its fins to trap its opponents and drag them to the bottom.",
+          "Parasitic Attachment (Barnacles): If it touches an opponent underwater, it infects their body or Stand with hordes of parasitic barnacles. These crustaceans multiply rapidly, draining the victim's energy and physical strength while increasing their weight to stop them from reaching the surface to breathe.",
+          "Cutting Scales: Its fins and scales are as sharp as razor blades, allowing it to shed them and hurl them through the water to slash its enemies from a distance or shred ships' propellers."
+        ],
+        "source_hash": "aa95baca2a24042fca0beb97e41a455e524b7f5b033f782a3ad0f427696c104e"
+      },
+      "ca-ES": {
+        "description": "Portador: Fals Capità Tennille\n\nÉs un Stand especialitzat en el combat aquàtic. Tot i que es pot manifestar en terra ferma, el seu veritable potencial s'allibera quan està submergit sota l'aigua, on supera en mobilitat gairebé qualsevol altre Stand.",
+        "skills": [
+          "Domini Aquàtic: Dins de l'aigua té una velocitat i agilitat extremes. És capaç de crear remolins gegantins fent girar les seves aletes per atrapar els seus oponents i arrossegar-los cap al fons.",
+          "Adherència de Parasitació (Cirrípedes): Si toca un oponent sota l'aigua, infecta el seu cos o Stand amb hordes de cirrípedes paràsits. Aquests crustacis es multipliquen ràpidament, drenant l'energia i la força física de la víctima mentre augmenten de pes per impedir que pugi a la superfície a respirar.",
+          "Escates Tallants: Les seves aletes i escates són tan esmolades com fulles d'afaitar, cosa que li permet despendre-les i llançar-les per l'aigua per tallar els seus enemics a distància o destrossar hèlices de vaixells."
+        ],
+        "source_hash": "aa95baca2a24042fca0beb97e41a455e524b7f5b033f782a3ad0f427696c104e"
+      }
+    },
+    "Death Thirteen": {
+      "en-GB": {
+        "description": "User: Mannish Boy\n\nIt is a Stand that operates exclusively within the Dream World, which makes it a practically perfect and inescapable trap if its victims are unprepared.",
+        "skills": [
+          "Invasion of the Dream World: It attacks anyone who falls asleep near its user (Mannish Boy). Victims are dragged into a surreal and macabre amusement park entirely controlled by Death Thirteen.",
+          "Disarming of Stands While Asleep: If a person falls asleep while their Stand is deactivated (put away), they cannot summon or manifest their Stand within the dream. This leaves victims completely disarmed and defenceless against the Stand's attacks.",
+          "Dream Omnipotence: Within its dream world, Death Thirteen controls reality at will. It can alter the laws of physics, modify the environment, regenerate its body from any damage, and manipulate its victims' objects or bodies.",
+          "Post-Dream Amnesia: Upon waking from the dream, victims completely forget everything that happened within the dream world, recalling only a vague nightmarish feeling. However, any wound or fatal damage suffered in the dream is reflected on the real body.",
+          "Summoning Exception: The only way to manifest a Stand within the dream is to fall asleep with the Stand active outside the body just before losing consciousness."
+        ],
+        "source_hash": "6f624e4a2106b8cbad7816d92d388241a8b40fbc9226cdc738b07c54548c4491"
+      },
+      "ca-ES": {
+        "description": "Portador: Mannish Boy\n\nÉs un Stand que opera exclusivament dins del món dels somnis (Dream World), la qual cosa el converteix en una trampa pràcticament perfecta i ineludible si les seves víctimes no hi estan preparades.",
+        "skills": [
+          "Invasió del Món Oníric: Ataca qualsevol que s'adormi a prop del seu usuari (en Mannish Boy). Les víctimes són arrossegades a un parc d'atraccions surrealista i macabre controlat íntegrament per Death Thirteen.",
+          "Desarmament dels Stands en Adormir-se: Si una persona s'adorm mentre el seu Stand està desactivat (guardat), no pot invocar ni manifestar el seu Stand dins del somni. Això deixa les víctimes completament desarmades i indefenses davant dels atacs del Stand.",
+          "Omnipotència Onírica: Dins del seu món de somnis, Death Thirteen controla la realitat a voluntat. Pot alterar les lleis de la física, modificar l'entorn, regenerar el seu cos de qualsevol dany i manipular els objectes o cossos de les seves víctimes.",
+          "Amnèsia Post-Somni: En despertar del somni, les víctimes obliden completament tot el que ha passat dins del món oníric, recordant només una vaga sensació de malson. Tanmateix, qualsevol ferida o dany mortal patit en el somni es reflecteix en el cos real.",
+          "Excepció d'Invocació: L'única manera de manifestar un Stand dins del somni és adormir-se amb el Stand actiu fora del cos just abans de perdre la consciència."
+        ],
+        "source_hash": "6f624e4a2106b8cbad7816d92d388241a8b40fbc9226cdc738b07c54548c4491"
+      }
+    },
+    "Ebony Devil": {
+      "en-GB": {
+        "description": "User: Devovo\n\nIt is an automatic, long-range Stand activated by resentment. Unlike other Stands that are summoned at will, Ebony Devil's ability depends entirely on the hatred generated by its user's suffering.",
+        "skills": [
+          "Hate Amplification: The Stand can only activate when Devo suffers a physical attack or injury at the hands of his target. The more pain or damage Devo receives, and the deeper his hatred towards his attacker, the stronger and faster Ebony Devil becomes.",
+          "Possession of Inanimate Objects: It enters an inanimate body (such as the wooden doll) to materialise physically in the real world. This allows it to move stealthily and attack from the shadows without revealing its user's position.",
+          "Stealth Attacks and Torture: By possessing a small object, it takes advantage of enclosed spaces (such as under beds or in hotel rooms) to immobilise its victims with ropes, blind them with shampoo, or attack them with knives and razor blades."
+        ],
+        "source_hash": "e7ed47e6065025e77d995ac3a3b994d86ce94bc299c3b396ce6f393284f6de22"
+      },
+      "ca-ES": {
+        "description": "Usuari: Devovo\n\nÉs un Stand d'abast llarg automàtic activat pel rancor. A diferència d'altres Stands que s'invoquen a voluntat, l'habilitat d'Ebony Devil depèn totalment de l'odi generat pel patiment del seu usuari.",
+        "skills": [
+          "Amplificació del Rancor (Hate Amplification): El Stand només es pot activar quan en Devo pateix un atac físic o una ferida a mans del seu objectiu. Com més dolor o dany rebi en Devo i més profund sigui el seu odi cap a l'agressor, més fort i veloç es torna Ebony Devil.",
+          "Possessió d'Objectes Inanimats: S'introdueix en un cos inanimat (com el nino de fusta) per materialitzar-se físicament al món real. Això li permet moure's de manera sigil·losa i atacar des de les ombres sense revelar la posició del seu usuari.",
+          "Atacs Sigil·losos i Tortura: En posseir un objecte petit, aprofita espais tancats (com sota els llits o en habitacions d'hotel) per immobilitzar les seves víctimes amb cordes, encegar-les amb xampú o atacar-les amb ganivets i fulles d'afaitar."
+        ],
+        "source_hash": "e7ed47e6065025e77d995ac3a3b994d86ce94bc299c3b396ce6f393284f6de22"
+      }
+    },
+    "Emperor": {
+      "en-GB": {
+        "description": "User: Hol Horse\n\nIt is a ranged Stand of absolute precision, designed for quick executions and close/long-range combat.",
+        "skills": [
+          "Instant Summoning: Hol Horse can materialise the weapon directly in his hand in a fraction of a second, allowing him to draw and fire much faster than with an ordinary pistol.",
+          "Guided Bullets and Trajectory Control: This is his most powerful ability. The bullets he fires are part of the Stand and are under Hol Horse's direct mental control. He can change the direction, curve or angle of the bullets mid-flight to dodge obstacles (such as swords or punches from other Stands) and direct the projectiles with surgical precision towards his target.",
+          "Infinite Ammunition: It requires no reloading and does not use real bullets; it fires unlimited spiritual energy for as long as the user keeps the Stand active.",
+          "No Gunpowder or Residue: As it is not a real firearm, it leaves no shell casings, gunpowder residue or conventional ballistic traces."
+        ],
+        "source_hash": "72228d50c8528078a6d5f1b655dc3b3d2670b53f2fd0ad309166941ccf3495c5"
+      },
+      "ca-ES": {
+        "description": "Usuari: en Hol Horse\n\nÉs un Stand d'atac a distància i precisió absoluta, dissenyat per a execucions ràpides i combat a mitjana/llarga distància.",
+        "skills": [
+          "Invocació Instantània: En Hol Horse pot materialitzar l'arma directament a la mà en una fracció de segon, cosa que li permet desenfundar i disparar molt més ràpid que amb una pistola ordinària.",
+          "Bales Guiades i Control de Trajectòria: És la seva habilitat més poderosa. Les bales que dispara formen part del Stand i estan sota el control mental directe d'en Hol Horse. Pot canviar la direcció, la corba o l'angle de les bales en ple vol per esquivar obstacles (com espases o cops de puny d'altres Stands) i dirigir els projectils amb precisió quirúrgica cap al seu objectiu.",
+          "Munició Infinita: No necessita recàrrega ni utilitza bales reals; dispara energia espiritual il·limitada mentre l'usuari mantingui el Stand actiu.",
+          "Sense Pólvora ni Residus: Com que no és una arma de foc real, no deixa casquets, residus de pólvora ni petjades balístiques convencionals."
+        ],
+        "source_hash": "72228d50c8528078a6d5f1b655dc3b3d2670b53f2fd0ad309166941ccf3495c5"
+      }
+    },
+    "Empress": {
+      "en-GB": {
+        "description": "User: Nena\n\nIt is a parasitic-infection Stand with progressive growth, designed to destroy its victim from inside their own body.",
+        "skills": [
+          "Infection by Contact: It is transmitted through the user's (Nena's) blood. As soon as a drop of her blood makes contact with the target's skin, the infection takes hold instantly.",
+          "Growth and Inseparability: It uses the host's vital energy and nutrients to grow rapidly. Being physically fused to the victim's body, attacking or attempting to cut Empress causes the same pain and damage to the host itself.",
+          "Increased Strength: As it grows in size, it develops superhuman physical strength capable of strangling or striking the host.",
+          "Social Infiltration and Deception: While growing, Empress can speak, imitate voices or cry to make bystanders believe the victim is attacking a baby or a defenceless creature, psychologically isolating its target."
+        ],
+        "source_hash": "7aa5efadd1cd41ea3c3b41d37d97c7db18134abe0a5476512bd5191e634e2dab"
+      },
+      "ca-ES": {
+        "description": "Usuària: la Nena\n\nÉs un Stand d'infecció paràsita i creixement progressiu, dissenyat per destruir la seva víctima des de dins del seu propi cos.",
+        "skills": [
+          "Infecció per Contacte: Es transmet a través de la sang de la usuària (la Nena). Tan bon punt una gota de la seva sang entra en contacte amb la pell de l'objectiu, la infecció arrela a l'instant.",
+          "Creixement i Inseparabilitat: Utilitza l'energia vital i els nutrients de l'hoste per créixer ràpidament. En estar fusionat físicament amb el cos de la víctima, atacar o intentar tallar Empress causa el mateix dolor i dany al mateix hoste.",
+          "Increment de Força: A mesura que guanya mida, desenvolupa una força física sobrehumana capaç d'escanyar o colpejar el propi hoste.",
+          "Infiltració Social i Engany: Mentre creix, Empress pot parlar, imitar veus o plorar per fer creure als vianants que la víctima està atacant un nadó o una criatura indefensa, aïllant psicològicament el seu objectiu."
+        ],
+        "source_hash": "7aa5efadd1cd41ea3c3b41d37d97c7db18134abe0a5476512bd5191e634e2dab"
+      }
+    },
+    "Geb": {
+      "en-GB": {
+        "description": "User: N'Doul\n\nIt is a long-range Stand with fluid manipulation, considered one of the most fearsome in the desert due to its incredible reach and cutting power.",
+        "skills": [
+          "Mastery of Hydrokinesis: N'Doul can freely control the mass of water that makes up Geb. He can make it move along the ground, hide under the sand, or move across terrain at great speed.",
+          "High-Pressure Cutting Force: Geb is able to concentrate its water at such speed and pressure that its attacks act like a high-powered industrial cutting jet. It can decapitate a person in a second, tear off a man's head and put it inside a metal canteen, or cut through flesh and steel with extreme ease.",
+          "Massive Range and Dreamlike Echolocation: N'Doul can control Geb from more than 4 kilometres away. Since N'Doul is blind, he uses his hyper-developed hearing and his staff, planted on the ground, to \"listen\" to the vibrations of the enemy's footsteps, breathing or movements on the desert sand, directing Geb with pinpoint precision.",
+          "Resistance to Direct Physical Attacks: Being liquid, punches or slashes from physical Stands such as Star Platinum simply pass through the water without causing direct damage to Geb or to N'Doul."
+        ],
+        "source_hash": "ce4b5c99c13067490577eeaad7aa83c6a3e800dc43c46af26fbaec0d8bf972ea"
+      },
+      "ca-ES": {
+        "description": "Usuari: N'Doul\n\nÉs un Stand d'abast llarg amb manipulació de fluids, considerat un dels més temibles del desert a causa del seu increïble abast i força de tall.",
+        "skills": [
+          "Domini de la Hidrocinesi: N'Doul pot controlar lliurement la massa d'aigua que compon Geb. Pot fer que es mogui arran de terra, s'amagui sota la sorra o travessi el terreny a gran velocitat.",
+          "Força de Tall d'Alta Pressió: Geb és capaç de concentrar la seva aigua a tanta velocitat i pressió que els seus atacs actuen com un raig de tall industrial d'alta potència. Pot decapitar una persona en un segon, arrencar el cap d'un home i introduir-lo dins d'una cantimplora de metall, o tallar carn i acer amb extrema facilitat.",
+          "Abast Massiu i Ecolocalització Onírica: N'Doul pot controlar Geb a més de 4 quilòmetres de distància. Com que N'Doul és cec, utilitza la seva oïda hiperdesenvolupada i el seu bastó recolzat a terra per \"escoltar\" les vibracions de les passes, la respiració o els moviments de l'enemic sobre la sorra del desert, dirigint Geb amb precisió mil·limètrica.",
+          "Resistència a Atacs Físics Directes: En ser líquid, els cops de puny o talls de Stands físics com Star Platinum simplement travessen l'aigua sense causar dany directe ni a Geb ni a N'Doul."
+        ],
+        "source_hash": "ce4b5c99c13067490577eeaad7aa83c6a3e800dc43c46af26fbaec0d8bf972ea"
+      }
+    },
+    "Hanged Man": {
+      "en-GB": {
+        "description": "User: J. Geil\n\nIt is a long-range Stand based on light and reflections. Although Polnareff initially believed it attacked from a \"world of mirrors\", it actually exists only as a manifestation of reflected light.",
+        "skills": [
+          "Existence in the Reflection: Hanged Man can only exist within reflective objects (mirrors, glass, water, knives or even the cornea of a human eye). It cannot be attacked directly in the real world, as it has no physical body outside the reflection.",
+          "Physical Attack from the Reflection: Despite being \"trapped\" inside the reflection, it can attack its victim's real body from within the reflective surface. For example, if Hanged Man stabs the reflection of someone's back in a mirror, the real person suffers a real, instantaneous stab wound.",
+          "Movement at the Speed of Light: To move from one reflective surface to another, a beam of light shoots out towards the new reflection at the speed of light. In that extremely brief instant in the air, it is vulnerable to an attack if its trajectory is predicted with precision."
+        ],
+        "source_hash": "ad4728f74334389f0f2493037d63002b99ff0ca422bce34b2591655b99aa72da"
+      },
+      "ca-ES": {
+        "description": "Usuari: J. Geil\n\nÉs un Stand d'abast llarg basat en la llum i els reflexos. Tot i que en Polnareff va creure inicialment que atacava des d'un \"món de miralls\", en realitat existeix únicament com una manifestació de llum reflectida.",
+        "skills": [
+          "Existència en el Reflex: Hanged Man només pot existir dins d'objectes reflectants (miralls, vidre, aigua, ganivets o fins i tot la còrnia d'un ull humà). No pot ser atacat directament al món real, ja que no té cos físic fora del reflex.",
+          "Atac Físic des del Reflex: Tot i estar \"atrapat\" dins del reflex, pot atacar el cos real de la seva víctima des de l'interior de la superfície reflectant. Per exemple, si Hanged Man apunyala el reflex de l'esquena d'algú en un mirall, la persona real patirà una ferida de punyalada real i instantània.",
+          "Desplaçament a la Velocitat de la Llum: Per moure's d'una superfície reflectant a una altra, surt disparada una línia de llum a la velocitat de la llum cap al nou reflex. En aquest instant brevíssim a l'aire, és vulnerable a un atac si es prediu amb precisió la seva trajectòria."
+        ],
+        "source_hash": "ad4728f74334389f0f2493037d63002b99ff0ca422bce34b2591655b99aa72da"
+      }
+    },
+    "Hierophant Green": {
+      "en-GB": {
+        "description": "User: Noriaki Kakyoin\n\nUnlike close-combat Stands such as Star Platinum, Hierophant Green is a long-range Stand, designed for strategy, stealth and battlefield control.\n",
+        "skills": [
+          "Unravelling Tentacles: The main feature of its body is that it is not completely solid, but is made up of a long network of interwoven tentacles or cords. It can unravel to pass through narrow openings, spy from a distance, or extend over huge areas.",
+          "Possession (Bodily Possession): It can unravel its tentacles and insert them into a person's body through the orifices to control their movements like a puppet.",
+          "Emerald Splash: Its ultimate ranged attack. It gathers energy in its hands to fire a massive burst of projectiles that resemble emerald gems at high speed.",
+          "20-Metre Barrier (20m Emerald Splash): It deploys a network of invisible tentacles within a 20-metre radius. If an enemy touches any of the threads, it automatically triggers an Emerald Splash from multiple angles at once, creating an almost inescapable trap."
+        ],
+        "source_hash": "b60e8fcb75e1e381431f517ee6f350bc234ffe4e9198e70cf2d8435ad314c772"
+      },
+      "ca-ES": {
+        "description": "Usuari: en Noriaki Kakyoin\n\nA diferència dels Stands de combat cos a cos com Star Platinum, Hierophant Green és un Stand d'abast llarg, dissenyat per a l'estratègia, el sigil i el control del terreny.\n",
+        "skills": [
+          "Desembolicament de Tentacles: La característica principal del seu cos és que no és completament sòlid, sinó que està compost per una llarga xarxa de tentacles o cordes entrellaçades. Pot desembolicar-se per passar per obertures estretes, espiar a distància o estendre's per àrees enormes.",
+          "Possession (Possessió Corporal): Pot desembolicar els seus tentacles i introduir-los en el cos d'una persona a través dels orificis per controlar els seus moviments com si fos una marioneta.",
+          "Emerald Splash (Ràfega de Maragda): El seu atac a distància definitiu. Reuneix energia a les mans per disparar una ràfega massiva de projectils que semblen gemmes de maragda a gran velocitat.",
+          "Barrera de 20 Metres (20m Emerald Splash): Desplega una xarxa de tentacles invisibles en un radi de 20 metres. Si un enemic toca qualsevol dels fils, activa automàticament un Emerald Splash des de múltiples angles alhora, creant una trampa gairebé ineludible."
+        ],
+        "source_hash": "b60e8fcb75e1e381431f517ee6f350bc234ffe4e9198e70cf2d8435ad314c772"
+      }
+    },
+    "High Priestess": {
+      "en-GB": {
+        "description": "User: Midler\n\nA long-range Stand of inorganic matter mimicry, capable of fusing with its surroundings and altering the structure of any non-living object.",
+        "skills": [
+          "Transmutation and Possession of Inorganic Matter: Can turn into any inanimate substance or object made of minerals, metal, glass or plastic. Can transform into a cup, a harpoon, a headset, or even integrate itself into the structure of an entire submarine.",
+          "Ambush Attack and Close-Range Traps: While camouflaged as an everyday object, it waits for the victim to draw near before striking by surprise (for example, transforming into a flick-knife inside the victim's mouth or attacking from a breathing apparatus).",
+          "Fusion with the Seabed (Gigantic Scale): By accumulating and assimilating vast quantities of minerals from the sea floor (rock, sand and metals), it can increase its size to colossal proportions. At the bottom of the Red Sea, it transformed an entire underwater cave into a giant face of the Stand to swallow Jotaro's group whole.",
+          "Diamond Teeth: Its teeth are as hard as pure diamond, capable of crushing metal and withstanding devastating physical impacts while it devours its targets."
+        ],
+        "source_hash": "e40fea5ec36a4a84d2f3926cbc2a240dd5c91c050e33515c10744d715df41522"
+      },
+      "ca-ES": {
+        "description": "Usuària: Midler\n\nÉs un Stand de llarg abast i mimetisme de matèria inorgànica, capaç de fusionar-se amb l'entorn i alterar l'estructura de qualsevol objecte no viu.",
+        "skills": [
+          "Transmutació i Possessió de Matèria Inorgànica: Pot convertir-se en qualsevol substància o objecte inanimat compost de minerals, metall, vidre o plàstic. Pot transformar-se en una tassa, un arpó, uns auriculars, o fins i tot integrar-se en l'estructura d'un submarí sencer.",
+          "Atac d'Emboscada i Trampes de Proximitat: Mentre està camuflat com un objecte quotidià, espera que la víctima s'apropi per atacar-la per sorpresa (per exemple, transformant-se en una navalla dins la boca de la víctima o atacant des d'un respirador).",
+          "Fusió amb el Fons Marí (Escala Gegantina): En acumular i assimilar vastes quantitats de minerals del llit marí (roca, sorra i metalls), pot incrementar la seva mida fins a proporcions colossals. Al fons del Mar Roig, va transformar tota una cova submarina en un rostre gegant del Stand per engolir el grup d'en Jotaro.",
+          "Dents de Diamant: Les seves dents són tan dures com el diamant pur, capaces de triturar metall i resistir impactes físics devastadors mentre devora els seus objectius."
+        ],
+        "source_hash": "e40fea5ec36a4a84d2f3926cbc2a240dd5c91c050e33515c10744d715df41522"
+      }
+    },
+    "Horus": {
+      "en-GB": {
+        "description": "User: Pet Shop\n\nA Stand of absolute cryogenic manipulation (cryokinesis), capable of generating and controlling massive quantities of ice and sub-zero temperatures instantaneously.",
+        "skills": [
+          "Instant Freezing: Can freeze moisture in the air or any surface instantly. It is capable of trapping limbs, covering entire streets, or freezing the water inside pipes within seconds.",
+          "Ice Projectiles and Stalactites: Creates gigantic stalactites, spears and blocks of heavy ice to launch them at devastating speed and force, acting as missiles capable of crushing or piercing entire bodies.",
+          "Cryogenic Shaping and Traps: Pet Shop can seal its own wounds or passageways using layers of solid ice, as well as enclose its victims in blocks of ice to stop their movement or suffocate them."
+        ],
+        "source_hash": "677f04aecc9862b3ba423c75f7ef803592f4f5bb61b475204e72461febd702db"
+      },
+      "ca-ES": {
+        "description": "Usuari: Pet Shop\n\nÉs un Stand de manipulació criogènica absoluta (criocinesi), capaç de generar i controlar quantitats massives de gel i temperatures sota zero de manera instantània.",
+        "skills": [
+          "Congelació Instantània: Pot congelar la humitat de l'aire o qualsevol superfície a l'instant. És capaç d'atrapar extremitats, cobrir carrers sencers o congelar l'aigua de les canonades en qüestió de segons.",
+          "Projectils i Estalactites de Gel: Crea estalactites gegantines, llances i blocs de gel pesat per disparar-los a una velocitat i força devastadores, actuant com a míssils capaços d'aixafar o travessar cossos sencers.",
+          "Modelatge i Trampes Criogèniques: Pet Shop pot segellar ferides pròpies o passadissos utilitzant capes de gel sòlid, així com tancar les seves víctimes en blocs gelats per impedir-ne el moviment o asfixiar-les."
+        ],
+        "source_hash": "677f04aecc9862b3ba423c75f7ef803592f4f5bb61b475204e72461febd702db"
+      }
+    },
+    "Judgement": {
+      "en-GB": {
+        "description": "User: Cameo\n\nA Stand of matter creation through wishes, designed to deceive its victims by preying on their deepest desires and past guilt.",
+        "skills": [
+          "Granting of False Wishes (Genieing): Tricks people into believing it is a \"genie of the lamp\" capable of granting them three wishes.",
+          "Creation of Earth and Clay Dolls: Turns the surrounding earth or clay into hyper-realistic animated sculptures that fulfil the victim's wishes. If someone wishes for wealth, it will create clay coins that look real; if they wish to bring loved ones back to life (as Polnareff did with his sister Sherry and with Avdol), it will create exact clay doppelgängers.",
+          "Corruption of the \"Wishes\" (Clay Zombies): The creations made by Judgement are not the victims' true loved ones, but blood-thirsty puppets controlled by the Stand. Once the victim lowers their guard while embracing their \"resurrected loved one\", the clay creature bites them and devours them alive to feed the Stand itself.",
+          "Physical Strength and Direct Combat: Aside from its deception, Judgement is a very strong Stand in close combat. It possesses resilient metal armour and a speed capable of matching Silver Chariot's rapid thrusts."
+        ],
+        "source_hash": "3fe6f33a78a026b8e4c140eec49a61c445874961f9a1921dee420afb73b41e74"
+      },
+      "ca-ES": {
+        "description": "Usuari: Cameo\n\nÉs un Stand de creació de matèria mitjançant desitjos, dissenyat per enganyar les seves víctimes aprofitant-se dels seus desitjos més profunds i culpes del passat.",
+        "skills": [
+          "Concessió de Desitjos Falsos (Genieing): Enganya les persones fent-les creure que és un \"geni de la llàntia\" capaç de concedir-los tres desitjos.",
+          "Creació de Nines de Terra i Argila: Transforma la terra o l'argila de l'entorn en escultures animades hiperrealistes que compleixen els desitjos de la víctima. Si algú desitja riquesa, crearà monedes d'argila que semblen reals; si desitja ressuscitar éssers estimats (com va fer en Polnareff amb la seva germana Sherry i amb l'Avdol), crearà doppelgängers d'argila exactes.",
+          "Corrupció dels \"Desitjos\" (Zombis d'Argila): Les creacions fetes per Judgement no són els veritables éssers estimats, sinó titelles assedegades de sang controlades pel Stand. Un cop la víctima baixa la guàrdia abraçant el seu \"ésser estimat ressuscitat\", la criatura d'argila la mossega i la devora viva per engreixar el propi Stand.",
+          "Força Física i Combat Directe: A banda del seu engany, Judgement és un Stand molt fort en el combat cos a cos. Posseeix una armadura metàl·lica resistent i una velocitat capaç de competir amb les estocades ràpides de Silver Chariot."
+        ],
+        "source_hash": "3fe6f33a78a026b8e4c140eec49a61c445874961f9a1921dee420afb73b41e74"
+      }
+    },
+    "Justice": {
+      "en-GB": {
+        "description": "User: Enyaba\n\nA long-range Stand of fog manipulation, capable of controlling entire villages and manipulating corpses as if they were puppets.",
+        "skills": [
+          "Incorporeal Body and Intangibility: Being made purely of fog, any direct physical attack will pass straight through its body without inflicting any damage on Justice or Enya. Star Platinum's punches or Silver Chariot's thrusts are useless against its gaseous mass.",
+          "Flesh Puppet Control: If Justice's fog comes into contact with even the slightest open wound on the body of a living being or a corpse, it creates a perfectly circular hole in the skin. Through that opening, invisible threads of fog penetrate the body to take total control of the victim's limbs, moving it like a jointed puppet.",
+          "Illusions on a Massive Scale: Can cover entire villages with its fog to create complex, hyper-realistic illusions. Enya used this ability to transform a desolate cemetery in Pakistan into a thriving, spotless village with a luxury hotel, where the \"inhabitants\" were in fact corpses controlled by Justice."
+        ],
+        "source_hash": "51e8ff11e2379f3f350897ffe19ccd8482a023c7c8dd489c94499470837ec95d"
+      },
+      "ca-ES": {
+        "description": "Usuària: Enyaba\n\nÉs un Stand de gran abast i manipulació de boira, capaç de controlar pobles sencers i manipular cadàvers com si fossin titelles.",
+        "skills": [
+          "Cos Incorpori i Intangibilitat: En estar fet purament de boira, qualsevol atac físic directe travessarà el seu cos sense infligir cap dany a Justice ni a l'Enya. Els cops de puny de Star Platinum o les estocades de Silver Chariot són inútils contra la seva massa gasosa.",
+          "Control de Titelles de Carn: Si la boira de Justice entra en contacte amb la més mínima ferida oberta al cos d'un ésser viu o un cadàver, crea un forat circular perfecte a la pell. A través d'aquest orifici, fils invisibles de boira penetren al cos per prendre el control total de les extremitats de la víctima, movent-la com una titella articulada.",
+          "Il·lusions a Escala Massiva: Pot cobrir pobles sencers amb la seva boira per crear il·lusions complexes i hiperrealistes. L'Enya va usar aquesta habilitat per transformar un cementiri desolat al Pakistan en un poble pròsper i net amb un hotel de luxe, on els \"habitants\" eren en realitat cadàvers controlats per Justice."
+        ],
+        "source_hash": "51e8ff11e2379f3f350897ffe19ccd8482a023c7c8dd489c94499470837ec95d"
+      }
+    },
+    "Khnum": {
+      "en-GB": {
+        "description": "User: Oingo\n\nA Stand of anatomical alteration and physical metamorphosis, designed exclusively for infiltration, deception and the perfect disguise.",
+        "skills": [
+          "Facial and Bodily Transmutation: Oingo can mould the flesh, cartilage, skin and bones of his own face and head as if they were soft clay. This lets him take on the exact appearance of any person, recreating features, hairstyles and particular traits (as he did when transforming into Jotaro Kujo).",
+          "Scent and Voice Control: The transformation is not purely visual; Khnum lets him alter his vocal cords to mimic the target person's voice and even adjust his body odour to avoid detection by dogs or heightened senses (such as Iggy's sense of smell).",
+          "Height and Mass Modification: Can alter his height, physical build and skin tone to match the body of the person he is impersonating.",
+          "No Direct Combat Capabilities: Khnum grants no superhuman strength, speed or physical attack abilities. Oingo retains his ordinary human strength, which leaves him defenceless in a direct face-to-face confrontation against a combat Stand."
+        ],
+        "source_hash": "684aefb7571b182f194de9992df4c584a8f56daa912de315b278fd9394d83d4a"
+      },
+      "ca-ES": {
+        "description": "Usuari: Oingo\n\nÉs un Stand d'alteració anatòmica i metamorfosi física, dissenyat exclusivament per a la infiltració, l'engany i el disfressat perfecte.",
+        "skills": [
+          "Transmutació Facial i Corporal: L'Oingo pot modelar la carn, els cartílags, la pell i els ossos del seu propi rostre i cap com si fossin d'argila tova. Això li permet adoptar l'aparença exacta de qualsevol persona, recreant faccions, pentinats i trets particulars (com va fer en transformar-se en Jotaro Kujo).",
+          "Control d'Olor i Veu: La transformació no és només visual; Khnum li permet alterar les cordes vocals per imitar la veu de la persona objectiu i fins i tot adaptar la seva olor corporal per evitar ser detectat per gossos o sentits agusats (com l'olfacte d'en Iggy).",
+          "Modificació d'Estatura i Massa: Pot alterar la seva alçada, constitució física i to de pell per encaixar amb el cos de la persona que està suplantant.",
+          "Sense Capacitats de Combat Directe: Khnum no atorga força sobrehumana, velocitat ni habilitats d'atac físic. L'Oingo conserva la seva força humana ordinària, cosa que el deixa indefens en un enfrontament directe cara a cara contra un Stand de combat."
+        ],
+        "source_hash": "684aefb7571b182f194de9992df4c584a8f56daa912de315b278fd9394d83d4a"
+      }
+    },
+    "Lovers": {
+      "en-GB": {
+        "description": "User: Steely Dan\n\nDespite being considered by Steely Dan himself to be \"the weakest Stand in the world\" in terms of physical strength, it is one of the most dangerous due to its biological infiltration and damage feedback.",
+        "skills": [
+          "Brain Infiltration: Thanks to its microscopic size, it easily enters through the victim's ear canal or nostrils until it reaches the brain directly.",
+          "Pain Amplification and Transfer (Pain Synchronization): Once lodged in the victim's brainstem (in this case, Joseph Joestar), it connects the user's pain receptors with the target's. Any blow, scratch or damage Steely Dan suffers is transmitted, multiplied by several orders of magnitude, to Lovers' victim. A simple pinch on Steely Dan's cheek feels to the victim as if their flesh were being torn apart.",
+          "Cloning with Brain Cells (Fake Clones): Inside the brain or in organic environments, it can use the victim's own living cells to create dozens of reduced-sized puppets/clones of itself to confuse attackers.",
+          "Sporulation of DIO's Flesh Buds: Can implant DIO's brain parasites directly into its target's brain mass to ensure total control."
+        ],
+        "source_hash": "dbbb7712969f7c45de8415b0d65c137a1039bfe1dd7c32ad030518a61005cb00"
+      },
+      "ca-ES": {
+        "description": "Usuari: Steely Dan\n\nMalgrat ser considerat pel mateix Steely Dan com \"el Stand més feble del món\" en termes de força física, és un dels més perillosos a causa de la seva infiltració biològica i retroalimentació del dany.",
+        "skills": [
+          "Infiltració Cerebral: Gràcies a la seva mida microscòpica, s'introdueix fàcilment pel conducte auditiu o les fosses nasals de la víctima fins a arribar directament al cervell.",
+          "Amplificació i Transferència de Dolor (Pain Synchronization): Un cop instal·lat al tronc encefàlic de la víctima (en aquest cas, en Joseph Joestar), connecta els receptors de dolor de l'usuari amb els de l'objectiu. Qualsevol cop, esgarrapada o dany que pateixi Steely Dan es transmet multiplicat per diversos ordres de magnitud a la víctima de Lovers. Un simple pessic a la galta de Steely Dan se sent, per a la víctima, com si li esquincessin la carn.",
+          "Clonació amb Cèl·lules Cerebrals (Falsos Clons): Dins del cervell o en entorns orgànics, pot usar les pròpies cèl·lules vives de la víctima per crear dotzenes de titelles/clons de si mateix de mida reduïda per confondre els atacants.",
+          "Esporulació de Brots de Carn de DIO: Pot implantar els paràsits cerebrals de DIO directament a la massa cerebral del seu objectiu per assegurar-ne el control total."
+        ],
+        "source_hash": "dbbb7712969f7c45de8415b0d65c137a1039bfe1dd7c32ad030518a61005cb00"
+      }
+    },
+    "Osiris": {
+      "en-GB": {
+        "description": "User: Daniel J. D'Arby\n\nOsiris is a soul-extraction and wager-binding Stand, designed to incapacitate or kill its rivals without ever needing to exchange a single physical blow.",
+        "skills": [
+          "Soul Extraction and Materialisation: If a person agrees to take part in any kind of game or wager against D'Arby and is defeated, Osiris immediately extracts the victim's soul from their body.",
+          "Activation by Spiritual Defeat (Admission of Defeat): The ability does not necessarily require losing the game on paper; if the victim mentally admits defeat or feels despair in their heart, knowing they cannot win, Osiris can snatch their soul away instantly.",
+          "Conversion into Betting Chips (Poker Chips): Osiris compresses the captured souls and turns them into physical, metallic-looking poker chips bearing the victim's face. D'Arby keeps these chips in a collector's album as his prized trophies.",
+          "Soul Division through Partial Wagers: It can split a person's soul into multiple chips if they decide to wager fractions of their own soul (or that of their companions) to keep playing. If D'Arby dies or is knocked unconscious, the captured souls automatically return to their original bodies.",
+          "No Direct Combat Ability: Osiris has no notable combat strength or speed. D'Arby relies entirely on his tricks, sleight of hand and psychological warfare to force his rival to lose."
+        ],
+        "source_hash": "4239953d351b4f4bea6534ad32093c077eebdb4c0773b9a86bac179536d8648c"
+      },
+      "ca-ES": {
+        "description": "Usuari: Daniel J. D'Arby\n\nÉs un Stand d'extracció d'ànimes i vinculació d'apostes, dissenyat per incapacitar o matar els seus rivals sense necessitat d'intercanviar ni un sol cop físic.",
+        "skills": [
+          "Extracció i Materialització d'Ànimes: Si una persona accepta participar en qualsevol mena de joc o aposta contra en D'Arby i és derrotada, l'Osiris n'extreu de seguida l'ànima de la víctima del seu cos.",
+          "Activació per Derrota Espiritual (Admissió de la Derrota): L'habilitat no requereix necessàriament perdre el joc sobre el paper; si la víctima admet la derrota mentalment o sent desesperació en el cor tot sabent que no pot guanyar, l'Osiris pot arrabassar-li l'ànima a l'instant.",
+          "Conversió en Fitxes d'Aposta (Poker Chips): l'Osiris comprimeix les ànimes capturades i les transforma en fitxes de pòquer físiques d'aspecte metàl·lic amb el rostre de la víctima imprès. En D'Arby guarda aquestes fitxes en un àlbum de col·lecció com els seus valuosos trofeus.",
+          "Divisió d'Ànimes per Apostes Parcials: pot dividir l'ànima d'una persona en múltiples fitxes si aquesta decideix apostar fraccions de la seva pròpia ànima (o la dels seus companys) per continuar jugant. Si en D'Arby mor o queda inconscient, les ànimes capturades tornen automàticament als seus cossos originals.",
+          "Nul·la Capacitat de Combat Directe: l'Osiris no té força ni velocitat de combat notables. En D'Arby depèn totalment dels seus paranys, jocs de mans i guerra psicològica per obligar el seu rival a perdre."
+        ],
+        "source_hash": "4239953d351b4f4bea6534ad32093c077eebdb4c0773b9a86bac179536d8648c"
+      }
+    },
+    "Sethan": {
+      "en-GB": {
+        "description": "User: Alessi\n\nSethan is an age-reversal and bodily-involution Stand, designed to weaken its opponents by turning them into helpless children or foetuses.",
+        "skills": [
+          "Biological Time Reversal: Anyone who comes into contact with, or steps on, Sethan's shadow begins to rejuvenate at an accelerated rate. The longer the victim spends inside the shadow (even a fraction of a second), the more years of age they lose.",
+          "Skill and Memory Degradation: The regression is not only physical; the victim loses their muscular strength, their size and, gradually, their memories and the experience accumulated over the years. If the person is turned into a small child or a baby, they forget how to use their Stand, or it is simply reduced to an immature, ineffective version (as happened to Polnareff and his Silver Chariot).",
+          "Shadow Manipulation: Alessi can freely extend the length of his shadow along the ground or walls to ambush his targets from a distance without drawing attention.",
+          "Weapon Mimicry: Sethan can wield shadow-made versions of the objects or weapons Alessi holds in real life (such as a hand axe), allowing him to strike or cut victims from the two-dimensional plane of the wall or floor."
+        ],
+        "source_hash": "370e666de676fd3804d38eb03bfe40e8ee4c6320b125043b2b7f9e9e9f595459"
+      },
+      "ca-ES": {
+        "description": "Usuari: Alessi\n\nÉs un Stand de reversió d'edat i involució corporal, dissenyat per afeblir els seus oponents transformant-los en nens indefensos o fetus.",
+        "skills": [
+          "Reversió Temporal Biològica: qualsevol persona que entri en contacte amb l'ombra de Sethan o hi trepitgi comença a rejovenir de manera accelerada. Com més temps passi la víctima dins l'ombra (fins i tot una fracció de segon), més anys d'edat perd.",
+          "Degradació d'Habilitats i Memòria: la regressió no és només física; la víctima perd la força muscular, la mida i, gradualment, els records i l'experiència acumulada amb el pas dels anys. Si la persona es transforma en un nen petit o un nadó, oblida com fer servir el seu Stand o, directament, aquest es redueix a una versió immadura i ineficaç (com li va passar a en Polnareff i al seu Silver Chariot).",
+          "Manipulació de l'Ombra: l'Alessi pot allargar lliurement la seva ombra al llarg del terra o les parets per emboscar els seus objectius des de la distància sense cridar l'atenció.",
+          "Mimetisme d'Armes: Sethan pot empunyar versions fetes d'ombra dels objectes o armes que l'Alessi sosté en la vida real (com una destral de mà), cosa que li permet colpejar o tallar les víctimes des del pla bidimensional de la paret o el terra."
+        ],
+        "source_hash": "370e666de676fd3804d38eb03bfe40e8ee4c6320b125043b2b7f9e9e9f595459"
+      }
+    },
+    "Strength": {
+      "en-GB": {
+        "description": "User: Forever\n\nStrength is an object-bound Stand (bound Stand). It manifested by binding the Stand's energy to a small, dilapidated wooden boat, transforming and expanding it until it became a gigantic cargo ship.",
+        "skills": [
+          "Absolute Control of the Structure: Forever has total dominion over every physical element of the ship. He can manipulate pipes, steel cables, propellers, hatches, metal walls and cranes at will to imprison, crush or impale anyone aboard.",
+          "Internal Spatial Manipulation: He can move victims through the ship's solid walls or make corridors and rooms change shape to trap his enemies.",
+          "Invisibility and Psychological Camouflage: Since it looks like an ordinary abandoned ship out at sea, it acts as a perfect natural trap.",
+          "Reversion upon Defeat: If the user (Forever) is knocked unconscious or dies, the physical illusion unravels and the gigantic ship instantly returns to its original form: a small, rotten wooden boat."
+        ],
+        "source_hash": "ed3b2d88808f3a537442c410608c0ec1b031bcf71c1f29a4daa0909d5f175745"
+      },
+      "ca-ES": {
+        "description": "Usuari: Forever\n\nStrength és un Stand vinculat a un objecte (bound Stand). Es va manifestar unint l'energia del Stand a una petita i deteriorada barca de fusta, transformant-la i expandint-la fins a convertir-la en un vaixell de càrrega gegantí.",
+        "skills": [
+          "Control Absolut de l'Estructura: en Forever té un domini total sobre cada element físic del vaixell. Pot manipular canonades, cables d'acer, hèlices, escotilles, parets de metall i grues a voluntat per empresonar, aixafar o empalar qualsevol persona que sigui a bord.",
+          "Manipulació Espacial Interna: pot moure les víctimes a través de les parets sòlides del vaixell o fer que els passadissos i les habitacions canviïn de forma per atrapar els seus enemics.",
+          "Invisibilitat i Camuflatge Psicològic: com que sembla un vaixell abandonat estàndard enmig del mar, actua com un parany natural perfecte.",
+          "Reversió per Derrota: si l'usuari (en Forever) queda inconscient o mor, la il·lusió física es desfà i el vaixell gegantí torna instantàniament a la seva forma original: una petita barca de fusta podrida."
+        ],
+        "source_hash": "ed3b2d88808f3a537442c410608c0ec1b031bcf71c1f29a4daa0909d5f175745"
+      }
+    },
+    "Sun": {
+      "en-GB": {
+        "description": "User: Arabia Fats\n\nSun is a mass area-of-effect and environmental-influence Stand, designed for annihilation through starvation, heatstroke and long-range ambush.",
+        "skills": [
+          "Extreme Heat Emission: It can raise the ambient temperature to over 70°C within minutes across a radius of several kilometres. It prevents night from falling in the affected area, keeping perpetual daylight and disorienting its victims.",
+          "Thermal Projectiles and Radiation: It fires beams of solar energy and stifling-heat lasers with high precision from the floating sphere against any target that tries to defend itself or flee.",
+          "Long Range and Safe Distance: It positions itself around 100 metres up in the sky, which prevents most short- or medium-range Stands from striking it directly.",
+          "Reliance on a Hideout: Arabia Fats needs to stay reasonably close to keep the Stand active, so he hides inside a vehicle fitted with refrigerated air and camouflage mirrors in the desert so as not to suffer the effects of his own heat."
+        ],
+        "source_hash": "3181cbf98afd26f114882c347086360bdc164560da0acb6170a253b154409bf2"
+      },
+      "ca-ES": {
+        "description": "Usuari: Arabia Fats\n\nÉs un Stand d'àrea d'efecte massiva i influència ambiental, dissenyat per a l'aniquilació per inanició, cop de calor i emboscada a llarga distància.",
+        "skills": [
+          "Emissió de Calor Extrema: pot elevar la temperatura ambiental a més de 70 °C en qüestió de minuts dins d'un radi de diversos quilòmetres. Impedeix que caigui la nit a la zona afectada, mantenint una llum diürna perpètua i desorientant les víctimes.",
+          "Projectils Tèrmics i Radiació: dispara raigs d'energia solar i làsers de calor sufocant amb gran precisió des de l'esfera flotant contra qualsevol objectiu que intenti defensar-se o fugir.",
+          "Gran Abast i Distància Segura: se situa a uns 100 metres d'alçada al cel, la qual cosa impedeix que la majoria dels Stands de curt o mitjà abast el puguin colpejar directament.",
+          "Dependència d'un Amagatall: Arabia Fats necessita estar raonablement a prop per mantenir el Stand actiu, per la qual cosa s'amaga dins d'un vehicle condicionat amb aire refrigerat i miralls de camuflatge al desert per no patir els efectes de la seva pròpia calor."
+        ],
+        "source_hash": "3181cbf98afd26f114882c347086360bdc164560da0acb6170a253b154409bf2"
+      }
+    },
+    "Tenore Sax": {
+      "en-GB": {
+        "description": "User: Kenny G.\n\nTenore Sax is a Stand focused exclusively on creating large-scale spatial illusions, designed to disorient, confuse and ambush intruders.",
+        "skills": [
+          "Generation of Illusory Mazes: It can transform the interior appearance of DIO's mansion into a gigantic, endless maze full of fake rooms, distorted corridors and seemingly infinite spatial dimensions.",
+          "Concealment of Presence and Traps: It allows other allies (such as Vanilla Ice or Kenny G. himself) to be camouflaged and hides the building's true structure, luring enemies into deadly traps without them noticing the real danger.",
+          "Extreme Reliance on the User: The illusion is purely visual and perceptual; it creates no real solid matter. If the user is attacked or knocked out of the fight, the illusion instantly dissipates, revealing the place's true layout.",
+          "No Direct Combat Ability: It completely lacks strength, speed or offensive skills. Kenny G. must stay hidden to keep the illusion active, leaving him defenceless against enemies who can track down his real presence."
+        ],
+        "source_hash": "f95473d71274eb781b73bbe13da71cebe0851bdb856f4e6532647150bdac8034"
+      },
+      "ca-ES": {
+        "description": "Usuari: Kenny G.\n\nÉs un Stand enfocat exclusivament en la creació d'il·lusions espacials a gran escala, dissenyat per desorientar, confondre i emboscar els intrusos.",
+        "skills": [
+          "Generació de Laberints Il·lusoris: pot transformar l'aparença interna de la mansió d'en DIO en un laberint gegantí i interminable ple d'habitacions falses, passadissos distorsionats i dimensions espacials aparentment infinites.",
+          "Ocultació de Presència i Paranys: permet camuflar altres aliats (com en Vanilla Ice o el mateix Kenny G.) i amagar la veritable estructura de l'edifici per atreure els enemics cap a paranys mortals sense que notin el perill real.",
+          "Dependència Extrema de l'Usuari: la il·lusió és purament visual i perceptiva; no crea matèria sòlida real. Si l'usuari pateix un atac o queda fora de combat, la il·lusió es dissipa de manera instantània, revelant la veritable arquitectura del lloc.",
+          "Nul·la Capacitat de Combat Directe: manca completament de força, velocitat o habilitats ofensives. En Kenny G. ha de romandre amagat per mantenir la il·lusió activa, cosa que el deixa indefens davant d'enemics que puguin rastrejar la seva presència real."
+        ],
+        "source_hash": "f95473d71274eb781b73bbe13da71cebe0851bdb856f4e6532647150bdac8034"
+      }
+    },
+    "The Fool": {
+      "en-GB": {
+        "description": "User: Iggy\n\nUnlike most Stands, which are made of pure spiritual energy, The Fool is a Stand bound to physical matter, as it is manifested entirely out of loose sand.",
+        "skills": [
+          "Sand Manipulation: It can control huge amounts of surrounding sand to freely change shape, attack or defend.",
+          "Immunity to Direct Damage: Being a manifestation made entirely of loose grains of sand, attacking The Fool causes Iggy no physical harm at all. If the Stand is scattered or destroyed by a blow, it simply crumbles into sand and can instantly reassemble itself.",
+          "Shapeshifting and Disguises: It can mould sand with an extraordinary level of detail. It has shown itself capable of creating objects, exact sculptures and even perfect doppelgängers of other people (such as when it cloned DIO to trick Vanilla Ice).",
+          "Sand Glider: It can deploy wings made of sand to glide and fly through the air, carrying Iggy to safety."
+        ],
+        "source_hash": "783cc7e11c17e755055339286eb8920a61cc022452f7e78385291026061297b4"
+      },
+      "ca-ES": {
+        "description": "Usuari: Iggy\n\nA diferència de la majoria dels Stands, fets d'energia espiritual pura, The Fool és un Stand vinculat a la matèria física, ja que es manifesta totalment amb sorra solta.",
+        "skills": [
+          "Manipulació de Sorra: pot controlar quantitats enormes de sorra de l'entorn per canviar de forma lliurement, atacar o defensar-se.",
+          "Immunitat al Dany Directe: en ser una manifestació feta íntegrament de grans de sorra solts, atacar The Fool no causa cap mal físic a l'Iggy. Si el Stand es dispersa o es destrueix per un cop, simplement s'esmicola en sorra i pot tornar-se a reunir a l'instant.",
+          "Canvi de Forma i Disfresses: pot modelar la sorra amb un nivell de detall extraordinari. Ha demostrat ser capaç de crear objectes, escultures exactes i fins i tot doppelgängers perfectes d'altres persones (com quan va clonar en DIO per enganyar en Vanilla Ice).",
+          "Planador de Sorra: pot desplegar ales compostes de sorra per planar i volar per l'aire tot portant l'Iggy a lloc segur."
+        ],
+        "source_hash": "783cc7e11c17e755055339286eb8920a61cc022452f7e78385291026061297b4"
+      }
+    },
+    "The World": {
+      "en-GB": {
+        "description": "User: Dio Brando\n\nA close-combat Stand with extraordinary strength, precision and speed, rivalling — and even slightly surpassing at first — Star Platinum.",
+        "skills": [
+          "Time Stop: His ultimate ability. Allows the user to halt the flow of time for the entire universe. While time is stopped, only the user (and The World) can move freely and interact with their surroundings.",
+          "Superhuman Strength and Speed: Capable of piercing straight through an enemy's torso with a single punch, hurling massive objects (such as a steamroller) and unleashing flurries of punches at hyper-fast speeds.",
+          "Short Effective Range: Although his physical attacks require being close to the target (roughly a 2-to-10-metre manifestation radius), the time-stop effect affects the entire universe."
+        ],
+        "source_hash": "e3fcab381cf7b7e92d6733253767cbccc3d4825cd2878e1cbf6bdcf327330c4d"
+      },
+      "ca-ES": {
+        "description": "Usuari: Dio Brando\n\nÉs un Stand de combat cos a cos amb una força, precisió i velocitat extraordinàries, que rivalitza i fins i tot supera lleugerament al principi l'Star Platinum.",
+        "skills": [
+          "Aturada del Temps (Time Stop): La seva habilitat definitiva. Permet a l'usuari aturar el flux del temps per a tot l'univers. Mentre el temps està aturat, només l'usuari (i The World) poden moure's lliurement i interactuar amb l'entorn.",
+          "Força i Velocitat Sobrehumanes: És capaç de travessar el tors d'un enemic d'un sol cop de puny, llançar objectes massius (com una anivelladora) i desencadenar ràfegues de cops de puny a velocitats hiperiòniques.",
+          "Abast Efectiu Curt: Tot i que els seus atacs físics requereixen estar a prop de l'objectiu (aproximadament un radi de manifestació de 2 a 10 metres), l'efecte d'aturar el temps afecta tot l'univers."
+        ],
+        "source_hash": "e3fcab381cf7b7e92d6733253767cbccc3d4825cd2878e1cbf6bdcf327330c4d"
+      }
+    },
+    "Tohth": {
+      "en-GB": {
+        "description": "User: Boingo\n\nAn absolute and inescapable future-predicting Stand, which functions as an illustrated guide to events yet to come.",
+        "skills": [
+          "Absolute Precognition (Infallible Predictions): Tohth reveals the near future by automatically drawing new pages in the comic as time passes. The predictions show events that will happen within minutes.",
+          "Inevitability of Fate: Everything Tohth predicts will happen with absolute certainty, no exceptions. If the book illustrates that someone will suffer an accident or die in a certain way, fate will ensure it comes to pass.",
+          "Literal Interpretation and Context Trap: Although the prediction is infallible, the way it comes true depends on a literal, exact reading of the texts and drawings. If those involved try to deviate even slightly from the procedure the comic sets out, the prediction will become distorted or turn against the user himself.",
+          "No Direct Combat Capability: Tohth is completely harmless in terms of physical combat. Boingo cannot attack or defend with it, so he relies entirely on an ally (such as Oingo or Hol Horse) to carry out the book's instructions to the letter."
+        ],
+        "source_hash": "bffdca147bdb426a6c745741f640a103925c825741cce0ae377dcf0ed980b8a7"
+      },
+      "ca-ES": {
+        "description": "Usuari: Boingo\n\nÉs un Stand de predicció del futur absolut i ineludible, que funciona com una guia il·lustrada dels esdeveniments que han de venir.",
+        "skills": [
+          "Precognició Absoluta (Prediccions Infal·libles): Tohth revela el futur proper dibuixant automàticament pàgines noves al còmic a mesura que passa el temps. Les prediccions mostren esdeveniments que succeiran d'aquí a pocs minuts.",
+          "Inevitabilitat del Destí: Tot el que Tohth prediu passarà al 100%, sense excepció. Si el llibre il·lustra que algú patirà un accident o morirà d'una certa manera, el destí s'encarregarà que passi.",
+          "Interpretació Literal i Trampa de Context: Tot i que la predicció és infal·lible, la manera com es compleix depèn d'una interpretació literal i exacta dels textos i dibuixos. Si les persones implicades intenten desviar-se ni que sigui mínimament del procediment que indica el còmic, la predicció es distorsionarà o es girarà en contra del mateix usuari.",
+          "Sense Capacitat de Combat Directa: Tohth és completament inofensiu pel que fa al combat físic. En Boingo no pot atacar ni defensar-se'n, per la qual cosa depèn totalment d'un aliat (com l'Oingo o l'Hol Horse) que executi les instruccions del llibre al peu de la lletra."
+        ],
+        "source_hash": "bffdca147bdb426a6c745741f640a103925c825741cce0ae377dcf0ed980b8a7"
+      }
+    },
+    "Tower of Gray": {
+      "en-GB": {
+        "description": "User: Gray Fly\n\nA long-range assassin Stand specialising in swift ambushes, mass-transport sabotage and massacres in confined spaces.",
+        "skills": [
+          "Extreme Speed and Invasiveness: Despite its low speed rating in the official stats, Avdol himself notes that it moves at an absurd speed, able to dodge Star Platinum's punches at point-blank range effortlessly.",
+          "Secondary Needle (Tower Needle): It hides a sharp, extendable secondary jaw within its mouth, like a serpent's tongue. It uses it to pierce its victims' heads or necks at lightning speed, tearing out tongues and causing instant deaths.",
+          "Staging \"Accidents\": Gray Fly usually uses it inside public transport (such as the commercial flight bound for Egypt) to kill pilots and passengers, making the accidents look like mass tragedies without leaving any trace of its user."
+        ],
+        "source_hash": "4d6ebe2035409a0957d990a2d31992d1341e1ba628b5b28bf1054fe5e14d6418"
+      },
+      "ca-ES": {
+        "description": "Usuari: Gray Fly\n\nÉs un Stand assassí de llarg abast especialitzat en emboscades ràpides, sabotatge de transport massiu i massacres en espais reduïts.",
+        "skills": [
+          "Velocitat i Invasivitat Extremes: Tot i el seu baix rang de velocitat a les estadístiques oficials, el mateix Avdol assenyala que es mou a una velocitat absurda, capaç d'esquivar sense esforç els cops de puny de l'Star Platinum a boca de canó.",
+          "Agulla Secundària (Tower Needle): Amaga dins la seva boca una mandíbula secundària esmolada i extensible com la llengua d'una serp. La fa servir per travessar el cap o el coll de les seves víctimes a velocitats llampec, arrencant llengües i causant morts instantànies.",
+          "Provocació d'\"Accidents\": Gray Fly sol fer-lo servir dins de mitjans de transport públic (com l'avió comercial rumb a Egipte) per assassinar pilots i passatgers, fent que els accidents semblin tragèdies massives sense deixar cap rastre del seu usuari."
+        ],
+        "source_hash": "4d6ebe2035409a0957d990a2d31992d1341e1ba628b5b28bf1054fe5e14d6418"
+      }
+    },
+    "Wheel of Fortune": {
+      "en-GB": {
+        "description": "User: ZZ\n\nLike Strength, it is an object-bound Stand (bound Stand), meaning it possesses an existing physical vehicle and alters its atomic properties to turn it into a lethal weapon on wheels.",
+        "skills": [
+          "Mutation and Structural Repair: It can freely alter the shape of the car's bodywork, widening its chassis to crush targets or squeeze through narrow spaces. It can also repair itself immediately if it suffers physical damage (such as broken glass or dents).",
+          "High-Pressure Petrol Projectiles: It fires droplets of petrol at tremendous speed and force from its exhaust pipes or other openings. These droplets act like bullets capable of piercing human skin and, being soaked in fuel, leave the victim extremely flammable.",
+          "Electric Fire Attacks: It can generate sparks with its electrical systems to ignite the scattered fuel, turning surfaces or its own enemies into an instant bonfire.",
+          "Terrain Adaptation: It is capable of scaling vertical rock walls and travelling across impassable terrain thanks to the deformation of its wheels and its superhuman traction."
+        ],
+        "source_hash": "397d77673d23cfa14f968d95ca36f2ed93db741caa11bfb624edc029ff6366ec"
+      },
+      "ca-ES": {
+        "description": "Usuari: ZZ\n\nIgual que Strength, és un Stand vinculat a un objecte (bound Stand), la qual cosa significa que posseeix un vehicle físic existent i en modifica les propietats atòmiques per transformar-lo en una arma letal sobre rodes.",
+        "skills": [
+          "Mutació i Reparació Estructural: Pot alterar lliurement la forma de la carrosseria del cotxe, eixamplant el seu xassís per aixafar objectius o travessar espais estrets. A més, si pateix danys físics (com vidres trencats o bonys), es pot autoreparar de manera immediata.",
+          "Projectils de Gasolina a Alta Pressió: Dispara gotes de gasolina a una velocitat i força tremendes des dels seus tubs d'escapament o obertures. Aquestes gotes funcionen com a bales capaces de travessar la pell humana i, en estar impregnades de combustible, fan que la víctima sigui extremadament inflamable.",
+          "Atacs de Foc Elèctric: Pot generar espurnes amb els seus sistemes elèctrics per calar foc al combustible dispersat, convertint les superfícies o els seus propis enemics en una foguera instantània.",
+          "Adaptació al Terreny: És capaç d'escalar parets verticals de roca i circular per terrenys impracticables gràcies a la deformació de les seves rodes i una tracció sobrehumana."
+        ],
+        "source_hash": "397d77673d23cfa14f968d95ca36f2ed93db741caa11bfb624edc029ff6366ec"
+      }
+    },
+    "Wonder of U": {
+      "en-GB": {
+        "description": "User: Tooru\n\nA personified manifestation of the flow of Calamity, the logical force of the universe that punishes anyone who tries to oppose its order.",
+        "skills": [
+          "Automatic Calamity Flow: Anyone who harbours the intent to \"pursue\", investigate, attack or confront Tooru or Wonder of U immediately triggers the ability. Calamity acts as an inescapable law of nature that diverts fatal events towards the pursuer.",
+          "Deadly Physico-Mechanical Amplification: Under the effect of Calamity, ordinary, harmless objects (raindrops, tree leaves, insects, a cigarette, or bumping into a piece of furniture) exponentially increase their density and impact energy. A single drop of water can pierce a victim's body as if it were a high-calibre projectile.",
+          "Illusion and Tangible Public Presence: Unlike most Stands, ordinary people (non-Stand users) can see, hear and interact with Wonder of U in its identity as Satoru Akefu.",
+          "Autonomy and Persistence: It has an almost unlimited range and complete autonomy. Even if the user is far away or incapacitated, the logic of Calamity continues to protect the Stand's existence and carry out its attacks."
+        ],
+        "source_hash": "0471a3321010ae65fd02f0f4dc21f427ad681df88542880a3919433489f35715"
+      },
+      "ca-ES": {
+        "description": "Usuari: Tooru\n\nÉs una manifestació personificada del flux de la Calamitat (Calamity), la força lògica de l'univers que castiga qualsevol que intenti oposar-se al seu ordre.",
+        "skills": [
+          "Flux de Calamitat Automàtic: Qualsevol persona que albergui la intenció de \"perseguir\", investigar, atacar o encarar en Tooru o Wonder of U activa immediatament l'habilitat. La calamitat actua com una llei de la natura ineludible que desvia esdeveniments fatals cap al perseguidor.",
+          "Amplificació Fisicomecànica Mortal: Sota l'efecte de la calamitat, objectes quotidians i inofensius (gotes de pluja, fulles d'arbre, insectes, una cigarreta o un cop contra un moble) augmenten exponencialment la seva densitat i energia d'impacte. Una simple gota d'aigua pot travessar el cos d'una víctima com si fos un projectil de gran calibre.",
+          "Il·lusió i Presència Pública Tangible: A diferència de la majoria d'Stands, persones ordinàries (no usuàries d'Stand) poden veure, sentir i interactuar amb Wonder of U en la seva identitat d'en Satoru Akefu.",
+          "Autonomia i Persistència: Té un abast gairebé il·limitat i una autonomia completa. Fins i tot si l'usuari es troba lluny o queda incapacitat, la lògica de la calamitat continua protegint l'existència de l'Stand i executant els seus atacs."
+        ],
+        "source_hash": "0471a3321010ae65fd02f0f4dc21f427ad681df88542880a3919433489f35715"
+      }
+    },
+    "Yellow Temperance": {
+      "en-GB": {
+        "description": "User: Rubber Soul\n\nAn almost impenetrable defensive and assimilation Stand. It covers its user's body like biological armour, or an extremely versatile second skin.",
+        "skills": [
+          "Assimilation and Organic Digestion: If a fragment of the mass touches a living being, it clings firmly to their flesh and begins to consume them alive from the outside. The more organic matter it devours (flesh, animals, people), the bigger and stronger the Stand becomes. Trying to burn or freeze it only speeds up its digestion or harms the victim.",
+          "Mimicry and Physical Impersonation: Rubber Soul can shape its viscous mass to completely alter its voice, height, face and body structure. Thanks to this, it disguised itself perfectly as Noriaki Kakyoin, fooling Jotaro Kujo for much of their encounter.",
+          "Impact Absorption and Absolute Defence: By covering the user, the Stand's viscosity absorbs the kinetic force of any direct physical attack. Not even Star Platinum's punches can get through it, either bouncing off or becoming trapped in the edible mass."
+        ],
+        "source_hash": "280126798e4877000a7cd720392d95abe9e6cbb9f5b4db14862322dc2cdaa85b"
+      },
+      "ca-ES": {
+        "description": "Usuari: Rubber Soul\n\nÉs un Stand defensiu i d'assimilació gairebé impenetrable. Cobreix el cos del seu usuari com una armadura biològica o una segona pell extremadament versàtil.",
+        "skills": [
+          "Assimilació i Digestió Orgànica: Si un fragment de la massa toca un ésser viu, s'hi adhereix fermament a la carn i comença a consumir-lo viu des de l'exterior. Com més matèria orgànica devora (carn, animals, persones), més gran i fort es torna l'Stand. Intentar cremar-lo o congelar-lo només n'accelera la digestió o causa dany a la víctima.",
+          "Mimetisme i Suplantació Física: Rubber Soul pot modelar la massa viscosa per alterar completament la veu, l'alçada, el rostre i l'estructura corporal. Gràcies a això, es va disfressar a la perfecció d'en Noriaki Kakyoin, enganyant en Jotaro Kujo durant bona part de la seva trobada.",
+          "Absorció d'Impactes i Defensa Absoluta: En cobrir l'usuari, la viscositat de l'Stand absorbeix la força cinètica de qualsevol atac físic directe. Ni tan sols els cops de puny de l'Star Platinum poden travessar-lo, ja que reboten o queden atrapats en la massa comestible."
+        ],
+        "source_hash": "280126798e4877000a7cd720392d95abe9e6cbb9f5b4db14862322dc2cdaa85b"
+      }
     }
   },
   "devil_fruits": {
