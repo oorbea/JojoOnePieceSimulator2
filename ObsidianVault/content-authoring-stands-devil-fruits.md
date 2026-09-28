@@ -28,6 +28,11 @@ from catalogsync (new content, not translation catch-up on existing content). St
 Claude-authored-then-human-reviewed before merging, same trust model as catalogsync's own
 translation step.
 
+**Third partial exception, same day:** [[catalog-seed-part5-stands]] repeated the pattern for Part 5
+(Golden Wind), 26 more Stand rows, plus a rare third case — a hand-authored migration that also
+*fixes* an existing prod row's translations (Chariot Requiem's house-style violations), guarded the
+same admin-edit-wins way catalogsync's own translation updates are.
+
 **Why this matters for future work:** content volume grows only as fast as an admin types it in, or
 as fast as a reviewed content-migration adds it — there's no *unreviewed* batch-content risk to
 design around (e.g. no need for import validation, dedup-on-import, or large-payload handling from
