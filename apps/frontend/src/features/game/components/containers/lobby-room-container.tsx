@@ -14,6 +14,7 @@ import { useGameDetail } from '@/features/game/hooks/use-game-detail'
 import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { useMatchHotkeys } from '@/features/game/hooks/use-match-hotkeys'
+import { useSkipNotice } from '@/features/game/hooks/use-skip-notice'
 import {
   applyModeChange,
   buildUpdateConfigPayload,
@@ -165,6 +166,14 @@ export function LobbyRoomContainer() {
     revealEndsAt: socket.live.revealEndsAt,
     revealStartedAt: socket.live.revealStartedAt,
     stillAssigning: snapshot?.state === 'ASSIGNING',
+  })
+
+  useSkipNotice({
+    state: snapshot?.state,
+    revealEndsAt: socket.live.revealEndsAt,
+    summaryEndsAt: socket.live.summaryEndsAt,
+    connectedHumans: (snapshot?.participants ?? []).filter((p) => p.kind === 'HUMAN' && p.connected)
+      .length,
   })
 
   // Computed unconditionally for the same reason as revealMangas/revealActive

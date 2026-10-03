@@ -370,7 +370,10 @@ export function RevealStage({
         tooltip={t('game.match.reveal.skipA11y')}
       >
         {readyTotal
-          ? t('game.match.reveal.readyCount', { ready: readyCount ?? 0, total: readyTotal })
+          ? t('game.match.reveal.readyCount', {
+              ready: readyCount ?? 0,
+              needed: Math.floor(readyTotal / 2) + 1,
+            })
           : t('game.match.reveal.skip')}
       </GlossButton>
 

@@ -88,7 +88,10 @@ export function LoadoutSummaryStage({ snapshot, selfId, summaryEndsAt, readyCoun
         tooltip={t('game.match.summary.skipA11y')}
       >
         {readyTotal
-          ? t('game.match.summary.readyCount', { ready: readyCount ?? 0, total: readyTotal })
+          ? t('game.match.summary.readyCount', {
+              ready: readyCount ?? 0,
+              needed: Math.floor(readyTotal / 2) + 1,
+            })
           : t('game.match.summary.skip')}
       </GlossButton>
     </GlassPanel>

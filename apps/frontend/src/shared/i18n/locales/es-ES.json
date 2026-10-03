@@ -451,7 +451,7 @@
         "votingIn": "La votación empieza en {{seconds}}s",
         "skip": "Saltar",
         "skipA11y": "Saltar el resumen de poderes",
-        "readyCount": "{{ready}}/{{total}} listos"
+        "readyCount": "{{ready}}/{{needed}} para saltar"
       },
       "trait": {
         "spin": "Spin",
@@ -472,6 +472,10 @@
         "conqueror": "Del Rey",
         "none": "Ninguno"
       },
+      "skipMajority": {
+        "reveal": "La mayoría ha saltado el sorteo.",
+        "summary": "La mayoría ha saltado el resumen."
+      },
       "reveal": {
         "title": "Sorteo de poderes",
         "intro": "Preparados…",
@@ -479,7 +483,7 @@
         "skip": "Saltar",
         "skipA11y": "Saltar la animación del sorteo de poderes",
         "votingIn": "La votación empieza en {{seconds}}s",
-        "readyCount": "{{ready}}/{{total}} listos",
+        "readyCount": "{{ready}}/{{needed}} para saltar",
         "outro": "Vuestras estadísticas finales son las siguientes",
         "narrator": {
           "playerTurn": "Le toca a {{name}}",
