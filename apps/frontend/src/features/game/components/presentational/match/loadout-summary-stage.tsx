@@ -73,7 +73,7 @@ export function LoadoutSummaryStage({ snapshot, selfId, summaryEndsAt, readyCoun
   return (
     <GlassPanel tone="strong" width="100%" p="$4" gap="$3" items="center">
       {snapshot.mode === 'VERSUS' && snapshot.upcomingStage ? (
-        <StageAnnouncement stage={snapshot.upcomingStage} />
+        <StageAnnouncement stage={snapshot.upcomingStage} compact />
       ) : null}
       <GlowText level="heading">{t('game.match.summary.title')}</GlowText>
       {seconds !== null ? (

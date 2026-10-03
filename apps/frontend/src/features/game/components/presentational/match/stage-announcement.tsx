@@ -59,14 +59,16 @@ export function StageAnnouncement({ stage, compact = false }: Props) {
 
   return (
     <WiiCard padded width="100%" gap="$3">
-      <LazyImage
-        uri={stage.picture || null}
-        aspectRatio={16 / 9}
-        contentPosition={focalPosition(stage)}
-        pictureStatus={stage.pictureStatus}
-        priorityHint="high"
-        fallback={<Map size={40} color="$wiiBlue" />}
-      />
+      <YStack width="100%" maxW={520} self="center">
+        <LazyImage
+          uri={stage.picture || null}
+          aspectRatio={16 / 9}
+          contentPosition={focalPosition(stage)}
+          pictureStatus={stage.pictureStatus}
+          priorityHint="high"
+          fallback={<Map size={40} color="$wiiBlue" />}
+        />
+      </YStack>
       {text}
     </WiiCard>
   )
