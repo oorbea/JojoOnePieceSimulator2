@@ -1,5 +1,7 @@
 import {
   playerSlots,
+  REVEAL_EFFECT_INTRO_MS,
+  REVEAL_EFFECT_LAND_MS,
   REVEAL_EVOLVE_BASE_MS,
   REVEAL_EVOLVE_STEP_MS,
   REVEAL_EVOLVING_MS,
@@ -404,5 +406,138 @@ describe('seekRevealTimeline', () => {
       startIndex: 0,
       offsetIntoPhaseMs: 0,
     })
+  })
+})
+
+describe('revealTimeline - power effects', () => {
+  const player = (over: Partial<RevealPlayer> = {}): RevealPlayer => ({
+    hasStand: true,
+    hasDevilFruit: false,
+    hasArmamentHaki: false,
+    hasObservationHaki: false,
+    hasConquerorHaki: false,
+    ...over,
+  })
+  const kindsFor = (timeline: ReturnType<typeof revealTimeline>, from: number, to: number) =>
+    timeline.slice(from, to).map((p) => p.phase.kind)
+
+  it('plays a stat floor right after the slot it is anchored to: intro, then land', () => {
+    const p = player({ effects: [{ kind: 'STAT_FLOOR', steps: 0, anchor: 'spin' }] })
+    const timeline = revealTimeline('g1', 0, ['JOJO'], [p], 'SWIFT')
+    const slots = playerSlots(['JOJO'], p)
+    const spinSlot = slots.indexOf('spin')
+
+    const landIdx = timeline.findIndex((x) => x.phase.kind === 'land' && x.phase.slot === spinSlot)
+    expect(kindsFor(timeline, landIdx + 1, landIdx + 3)).toEqual(['effectIntro', 'effectLand'])
+    expect(timeline[landIdx + 1].durationMs).toBe(REVEAL_EFFECT_INTRO_MS)
+    expect(timeline[landIdx + 2].durationMs).toBe(REVEAL_EFFECT_LAND_MS)
+    expect(timeline[landIdx + 1].phase).toMatchObject({ effectIndex: 0, effectsApplied: 0 })
+    expect(timeline[landIdx + 2].phase).toMatchObject({ effectIndex: 0, effectsApplied: 1 })
+  })
+
+  it('counts an effect as applied for every later slot of the same turn, never before', () => {
+    const p = player({ effects: [{ kind: 'STAT_FLOOR', steps: 0, anchor: 'hamon' }] })
+    const timeline = revealTimeline('g1', 0, ['JOJO'], [p], 'SWIFT')
+    const slots = playerSlots(['JOJO'], p)
+    const applied = (slot: string) =>
+      timeline
+        .filter((x) => x.phase.kind === 'land' && x.phase.slot === slots.indexOf(slot as never))
+        .map((x) => x.phase.effectsApplied)
+    expect(applied('stand')).toEqual([0])
+    expect(applied('hamon')).toEqual([0]) // its own land still shows the drawn value
+    expect(applied('spin')).toEqual([1])
+    expect(applied('battleIQ')).toEqual([1])
+  })
+
+  it('plays an evolution as intro, evolving, steps-1 steps, land', () => {
+    const p = player({ effects: [{ kind: 'EVOLUTION', steps: 3, anchor: 'spin' }] })
+    const timeline = revealTimeline('g1', 0, ['JOJO'], [p], 'SWIFT')
+    const first = timeline.findIndex((x) => x.phase.kind === 'effectIntro')
+    expect(kindsFor(timeline, first, first + 5)).toEqual([
+      'effectIntro',
+      'effectEvolving',
+      'effectStep',
+      'effectStep',
+      'effectLand',
+    ])
+    const steps = timeline.filter((x) => x.phase.kind === 'effectStep')
+    expect(steps.map((x) => x.phase.evolveStage)).toEqual([0, 1])
+    expect(timeline[first + 1].durationMs).toBe(REVEAL_EVOLVING_MS)
+    expect(steps.every((x) => x.durationMs === REVEAL_EVOLVE_STEP_MS)).toBe(true)
+    expect(timeline[first + 4].phase.effectsApplied).toBe(1)
+  })
+
+  it('plays several effects on one anchor in list order, each one after the last', () => {
+    const p = player({
+      effects: [
+        { kind: 'EVOLUTION', steps: 1, anchor: 'spin' },
+        { kind: 'STAT_FLOOR', steps: 0, anchor: 'spin' },
+      ],
+    })
+    const timeline = revealTimeline('g1', 0, ['JOJO'], [p], 'SWIFT')
+    const effectPhases = timeline.filter((x) => x.phase.effectIndex !== undefined)
+    expect(effectPhases.map((x) => [x.phase.kind, x.phase.effectIndex, x.phase.effectsApplied])).toEqual([
+      ['effectIntro', 0, 0],
+      ['effectEvolving', 0, 0],
+      ['effectLand', 0, 1],
+      ['effectIntro', 1, 1],
+      ['effectLand', 1, 2],
+    ])
+  })
+
+  it('plays an effect anchored to a slot the player does not have after their last slot instead of dropping it', () => {
+    const p = player({ effects: [{ kind: 'STAT_FLOOR', steps: 0, anchor: 'armamentHaki' }] })
+    const timeline = revealTimeline('g1', 0, ['JOJO'], [p], 'SWIFT')
+    const slots = playerSlots(['JOJO'], p)
+    const lastLand = timeline.findIndex((x) => x.phase.kind === 'land' && x.phase.slot === slots.length - 1)
+    expect(kindsFor(timeline, lastLand + 1, lastLand + 3)).toEqual(['effectIntro', 'effectLand'])
+  })
+
+  it('a drawn fruit that evolves gets the stand-style evolution beats on the fruit slot only', () => {
+    const p = player({ hasStand: false, hasDevilFruit: true, fruitEvolutionSteps: 2 })
+    const timeline = revealTimeline('g1', 0, ['ONE_PIECE'], [p], 'SWIFT')
+    const slots = playerSlots(['ONE_PIECE'], p)
+    const fruitSlot = slots.indexOf('devilFruit')
+    const kinds = timeline.filter((x) => x.phase.slot === fruitSlot).map((x) => x.phase.kind)
+    expect(kinds).toEqual(['narrator', 'spin', 'evolveBase', 'evolving', 'evolveStep', 'land'])
+    expect(timeline.filter((x) => x.phase.kind === 'evolveBase')).toHaveLength(1)
+  })
+
+  it('a player with no effects gets the same timeline as before effects existed', () => {
+    const plain = revealTimeline('g1', 0, ['JOJO'], [player()], 'SWIFT')
+    const withEmpty = revealTimeline('g1', 0, ['JOJO'], [player({ effects: [] })], 'SWIFT')
+    expect(withEmpty.map((x) => x.phase.kind)).toEqual(plain.map((x) => x.phase.kind))
+    expect(plain.some((x) => x.phase.kind.startsWith('effect'))).toBe(false)
+  })
+
+  it('totals exactly what the backend computes (game.RevealDuration golden scenario)', () => {
+    // Mirrors power_effects_test.go's revealGoldenPlayers/revealGoldenMs: GameID{1}
+    // formats as the id below. If either side's reveal arithmetic changes,
+    // both tests have to change together.
+    const players: RevealPlayer[] = [
+      {
+        hasStand: true,
+        hasDevilFruit: true,
+        hasArmamentHaki: false,
+        hasObservationHaki: true,
+        hasConquerorHaki: false,
+        standEvolutionSteps: 1,
+        fruitEvolutionSteps: 1,
+        effects: [
+          { kind: 'EVOLUTION', steps: 2, anchor: 'spin' },
+          { kind: 'STAT_FLOOR', steps: 0, anchor: 'spin' },
+        ],
+      },
+      {
+        hasStand: true,
+        hasDevilFruit: false,
+        hasArmamentHaki: false,
+        hasObservationHaki: false,
+        hasConquerorHaki: false,
+      },
+    ]
+    expect(
+      revealDurationMs('01000000-0000-0000-0000-000000000000', 0, ['JOJO', 'ONE_PIECE'], players, 'SWIFT')
+    ).toBe(152400)
   })
 })

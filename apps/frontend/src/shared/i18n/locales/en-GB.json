@@ -539,6 +539,17 @@
           "evolving": "Something's happening... your stand is evolving!",
           "step": "It keeps evolving!",
           "final": "EVOLUTION!"
+        },
+        "effect": {
+          "raised": "LEVELLED UP!",
+          "floor": {
+            "byPower": "{{cause}} lifts your {{stat}} to {{value}}!",
+            "byStat": "With {{causeStat}} at {{cause}}, your {{stat}} rises to {{value}}!"
+          },
+          "evolution": {
+            "stand": "With {{cause}} Spin, {{from}} evolves into {{to}}!",
+            "fruit": "With {{cause}} mastery, {{from}} evolves into {{to}}!"
+          }
         }
       },
       "loadout": {

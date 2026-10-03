@@ -539,6 +539,17 @@
           "evolving": "Algo está pasando... ¡tu stand está evolucionando!",
           "step": "¡Sigue evolucionando!",
           "final": "¡EVOLUCIÓN!"
+        },
+        "effect": {
+          "raised": "¡SUBE DE NIVEL!",
+          "floor": {
+            "byPower": "¡{{cause}} sube tu {{stat}} a {{value}}!",
+            "byStat": "¡Con {{causeStat}} {{cause}}, tu {{stat}} sube a {{value}}!"
+          },
+          "evolution": {
+            "stand": "¡Con Spin {{cause}}, {{from}} evoluciona a {{to}}!",
+            "fruit": "¡Con maestría {{cause}}, {{from}} evoluciona a {{to}}!"
+          }
         }
       },
       "loadout": {

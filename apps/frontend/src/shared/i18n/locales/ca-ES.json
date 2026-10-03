@@ -539,6 +539,17 @@
           "evolving": "Alguna cosa està passant... el teu stand està evolucionant!",
           "step": "Continua evolucionant!",
           "final": "EVOLUCIÓ!"
+        },
+        "effect": {
+          "raised": "PUJA DE NIVELL!",
+          "floor": {
+            "byPower": "{{cause}} puja el teu {{stat}} a {{value}}!",
+            "byStat": "Amb {{causeStat}} {{cause}}, el teu {{stat}} puja a {{value}}!"
+          },
+          "evolution": {
+            "stand": "Amb Spin {{cause}}, {{from}} evoluciona a {{to}}!",
+            "fruit": "Amb mestria {{cause}}, {{from}} evoluciona a {{to}}!"
+          }
         }
       },
       "loadout": {
