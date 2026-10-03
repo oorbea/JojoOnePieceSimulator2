@@ -95,7 +95,8 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
 - `loadout.go`, `loadout_builder.go`, `loadout_evaluator.go`, `weights.go` — ability assignment +
   bot voting heuristic (`DefaultLoadoutEvaluator`/`BotVoter`).
 - `power_pool.go` — `AvailablePowers`, the per-team draw-without-replacement view over the catalog.
-- `power_traits.go` — `TraitsOf`/`HasTrait`, the `REQUIRES_SPIN_4` stopgap (see below).
+- `power_effects.go` — the name-keyed rule table, `PowerEffect`, and the effect resolver; replaced
+  `power_traits.go` (the `REQUIRES_SPIN_4` stopgap) on 2026-10-04 - see [[gameplay-power-effects]].
 - `ballot.go` — the shared vote-tally algorithm both modes map their options onto.
 - `participant.go`, `team.go`, `config.go`, `stage.go`, `round.go`, `game_result.go`, `events.go`,
   `errors.go` — supporting entities/value objects.
@@ -136,8 +137,11 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
 
 ## Known debt (flagged on purpose, not derivable from code)
 
-- `power_traits.go` matches `REQUIRES_SPIN_4` (Tusk ACT4, Ball Breaker, Soft & Wet: Go Beyond) by
-  **Stand name**. Fragile against renames — the single place to fix once `powers` gains a real
+- **Superseded 2026-10-04** ([[gameplay-power-effects]]): `power_effects.go` still matches rules by
+  **power name** (now exact after trim/lowercase/space-collapse, and with the prod spelling
+  `Tusk: Acto N`), by explicit owner choice over persisted columns. The paragraph below is the
+  original `REQUIRES_SPIN_4` note, kept for history. `power_traits.go` matched `REQUIRES_SPIN_4`
+  (Tusk ACT4, Ball Breaker, Soft & Wet: Go Beyond) by **Stand name**. Fragile against renames — the single place to fix once `powers` gains a real
   persisted traits column (e.g. `power_traits` table/array), at which point `TraitsOf` becomes a
   lookup instead of a name match and nothing else in the game package changes.
 - **Resolved 2026-08-11**: stage catalog content now has a schema, seed data, and admin CRUD (see
