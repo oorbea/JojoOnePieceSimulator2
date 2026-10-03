@@ -478,6 +478,11 @@ export function RevealStage({
           participantName={currentParticipant.displayName}
           onSkip={onSkip}
           evolvePhase={evolvePhase}
+          evolveMessage={
+            currentSlot === 'devilFruit'
+              ? t('game.match.reveal.evolution.evolvingFruit')
+              : undefined
+          }
           causeLine={isEffectPhase ? effectLine : undefined}
           reducedMotion={reducedMotion}
         />

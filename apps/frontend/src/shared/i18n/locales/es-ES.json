@@ -537,6 +537,7 @@
         },
         "evolution": {
           "evolving": "Algo está pasando... ¡tu stand está evolucionando!",
+          "evolvingFruit": "Algo está pasando... ¡tu fruta está evolucionando!",
           "step": "¡Sigue evolucionando!",
           "final": "¡EVOLUCIÓN!"
         },
