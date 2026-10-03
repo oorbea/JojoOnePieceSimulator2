@@ -211,6 +211,45 @@ func (l *Loadout) DrawnStand() *powers.Stand {
 	return l.stand
 }
 
+// hakiGranted reports whether a power effect raised the haki type in slot up
+// from nothing: such a type has no level slot of its own in the sorteo, its
+// effect's beat shows the grant instead.
+func (l *Loadout) hakiGranted(slot enums.LoadoutSlot) bool {
+	for _, e := range l.effects {
+		if e.Kind == enums.EffectStatFloor && e.Slot == slot && e.From == enums.HakiNone.String() {
+			return true
+		}
+	}
+	return false
+}
+
+// effectSteps is how many evolution stages e spans along the final Stand's or
+// DevilFruit's chain (to's depth minus from's), at least 1. Zero for anything
+// but an evolution. A stage that cannot be found on the chain counts as one
+// step rather than failing: it only sizes an animation.
+func (l *Loadout) effectSteps(e PowerEffect) int {
+	if e.Kind != enums.EffectEvolution {
+		return 0
+	}
+	depths := map[string]int{}
+	switch e.Slot {
+	case enums.SlotStand:
+		for cur := l.stand; cur != nil; cur = cur.EvolvesFrom() {
+			depths[cur.ID().String()] = cur.EvolutionDepth()
+		}
+	case enums.SlotDevilFruit:
+		for cur := l.devilFruit; cur != nil; cur = cur.EvolvesFrom() {
+			depths[cur.ID().String()] = cur.EvolutionDepth()
+		}
+	}
+	from, okFrom := depths[e.From]
+	to, okTo := depths[e.To]
+	if !okFrom || !okTo || to-from < 1 {
+		return 1
+	}
+	return to - from
+}
+
 // DrawnDevilFruit is DrawnStand for the DevilFruit.
 func (l *Loadout) DrawnDevilFruit() *powers.DevilFruit {
 	if l.devilFruit == nil {

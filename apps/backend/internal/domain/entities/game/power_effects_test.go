@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
@@ -625,5 +626,136 @@ func TestMissingPowerEffectNames(t *testing.T) {
 	}
 	if len(missing) != len(all)-1 {
 		t.Fatalf("expected exactly one name to drop out, got %d missing of %d", len(missing), len(all))
+	}
+}
+
+// --- sorteo timing --------------------------------------------------------
+
+func swiftMs(d time.Duration) int { return int(d / time.Millisecond) }
+
+// effectBeatMs mirrors the constants a power effect's beat is made of.
+func effectBeatMs(kind enums.PowerEffectKind, steps int) int {
+	if kind == enums.EffectEvolution {
+		return game.RevealEffectIntroMs + game.RevealEvolvingMs + game.RevealEvolveStepMs*(steps-1) + game.RevealEffectLandMs
+	}
+	return game.RevealEffectIntroMs + game.RevealEffectLandMs
+}
+
+func TestRevealDuration_PowerEffectBeats(t *testing.T) {
+	id := game.GameID{1}
+	base := game.RevealPlayer{HasStand: true, HasDevilFruit: true}
+	baseline := swiftMs(game.RevealDuration(id, 0, both, []game.RevealPlayer{base}, enums.Swift))
+
+	tests := []struct {
+		name    string
+		effects []game.RevealEffect
+		want    int
+	}{
+		{"one stat floor", []game.RevealEffect{{Kind: enums.EffectStatFloor}}, effectBeatMs(enums.EffectStatFloor, 0)},
+		{"evolution of one stage", []game.RevealEffect{{Kind: enums.EffectEvolution, Steps: 1}}, effectBeatMs(enums.EffectEvolution, 1)},
+		{"evolution of three stages", []game.RevealEffect{{Kind: enums.EffectEvolution, Steps: 3}}, effectBeatMs(enums.EffectEvolution, 3)},
+		{"an evolution that reports no steps still plays one", []game.RevealEffect{{Kind: enums.EffectEvolution}}, effectBeatMs(enums.EffectEvolution, 1)},
+		{"beats add up", []game.RevealEffect{{Kind: enums.EffectStatFloor}, {Kind: enums.EffectEvolution, Steps: 2}},
+			effectBeatMs(enums.EffectStatFloor, 0) + effectBeatMs(enums.EffectEvolution, 2)},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := base
+			p.Effects = tc.effects
+			got := swiftMs(game.RevealDuration(id, 0, both, []game.RevealPlayer{p}, enums.Swift)) - baseline
+			if got != tc.want {
+				t.Fatalf("effects added %dms, want %dms", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRevealDuration_FruitEvolutionAddsTheStandStyleBeat(t *testing.T) {
+	id := game.GameID{1}
+	plain := swiftMs(game.RevealDuration(id, 0, onePiece, []game.RevealPlayer{{HasDevilFruit: true}}, enums.Swift))
+	oneStep := swiftMs(game.RevealDuration(id, 0, onePiece, []game.RevealPlayer{{HasDevilFruit: true, FruitEvolutionSteps: 1}}, enums.Swift))
+	threeSteps := swiftMs(game.RevealDuration(id, 0, onePiece, []game.RevealPlayer{{HasDevilFruit: true, FruitEvolutionSteps: 3}}, enums.Swift))
+	if want := game.RevealEvolveBaseMs + game.RevealEvolvingMs; oneStep-plain != want {
+		t.Fatalf("a one-stage fruit evolution added %dms, want %dms", oneStep-plain, want)
+	}
+	if want := game.RevealEvolveBaseMs + game.RevealEvolvingMs + 2*game.RevealEvolveStepMs; threeSteps-plain != want {
+		t.Fatalf("a three-stage fruit evolution added %dms, want %dms", threeSteps-plain, want)
+	}
+	// A stand's steps never leak into a fruit-only reveal.
+	if got := swiftMs(game.RevealDuration(id, 0, onePiece, []game.RevealPlayer{{HasDevilFruit: true, StandEvolutionSteps: 3}}, enums.Swift)); got != plain {
+		t.Fatalf("stand steps changed a One Piece-only reveal: %d vs %d", got, plain)
+	}
+}
+
+// revealGoldenMs pins one full scenario's total so the frontend's
+// revealTimeline (loadout-reveal.ts) can be checked against the exact same
+// number: loadout-reveal.test.ts has the matching case. If this changes, change both.
+const revealGoldenMs = 152400
+
+func revealGoldenPlayers() []game.RevealPlayer {
+	return []game.RevealPlayer{
+		{
+			HasStand: true, HasDevilFruit: true, HasObservationHaki: true,
+			StandEvolutionSteps: 1, FruitEvolutionSteps: 1,
+			Effects: []game.RevealEffect{
+				{Kind: enums.EffectEvolution, Steps: 2},
+				{Kind: enums.EffectStatFloor},
+			},
+		},
+		{HasStand: true},
+	}
+}
+
+func TestRevealDuration_GoldenScenario(t *testing.T) {
+	got := swiftMs(game.RevealDuration(game.GameID{1}, 0, both, revealGoldenPlayers(), enums.Swift))
+	if got != revealGoldenMs {
+		t.Fatalf("golden scenario total = %dms, want %dms - update loadout-reveal.test.ts too", got, revealGoldenMs)
+	}
+}
+
+// --- RevealPlayerFor ------------------------------------------------------
+
+func TestRevealPlayerFor(t *testing.T) {
+	if got := game.RevealPlayerFor(nil); !reflect.DeepEqual(got, game.RevealPlayer{}) {
+		t.Fatalf("a nil loadout lands nothing, got %+v", got)
+	}
+
+	acto := tuskFamily(t)
+	gomu, nika := gomuAndNika(t)
+	nikaLinked := nika.WithEvolvesFrom(gomu)
+	effects := []game.PowerEffect{
+		{Kind: enums.EffectEvolution, Slot: enums.SlotStand, From: acto[1].ID().String(), To: acto[3].ID().String(), CauseSlot: enums.SlotSpin, Cause: "INFINITE"},
+		{Kind: enums.EffectStatFloor, Slot: enums.SlotArmamentHaki, From: "NONE", To: "PRIVATE", CauseSlot: enums.SlotHamon, Cause: "PERFECT"},
+		{Kind: enums.EffectStatFloor, Slot: enums.SlotObservationHaki, From: "PRIVATE", To: "YONKO_COMMANDER", CauseSlot: enums.SlotStand, Cause: "King Crimson"},
+	}
+	l, err := game.NewLoadoutFromSpec(game.LoadoutSpec{
+		Stand: acto[3], DevilFruit: nikaLinked, Spin: enums.SpinInfinite, FruitMastery: enums.FruitMasteryAwakened,
+		Hamon:        enums.HamonPerfect,
+		ArmamentHaki: enums.HakiPrivate, ObservationHaki: enums.HakiYonkoCommander, ConquerorHaki: enums.HakiNone,
+		PhysicalForm: enums.PhysicalFormMarineCaptain, Effects: effects,
+	})
+	if err != nil {
+		t.Fatalf("NewLoadoutFromSpec: %v", err)
+	}
+	got := game.RevealPlayerFor(l)
+
+	if !got.HasStand || !got.HasDevilFruit {
+		t.Fatalf("expected a stand and a devil fruit, got %+v", got)
+	}
+	// Drawn Acto 2 (depth 1); Nika was drawn directly, so its depth-1 chain from Gomu is revealed.
+	if got.StandEvolutionSteps != 1 || got.FruitEvolutionSteps != 1 {
+		t.Fatalf("expected drawn depths 1/1, got %d/%d", got.StandEvolutionSteps, got.FruitEvolutionSteps)
+	}
+	// Armament was granted by an effect: no level slot of its own. Observation existed.
+	if got.HasArmamentHaki || !got.HasObservationHaki || got.HasConquerorHaki {
+		t.Fatalf("expected only observation haki in the drawn loadout, got %+v", got)
+	}
+	want := []game.RevealEffect{
+		{Kind: enums.EffectEvolution, Steps: 2}, // Acto 2 -> Acto 4 spans two stages
+		{Kind: enums.EffectStatFloor},
+		{Kind: enums.EffectStatFloor},
+	}
+	if !reflect.DeepEqual(got.Effects, want) {
+		t.Fatalf("effects = %+v, want %+v", got.Effects, want)
 	}
 }
