@@ -283,6 +283,7 @@
     },
     "config": {
       "title": "Configuració de la sala",
+      "titleHost": "Edita la configuració de la sala",
       "readOnly": "Només lectura",
       "hostOnly": "Només l'amfitrió pot canviar aquesta configuració.",
       "saving": "Desant…",
@@ -574,6 +575,11 @@
       "title": "Vols abandonar aquesta sala?",
       "message": "Podràs tornar-hi més tard amb el codi de sala, mentre segueixi oberta.",
       "confirm": "Abandona la sala"
+    },
+    "bots": {
+      "add": "Afegeix un bot",
+      "remove": "Treu {{name}}",
+      "enableHint": "Activa primer els bots a la configuració de la sala."
     },
     "kick": {
       "action": "Expulsa {{name}}",

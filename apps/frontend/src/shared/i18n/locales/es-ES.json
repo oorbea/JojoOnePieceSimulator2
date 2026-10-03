@@ -283,6 +283,7 @@
     },
     "config": {
       "title": "Ajustes de la sala",
+      "titleHost": "Editar ajustes de la sala",
       "readOnly": "Solo lectura",
       "hostOnly": "Solo el anfitrión puede cambiar estos ajustes.",
       "saving": "Guardando…",
@@ -574,6 +575,11 @@
       "title": "¿Abandonar esta sala?",
       "message": "Podrás volver a unirte más tarde con el código de sala, mientras siga abierta.",
       "confirm": "Abandonar sala"
+    },
+    "bots": {
+      "add": "Añadir bot",
+      "remove": "Quitar a {{name}}",
+      "enableHint": "Activa antes los bots en los ajustes de la sala."
     },
     "kick": {
       "action": "Expulsar a {{name}}",

@@ -283,6 +283,7 @@
     },
     "config": {
       "title": "Lobby settings",
+      "titleHost": "Edit lobby settings",
       "readOnly": "Read only",
       "hostOnly": "Only the host can change these settings.",
       "saving": "Saving…",
@@ -574,6 +575,11 @@
       "title": "Leave this lobby?",
       "message": "You can rejoin later with the join code, as long as the lobby is still open.",
       "confirm": "Leave lobby"
+    },
+    "bots": {
+      "add": "Add bot",
+      "remove": "Remove bot {{name}}",
+      "enableHint": "Enable bots in the lobby settings first."
     },
     "kick": {
       "action": "Kick {{name}}",
