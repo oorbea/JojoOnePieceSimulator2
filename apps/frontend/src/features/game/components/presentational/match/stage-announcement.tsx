@@ -29,9 +29,7 @@ export function StageAnnouncement({ stage, compact = false }: Props) {
           {t('game.match.stage.venueKicker')}
         </GlowText>
       </XStack>
-      <GlowText level={compact ? 'heading' : 'title'} numberOfLines={compact ? 1 : undefined}>
-        {stage.name}
-      </GlowText>
+      <GlowText level={compact ? 'heading' : 'title'}>{stage.name}</GlowText>
       <GlowText level="label" tone="soft">
         {t('game.match.stage.venueHint')}
       </GlowText>
@@ -42,7 +40,7 @@ export function StageAnnouncement({ stage, compact = false }: Props) {
     return (
       <WiiCard padded width="100%">
         <XStack items="center" gap="$3">
-          <YStack width={96}>
+          <YStack width={80}>
             <LazyImage
               uri={stage.pictureThumb || stage.picture || null}
               aspectRatio={16 / 9}
