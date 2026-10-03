@@ -57,6 +57,12 @@ type Game struct {
 	// deadline armed by one process survives a restart and can be re-armed by
 	// the next (see GameService.rearmPhaseTimerLocked).
 	phaseEndsAt *time.Time
+
+	// upcomingStage is the Stage the next round will be played on, picked
+	// when a reassigning mode (Versus) assigns loadouts so the sorteo can
+	// tell players where the fight happens. OpenVoting consumes it instead
+	// of drawing again. Nil outside that window and in Gauntlet.
+	upcomingStage *Stage
 }
 
 // SetPhaseDeadline records the wall-clock deadline of the timed phase the
@@ -720,6 +726,33 @@ func (g *Game) AssignLoadouts(builder *LoadoutBuilder, poolByTeam map[TeamID]*Av
 	return nil
 }
 
+// PrepareUpcomingStage picks the stage of the round about to be played right
+// after its loadouts are assigned, for modes that draw a fresh stage every
+// round (Versus), so the sorteo can announce it. Other modes keep choosing it
+// when voting opens. Call it once, right after AssignLoadouts.
+func (g *Game) PrepareUpcomingStage(rng RandomSource) error {
+	if g.state != enums.Assigning {
+		return ErrInvalidStateTransition
+	}
+	if !g.mode.ReassignsEachRound() {
+		return nil
+	}
+	stage, err := g.mode.StageFor(g, len(g.rounds), rng)
+	if err != nil {
+		return err
+	}
+	g.upcomingStage = &stage
+	return nil
+}
+
+// UpcomingStage reports the stage picked by PrepareUpcomingStage, if any.
+func (g *Game) UpcomingStage() (Stage, bool) {
+	if g.upcomingStage == nil {
+		return Stage{}, false
+	}
+	return *g.upcomingStage, true
+}
+
 // MarkRevealReady records that the connected human id is done watching its
 // own sorteo reveal and wants to skip ahead - the server-side half of the
 // "todos pueden saltar" skip (owner decision, 2026-08-30): once every
@@ -874,9 +907,16 @@ func (g *Game) OpenVoting(rng RandomSource) error {
 		return ErrInvalidStateTransition
 	}
 	roundIndex := len(g.rounds)
-	stage, err := g.mode.StageFor(g, roundIndex, rng)
-	if err != nil {
-		return err
+	var stage Stage
+	if g.upcomingStage != nil {
+		stage = *g.upcomingStage
+		g.upcomingStage = nil
+	} else {
+		var err error
+		stage, err = g.mode.StageFor(g, roundIndex, rng)
+		if err != nil {
+			return err
+		}
 	}
 	options := g.mode.BallotOptions(g)
 	ballot, err := NewBallot(options)

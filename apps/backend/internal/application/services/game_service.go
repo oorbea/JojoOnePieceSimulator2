@@ -831,6 +831,9 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 		if err := g.AssignLoadouts(builder, poolByTeam); err != nil {
 			return err
 		}
+		if err := g.PrepareUpcomingStage(s.rng); err != nil {
+			return err
+		}
 	}
 
 	if assigned {
