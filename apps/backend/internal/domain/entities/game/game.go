@@ -767,16 +767,23 @@ func (g *Game) RevealReadyProgress() (ready, total int) {
 	return ready, total
 }
 
-// RevealReadyComplete reports whether every connected human has marked the
-// current sorteo ready to skip. False outside ASSIGNING, and false when
-// there are no connected humans at all (an all-bots Gauntlet still plays
-// out its full reveal - nobody is there to skip it).
+// strictMajority reports whether ready is strictly more than half of total
+// (and total is non-zero) - the threshold at which a skip vote carries for
+// everyone, so a single idle or AFK player can no longer hold a phase open.
+func strictMajority(ready, total int) bool {
+	return total > 0 && ready*2 > total
+}
+
+// RevealReadyComplete reports whether a strict majority of connected humans
+// has marked the current sorteo ready to skip. False outside ASSIGNING, and
+// false when there are no connected humans at all (an all-bots Gauntlet
+// still plays out its full reveal - nobody is there to skip it).
 func (g *Game) RevealReadyComplete() bool {
 	if g.state != enums.Assigning {
 		return false
 	}
 	ready, total := g.RevealReadyProgress()
-	return total > 0 && ready >= total
+	return strictMajority(ready, total)
 }
 
 // OpenSummary moves the Game from ASSIGNING to SUMMARY once a reassigning
@@ -840,7 +847,7 @@ func (g *Game) SummaryReadyComplete() bool {
 		return false
 	}
 	ready, total := g.SummaryReadyProgress()
-	return total > 0 && ready >= total
+	return strictMajority(ready, total)
 }
 
 // OpenVoting picks the round's Stage, opens a fresh Ballot, and casts every
