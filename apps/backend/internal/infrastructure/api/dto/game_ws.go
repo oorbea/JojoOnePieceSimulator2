@@ -63,6 +63,11 @@ const (
 	// id comes back to every connected client as a REMATCH_READY frame, not
 	// as a reply to the requester alone.
 	CommandRematch = "REMATCH"
+	// CommandExtendVoting adds 10 seconds to the open voting window. Host-
+	// only, VOTING/TIEBREAK-only, takes no payload. See
+	// services.GameService.ExtendVoting; every client learns the new
+	// deadline from the VOTING_EXTENDED frame.
+	CommandExtendVoting = "EXTEND_VOTING"
 )
 
 // AddBotPayload is CommandAddBot's payload.
@@ -304,6 +309,7 @@ const (
 	FramePlayerReconnected   = "PLAYER_RECONNECTED"
 	FramePlayerAbandoned     = "PLAYER_ABANDONED"
 	FrameJoinCodeRegenerated = "JOIN_CODE_REGENERATED"
+	FrameVotingExtended      = "VOTING_EXTENDED"
 )
 
 // RematchReadyPayload announces the new lobby a REMATCH created from this
@@ -351,6 +357,13 @@ type VoteCastPayload struct {
 type RevealReadyChangedPayload struct {
 	Ready int `json:"ready"`
 	Total int `json:"total"`
+}
+
+// VotingExtendedPayload carries the open voting window's new deadline after
+// the host added time.
+type VotingExtendedPayload struct {
+	RoundIndex int    `json:"roundIndex"`
+	ClosesAt   string `json:"closesAt" ts:"datetime"`
 }
 
 // SummaryOpenedPayload mirrors VotingOpenedPayload exactly, scoped to the
@@ -492,6 +505,7 @@ var FramePayloads = []FrameSpec{
 	{FramePlayerReconnected, PlayerReconnectedPayload{}},
 	{FramePlayerAbandoned, PlayerAbandonedPayload{}},
 	{FrameJoinCodeRegenerated, nil},
+	{FrameVotingExtended, VotingExtendedPayload{}},
 }
 
 // CommandSpec mirrors FrameSpec for the client->server direction.
@@ -522,4 +536,5 @@ var CommandPayloads = []CommandSpec{
 	{CommandRevealReady, nil},
 	{CommandSummaryReady, nil},
 	{CommandRematch, nil},
+	{CommandExtendVoting, nil},
 }

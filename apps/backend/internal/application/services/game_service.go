@@ -1080,6 +1080,36 @@ func (s *GameService) MarkSummaryReady(ctx context.Context, gameID game.GameID, 
 	})
 }
 
+// votingExtension is how much time the host's "+10s" adds to the open voting
+// window, however many times it is pressed.
+const votingExtension = 10 * time.Second
+
+// ExtendVoting pushes the open voting (or tiebreak) window's deadline back by
+// votingExtension. Host-only. The timer is re-armed before the event is
+// published so VOTING_EXTENDED carries the new closesAt.
+func (s *GameService) ExtendVoting(ctx context.Context, gameID game.GameID, callerID game.ParticipantID) (*game.Game, error) {
+	return s.withGame(ctx, gameID, func(g *game.Game) error {
+		if err := g.ExtendVoting(callerID); err != nil {
+			return err
+		}
+		pt, ok := s.phaseTimerFor(g)
+		if !ok {
+			return game.ErrVotingClosed
+		}
+		s.timersMu.Lock()
+		current, has := s.votingEnds[g.ID()]
+		s.timersMu.Unlock()
+		if !has {
+			current, has = g.PhaseEndsAt()
+		}
+		if !has || current.Before(s.clock.Now()) {
+			current = s.clock.Now()
+		}
+		s.armPhaseTimer(g, pt, current.Add(votingExtension))
+		return nil
+	})
+}
+
 func (s *GameService) CastVote(ctx context.Context, gameID game.GameID, participantID game.ParticipantID, option game.OptionID) (*game.Game, error) {
 	return s.withGame(ctx, gameID, func(g *game.Game) error {
 		if err := g.CastVote(participantID, option); err != nil {
@@ -1499,7 +1529,7 @@ func (s *GameService) publish(g *game.Game) {
 	for _, e := range g.PullEvents() {
 		var closesAt, revealStartedAt time.Time
 		switch e.(type) {
-		case game.VotingOpened, game.TiebreakOpened:
+		case game.VotingOpened, game.TiebreakOpened, game.VotingExtended:
 			if hasVotingEnd {
 				closesAt = votingEndsAt
 			}

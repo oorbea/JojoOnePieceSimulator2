@@ -802,6 +802,20 @@ func (g *Game) OpenSummary() error {
 	return nil
 }
 
+// ExtendVoting validates a host request for more thinking time while a
+// voting or tiebreak window is open and emits VotingExtended. The domain
+// never owns the deadline - the application layer moves the timer.
+func (g *Game) ExtendVoting(callerID ParticipantID) error {
+	if g.state != enums.Voting && g.state != enums.Tiebreak {
+		return ErrVotingClosed
+	}
+	if callerID != g.hostID {
+		return ErrNotHost
+	}
+	g.emit(VotingExtended{RoundIndex: len(g.rounds) - 1})
+	return nil
+}
+
 // MarkSummaryReady mirrors MarkRevealReady exactly, scoped to the SUMMARY
 // window instead of ASSIGNING.
 func (g *Game) MarkSummaryReady(id ParticipantID) error {

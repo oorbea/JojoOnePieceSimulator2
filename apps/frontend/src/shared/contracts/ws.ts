@@ -187,6 +187,7 @@ export const CLIENT_COMMAND = {
   REVEAL_READY: 'REVEAL_READY',
   SUMMARY_READY: 'SUMMARY_READY',
   REMATCH: 'REMATCH',
+  EXTEND_VOTING: 'EXTEND_VOTING',
 } as const
 
 export type ClientCommandType = (typeof CLIENT_COMMAND)[keyof typeof CLIENT_COMMAND]
@@ -277,6 +278,11 @@ export const clientCommandSchema = z.discriminatedUnion('type', [
     requestId: z.string().optional(),
     payload: z.object({}).optional(),
   }),
+  z.object({
+    type: z.literal(CLIENT_COMMAND.EXTEND_VOTING),
+    requestId: z.string().optional(),
+    payload: z.object({}).optional(),
+  }),
 ])
 export type ClientCommand = z.infer<typeof clientCommandSchema>
 
@@ -307,6 +313,7 @@ export const SERVER_FRAME = {
   PLAYER_RECONNECTED: 'PLAYER_RECONNECTED',
   PLAYER_ABANDONED: 'PLAYER_ABANDONED',
   JOIN_CODE_REGENERATED: 'JOIN_CODE_REGENERATED',
+  VOTING_EXTENDED: 'VOTING_EXTENDED',
 } as const
 
 export type ServerFrameType = (typeof SERVER_FRAME)[keyof typeof SERVER_FRAME]
@@ -467,6 +474,12 @@ export const serverFrameSchema = z.discriminatedUnion('type', [
     requestId: z.string().optional(),
     serverTime: z.iso.datetime({ offset: true }),
     payload: z.object({}).optional(),
+  }),
+  z.object({
+    type: z.literal(SERVER_FRAME.VOTING_EXTENDED),
+    requestId: z.string().optional(),
+    serverTime: z.iso.datetime({ offset: true }),
+    payload: votingExtendedPayloadSchema,
   }),
 ])
 export type ServerFrame = z.infer<typeof serverFrameSchema>
