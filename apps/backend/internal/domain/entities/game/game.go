@@ -57,6 +57,12 @@ type Game struct {
 	// deadline armed by one process survives a restart and can be re-armed by
 	// the next (see GameService.rearmPhaseTimerLocked).
 	phaseEndsAt *time.Time
+
+	// upcomingStage is the Stage the next round will be played on, picked
+	// when a reassigning mode (Versus) assigns loadouts so the sorteo can
+	// tell players where the fight happens. OpenVoting consumes it instead
+	// of drawing again. Nil outside that window and in Gauntlet.
+	upcomingStage *Stage
 }
 
 // SetPhaseDeadline records the wall-clock deadline of the timed phase the
@@ -632,6 +638,11 @@ func (g *Game) Reconfigure(callerID ParticipantID, cfg Config, newTeams []*Team,
 	// Config/teams/stages replace the old ones and every remaining
 	// participant is reseated per plan.
 	for _, pid := range botsToDrop {
+		// Same-mode reconfigures reuse the existing Team objects, so the
+		// dropped bot must leave its team too or it lingers in Team.Size().
+		if t := g.teamByID(g.participants[pid].TeamID()); t != nil {
+			t.RemoveMember(pid)
+		}
 		delete(g.participants, pid)
 		g.removeFromOrder(pid)
 		g.emit(PlayerLeft{ParticipantID: pid})
@@ -715,6 +726,33 @@ func (g *Game) AssignLoadouts(builder *LoadoutBuilder, poolByTeam map[TeamID]*Av
 	return nil
 }
 
+// PrepareUpcomingStage picks the stage of the round about to be played right
+// after its loadouts are assigned, for modes that draw a fresh stage every
+// round (Versus), so the sorteo can announce it. Other modes keep choosing it
+// when voting opens. Call it once, right after AssignLoadouts.
+func (g *Game) PrepareUpcomingStage(rng RandomSource) error {
+	if g.state != enums.Assigning {
+		return ErrInvalidStateTransition
+	}
+	if !g.mode.ReassignsEachRound() {
+		return nil
+	}
+	stage, err := g.mode.StageFor(g, len(g.rounds), rng)
+	if err != nil {
+		return err
+	}
+	g.upcomingStage = &stage
+	return nil
+}
+
+// UpcomingStage reports the stage picked by PrepareUpcomingStage, if any.
+func (g *Game) UpcomingStage() (Stage, bool) {
+	if g.upcomingStage == nil {
+		return Stage{}, false
+	}
+	return *g.upcomingStage, true
+}
+
 // MarkRevealReady records that the connected human id is done watching its
 // own sorteo reveal and wants to skip ahead - the server-side half of the
 // "todos pueden saltar" skip (owner decision, 2026-08-30): once every
@@ -762,16 +800,23 @@ func (g *Game) RevealReadyProgress() (ready, total int) {
 	return ready, total
 }
 
-// RevealReadyComplete reports whether every connected human has marked the
-// current sorteo ready to skip. False outside ASSIGNING, and false when
-// there are no connected humans at all (an all-bots Gauntlet still plays
-// out its full reveal - nobody is there to skip it).
+// strictMajority reports whether ready is strictly more than half of total
+// (and total is non-zero) - the threshold at which a skip vote carries for
+// everyone, so a single idle or AFK player can no longer hold a phase open.
+func strictMajority(ready, total int) bool {
+	return total > 0 && ready*2 > total
+}
+
+// RevealReadyComplete reports whether a strict majority of connected humans
+// has marked the current sorteo ready to skip. False outside ASSIGNING, and
+// false when there are no connected humans at all (an all-bots Gauntlet
+// still plays out its full reveal - nobody is there to skip it).
 func (g *Game) RevealReadyComplete() bool {
 	if g.state != enums.Assigning {
 		return false
 	}
 	ready, total := g.RevealReadyProgress()
-	return total > 0 && ready >= total
+	return strictMajority(ready, total)
 }
 
 // OpenSummary moves the Game from ASSIGNING to SUMMARY once a reassigning
@@ -787,6 +832,20 @@ func (g *Game) OpenSummary() error {
 	g.summaryReady = make(map[ParticipantID]struct{})
 	g.state = enums.Summary
 	g.emit(SummaryOpened{RoundIndex: len(g.rounds)})
+	return nil
+}
+
+// ExtendVoting validates a host request for more thinking time while a
+// voting or tiebreak window is open and emits VotingExtended. The domain
+// never owns the deadline - the application layer moves the timer.
+func (g *Game) ExtendVoting(callerID ParticipantID) error {
+	if g.state != enums.Voting && g.state != enums.Tiebreak {
+		return ErrVotingClosed
+	}
+	if callerID != g.hostID {
+		return ErrNotHost
+	}
+	g.emit(VotingExtended{RoundIndex: len(g.rounds) - 1})
 	return nil
 }
 
@@ -835,7 +894,7 @@ func (g *Game) SummaryReadyComplete() bool {
 		return false
 	}
 	ready, total := g.SummaryReadyProgress()
-	return total > 0 && ready >= total
+	return strictMajority(ready, total)
 }
 
 // OpenVoting picks the round's Stage, opens a fresh Ballot, and casts every
@@ -848,9 +907,16 @@ func (g *Game) OpenVoting(rng RandomSource) error {
 		return ErrInvalidStateTransition
 	}
 	roundIndex := len(g.rounds)
-	stage, err := g.mode.StageFor(g, roundIndex, rng)
-	if err != nil {
-		return err
+	var stage Stage
+	if g.upcomingStage != nil {
+		stage = *g.upcomingStage
+		g.upcomingStage = nil
+	} else {
+		var err error
+		stage, err = g.mode.StageFor(g, roundIndex, rng)
+		if err != nil {
+			return err
+		}
 	}
 	options := g.mode.BallotOptions(g)
 	ballot, err := NewBallot(options)

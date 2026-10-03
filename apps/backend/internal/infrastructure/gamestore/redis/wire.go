@@ -65,6 +65,9 @@ type wireGame struct {
 	// fresh full window rather than wedging. So no snapshotVersion bump, per
 	// that const's own stated criterion.
 	PhaseEndsAt *time.Time `json:"phaseEndsAt,omitempty"`
+	// UpcomingStage mirrors game.Snapshot.UpcomingStage: additive/omitempty,
+	// nil for any payload written before it existed.
+	UpcomingStage *wireStage `json:"upcomingStage,omitempty"`
 	// RevealReady/SummaryReady mirror game.Snapshot.RevealReady/SummaryReady
 	// (added 2026-09-14, same additive/omitempty shape as TiedVotes above):
 	// without these, every Get→Restore round trip dropped the in-flight
@@ -236,6 +239,10 @@ func toWire(s game.Snapshot) wireGame {
 		Rounds:       make([]wireRound, 0, len(s.Rounds)),
 		PhaseEndsAt:  s.PhaseEndsAt,
 	}
+	if s.UpcomingStage != nil {
+		us := toWireStage(*s.UpcomingStage)
+		w.UpcomingStage = &us
+	}
 	if s.RevealReady != nil {
 		w.RevealReady = make([][16]byte, len(s.RevealReady))
 		for i, pid := range s.RevealReady {
@@ -405,6 +412,10 @@ func fromWire(w wireGame) game.Snapshot {
 		Stages:       make([]game.StageSnapshot, 0, len(w.Stages)),
 		Rounds:       make([]game.RoundSnapshot, 0, len(w.Rounds)),
 		PhaseEndsAt:  w.PhaseEndsAt,
+	}
+	if w.UpcomingStage != nil {
+		us := fromWireStage(*w.UpcomingStage)
+		s.UpcomingStage = &us
 	}
 	if w.RevealReady != nil {
 		s.RevealReady = make([]game.ParticipantID, len(w.RevealReady))

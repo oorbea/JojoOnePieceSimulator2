@@ -16,6 +16,8 @@ export function useGameCommands() {
     vote: (option: string) => send(CLIENT_COMMAND.VOTE, { option }),
     revealReady: () => send(CLIENT_COMMAND.REVEAL_READY),
     summaryReady: () => send(CLIENT_COMMAND.SUMMARY_READY),
+    // Host-only, VOTING/TIEBREAK-only: +10s on the open voting window.
+    extendVoting: () => send(CLIENT_COMMAND.EXTEND_VOTING),
     resync: () => send(CLIENT_COMMAND.RESYNC),
     // Host-only, and only once the game is over. The new lobby's id comes
     // back as a REMATCH_READY frame on this same (old) game's socket, so

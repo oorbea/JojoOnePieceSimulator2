@@ -71,9 +71,9 @@ func TestGame_OpenVoting_AcceptsBothAssigningAndSummary(t *testing.T) {
 	}
 }
 
-// TestGame_SummaryReadyComplete_FalseUntilAllHumansReady mirrors
-// TestGame_RevealReadyComplete_FalseUntilAllHumansReady one phase later.
-func TestGame_SummaryReadyComplete_FalseUntilAllHumansReady(t *testing.T) {
+// TestGame_SummaryReadyComplete_FalseUntilStrictMajorityReady mirrors
+// TestGame_RevealReadyComplete_FalseUntilStrictMajorityReady one phase later.
+func TestGame_SummaryReadyComplete_FalseUntilStrictMajorityReady(t *testing.T) {
 	g, players := newGauntletGame(t, oneStage(t), 3)
 	assignOnly(t, g)
 	if err := g.OpenSummary(); err != nil {
@@ -87,16 +87,13 @@ func TestGame_SummaryReadyComplete_FalseUntilAllHumansReady(t *testing.T) {
 		t.Fatalf("MarkSummaryReady: %v", err)
 	}
 	if g.SummaryReadyComplete() {
-		t.Fatalf("expected SummaryReadyComplete to be false with two humans left unready")
+		t.Fatalf("expected SummaryReadyComplete to be false with 1 of 3 humans ready")
 	}
 	if err := g.MarkSummaryReady(players[1].ID()); err != nil {
 		t.Fatalf("MarkSummaryReady: %v", err)
 	}
-	if err := g.MarkSummaryReady(players[2].ID()); err != nil {
-		t.Fatalf("MarkSummaryReady: %v", err)
-	}
 	if !g.SummaryReadyComplete() {
-		t.Fatalf("expected SummaryReadyComplete to be true once every human is ready")
+		t.Fatalf("expected SummaryReadyComplete to be true once 2 of 3 humans are ready")
 	}
 }
 

@@ -158,6 +158,15 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   }))
 }
 
+// burnt is a native-only toast module (no JS fallback): any test whose import
+// graph reaches shared/lib/toast.ts - directly or through a feature barrel -
+// would otherwise fail to load with "Cannot find native module 'Burnt'".
+jest.mock('burnt', () => ({
+  toast: jest.fn(),
+  dismissAllAlerts: jest.fn(),
+  alert: jest.fn(),
+}))
+
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn().mockResolvedValue(null),
   setItemAsync: jest.fn().mockResolvedValue(undefined),

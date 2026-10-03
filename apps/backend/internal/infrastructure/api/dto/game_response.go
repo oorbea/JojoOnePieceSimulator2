@@ -235,7 +235,11 @@ type GameSnapshotResponse struct {
 	Teams        []GameTeamResponse        `json:"teams"`
 	Participants []GameParticipantResponse `json:"participants"`
 	Rounds       []GameRoundResponse       `json:"rounds"`
-	Result       *GameResultResponse       `json:"result,omitempty"`
+	// UpcomingStage is the stage the round being assigned/previewed will be
+	// played on (Versus only) - set from the sorteo until voting opens, so
+	// players are told where the fight happens before they vote.
+	UpcomingStage *GameStageResponse  `json:"upcomingStage,omitempty"`
+	Result        *GameResultResponse `json:"result,omitempty"`
 	// RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a
 	// pending reveal - see NewGameStateResponse's deadlines param.
 	RevealEndsAt *string `json:"revealEndsAt,omitempty" ts:"datetime"`
@@ -437,6 +441,15 @@ func NewGameStateResponse(
 		rounds = append(rounds, rr)
 	}
 
+	var upcomingStage *GameStageResponse
+	if st, ok := g.UpcomingStage(); ok {
+		resp, err := newGameStageResponse(ctx, st, resolveStagePicture, resolveStageDescription)
+		if err != nil {
+			return GameStateResponse{}, err
+		}
+		upcomingStage = &resp
+	}
+
 	var result *GameResultResponse
 	if g.State() == enums.Finished || g.State() == enums.Aborted {
 		if res, err := g.Result(); err == nil {
@@ -490,6 +503,7 @@ func NewGameStateResponse(
 			Teams:           teams,
 			Participants:    participants,
 			Rounds:          rounds,
+			UpcomingStage:   upcomingStage,
 			Result:          result,
 			RevealEndsAt:    revealEndsAtStr,
 			RevealStartedAt: revealStartedAtStr,

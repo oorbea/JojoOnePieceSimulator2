@@ -54,6 +54,8 @@ type Props = {
    * path (tap AND drag, both resolve to the same switchTeam command). */
   onMovePlayer: (participantId: string, teamId: string) => void
   onKick: (participantId: string) => void
+  onAddBot: (teamId: string) => void
+  onRemoveBot: (botId: string) => void
   onTransferHost: (participantId: string) => void
   onToggleLock: () => void
   onCopyCode: () => Promise<'copied' | 'shared' | 'failed'>
@@ -103,6 +105,8 @@ type Props = {
   isRevealing: boolean
   onSkipReveal: () => void
   onSummaryReady: () => void
+  onExtendVoting: () => void
+  onRewatchReveal: () => void
   reducedMotion: boolean
   onVote: (optionId: string) => void
   onSkipResult: () => void
@@ -126,6 +130,8 @@ export function LobbyRoomScreen({
   onJoinTeam,
   onMovePlayer,
   onKick,
+  onAddBot,
+  onRemoveBot,
   onTransferHost,
   onToggleLock,
   onCopyCode,
@@ -175,6 +181,8 @@ export function LobbyRoomScreen({
   isRevealing,
   onSkipReveal,
   onSummaryReady,
+  onExtendVoting,
+  onRewatchReveal,
   reducedMotion,
   onVote,
   onSkipResult,
@@ -289,47 +297,8 @@ export function LobbyRoomScreen({
             saved={configSaved}
           />
 
-          {snapshot.mode === 'VERSUS' ? (
-            <YStack width="100%" gap="$3" $md={{ flexDirection: 'row' }}>
-              {snapshot.teams.map((team, index) => (
-                <TeamColumn
-                  key={team.id}
-                  team={team}
-                  tone={teamTone(index)}
-                  participants={snapshot.participants.filter((p) => p.teamId === team.id)}
-                  hostId={snapshot.hostId}
-                  selfId={you.participantId}
-                  capacity={capacity}
-                  canJoin={you.teamId !== team.id && snapshot.state === 'LOBBY'}
-                  isHost={you.isHost}
-                  onJoin={() => onJoinTeam(team.id)}
-                  onKick={onKick}
-                  onTransferHost={onTransferHost}
-                  zoneRef={dropZones.registerZone(team.id)}
-                  onZoneLayout={dropZones.onZoneLayout(team.id)}
-                  onDragEndAt={(participantId, { pageX, pageY }) => {
-                    const targetTeamId = dropZones.resolveZone(pageX, pageY)
-                    if (!targetTeamId || targetTeamId === team.id) return
-                    if (participantId === you.participantId) onJoinTeam(targetTeamId)
-                    else onMovePlayer(participantId, targetTeamId)
-                  }}
-                />
-              ))}
-            </YStack>
-          ) : (
-            <SquadRoster
-              participants={snapshot.participants}
-              hostId={snapshot.hostId}
-              selfId={you.participantId}
-              capacity={capacity}
-              isHost={you.isHost}
-              onKick={onKick}
-              onTransferHost={onTransferHost}
-            />
-          )}
-
           <FilterDisclosure
-            label={t('game.config.title')}
+            label={you.isHost ? t('game.config.titleHost') : t('game.config.title')}
             activeCount={0}
             expanded={configExpanded}
             onToggle={() => setConfigExpanded((v) => !v)}
@@ -369,6 +338,48 @@ export function LobbyRoomScreen({
             />
           </FilterDisclosure>
 
+          {snapshot.mode === 'VERSUS' ? (
+            <YStack width="100%" gap="$3" $md={{ flexDirection: 'row' }}>
+              {snapshot.teams.map((team, index) => (
+                <TeamColumn
+                  key={team.id}
+                  team={team}
+                  tone={teamTone(index)}
+                  participants={snapshot.participants.filter((p) => p.teamId === team.id)}
+                  hostId={snapshot.hostId}
+                  selfId={you.participantId}
+                  capacity={capacity}
+                  canJoin={you.teamId !== team.id && snapshot.state === 'LOBBY'}
+                  isHost={you.isHost}
+                  onJoin={() => onJoinTeam(team.id)}
+                  onKick={onKick}
+                  allowBots={snapshot.config.allowBots}
+                  onAddBot={() => onAddBot(team.id)}
+                  onRemoveBot={onRemoveBot}
+                  onTransferHost={onTransferHost}
+                  zoneRef={dropZones.registerZone(team.id)}
+                  onZoneLayout={dropZones.onZoneLayout(team.id)}
+                  onDragEndAt={(participantId, { pageX, pageY }) => {
+                    const targetTeamId = dropZones.resolveZone(pageX, pageY)
+                    if (!targetTeamId || targetTeamId === team.id) return
+                    if (participantId === you.participantId) onJoinTeam(targetTeamId)
+                    else onMovePlayer(participantId, targetTeamId)
+                  }}
+                />
+              ))}
+            </YStack>
+          ) : (
+            <SquadRoster
+              participants={snapshot.participants}
+              hostId={snapshot.hostId}
+              selfId={you.participantId}
+              capacity={capacity}
+              isHost={you.isHost}
+              onKick={onKick}
+              onTransferHost={onTransferHost}
+            />
+          )}
+
           <StartBar
             isHost={you.isHost}
             gate={gate}
@@ -395,6 +406,8 @@ export function LobbyRoomScreen({
           isRevealing={isRevealing}
           onSkipReveal={onSkipReveal}
           onSummaryReady={onSummaryReady}
+          onExtendVoting={onExtendVoting}
+          onRewatchReveal={onRewatchReveal}
           reducedMotion={reducedMotion}
           onAbort={onAbort}
           onVote={onVote}

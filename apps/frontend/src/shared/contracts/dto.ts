@@ -487,6 +487,7 @@ export const gameSnapshotResponseSchema = z.object({
   teams: z.array(gameTeamResponseSchema),
   participants: z.array(gameParticipantResponseSchema),
   rounds: z.array(gameRoundResponseSchema),
+  upcomingStage: gameStageResponseSchema.optional(),
   result: gameResultResponseSchema.optional(),
   revealEndsAt: z.iso.datetime({ offset: true }).optional(),
   revealStartedAt: z.iso.datetime({ offset: true }).optional(),

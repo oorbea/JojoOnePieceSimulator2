@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
 import { LoadoutCard } from '@/features/game/components/presentational/match/loadout-card'
+import { StageAnnouncement } from '@/features/game/components/presentational/match/stage-announcement'
 import { teamTone, teamToneColor } from '@/features/game/lib/lobby-rules'
 import { secondsUntil } from '@/features/game/lib/match-rules'
 import type { GameSnapshot } from '@/features/game/types/game.types'
@@ -71,6 +72,9 @@ export function LoadoutSummaryStage({ snapshot, selfId, summaryEndsAt, readyCoun
 
   return (
     <GlassPanel tone="strong" width="100%" p="$4" gap="$3" items="center">
+      {snapshot.mode === 'VERSUS' && snapshot.upcomingStage ? (
+        <StageAnnouncement stage={snapshot.upcomingStage} compact />
+      ) : null}
       <GlowText level="heading">{t('game.match.summary.title')}</GlowText>
       {seconds !== null ? (
         <GlowText level="label" tone="soft">
@@ -88,7 +92,10 @@ export function LoadoutSummaryStage({ snapshot, selfId, summaryEndsAt, readyCoun
         tooltip={t('game.match.summary.skipA11y')}
       >
         {readyTotal
-          ? t('game.match.summary.readyCount', { ready: readyCount ?? 0, total: readyTotal })
+          ? t('game.match.summary.readyCount', {
+              ready: readyCount ?? 0,
+              needed: Math.floor(readyTotal / 2) + 1,
+            })
           : t('game.match.summary.skip')}
       </GlossButton>
     </GlassPanel>

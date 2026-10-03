@@ -9,6 +9,7 @@ import {
 } from '@/features/game/components/presentational/match/power-reveal-card'
 import { PowerRoulette } from '@/features/game/components/presentational/match/power-roulette'
 import { RevealNarrator } from '@/features/game/components/presentational/match/reveal-narrator'
+import { StageAnnouncement } from '@/features/game/components/presentational/match/stage-announcement'
 import { useRevealSpinSound } from '@/features/game/hooks/use-reveal-spin-sound'
 import { buildCaseStrip, type CaseStripCard } from '@/features/game/lib/case-strip'
 import {
@@ -298,6 +299,12 @@ export function RevealStage({
 
   return (
     <GlassPanel tone="strong" width="100%" p="$4" gap="$3" items="center">
+      {snapshot.mode === 'VERSUS' && snapshot.upcomingStage ? (
+        <StageAnnouncement
+          stage={snapshot.upcomingStage}
+          compact={phase !== 'intro' && phase !== 'outro'}
+        />
+      ) : null}
       <GlowText level="heading">{title}</GlowText>
       {currentSlot && phase !== 'outro' && phase !== 'intro' ? (
         <GlowText level="label" tone="soft">
@@ -370,7 +377,10 @@ export function RevealStage({
         tooltip={t('game.match.reveal.skipA11y')}
       >
         {readyTotal
-          ? t('game.match.reveal.readyCount', { ready: readyCount ?? 0, total: readyTotal })
+          ? t('game.match.reveal.readyCount', {
+              ready: readyCount ?? 0,
+              needed: Math.floor(readyTotal / 2) + 1,
+            })
           : t('game.match.reveal.skip')}
       </GlossButton>
 

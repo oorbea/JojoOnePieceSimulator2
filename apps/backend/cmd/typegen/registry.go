@@ -99,6 +99,7 @@ var wsOnlyTypes = []any{
 	dto.VoteCastPayload{},
 	dto.RevealReadyChangedPayload{},
 	dto.SummaryOpenedPayload{},
+	dto.VotingExtendedPayload{},
 	dto.SummaryReadyChangedPayload{},
 	dto.PlayerJoinedPayload{},
 	dto.PlayerLeftPayload{},

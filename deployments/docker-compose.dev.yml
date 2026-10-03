@@ -34,6 +34,11 @@ services:
   frontend:
     ports:
       - "${FRONTEND_PORT:-3000}:80"
+    environment:
+      # Dev only: lets the app embed itself in iframes (same origin), which is
+      # what browser device-emulation extensions (Responsive Viewer) do.
+      # Production keeps frame-ancestors 'none' - see docker-compose.yml.
+      CSP_FRAME_ANCESTORS: "'self'"
     build:
       args:
         # Renders the /dev-login screen - see backend's DEV_AUTH_BYPASS just

@@ -22,6 +22,9 @@ type Props = {
   isHost: boolean
   onJoin: () => void
   onKick: (participantId: string) => void
+  allowBots: boolean
+  onAddBot: () => void
+  onRemoveBot: (botId: string) => void
   onTransferHost: (participantId: string) => void
   /** Drop-zone registration for drag-to-move (`use-drop-zones.ts`, owned by
    * the parent that renders every `TeamColumn` since resolving a drop needs
@@ -45,6 +48,9 @@ export function TeamColumn({
   isHost,
   onJoin,
   onKick,
+  allowBots,
+  onAddBot,
+  onRemoveBot,
   onTransferHost,
   zoneRef,
   onZoneLayout,
@@ -91,6 +97,7 @@ export function TeamColumn({
                 isSelf={p.id === selfId}
                 showHostActions={isHost && p.id !== selfId}
                 onKick={() => onKick(p.id)}
+                onRemoveBot={() => onRemoveBot(p.id)}
                 onTransferHost={() => onTransferHost(p.id)}
                 onDragEnd={draggable && onDragEndAt ? (info) => onDragEndAt(p.id, info) : undefined}
               />
@@ -111,6 +118,21 @@ export function TeamColumn({
             {...a11yProps(t('game.lobby.switchTeam', { name: team.name }), 'button')}
           >
             <GlowText level="label">{t('game.lobby.emptySlot')}</GlowText>
+          </YStack>
+        ) : null}
+
+        {isHost && !full ? (
+          <YStack gap="$1">
+            <GlossButton
+              tone="glass"
+              btnSize="sm"
+              disabled={!allowBots}
+              onPress={onAddBot}
+              accessibilityLabel={t('game.bots.add')}
+            >
+              {t('game.bots.add')}
+            </GlossButton>
+            {!allowBots ? <GlowText level="label">{t('game.bots.enableHint')}</GlowText> : null}
           </YStack>
         ) : null}
 

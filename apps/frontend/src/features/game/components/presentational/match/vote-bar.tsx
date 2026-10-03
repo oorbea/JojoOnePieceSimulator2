@@ -26,6 +26,8 @@ type Props = {
   now: number
   tiebreak: boolean
   onVote: (optionId: string) => void
+  /** Host-only "+10s" - omit for everyone else. */
+  onExtend?: () => void
 }
 
 // The fixed bottom bar for an open voting (or revote) window: a draining
@@ -36,7 +38,7 @@ type Props = {
 // no CSS position:sticky - it just renders last in the scroll content,
 // per the a11y/pointerEvents-leak norm: platform branching stays inside
 // style{}, never as a top-level prop).
-export function VoteBar({ options, selectedOptionId, cast, total, closesAt, windowMs, now, tiebreak, onVote }: Props) {
+export function VoteBar({ options, selectedOptionId, cast, total, closesAt, windowMs, now, tiebreak, onVote, onExtend }: Props) {
   const { t } = useTranslation()
   // Clears AppShell's floating bottom dock (mobile-width nav) - position:
   // sticky resolves its offset against the scrollport, not PageShell's own
@@ -57,7 +59,8 @@ export function VoteBar({ options, selectedOptionId, cast, total, closesAt, wind
   if (options.length === 0) return null
 
   const remainingMs = closesAt !== null ? Math.max(0, closesAt - now) : null
-  const progress = remainingMs !== null && windowMs > 0 ? remainingMs / windowMs : null
+  // Clamped: an extension can leave more time than the configured window.
+  const progress = remainingMs !== null && windowMs > 0 ? Math.min(1, remainingMs / windowMs) : null
   const seconds = remainingMs !== null ? Math.round(remainingMs / 1000) : null
 
   return (
@@ -77,6 +80,17 @@ export function VoteBar({ options, selectedOptionId, cast, total, closesAt, wind
           <GlowText level="label" tone="soft" minW={32}>
             {seconds}s
           </GlowText>
+          {onExtend ? (
+            <GlossButton
+              tone="glass"
+              btnSize="sm"
+              onPress={onExtend}
+              accessibilityLabel={t('game.vote.extend')}
+              tooltip={t('game.vote.extendHint')}
+            >
+              {t('game.vote.extendShort')}
+            </GlossButton>
+          ) : null}
         </XStack>
       ) : null}
 

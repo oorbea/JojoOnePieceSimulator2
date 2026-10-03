@@ -82,6 +82,13 @@ Every round is decided by a vote among the relevant participants:
   wins the match (a tie across 3 rounds is structurally impossible, since each round always
   resolves to a definite, non-tied winner — see tiebreak below).
 
+**Skips (sorteo y resumen)**: desde 2026-10-03 se saltan para todos cuando una **mayoría estricta**
+de humanos conectados lo pide (`ready*2 > total`), no el 100%. El host puede además añadir +10 s a la
+votación abierta (`EXTEND_VOTING`, sin límite). Ver [[playtest-fixes-2026-10-03]].
+
+**Stage en Versus**: se elige al asignar loadouts (no al abrir la votación) para anunciarlo durante
+el sorteo; es solo el escenario del combate, sin efecto sobre el resultado.
+
 **Voting window**: up to 30s (a timer owned entirely by the application layer, not the domain), but
 closed **as soon as every connected human has voted** — nobody waits out the rest of the window
 once nothing is left to collect. A participant who disconnects, or simply doesn't vote in time,

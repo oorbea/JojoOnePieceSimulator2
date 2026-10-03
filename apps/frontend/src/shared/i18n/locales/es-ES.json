@@ -283,6 +283,7 @@
     },
     "config": {
       "title": "Ajustes de la sala",
+      "titleHost": "Editar ajustes de la sala",
       "readOnly": "Solo lectura",
       "hostOnly": "Solo el anfitrión puede cambiar estos ajustes.",
       "saving": "Guardando…",
@@ -437,9 +438,15 @@
     "match": {
       "title": "Partida",
       "roundBadge": "Ronda {{index}}",
+      "stage": {
+        "venueKicker": "Escenario del combate",
+        "venueHint": "Es solo el lugar donde se desarrollará el combate: no da ventaja a ningún equipo."
+      },
       "drawing": "Repartiendo poderes…",
       "revealing": "Revelando poderes…",
       "skipReveal": "Saltar",
+      "rewatchReveal": "Volver al sorteo en directo",
+      "rewatchRevealHint": "Vuelve al sorteo de poderes por donde lo están viendo los demás.",
       "skipRevealA11y": "Saltar la revelación de poderes",
       "tiebreakOpen": "Voto de desempate abierto",
       "closesIn": "Cierra en {{seconds}}s",
@@ -450,7 +457,7 @@
         "votingIn": "La votación empieza en {{seconds}}s",
         "skip": "Saltar",
         "skipA11y": "Saltar el resumen de poderes",
-        "readyCount": "{{ready}}/{{total}} listos"
+        "readyCount": "{{ready}}/{{needed}} para saltar"
       },
       "trait": {
         "spin": "Spin",
@@ -471,6 +478,10 @@
         "conqueror": "Del Rey",
         "none": "Ninguno"
       },
+      "skipMajority": {
+        "reveal": "La mayoría ha saltado el sorteo.",
+        "summary": "La mayoría ha saltado el resumen."
+      },
       "reveal": {
         "title": "Sorteo de poderes",
         "intro": "Preparados…",
@@ -478,7 +489,7 @@
         "skip": "Saltar",
         "skipA11y": "Saltar la animación del sorteo de poderes",
         "votingIn": "La votación empieza en {{seconds}}s",
-        "readyCount": "{{ready}}/{{total}} listos",
+        "readyCount": "{{ready}}/{{needed}} para saltar",
         "outro": "Vuestras estadísticas finales son las siguientes",
         "narrator": {
           "playerTurn": "Le toca a {{name}}",
@@ -532,6 +543,9 @@
       },
       "loadout": {
         "viewA11y": "Ver los poderes de {{name}}",
+        "viewPower": "Ver ficha completa",
+        "viewPowerHint": "Abre la ficha completa de este poder (descripción, stats, habilidades).",
+        "viewPowerA11y": "Ver la ficha completa de {{name}}",
         "closeA11y": "Cerrar el desglose de poderes",
         "viewImageA11y": "Ver la imagen de {{name}} en grande"
       },
@@ -555,6 +569,9 @@
       "progress": "{{cast}}/{{total}} han votado",
       "youVoted": "Has votado",
       "timeLeftA11y": "Tiempo restante para votar",
+      "extend": "Añadir 10 segundos",
+      "extendShort": "+10 s",
+      "extendHint": "Da a todos 10 segundos más para pensar y debatir.",
       "tiebreakHint": "Empate - revotación",
       "groupA11y": "Votación",
       "yourTeam": "Tu equipo",
@@ -574,6 +591,11 @@
       "title": "¿Abandonar esta sala?",
       "message": "Podrás volver a unirte más tarde con el código de sala, mientras siga abierta.",
       "confirm": "Abandonar sala"
+    },
+    "bots": {
+      "add": "Añadir bot",
+      "remove": "Quitar a {{name}}",
+      "enableHint": "Activa antes los bots en los ajustes de la sala."
     },
     "kick": {
       "action": "Expulsar a {{name}}",

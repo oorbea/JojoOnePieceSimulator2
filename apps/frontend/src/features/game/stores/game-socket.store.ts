@@ -468,6 +468,16 @@ export const useGameSocketStore = create<GameSocketState>((set, get) => {
           }))
           break
         }
+        case SERVER_FRAME.VOTING_EXTENDED: {
+          // Absolute deadline, like VOTING_OPENED's - a later STATE never
+          // moves an existing votingClosesAt, so this frame is the only way
+          // the new one reaches the client.
+          const payload = frame.payload
+          set((state) => ({
+            live: { ...state.live, votingClosesAt: Date.parse(payload.closesAt) || state.live.votingClosesAt },
+          }))
+          break
+        }
         case SERVER_FRAME.SUMMARY_READY_CHANGED: {
           // Absolute values, never an increment - same shape as VOTE_CAST/
           // REVEAL_READY_CHANGED.

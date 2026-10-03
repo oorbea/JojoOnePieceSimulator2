@@ -14,6 +14,7 @@ import { useGameDetail } from '@/features/game/hooks/use-game-detail'
 import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { useMatchHotkeys } from '@/features/game/hooks/use-match-hotkeys'
+import { useSkipNotice } from '@/features/game/hooks/use-skip-notice'
 import {
   applyModeChange,
   buildUpdateConfigPayload,
@@ -165,6 +166,14 @@ export function LobbyRoomContainer() {
     revealEndsAt: socket.live.revealEndsAt,
     revealStartedAt: socket.live.revealStartedAt,
     stillAssigning: snapshot?.state === 'ASSIGNING',
+  })
+
+  useSkipNotice({
+    state: snapshot?.state,
+    revealEndsAt: socket.live.revealEndsAt,
+    summaryEndsAt: socket.live.summaryEndsAt,
+    connectedHumans: (snapshot?.participants ?? []).filter((p) => p.kind === 'HUMAN' && p.connected)
+      .length,
   })
 
   // Computed unconditionally for the same reason as revealMangas/revealActive
@@ -504,6 +513,8 @@ export function LobbyRoomContainer() {
         onJoinTeam={(teamId) => commands.switchTeam(teamId)}
         onMovePlayer={(participantId, teamId) => commands.movePlayer(participantId, teamId)}
         onKick={handleKick}
+        onAddBot={(teamId) => commands.addBot(teamId)}
+        onRemoveBot={(botId) => commands.removeBot(botId)}
         onTransferHost={handleTransferHost}
         onToggleLock={() => commands.setLocked(!snapshot.locked)}
         onCopyCode={async () => {
@@ -593,6 +604,8 @@ export function LobbyRoomContainer() {
         isRevealing={loadoutReveal.isRevealing}
         onSkipReveal={loadoutReveal.skip}
         onSummaryReady={commands.summaryReady}
+        onExtendVoting={commands.extendVoting}
+        onRewatchReveal={loadoutReveal.rewatch}
         reducedMotion={reducedMotion}
         onVote={handleVote}
         onSkipResult={socket.dismissResult}

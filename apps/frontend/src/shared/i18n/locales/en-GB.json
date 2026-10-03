@@ -283,6 +283,7 @@
     },
     "config": {
       "title": "Lobby settings",
+      "titleHost": "Edit lobby settings",
       "readOnly": "Read only",
       "hostOnly": "Only the host can change these settings.",
       "saving": "Saving…",
@@ -437,9 +438,15 @@
     "match": {
       "title": "Match",
       "roundBadge": "Round {{index}}",
+      "stage": {
+        "venueKicker": "Battle arena",
+        "venueHint": "This is just where the fight takes place - it gives neither team an advantage."
+      },
       "drawing": "Drawing powers…",
       "revealing": "Revealing powers…",
       "skipReveal": "Skip",
+      "rewatchReveal": "Back to the live draw",
+      "rewatchRevealHint": "Jump back into the power draw at the point everyone else is watching.",
       "skipRevealA11y": "Skip the power reveal",
       "tiebreakOpen": "Tiebreak vote open",
       "closesIn": "Closes in {{seconds}}s",
@@ -450,7 +457,7 @@
         "votingIn": "Voting opens in {{seconds}}s",
         "skip": "Skip",
         "skipA11y": "Skip the loadout summary",
-        "readyCount": "{{ready}}/{{total}} ready"
+        "readyCount": "{{ready}}/{{needed}} to skip"
       },
       "trait": {
         "spin": "Spin",
@@ -471,6 +478,10 @@
         "conqueror": "Conqueror's",
         "none": "None"
       },
+      "skipMajority": {
+        "reveal": "The majority skipped the sorteo.",
+        "summary": "The majority skipped the summary."
+      },
       "reveal": {
         "title": "Power draw",
         "intro": "Get ready…",
@@ -478,7 +489,7 @@
         "skip": "Skip",
         "skipA11y": "Skip the power draw animation",
         "votingIn": "Voting opens in {{seconds}}s",
-        "readyCount": "{{ready}}/{{total}} ready",
+        "readyCount": "{{ready}}/{{needed}} to skip",
         "outro": "Here are your final stats",
         "narrator": {
           "playerTurn": "It's {{name}}'s turn",
@@ -532,6 +543,9 @@
       },
       "loadout": {
         "viewA11y": "View {{name}}'s powers",
+        "viewPower": "View full card",
+        "viewPowerHint": "Open this power's full card (description, stats, skills).",
+        "viewPowerA11y": "View {{name}}'s full card",
         "closeA11y": "Close power breakdown",
         "viewImageA11y": "View {{name}}'s image full-size"
       },
@@ -555,6 +569,9 @@
       "progress": "{{cast}}/{{total}} have voted",
       "youVoted": "You voted",
       "timeLeftA11y": "Time left to vote",
+      "extend": "Add 10 seconds",
+      "extendShort": "+10s",
+      "extendHint": "Give everyone 10 more seconds to think and discuss.",
       "tiebreakHint": "Tie - revote",
       "groupA11y": "Vote",
       "yourTeam": "Your team",
@@ -574,6 +591,11 @@
       "title": "Leave this lobby?",
       "message": "You can rejoin later with the join code, as long as the lobby is still open.",
       "confirm": "Leave lobby"
+    },
+    "bots": {
+      "add": "Add bot",
+      "remove": "Remove bot {{name}}",
+      "enableHint": "Enable bots in the lobby settings first."
     },
     "kick": {
       "action": "Kick {{name}}",

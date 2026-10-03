@@ -50,6 +50,13 @@ type SummaryReadyChanged struct {
 
 func (SummaryReadyChanged) Name() string { return "SUMMARY_READY_CHANGED" }
 
+// VotingExtended is emitted by ExtendVoting when the host adds time to the
+// open voting (or tiebreak) window. The new deadline is stamped by the
+// application layer, like VotingOpened's.
+type VotingExtended struct{ RoundIndex int }
+
+func (VotingExtended) Name() string { return "VOTING_EXTENDED" }
+
 // RevealReadyChanged is emitted by MarkRevealReady - the sorteo's own skip
 // vote, mirroring VoteCast's ready/total shape but scoped to the ASSIGNING
 // window rather than a round's Ballot. ReadyCount/TotalHumans are

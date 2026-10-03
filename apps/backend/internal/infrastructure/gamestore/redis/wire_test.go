@@ -586,3 +586,60 @@ func TestEncodeDecodeRoundTrip_DisconnectedAbandonedAndFocalPoint(t *testing.T) 
 		t.Error("a legacy payload must decode to no disconnectedAt")
 	}
 }
+
+// A Versus game announces its next round's stage during ASSIGNING, before
+// any Round exists. The wire form must carry it, or a Redis-backed game
+// loses the announced stage on the very next command and OpenVoting would
+// draw a different one than the sorteo showed.
+func TestEncodeDecodeRoundTrip_UpcomingStage(t *testing.T) {
+	cfg, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 1, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	teamA, err := game.NewTeam(game.TeamID{10}, "A", 0)
+	if err != nil {
+		t.Fatalf("NewTeam: %v", err)
+	}
+	teamB, err := game.NewTeam(game.TeamID{11}, "B", 1)
+	if err != nil {
+		t.Fatalf("NewTeam: %v", err)
+	}
+	host, err := game.NewHumanParticipant(game.ParticipantID{1}, user.UserID{1}, "host", teamA.ID())
+	if err != nil {
+		t.Fatalf("NewHumanParticipant: %v", err)
+	}
+	other, err := game.NewHumanParticipant(game.ParticipantID{2}, user.UserID{2}, "other", teamB.ID())
+	if err != nil {
+		t.Fatalf("NewHumanParticipant: %v", err)
+	}
+	stage, err := game.NewStage(game.StageID{7}, enums.Jojo, 0, "Morioh", "a test stage", "")
+	if err != nil {
+		t.Fatalf("NewStage: %v", err)
+	}
+	g, err := game.NewGame(game.GameID{1}, cfg, host, []*game.Team{teamA, teamB}, []game.Stage{stage})
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	if err := g.Join(other); err != nil {
+		t.Fatalf("Join: %v", err)
+	}
+	if err := g.Start(g.HostID()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if err := g.PrepareUpcomingStage(zeroWireRandom{}); err != nil {
+		t.Fatalf("PrepareUpcomingStage: %v", err)
+	}
+
+	payload, err := encode(g, time.Now())
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	restored, err := decode(payload)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	st, ok := restored.UpcomingStage()
+	if !ok || st.Name() != "Morioh" {
+		t.Fatalf("restored UpcomingStage = %q (ok=%v), want Morioh", st.Name(), ok)
+	}
+}

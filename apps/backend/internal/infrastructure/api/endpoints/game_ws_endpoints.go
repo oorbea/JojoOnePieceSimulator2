@@ -319,6 +319,8 @@ func (e *GameEndpoints) dispatch(ctx context.Context, gameID game.GameID, self g
 		return e.svc.MarkRevealReady(ctx, gameID, self)
 	case dto.CommandSummaryReady:
 		return e.svc.MarkSummaryReady(ctx, gameID, self)
+	case dto.CommandExtendVoting:
+		return e.svc.ExtendVoting(ctx, gameID, self)
 	case dto.CommandRematch:
 		// Rematch returns the NEW game (and its code), which is deliberately
 		// discarded here: this socket belongs to the OLD game, and every
@@ -496,6 +498,10 @@ func buildEventFrame(evt game.DomainEvent, votingWindow time.Duration, revealWin
 		return dto.FrameVotingOpened, dto.VotingOpenedPayload{
 			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, votingWindow),
 		}, true
+	case game.VotingExtended:
+		return dto.FrameVotingExtended, dto.VotingExtendedPayload{
+			RoundIndex: e.RoundIndex, ClosesAt: frameDeadline(closesAt, votingWindow),
+		}, false
 	case game.VoteCast:
 		return dto.FrameVoteCast, dto.VoteCastPayload{
 			RoundIndex: e.RoundIndex, VotesCast: e.HumanVotesCast, Voters: e.HumanVoters,

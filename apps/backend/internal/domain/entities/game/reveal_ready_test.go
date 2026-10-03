@@ -6,7 +6,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 )
 
-func TestGame_RevealReadyComplete_FalseUntilAllHumansReady(t *testing.T) {
+func TestGame_RevealReadyComplete_FalseUntilStrictMajorityReady(t *testing.T) {
 	g, players := newGauntletGame(t, oneStage(t), 3)
 	assignOnly(t, g)
 
@@ -17,16 +17,13 @@ func TestGame_RevealReadyComplete_FalseUntilAllHumansReady(t *testing.T) {
 		t.Fatalf("MarkRevealReady: %v", err)
 	}
 	if g.RevealReadyComplete() {
-		t.Fatalf("expected RevealReadyComplete to be false with two humans left unready")
+		t.Fatalf("expected RevealReadyComplete to be false with 1 of 3 humans ready")
 	}
 	if err := g.MarkRevealReady(players[1].ID()); err != nil {
 		t.Fatalf("MarkRevealReady: %v", err)
 	}
-	if err := g.MarkRevealReady(players[2].ID()); err != nil {
-		t.Fatalf("MarkRevealReady: %v", err)
-	}
 	if !g.RevealReadyComplete() {
-		t.Fatalf("expected RevealReadyComplete to be true once every human is ready")
+		t.Fatalf("expected RevealReadyComplete to be true once 2 of 3 humans are ready")
 	}
 }
 

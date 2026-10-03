@@ -53,6 +53,10 @@ type Snapshot struct {
 	// iteration order, so encoding is deterministic.
 	RevealReady  []ParticipantID
 	SummaryReady []ParticipantID
+
+	// UpcomingStage mirrors Game.upcomingStage. Additive: nil for every
+	// snapshot written before it existed.
+	UpcomingStage *StageSnapshot
 }
 
 // ConfigSnapshot mirrors Config. Visibility/VotingWindowSeconds/PoolFilter
@@ -211,6 +215,10 @@ func (g *Game) Snapshot() Snapshot {
 	if g.phaseEndsAt != nil {
 		t := *g.phaseEndsAt
 		s.PhaseEndsAt = &t
+	}
+	if g.upcomingStage != nil {
+		us := snapshotStage(*g.upcomingStage)
+		s.UpcomingStage = &us
 	}
 	for _, pid := range g.order {
 		if _, ok := g.revealReady[pid]; ok {
@@ -542,6 +550,13 @@ func Restore(s Snapshot) (*Game, error) {
 	if s.PhaseEndsAt != nil {
 		t := *s.PhaseEndsAt
 		g.phaseEndsAt = &t
+	}
+	if s.UpcomingStage != nil {
+		st, err := restoreStage(*s.UpcomingStage)
+		if err != nil {
+			return nil, err
+		}
+		g.upcomingStage = &st
 	}
 	if len(s.RevealReady) > 0 {
 		g.revealReady = make(map[ParticipantID]struct{}, len(s.RevealReady))
