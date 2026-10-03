@@ -24,13 +24,16 @@ var physicalFormLevels = []enums.PhysicalForm{
 // selected: PhysicalForm -> Stand -> DevilFruit -> FruitMastery -> Hamon ->
 // Haki (set, then a mastery per haki present) -> Spin -> BattleIQ. DevilFruit
 // is drawn before its FruitMastery, since the latter depends on the former;
-// the RequiresSpin4 override runs after Spin is drawn, before BattleIQ,
-// which is always the last draw. The concrete draws are weighted random
+// BattleIQ is always the last draw. The concrete draws are weighted random
 // picks (RandomSource + AssignmentWeights) except Stand and DevilFruit,
 // which are uniform over the pool - see AssignmentWeights' doc comment for
-// why. The hard invariants (fruit<->mastery coupling, RequiresSpin4) are
-// re-checked by NewLoadout at the very end regardless of what the weighted
-// draws produced.
+// why. After every draw the power-effect resolver runs (power_effects.go):
+// it raises stats a drawn power demands and evolves a Stand/DevilFruit the
+// drawn Spin/Mastery covers, recording each as a PowerEffect. It consumes
+// randomness only to break a tie between equally ranked evolution targets,
+// so the draw order above is unaffected. The hard invariants (fruit<->mastery
+// coupling, the effect floors) are re-checked by NewLoadout at the very end
+// regardless of what the draws and the resolver produced.
 type LoadoutBuilder struct {
 	mangas  map[enums.Manga]struct{}
 	weights AssignmentWeights
@@ -57,7 +60,9 @@ func (b *LoadoutBuilder) hasManga(m enums.Manga) bool {
 func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 	var (
 		stand           *powers.Stand
+		standFamily     []*powers.Stand
 		devilFruit      *powers.DevilFruit
+		fruitFamily     []*powers.DevilFruit
 		spin            = enums.SpinNone
 		hamon           = enums.HamonNone
 		fruitMastery    = enums.FruitMasteryNone
@@ -73,13 +78,13 @@ func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 	}
 
 	if b.hasManga(enums.Jojo) {
-		if stand, err = b.drawStand(pool); err != nil {
+		if stand, standFamily, err = b.drawStand(pool); err != nil {
 			return nil, err
 		}
 	}
 
 	if b.hasManga(enums.OnePiece) {
-		if devilFruit, err = b.drawDevilFruit(pool); err != nil {
+		if devilFruit, fruitFamily, err = b.drawDevilFruit(pool); err != nil {
 			return nil, err
 		}
 		fruitMastery = b.drawFruitMastery(devilFruit)
@@ -106,34 +111,62 @@ func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 		spin = b.drawSpin()
 	}
 
-	if stand != nil && HasTrait(&stand.Power, enums.RequiresSpin4) {
-		spin = enums.SpinInfinite
-	}
-
 	battleIQ := NoBattleIQ()
 	if b.hasManga(enums.Jojo) {
 		battleIQ = b.drawBattleIQ()
 	}
 
+	st := &effectState{
+		stand:       stand,
+		fruit:       devilFruit,
+		standFamily: standFamily,
+		fruitFamily: fruitFamily,
+		bothMangas:  b.hasManga(enums.Jojo) && b.hasManga(enums.OnePiece),
+	}
+	st.values[enums.SlotPhysicalForm] = int(physicalForm)
+	st.values[enums.SlotFruitMastery] = int(fruitMastery)
+	st.values[enums.SlotHamon] = int(hamon)
+	st.values[enums.SlotArmamentHaki] = int(armamentHaki)
+	st.values[enums.SlotObservationHaki] = int(observationHaki)
+	st.values[enums.SlotConquerorHaki] = int(conquerorHaki)
+	st.values[enums.SlotSpin] = int(spin)
+	effects, err := resolvePowerEffects(st, b.rng)
+	if err != nil {
+		return nil, err
+	}
+
 	return NewLoadoutFromSpec(LoadoutSpec{
-		Stand:           stand,
-		DevilFruit:      devilFruit,
-		Spin:            spin,
-		Hamon:           hamon,
-		FruitMastery:    fruitMastery,
-		ArmamentHaki:    armamentHaki,
-		ObservationHaki: observationHaki,
-		ConquerorHaki:   conquerorHaki,
-		PhysicalForm:    physicalForm,
+		Stand:           st.stand,
+		DevilFruit:      st.fruit,
+		Spin:            st.spin(),
+		Hamon:           enums.HamonLevel(st.values[enums.SlotHamon]),
+		FruitMastery:    st.mastery(),
+		ArmamentHaki:    enums.HakiLevel(st.values[enums.SlotArmamentHaki]),
+		ObservationHaki: enums.HakiLevel(st.values[enums.SlotObservationHaki]),
+		ConquerorHaki:   enums.HakiLevel(st.values[enums.SlotConquerorHaki]),
+		PhysicalForm:    enums.PhysicalForm(st.values[enums.SlotPhysicalForm]),
 		BattleIQ:        battleIQ,
+		Effects:         effects,
+		Mangas:          b.mangaList(),
 	})
+}
+
+// mangaList is the manga selection in a stable order, for LoadoutSpec.Mangas.
+func (b *LoadoutBuilder) mangaList() []enums.Manga {
+	var ms []enums.Manga
+	for _, m := range []enums.Manga{enums.Jojo, enums.OnePiece} {
+		if b.hasManga(m) {
+			ms = append(ms, m)
+		}
+	}
+	return ms
 }
 
 // drawStand picks uniformly among "no stand" and every Stand in the pool -
 // deliberately not weighted by rarity, matching V1's
 // uniform_int_distribution over the whole power array (see
 // AssignmentWeights' doc comment).
-func (b *LoadoutBuilder) drawStand(pool *AvailablePowers) (*powers.Stand, error) {
+func (b *LoadoutBuilder) drawStand(pool *AvailablePowers) (*powers.Stand, []*powers.Stand, error) {
 	stands := pool.Stands()
 	weights := make([]int, len(stands)+1)
 	weights[0] = b.weights.NoStandWeight
@@ -142,14 +175,14 @@ func (b *LoadoutBuilder) drawStand(pool *AvailablePowers) (*powers.Stand, error)
 	}
 	idx := weightedPick(b.rng, weights)
 	if idx == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	return pool.DrawStand(idx - 1)
 }
 
 // drawDevilFruit picks uniformly among "no fruit" and every DevilFruit in
 // the pool - see drawStand's doc comment.
-func (b *LoadoutBuilder) drawDevilFruit(pool *AvailablePowers) (*powers.DevilFruit, error) {
+func (b *LoadoutBuilder) drawDevilFruit(pool *AvailablePowers) (*powers.DevilFruit, []*powers.DevilFruit, error) {
 	fruits := pool.DevilFruits()
 	weights := make([]int, len(fruits)+1)
 	weights[0] = b.weights.NoDevilFruitWeight
@@ -158,7 +191,7 @@ func (b *LoadoutBuilder) drawDevilFruit(pool *AvailablePowers) (*powers.DevilFru
 	}
 	idx := weightedPick(b.rng, weights)
 	if idx == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	return pool.DrawDevilFruit(idx - 1)
 }

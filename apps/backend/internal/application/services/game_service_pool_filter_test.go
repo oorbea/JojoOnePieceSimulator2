@@ -11,6 +11,7 @@ package services_test
 
 import (
 	"context"
+	"encoding/binary"
 	"testing"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
@@ -316,4 +317,55 @@ func TestPoolFilter_EditLobbyConfig_BanlistHonoredOnStart(t *testing.T) {
 		t.Fatalf("StartGame: %v", err)
 	}
 	assertNoBannedPower(t, g, bannedStandID)
+}
+
+// mustEvolvedStandOf builds a Stand evolving from parent, for tests that need
+// a multi-stage family in the catalogue.
+func mustEvolvedStandOf(t *testing.T, name string, parent *powers.Stand) *powers.Stand {
+	t.Helper()
+	powerIDCounter++
+	var id powers.PowerID
+	binary.BigEndian.PutUint32(id[12:], powerIDCounter)
+	skills := []string{"skill"}
+	power, err := powers.NewPower(id, name, "description", enums.Common, &skills, "")
+	if err != nil {
+		t.Fatalf("mustEvolvedStandOf power: %v", err)
+	}
+	stand, err := powers.NewStand(*power, enums.B, enums.B, enums.B, enums.B, enums.B, enums.B, parent)
+	if err != nil {
+		t.Fatalf("mustEvolvedStandOf: %v", err)
+	}
+	return stand
+}
+
+// Drawing a Stand removes its whole evolution family from a team's pool, so a
+// catalogue of several stages of one chain can serve one teammate, not one per
+// stage. checkPoolSufficiency must count families, or StartGame would pass and
+// then fail mid-assignment with ErrPowerPoolExhausted.
+func TestPoolSufficiency_CountsEvolutionFamiliesNotEntries(t *testing.T) {
+	svc, deps := newTestGameService(t)
+	hostID := mustTestUser(t, deps, "host")
+	joinerID := mustTestUser(t, deps, "joiner")
+
+	ws := mustEvolvedStandOf(t, "Whitesnake", nil)
+	cm := mustEvolvedStandOf(t, "C-MOON", ws)
+	deps.powers.stands = []*powers.Stand{ws, cm}
+
+	g, code, err := svc.CreateGame(context.Background(), hostID, gauntletInput())
+	if err != nil {
+		t.Fatalf("CreateGame: %v", err)
+	}
+	if _, err := svc.JoinByCode(context.Background(), code, joinerID); err != nil {
+		t.Fatalf("JoinByCode: %v", err)
+	}
+	// Two players, two stands - but one family: only one teammate can be served.
+	if _, err := svc.StartGame(context.Background(), g.ID(), g.HostID()); err != game.ErrPoolTooSmall {
+		t.Fatalf("StartGame err = %v, want ErrPoolTooSmall", err)
+	}
+
+	// Two unrelated stands do serve two players.
+	deps.powers.stands = []*powers.Stand{ws, mustStand(t, "The Hand")}
+	if _, err := svc.StartGame(context.Background(), g.ID(), g.HostID()); err != nil {
+		t.Fatalf("StartGame: %v, want success with two distinct families", err)
+	}
 }

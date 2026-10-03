@@ -322,6 +322,46 @@ func TestRestoreRejectsMalformedBallot(t *testing.T) {
 	}
 }
 
+// A snapshot holds an already-assigned Loadout, so restoring must not re-judge
+// it against today's power-effect rules: a game persisted under an older rule
+// table (or before a rule existed) has to keep loading instead of failing for
+// the rest of its Redis TTL. The same values are rejected when built fresh.
+func TestRestore_SkipsPowerEffectFloorValidation(t *testing.T) {
+	g := buildMidMatchVersusGame(t)
+	s := g.Snapshot()
+
+	var restored *game.LoadoutSnapshot
+	for i := range s.Participants {
+		if ls := s.Participants[i].Loadout; ls != nil {
+			ls.Hamon, ls.Spin = "PERFECT", "NONE" // rule #5: Hamon PERFECT needs Spin >= BASIC
+			restored = ls
+			break
+		}
+	}
+	if restored == nil {
+		t.Fatal("expected the fixture to carry at least one assigned loadout")
+	}
+
+	if _, err := game.NewLoadoutFromSpec(game.LoadoutSpec{
+		Spin: enums.SpinNone, Hamon: enums.HamonPerfect, FruitMastery: enums.FruitMasteryNone,
+		ArmamentHaki: enums.HakiNone, ObservationHaki: enums.HakiNone, ConquerorHaki: enums.HakiNone,
+		PhysicalForm: enums.PhysicalFormPrivate,
+	}); err != game.ErrPowerEffectFloorViolated {
+		t.Fatalf("precondition: expected a fresh loadout with these values to be rejected, got %v", err)
+	}
+
+	g2, err := game.Restore(s)
+	if err != nil {
+		t.Fatalf("Restore must accept a loadout that breaks a floor, got %v", err)
+	}
+	for _, p := range g2.Participants() {
+		if l := p.Loadout(); l != nil && l.Hamon() == enums.HamonPerfect && l.Spin() == enums.SpinNone {
+			return
+		}
+	}
+	t.Fatal("expected the restored game to carry the loadout as persisted")
+}
+
 func TestRestoreOfZeroSnapshot(t *testing.T) {
 	if _, err := game.Restore(game.Snapshot{}); err == nil {
 		t.Fatal("expected error restoring a zero Snapshot (invalid mode/state/manga)")

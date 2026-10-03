@@ -711,7 +711,7 @@ func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
 	if ls.BattleIQ != nil {
 		battleIQ = NewBattleIQ(*ls.BattleIQ)
 	}
-	return NewLoadoutFromSpec(LoadoutSpec{
+	return newLoadout(LoadoutSpec{
 		Stand:           ls.Stand,
 		DevilFruit:      ls.DevilFruit,
 		Spin:            spin,
@@ -722,5 +722,5 @@ func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
 		ConquerorHaki:   conquerorHaki,
 		PhysicalForm:    physicalForm,
 		BattleIQ:        battleIQ,
-	})
+	}, false)
 }

@@ -40,6 +40,7 @@ var WireEnums = []WireEnum{
 	{"HakiLevel", []wireMember{HakiNone, HakiPrivate, HakiViceAdmiral, HakiYonkoCommander, HakiYonkoPlus}},
 	{"HamonLevel", []wireMember{HamonNone, HamonBasic, HamonAdvanced, HamonPerfect}},
 	{"InviteStatus", []wireMember{InviteValid, InviteExpired}},
+	{"LoadoutSlot", []wireMember{SlotPhysicalForm, SlotStand, SlotDevilFruit, SlotFruitMastery, SlotHamon, SlotArmamentHaki, SlotObservationHaki, SlotConquerorHaki, SlotSpin}},
 	{"LobbyVisibility", []wireMember{Private, Public}},
 	// Must stay in ascending ordinal order (TestWireEnums_MembersAreComplete
 	// enforces this for every registered enum) - the frontend achieves
@@ -51,9 +52,9 @@ var WireEnums = []WireEnum{
 	{"PhysicalForm", []wireMember{PhysicalFormPrivate, PhysicalFormStrongFishman, PhysicalFormMarineCaptain, PhysicalFormViceAdmiral, PhysicalFormYonkoCommander, PhysicalFormYonkoPlus}},
 	{"PictureStatus", []wireMember{PictureNone, PicturePending, PictureReady, PictureFailed}},
 	{"PictureSubjectKind", []wireMember{StandSubject, DevilFruitSubject, UserSubject, StageSubject, JojoCharacterSubject, OnePieceCharacterSubject}},
+	{"PowerEffectKind", []wireMember{EffectStatFloor, EffectEvolution}},
 	{"PowerKind", []wireMember{StandKind, DevilFruitKind}},
 	{"PowerRarity", []wireMember{Common, Rare, Epic, Legendary, Mythical}},
-	{"PowerTrait", []wireMember{RequiresSpin4}},
 	{"RevealSpeed", []wireMember{Normal, Relaxed, Swift}},
 	{"SpinLevel", []wireMember{SpinNone, SpinBasic, SpinGolden, SpinInfinite}},
 	{"SquadVerdict", []wireMember{Survive, Fall}},
