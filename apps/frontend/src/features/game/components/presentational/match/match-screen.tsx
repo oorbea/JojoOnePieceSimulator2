@@ -41,6 +41,7 @@ type Props = {
   isRevealing: boolean
   onSkipReveal: () => void
   onSummaryReady: () => void
+  onExtendVoting: () => void
   reducedMotion: boolean
   onAbort: () => void
   onVote: (optionId: string) => void
@@ -69,6 +70,7 @@ export function MatchScreen({
   isRevealing,
   onSkipReveal,
   onSummaryReady,
+  onExtendVoting,
   reducedMotion,
   onAbort,
   onVote,
@@ -200,6 +202,7 @@ export function MatchScreen({
               now={now}
               tiebreak={live.tiebreak}
               onVote={onVote}
+              onExtend={you.isHost ? onExtendVoting : undefined}
             />
           ) : null}
         </>

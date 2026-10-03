@@ -604,6 +604,7 @@ export function LobbyRoomContainer() {
         isRevealing={loadoutReveal.isRevealing}
         onSkipReveal={loadoutReveal.skip}
         onSummaryReady={commands.summaryReady}
+        onExtendVoting={commands.extendVoting}
         reducedMotion={reducedMotion}
         onVote={handleVote}
         onSkipResult={socket.dismissResult}

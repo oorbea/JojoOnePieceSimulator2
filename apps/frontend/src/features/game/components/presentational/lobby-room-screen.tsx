@@ -105,6 +105,7 @@ type Props = {
   isRevealing: boolean
   onSkipReveal: () => void
   onSummaryReady: () => void
+  onExtendVoting: () => void
   reducedMotion: boolean
   onVote: (optionId: string) => void
   onSkipResult: () => void
@@ -179,6 +180,7 @@ export function LobbyRoomScreen({
   isRevealing,
   onSkipReveal,
   onSummaryReady,
+  onExtendVoting,
   reducedMotion,
   onVote,
   onSkipResult,
@@ -402,6 +404,7 @@ export function LobbyRoomScreen({
           isRevealing={isRevealing}
           onSkipReveal={onSkipReveal}
           onSummaryReady={onSummaryReady}
+          onExtendVoting={onExtendVoting}
           reducedMotion={reducedMotion}
           onAbort={onAbort}
           onVote={onVote}
