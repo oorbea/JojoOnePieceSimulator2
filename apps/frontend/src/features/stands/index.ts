@@ -1,5 +1,4 @@
 export { StandsContainer } from '@/features/stands/components/containers/stands-container'
 export { CatalogStandsContainer } from '@/features/stands/components/containers/catalog-stands-container'
-export { StandDetail } from '@/features/stands/components/presentational/stand-detail'
 export { useStands } from '@/features/stands/hooks/use-stands'
 export type { StandResponse } from '@/features/stands/types/stands.types'

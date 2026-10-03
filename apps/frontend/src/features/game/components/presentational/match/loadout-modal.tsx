@@ -11,8 +11,11 @@ import {
   STAND_STAT_LABELS,
 } from '@/features/game/components/presentational/match/loadout-card'
 import { PowerBlock } from '@/features/game/components/presentational/match/power-block'
-import { DevilFruitDetail } from '@/features/devil-fruits'
-import { StandDetail } from '@/features/stands'
+// Deep imports on purpose: the stands/devil-fruits barrels also export their
+// containers (API client, env validation), far too heavy for this
+// presentational component and its tests. These two are pure UI.
+import { DevilFruitDetail } from '@/features/devil-fruits/components/presentational/devil-fruit-detail'
+import { StandDetail } from '@/features/stands/components/presentational/stand-detail'
 import { loadoutSlots } from '@/features/game/lib/match-rules'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import { DetailModal } from '@/shared/components/presentational/detail-modal'
