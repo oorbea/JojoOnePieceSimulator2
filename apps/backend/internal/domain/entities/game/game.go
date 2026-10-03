@@ -632,6 +632,11 @@ func (g *Game) Reconfigure(callerID ParticipantID, cfg Config, newTeams []*Team,
 	// Config/teams/stages replace the old ones and every remaining
 	// participant is reseated per plan.
 	for _, pid := range botsToDrop {
+		// Same-mode reconfigures reuse the existing Team objects, so the
+		// dropped bot must leave its team too or it lingers in Team.Size().
+		if t := g.teamByID(g.participants[pid].TeamID()); t != nil {
+			t.RemoveMember(pid)
+		}
 		delete(g.participants, pid)
 		g.removeFromOrder(pid)
 		g.emit(PlayerLeft{ParticipantID: pid})

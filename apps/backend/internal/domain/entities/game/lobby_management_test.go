@@ -264,6 +264,38 @@ func TestReconfigure_VersusToGauntletMergesPlayers(t *testing.T) {
 	}
 }
 
+func TestReconfigure_DroppedBotsLeaveTheirTeam(t *testing.T) {
+	botsOn, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, true, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	teamA := mustTeam(t, 100, "A")
+	teamB := mustTeam(t, 101, "B")
+	host := mustHumanParticipant(t, 1, 1, 100)
+	g, err := game.NewGame(game.GameID{1}, botsOn, host, []*game.Team{teamA, teamB}, someStages(t))
+	if err != nil {
+		t.Fatalf("NewGame: %v", err)
+	}
+	bot := mustBotParticipant(t, 9, 101)
+	if err := g.AddBot(bot); err != nil {
+		t.Fatalf("AddBot: %v", err)
+	}
+	if teamB.Size() != 1 {
+		t.Fatalf("setup: expected the bot seated on team B, got size %d", teamB.Size())
+	}
+
+	botsOff, err := game.NewConfig(enums.Versus, []enums.Manga{enums.Jojo}, []enums.Manga{enums.Jojo}, enums.Random, 2, false, enums.Private, 30, game.PoolFilter{}, enums.Normal, game.DefaultSummaryDurationSeconds)
+	if err != nil {
+		t.Fatalf("NewConfig: %v", err)
+	}
+	if err := g.Reconfigure(host.ID(), botsOff, []*game.Team{teamA, teamB}, someStages(t)); err != nil {
+		t.Fatalf("Reconfigure: %v", err)
+	}
+	if teamB.Size() != 0 || teamB.HasMember(bot.ID()) {
+		t.Fatalf("expected the dropped bot to leave team B, got size %d", teamB.Size())
+	}
+}
+
 func TestReconfigure_ShrinkingBelowSeatedHumansIsRejected(t *testing.T) {
 	g, host, _, teamA, teamB := newVersusLobby(t, 2)
 	third, err := game.NewHumanParticipant(game.ParticipantID{3}, user.UserID{3}, "p3", teamA.ID())
