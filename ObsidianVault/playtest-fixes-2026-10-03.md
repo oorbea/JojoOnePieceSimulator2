@@ -35,3 +35,16 @@ Nueve cosas encontradas en una partida real; todo commiteado directo en `develop
 - **`burnt` es módulo nativo sin fallback JS**: cualquier test cuyo grafo llegue a `shared/lib/toast.ts` fallaba con `Cannot find native module 'Burnt'`; ahora hay mock global en `jest.setup.ts`.
 - `GlowText` no acepta `flexShrink`/`textAlign="right"` (solo `flex` y `align` left/center): alinear a la derecha con un contenedor `YStack items="flex-end"`.
 - Docker en Windows: `docker run -v "$(pwd):/repo"` desde Git Bash monta vacío; usar PowerShell con ruta explícita. Frontend local sirve en `:8081` (nginx), no en `:3000`.
+
+## Pruebas en móvil (2026-10-03, tarde)
+
+Probado con la extensión **Responsive Viewer** (iPhone 14 Pro 393, Pixel 7 Pro 412, Pixel 10 Pro 412, iPhone 17 Pro 402) y con Playwright en Docker (iPhone SE 320, iPhone 15 Pro Max, Pixel 7). Resultado: sin scroll horizontal en ningún dispositivo; filas de stats del modal sin solape (el valor largo "86 · Medio bajo" se parte en dos líneas); rejilla del Stand 3+3; barra de voto con "+10 s" cabe en todos; la ronda 2 de Versus reparte poderes y anuncia su escenario. Único fallo real: el nombre del escenario del `StageAnnouncement` compacto se truncaba a 393px ("Fish-Man Isla…") → ahora hace wrap y la miniatura baja a 80px.
+
+### Cómo operar Responsive Viewer desde Claude (gotchas)
+
+- `chrome://` y `chrome-extension://` están bloqueados para las herramientas de navegador: la extensión solo se puede usar si el usuario la activa en la pestaña.
+- El visor pinta cada móvil como `<iframe>` de **la misma página** (mismo origen) → se pueden controlar por JS (`iframe.contentDocument`). Clicks por JS: despachar `pointerdown/mousedown/pointerup/mouseup/click`; inputs React: setter nativo de `value` + evento `input`.
+- Cambiar `iframe.src` o su `location` solo funciona si el CSP deja embeber la app. nginx servía `frame-ancestors 'none'` → "localhost rechazó la conexión". Ahora es `${CSP_FRAME_ANCESTORS}`: `'none'` en el compose base (hereda prod) y `'self'` solo en `docker-compose.dev.yml`. Una variable sin definir en el envsubst de nginx queda vacía (directiva inválida): el valor seguro vive en el base.
+- Los 4 iframes comparten `sessionStorage`/cookie: recargarlos a la vez rota el refresh token y deja a algunos en `/login`. Mejor un `/dev-login` por marco y "Volver a la partida" sin recargar.
+- Scripts largos (>45 s) matan la llamada del tool: lanzarlos como async en la página y consultar `window.__out`.
+- `resize_window` no cambia el viewport en el navegador de automatización; para móvil usar la extensión o Playwright con `devices[...]` (`--host-resolver-rules="MAP localhost host.docker.internal"` para llegar al stack local desde el contenedor).
