@@ -40,7 +40,12 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
   const stand = loadout?.stand
   const fruit = loadout?.devilFruit
   const slots = loadout ? loadoutSlots(loadout, mangas) : []
-  const scalarSlots = slots.filter((s) => s.key !== 'stand' && s.key !== 'devilFruit')
+  // hakiSet is a reveal-only header slot (no label/value) - the three haki
+  // levels already get their own rows below, so rendering it here printed
+  // the raw "hakiSet" key and "enums.hakiLevel.undefined".
+  const scalarSlots = slots.filter(
+    (s) => s.key !== 'stand' && s.key !== 'devilFruit' && s.key !== 'hakiSet'
+  )
   const hasStandSlot = slots.some((s) => s.key === 'stand')
   const hasFruitSlot = slots.some((s) => s.key === 'devilFruit')
 
@@ -97,7 +102,7 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
           <ScrollView flex={1} minH={0} onScroll={notifyScroll} scrollEventThrottle={16}>
             <YStack gap="$3" pb="$2" $md={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {hasStandSlot ? (
-                <YStack flex={1} minW={280} gap="$2">
+                <YStack flex={1} gap="$2" $md={{ minW: 280 }}>
                   <PowerBlock
                     picture={stand ? cardSource(stand) : undefined}
                     fullPicture={stand ? fullSource(stand) : undefined}
@@ -134,7 +139,7 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
               ) : null}
 
               {hasFruitSlot ? (
-                <YStack flex={1} minW={280} gap="$2">
+                <YStack flex={1} gap="$2" $md={{ minW: 280 }}>
                   <PowerBlock
                     picture={fruit ? cardSource(fruit) : undefined}
                     fullPicture={fruit ? fullSource(fruit) : undefined}
@@ -155,17 +160,22 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
                       key={slot.key}
                       items="center"
                       justify="space-between"
+                      gap="$3"
                       px="$3"
                       py="$2"
                       rounded="$card"
                       bg="$plasticFill"
                     >
-                      <GlowText level="label">{slot.i18nKey ? t(slot.i18nKey) : slot.key}</GlowText>
-                      <GlowText level="label" tone={slot.value === 'NONE' ? 'soft' : undefined}>
-                        {slot.numeric
-                          ? `${slot.numeric.score} · ${t(slot.numeric.categoryKey)}`
-                          : t(`enums.${enumNamespace(slot.key)}.${slot.value}`)}
+                      <GlowText level="label" flex={1}>
+                        {slot.i18nKey ? t(slot.i18nKey) : slot.key}
                       </GlowText>
+                      <YStack flex={1} items="flex-end">
+                        <GlowText level="label" tone={slot.value === 'NONE' ? 'soft' : undefined}>
+                          {slot.numeric
+                            ? `${slot.numeric.score} · ${t(slot.numeric.categoryKey)}`
+                            : t(`enums.${enumNamespace(slot.key)}.${slot.value}`)}
+                        </GlowText>
+                      </YStack>
                     </XStack>
                   ))}
                 </YStack>
