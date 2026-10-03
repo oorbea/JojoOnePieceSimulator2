@@ -26,9 +26,19 @@ type DevilFruitSnapshot struct {
 	FocalX         float64  `json:"focalX"`
 	FocalY         float64  `json:"focalY"`
 	FruitType      string   `json:"fruitType"`
+	// EvolvesFrom is only ever set on a fruit a game drew with its evolution
+	// attached (Hito Hito no mi: Model Nika <- Gomu Gomu no mi - see
+	// game.LinkFruitEvolutions); catalogue-cached fruits never carry one, so
+	// payloads written before this field existed decode to nil unchanged.
+	EvolvesFrom *DevilFruitSnapshot `json:"evolvesFrom,omitempty"`
 }
 
 func OfDevilFruit(fruit *powers.DevilFruit) DevilFruitSnapshot {
+	var evolvesFrom *DevilFruitSnapshot
+	if parent := fruit.EvolvesFrom(); parent != nil {
+		s := OfDevilFruit(parent)
+		evolvesFrom = &s
+	}
 	return DevilFruitSnapshot{
 		ID:             fruit.ID(),
 		Name:           fruit.Name(),
@@ -44,10 +54,20 @@ func OfDevilFruit(fruit *powers.DevilFruit) DevilFruitSnapshot {
 		FocalX:         fruit.FocalX(),
 		FocalY:         fruit.FocalY(),
 		FruitType:      fruit.FruitType().String(),
+		EvolvesFrom:    evolvesFrom,
 	}
 }
 
 func (s DevilFruitSnapshot) Hydrate() (*powers.DevilFruit, error) {
+	var evolvesFrom *powers.DevilFruit
+	if s.EvolvesFrom != nil {
+		parent, err := s.EvolvesFrom.Hydrate()
+		if err != nil {
+			return nil, err
+		}
+		evolvesFrom = parent
+	}
+
 	rarity, err := enums.ParsePowerRarity(s.Rarity)
 	if err != nil {
 		return nil, fmt.Errorf("devil fruit %q: %w", s.Name, err)
@@ -72,7 +92,14 @@ func (s DevilFruitSnapshot) Hydrate() (*powers.DevilFruit, error) {
 		return nil, fmt.Errorf("devil fruit %q: fruit_type: %w", s.Name, err)
 	}
 
-	return powers.NewDevilFruit(*power, fruitType)
+	fruit, err := powers.NewDevilFruit(*power, fruitType)
+	if err != nil {
+		return nil, err
+	}
+	if evolvesFrom != nil {
+		fruit = fruit.WithEvolvesFrom(evolvesFrom)
+	}
+	return fruit, nil
 }
 
 func MarshalDevilFruit(fruit *powers.DevilFruit) ([]byte, error) {

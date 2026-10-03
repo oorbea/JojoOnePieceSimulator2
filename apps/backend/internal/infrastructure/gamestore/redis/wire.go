@@ -211,6 +211,18 @@ type wireLoadout struct {
 	// here only omits a nil pointer, never a present 0. See
 	// game.BattleIQ's doc comment.
 	BattleIQ *byte `json:"battleIQ,omitempty"`
+	// Effects is omitted when empty, so a payload written before power
+	// effects existed decodes to "no effects" with no snapshotVersion bump.
+	Effects []wirePowerEffect `json:"effects,omitempty"`
+}
+
+type wirePowerEffect struct {
+	Kind      string `json:"kind"`
+	Slot      string `json:"slot"`
+	From      string `json:"from"`
+	To        string `json:"to"`
+	CauseSlot string `json:"causeSlot"`
+	Cause     string `json:"cause"`
 }
 
 // toWire converts a domain Snapshot to its wire form.
@@ -383,6 +395,11 @@ func toWireLoadout(l game.LoadoutSnapshot) wireLoadout {
 		v := *l.BattleIQ
 		wl.BattleIQ = &v
 	}
+	for _, e := range l.Effects {
+		wl.Effects = append(wl.Effects, wirePowerEffect{
+			Kind: e.Kind, Slot: e.Slot, From: e.From, To: e.To, CauseSlot: e.CauseSlot, Cause: e.Cause,
+		})
+	}
 	return wl
 }
 
@@ -535,6 +552,11 @@ func fromWireLoadout(w wireLoadout) game.LoadoutSnapshot {
 	if w.BattleIQ != nil {
 		v := *w.BattleIQ
 		ls.BattleIQ = &v
+	}
+	for _, e := range w.Effects {
+		ls.Effects = append(ls.Effects, game.PowerEffectSnapshot{
+			Kind: e.Kind, Slot: e.Slot, From: e.From, To: e.To, CauseSlot: e.CauseSlot, Cause: e.Cause,
+		})
 	}
 	return ls
 }

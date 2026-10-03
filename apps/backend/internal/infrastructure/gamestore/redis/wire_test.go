@@ -2,6 +2,7 @@ package redis
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -641,5 +642,123 @@ func TestEncodeDecodeRoundTrip_UpcomingStage(t *testing.T) {
 	st, ok := restored.UpcomingStage()
 	if !ok || st.Name() != "Morioh" {
 		t.Fatalf("restored UpcomingStage = %q (ok=%v), want Morioh", st.Name(), ok)
+	}
+}
+
+// TestEncodeDecodeRoundTrip_PowerEffects guards the same class of bug
+// TestEncodeDecodeRoundTrip_TiedVotes documents: a field added to the domain
+// snapshot but not to this package's own wire types encodes and decodes
+// without error and is simply gone. Effects must survive in order, and a
+// fruit's evolvesFrom (Nika <- Gomu) must survive the recursive embedding.
+func TestEncodeDecodeRoundTrip_PowerEffects(t *testing.T) {
+	g := buildTestGame(t)
+	now := time.Date(2026, 10, 3, 12, 0, 0, 0, time.UTC)
+
+	// Legacy shape: a loadout with no effects writes no "effects" key at all,
+	// so payloads from before the field existed and after look the same.
+	payload, err := encode(g, now)
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	if strings.Contains(string(payload), `"effects"`) {
+		t.Fatalf("a loadout without effects must not write an effects key: %s", payload)
+	}
+
+	skills := []string{"skill"}
+	mkStand := func(id byte, name string, parent *powers.Stand) *powers.Stand {
+		p, err := powers.NewPower(powers.PowerID{id}, name, "desc", enums.Epic, &skills, "")
+		if err != nil {
+			t.Fatalf("NewPower(%q): %v", name, err)
+		}
+		s, err := powers.NewStand(*p, enums.A, enums.A, enums.A, enums.A, enums.A, enums.A, parent)
+		if err != nil {
+			t.Fatalf("NewStand(%q): %v", name, err)
+		}
+		return s
+	}
+	mkFruit := func(id byte, name string, typ enums.FruitType) *powers.DevilFruit {
+		p, err := powers.NewPower(powers.PowerID{id}, name, "desc", enums.Epic, &skills, "")
+		if err != nil {
+			t.Fatalf("NewPower(%q): %v", name, err)
+		}
+		f, err := powers.NewDevilFruit(*p, typ)
+		if err != nil {
+			t.Fatalf("NewDevilFruit(%q): %v", name, err)
+		}
+		return f
+	}
+	acto1 := mkStand(70, "Tusk: Acto 1", nil)
+	acto4 := mkStand(71, "Tusk: Acto 4", acto1)
+	gomu := mkFruit(80, "Gomu Gomu no mi", enums.Paramecia)
+	nika := mkFruit(81, "Hito Hito no mi: Model Nika", enums.MythicalZoan).WithEvolvesFrom(gomu)
+
+	effects := []game.PowerEffect{
+		{Kind: enums.EffectEvolution, Slot: enums.SlotStand, From: acto1.ID().String(), To: acto4.ID().String(), CauseSlot: enums.SlotSpin, Cause: "INFINITE"},
+		{Kind: enums.EffectEvolution, Slot: enums.SlotDevilFruit, From: gomu.ID().String(), To: nika.ID().String(), CauseSlot: enums.SlotFruitMastery, Cause: "AWAKENED"},
+		{Kind: enums.EffectStatFloor, Slot: enums.SlotPhysicalForm, From: "PRIVATE", To: "MARINE_CAPTAIN", CauseSlot: enums.SlotDevilFruit, Cause: nika.Name()},
+	}
+	loadout, err := game.NewLoadoutFromSpec(game.LoadoutSpec{
+		Stand: acto4, DevilFruit: nika, Spin: enums.SpinInfinite, FruitMastery: enums.FruitMasteryAwakened,
+		ArmamentHaki: enums.HakiNone, ObservationHaki: enums.HakiNone, ConquerorHaki: enums.HakiNone,
+		PhysicalForm: enums.PhysicalFormMarineCaptain, Effects: effects,
+	})
+	if err != nil {
+		t.Fatalf("NewLoadoutFromSpec: %v", err)
+	}
+	host, ok := g.Participant(game.ParticipantID{1})
+	if !ok {
+		t.Fatal("host missing")
+	}
+	host.AssignLoadout(loadout)
+
+	payload, err = encode(g, now)
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	restored, err := decode(payload)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	rhost, _ := restored.Participant(game.ParticipantID{1})
+	got := rhost.Loadout()
+	if got == nil {
+		t.Fatal("loadout lost across decode")
+	}
+	if !reflect.DeepEqual(got.Effects(), effects) {
+		t.Fatalf("effects lost or reordered across decode:\n got  %+v\n want %+v", got.Effects(), effects)
+	}
+	if got.DrawnStand() == nil || got.DrawnStand().Name() != "Tusk: Acto 1" {
+		t.Fatalf("drawn stand lost across decode, got %v", got.DrawnStand())
+	}
+	if parent := got.DevilFruit().EvolvesFrom(); parent == nil || parent.Name() != "Gomu Gomu no mi" {
+		t.Fatalf("fruit evolvesFrom lost across decode, got %v", parent)
+	}
+	if got.DrawnDevilFruit().Name() != "Gomu Gomu no mi" {
+		t.Fatalf("drawn fruit should be Gomu Gomu no mi, got %q", got.DrawnDevilFruit().Name())
+	}
+}
+
+// A payload carrying an effect the current code cannot parse (a kind or slot
+// from a future version) must still decode: effects only drive an animation.
+func TestDecodeDropsUnparseableEffects(t *testing.T) {
+	g := buildTestGame(t)
+	payload, err := encode(g, time.Date(2026, 10, 3, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	patched := strings.Replace(string(payload), `"physicalForm":"PRIVATE"`,
+		`"physicalForm":"PRIVATE","effects":[{"kind":"WARP","slot":"SPIN","from":"","to":"","causeSlot":"SPIN","cause":""},`+
+			`{"kind":"STAT_FLOOR","slot":"SPIN","from":"NONE","to":"BASIC","causeSlot":"HAMON","cause":"PERFECT"}]`, 1)
+	if patched == string(payload) {
+		t.Fatal("test setup: expected to patch the payload")
+	}
+	restored, err := decode([]byte(patched))
+	if err != nil {
+		t.Fatalf("decode must tolerate an unparseable effect, got %v", err)
+	}
+	host, _ := restored.Participant(game.ParticipantID{1})
+	effects := host.Loadout().Effects()
+	if len(effects) != 1 || effects[0].Kind != enums.EffectStatFloor || effects[0].To != "BASIC" {
+		t.Fatalf("expected only the parseable effect to survive, got %+v", effects)
 	}
 }
