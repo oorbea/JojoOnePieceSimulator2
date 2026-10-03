@@ -17,6 +17,8 @@ type Props = {
   isSelf: boolean
   showHostActions: boolean
   onKick?: () => void
+  /** Host-only removal of a bot; replaces Kick for bot rows. */
+  onRemoveBot?: () => void
   onTransferHost?: () => void
   /** Drag-to-move onto another `TeamColumn` - required to work on both
    * desktop (mouse drag) and mobile (touch drag), not optional polish (see
@@ -34,6 +36,7 @@ export function PlayerRow({
   isSelf,
   showHostActions,
   onKick,
+  onRemoveBot,
   onTransferHost,
   onDragEnd,
 }: Props) {
@@ -106,7 +109,17 @@ export function PlayerRow({
                 <UserCog size={16} color="$panelText" />
               </GlossButton>
             ) : null}
-            {onKick ? (
+            {participant.kind === 'BOT' && onRemoveBot ? (
+              <GlossButton
+                tone="glass"
+                btnSize="sm"
+                shape="circle"
+                onPress={onRemoveBot}
+                accessibilityLabel={t('game.bots.remove', { name: participant.displayName })}
+              >
+                <UserMinus size={16} color="$strawHatRedDeep" />
+              </GlossButton>
+            ) : onKick ? (
               <GlossButton
                 tone="glass"
                 btnSize="sm"
