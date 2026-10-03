@@ -58,6 +58,7 @@ export type {
   JojoCharacterRequest,
   JojoCharacterResponse,
   JojoCharacterPageResponse,
+  LoadoutEffectResponse,
   LobbyPreviewResponse,
   OnePieceCharacterRequest,
   OnePieceCharacterResponse,

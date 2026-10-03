@@ -21,11 +21,25 @@ type DevilFruitResponse struct {
 	FocalX        float64  `json:"focalX"`
 	FocalY        float64  `json:"focalY"`
 	FruitType     string   `json:"fruitType" ts:"FruitType"`
+	// EvolvesFrom is the fruit this one is the evolved form of (Model Nika's
+	// parent is Gomu Gomu no mi). Always null from the catalogue endpoints -
+	// the relation lives in game's rule table and is only attached to the
+	// fruit of a drawn loadout - see game.LinkFruitEvolutions.
+	EvolvesFrom *DevilFruitResponse `json:"evolvesFrom"`
 }
 
 // NewDevilFruitResponse builds a DevilFruitResponse from a domain DevilFruit,
 // resolving its picture key through resolve.
 func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolve PictureURLResolver, media MediaURLBuilder) (DevilFruitResponse, error) {
+	var evolvesFrom *DevilFruitResponse
+	if parent := fruit.EvolvesFrom(); parent != nil {
+		resp, err := NewDevilFruitResponse(ctx, parent, resolve, media)
+		if err != nil {
+			return DevilFruitResponse{}, err
+		}
+		evolvesFrom = &resp
+	}
+
 	skills := fruit.Skills()
 	if skills == nil {
 		skills = []string{}
@@ -52,6 +66,7 @@ func NewDevilFruitResponse(ctx context.Context, fruit *powers.DevilFruit, resolv
 		FocalX:        fruit.FocalX(),
 		FocalY:        fruit.FocalY(),
 		FruitType:     fruit.FruitType().String(),
+		EvolvesFrom:   evolvesFrom,
 	}, nil
 }
 

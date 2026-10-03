@@ -524,3 +524,81 @@ func TestNewGameStateResponse_Deadlines(t *testing.T) {
 		t.Fatalf("zero-value GameStateDeadlines marshaled resultEndsAt: %s", emptyRaw)
 	}
 }
+
+// TestNewGameStateResponse_LoadoutEffectsAndFruitEvolution pins the sorteo's
+// contract: effects arrive in order, the loadout's fruit nests its evolution
+// parent, and a loadout with no effects serializes "effects":[] - never null.
+func TestNewGameStateResponse_LoadoutEffectsAndFruitEvolution(t *testing.T) {
+	g, _ := buildLoadoutTestGame(t)
+	host := g.Participants()[0]
+	noText := func(_ context.Context, _ powers.PowerID) (ports.PowerContent, error) {
+		return ports.PowerContent{}, nil
+	}
+	state := func() dto.GameLoadoutResponse {
+		t.Helper()
+		resp, err := dto.NewGameStateResponse(context.Background(), g, "ABC123", host.ID(),
+			noPictures, noPictures, noPictures, noPictures, dto.MediaURLBuilder{},
+			noStageText, noText, noText, dto.GameStateDeadlines{})
+		if err != nil {
+			t.Fatalf("NewGameStateResponse: %v", err)
+		}
+		return *resp.Game.Participants[0].Loadout
+	}
+
+	// No effects: an empty array on the wire, not null.
+	l := state()
+	if l.Effects == nil || len(l.Effects) != 0 {
+		t.Fatalf("expected a non-nil empty Effects, got %#v", l.Effects)
+	}
+	raw, err := json.Marshal(l)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if !strings.Contains(string(raw), `"effects":[]`) {
+		t.Fatalf("effects must serialize as [], got %s", raw)
+	}
+
+	skills := []string{"skill"}
+	mkFruit := func(id byte, name string, typ enums.FruitType) *powers.DevilFruit {
+		p, err := powers.NewPower(powers.PowerID{id}, name, "desc", enums.Epic, &skills, "")
+		if err != nil {
+			t.Fatalf("NewPower: %v", err)
+		}
+		f, err := powers.NewDevilFruit(*p, typ)
+		if err != nil {
+			t.Fatalf("NewDevilFruit: %v", err)
+		}
+		return f
+	}
+	gomu := mkFruit(80, "Gomu Gomu no mi", enums.Paramecia)
+	nika := mkFruit(81, "Hito Hito no mi: Model Nika", enums.MythicalZoan).WithEvolvesFrom(gomu)
+	effects := []game.PowerEffect{
+		{Kind: enums.EffectEvolution, Slot: enums.SlotDevilFruit, From: gomu.ID().String(), To: nika.ID().String(), CauseSlot: enums.SlotFruitMastery, Cause: "AWAKENED"},
+		{Kind: enums.EffectStatFloor, Slot: enums.SlotPhysicalForm, From: "PRIVATE", To: "MARINE_CAPTAIN", CauseSlot: enums.SlotDevilFruit, Cause: nika.Name()},
+	}
+	loadout, err := game.NewLoadoutFromSpec(game.LoadoutSpec{
+		DevilFruit: nika, FruitMastery: enums.FruitMasteryAwakened,
+		ArmamentHaki: enums.HakiNone, ObservationHaki: enums.HakiNone, ConquerorHaki: enums.HakiNone,
+		PhysicalForm: enums.PhysicalFormMarineCaptain, Effects: effects,
+	})
+	if err != nil {
+		t.Fatalf("NewLoadoutFromSpec: %v", err)
+	}
+	host.AssignLoadout(loadout)
+
+	l = state()
+	if len(l.Effects) != 2 {
+		t.Fatalf("expected 2 effects, got %d", len(l.Effects))
+	}
+	first := l.Effects[0]
+	if first.Kind != "EVOLUTION" || first.Slot != "DEVIL_FRUIT" || first.From != gomu.ID().String() ||
+		first.To != nika.ID().String() || first.CauseSlot != "FRUIT_MASTERY" || first.Cause != "AWAKENED" {
+		t.Fatalf("first effect mismatch: %+v", first)
+	}
+	if second := l.Effects[1]; second.Kind != "STAT_FLOOR" || second.Slot != "PHYSICAL_FORM" || second.To != "MARINE_CAPTAIN" {
+		t.Fatalf("second effect mismatch: %+v", second)
+	}
+	if l.DevilFruit == nil || l.DevilFruit.EvolvesFrom == nil || l.DevilFruit.EvolvesFrom.Name != "Gomu Gomu no mi" {
+		t.Fatalf("expected the fruit to nest its evolution parent, got %+v", l.DevilFruit)
+	}
+}

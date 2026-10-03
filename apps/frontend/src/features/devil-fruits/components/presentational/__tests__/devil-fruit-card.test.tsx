@@ -19,6 +19,7 @@ function baseFruit(overrides: Partial<DevilFruitResponse> = {}): DevilFruitRespo
     focalX: 0.5,
     focalY: 0.5,
     fruitType: 'PARAMECIA',
+    evolvesFrom: null,
     ...overrides,
   }
 }
