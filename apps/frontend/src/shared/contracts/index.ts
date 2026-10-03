@@ -125,6 +125,7 @@ export type {
   TransferHostPayload,
   VoteCastPayload,
   VotePayload,
+  VotingExtendedPayload,
   VotingOpenedPayload,
   ClientCommandType,
   ClientCommand,

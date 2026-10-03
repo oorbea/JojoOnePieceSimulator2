@@ -163,6 +163,12 @@ export const votePayloadSchema = z.object({
 })
 export type VotePayload = z.infer<typeof votePayloadSchema>
 
+export const votingExtendedPayloadSchema = z.object({
+  roundIndex: z.number().int(),
+  closesAt: z.iso.datetime({ offset: true }),
+})
+export type VotingExtendedPayload = z.infer<typeof votingExtendedPayloadSchema>
+
 export const votingOpenedPayloadSchema = z.object({
   roundIndex: z.number().int(),
   closesAt: z.iso.datetime({ offset: true }),
