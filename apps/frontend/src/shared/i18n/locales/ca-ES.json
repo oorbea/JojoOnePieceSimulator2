@@ -438,6 +438,10 @@
     "match": {
       "title": "Partida",
       "roundBadge": "Ronda {{index}}",
+      "stage": {
+        "venueKicker": "Escenari del combat",
+        "venueHint": "És només el lloc on es desenvoluparà el combat: no dona avantatge a cap equip."
+      },
       "drawing": "Repartint poders…",
       "revealing": "Revelant poders…",
       "skipReveal": "Salta",

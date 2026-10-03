@@ -438,6 +438,10 @@
     "match": {
       "title": "Partida",
       "roundBadge": "Ronda {{index}}",
+      "stage": {
+        "venueKicker": "Escenario del combate",
+        "venueHint": "Es solo el lugar donde se desarrollará el combate: no da ventaja a ningún equipo."
+      },
       "drawing": "Repartiendo poderes…",
       "revealing": "Revelando poderes…",
       "skipReveal": "Saltar",

@@ -12,12 +12,14 @@ import type { GameStage } from '@/features/game/types/game.types'
 type Props = {
   stage: GameStage
   roundIndex: number
+  /** Versus: label the stage as the arena the teams fight in. */
+  venue?: boolean
 }
 
 // Hero card for the round's Stage - same art-well/badge recipe as
 // StageCard/StandCard (the `|| null` guard, not `??`, matters here too:
 // picture/pictureThumb can be an empty string mid-generation).
-export function StageBanner({ stage, roundIndex }: Props) {
+export function StageBanner({ stage, roundIndex, venue = false }: Props) {
   const { t } = useTranslation()
 
   return (
@@ -32,6 +34,11 @@ export function StageBanner({ stage, roundIndex }: Props) {
       />
 
       <YStack gap="$1.5">
+        {venue ? (
+          <GlowText level="label" tone="soft">
+            {t('game.match.stage.venueKicker')} · {t('game.match.stage.venueHint')}
+          </GlowText>
+        ) : null}
         <XStack gap="$2" flexWrap="wrap">
           <GlassPanel tone="plastic" px="$2.5" py="$1" rounded="$pill" elevate={0}>
             <GlowText level="label">{t(`enums.manga.${stage.manga}`)}</GlowText>

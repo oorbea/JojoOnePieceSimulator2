@@ -438,6 +438,10 @@
     "match": {
       "title": "Match",
       "roundBadge": "Round {{index}}",
+      "stage": {
+        "venueKicker": "Battle arena",
+        "venueHint": "This is just where the fight takes place - it gives neither team an advantage."
+      },
       "drawing": "Drawing powers…",
       "revealing": "Revealing powers…",
       "skipReveal": "Skip",

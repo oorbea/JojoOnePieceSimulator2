@@ -7,6 +7,7 @@ import { MatchRoster } from '@/features/game/components/presentational/match/mat
 import { RevealStage } from '@/features/game/components/presentational/match/reveal-stage'
 import { RoundFlash } from '@/features/game/components/presentational/match/round-flash'
 import { RoundResultPanel } from '@/features/game/components/presentational/match/round-result-panel'
+import { StageAnnouncement } from '@/features/game/components/presentational/match/stage-announcement'
 import { StageBanner } from '@/features/game/components/presentational/match/stage-banner'
 import { VoteBar } from '@/features/game/components/presentational/match/vote-bar'
 import { VotingStatusBar } from '@/features/game/components/presentational/match/voting-status-bar'
@@ -147,7 +148,20 @@ export function MatchScreen({
         />
       ) : (
         <>
-          {round ? <StageBanner stage={round.stage} roundIndex={round.index} /> : null}
+          {/* During ASSIGNING `round` is still the PREVIOUS round (the new one
+              is only created when voting opens), so never banner it then -
+              Versus announces the upcoming stage instead. */}
+          {snapshot.state === 'ASSIGNING' ? (
+            snapshot.mode === 'VERSUS' && snapshot.upcomingStage ? (
+              <StageAnnouncement stage={snapshot.upcomingStage} />
+            ) : null
+          ) : round ? (
+            <StageBanner
+              stage={round.stage}
+              roundIndex={round.index}
+              venue={snapshot.mode === 'VERSUS'}
+            />
+          ) : null}
 
           <VotingStatusBar
             isRevealing={false}
