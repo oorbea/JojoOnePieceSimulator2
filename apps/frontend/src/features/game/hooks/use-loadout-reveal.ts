@@ -85,6 +85,9 @@ type Result = {
    * animation immediately, so a lone player never has to sit through their
    * own already-acknowledged reveal waiting on the server's timer. */
   skip: () => void
+  /** Rejoins the sorteo at the point everyone else is at right now, after
+   * this client skipped it. Does not undo the skip vote already sent. */
+  rewatch: () => void
 }
 
 // Drives the sorteo overlay: jugador-por-jugador (owner request,
@@ -144,7 +147,12 @@ export function useLoadoutReveal({
   // Date.now()-derived one - the actual "how much time is left" read only
   // happens once, inside the scheduling effect below, at the moment a run
   // is genuinely (re)started.
-  const runKey = `${gameId}:${roundIndex}:${mangasKey}:${playersKey}:${speed}:${revealEndsAt ?? 'local'}`
+  // rewatchCount is part of the runKey so asking to rewatch is a genuinely
+  // new run: it re-seeks against the server clock (the same math a reconnect
+  // uses) instead of replaying from phase 0.
+  const [rewatchCount, setRewatchCount] = useState(0)
+  const runKey = `${gameId}:${roundIndex}:${mangasKey}:${playersKey}:${speed}:${revealEndsAt ?? 'local'}:${rewatchCount}`
+  const runActive = active || (rewatchCount > 0 && stillAssigning)
 
   const [phaseIndex, setPhaseIndex] = useState(0)
   const [revealing, setRevealing] = useState(false)
@@ -167,7 +175,7 @@ export function useLoadoutReveal({
   // documents for its own once-per-run reads - it only ever runs once per
   // actual run, guarded the same way setPhaseIndex(0) always was.
   const seek =
-    active && runKey !== seededKey
+    runActive && runKey !== seededKey
       ? seekRevealTimeline(phases, localTotalMs, revealStartedAt, revealEndsAt, serverNow())
       : null
 
@@ -186,7 +194,7 @@ export function useLoadoutReveal({
   }
 
   useEffect(() => {
-    if (!active || startedRef.current === runKey) return
+    if (!runActive || startedRef.current === runKey) return
     startedRef.current = runKey
 
     markRevealed()
@@ -226,7 +234,7 @@ export function useLoadoutReveal({
       timers.current.push(timer)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startedRef (keyed on runKey) guards re-entry; phases/revealStartedAt/revealEndsAt/markRevealed are read fresh on the run they gate, not meant to re-trigger it on their own
-  }, [active, runKey])
+  }, [runActive, runKey])
 
   // Only clears pending timers on unmount - deliberately not tied to
   // `active`/`runKey` changing (that's the bug described above). Any timer
@@ -262,6 +270,7 @@ export function useLoadoutReveal({
       evolveStage: -1,
       scale: 1,
       skip: () => {},
+      rewatch: () => setRewatchCount((n) => n + 1),
     }
   }
 
@@ -279,5 +288,6 @@ export function useLoadoutReveal({
     evolveStage,
     scale: runScale,
     skip,
+    rewatch: () => {},
   }
 }

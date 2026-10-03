@@ -441,6 +441,8 @@
       "drawing": "Repartint poders…",
       "revealing": "Revelant poders…",
       "skipReveal": "Salta",
+      "rewatchReveal": "Torna al sorteig en directe",
+      "rewatchRevealHint": "Torna al sorteig de poders pel punt on el veuen els altres.",
       "skipRevealA11y": "Salta la revelació de poders",
       "tiebreakOpen": "Vot de desempat obert",
       "closesIn": "Tanca en {{seconds}}s",

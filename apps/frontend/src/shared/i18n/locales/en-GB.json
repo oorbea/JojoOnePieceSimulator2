@@ -441,6 +441,8 @@
       "drawing": "Drawing powers…",
       "revealing": "Revealing powers…",
       "skipReveal": "Skip",
+      "rewatchReveal": "Back to the live draw",
+      "rewatchRevealHint": "Jump back into the power draw at the point everyone else is watching.",
       "skipRevealA11y": "Skip the power reveal",
       "tiebreakOpen": "Tiebreak vote open",
       "closesIn": "Closes in {{seconds}}s",

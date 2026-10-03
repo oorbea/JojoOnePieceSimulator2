@@ -10,6 +10,9 @@ import { useNow } from '@/shared/hooks/use-now'
 type Props = {
   isRevealing: boolean
   onSkip: () => void
+  /** Rejoin the sorteo live after skipping it - only offered while the
+   * server is still in ASSIGNING. */
+  onRewatch?: () => void
   tiebreak: boolean
   votingClosesAt: number | null
   /** The server's own sorteo deadline (live.revealEndsAt) - still set for a
@@ -27,7 +30,7 @@ type Props = {
 // Once voting has genuinely opened: just the current game state label - the
 // countdown itself now lives in VoteBar (which owns the vote buttons right
 // below it), so it isn't shown twice.
-export function VotingStatusBar({ isRevealing, onSkip, tiebreak, votingClosesAt, revealEndsAt, gameState }: Props) {
+export function VotingStatusBar({ isRevealing, onSkip, onRewatch, tiebreak, votingClosesAt, revealEndsAt, gameState }: Props) {
   const { t } = useTranslation()
   const now = useNow(1000, votingClosesAt !== null || revealEndsAt !== null)
 
@@ -54,9 +57,22 @@ export function VotingStatusBar({ isRevealing, onSkip, tiebreak, votingClosesAt,
     const seconds = secondsUntil(revealEndsAt, now)
     return (
       <GlassPanel tone="strong" rounded="$pill" px="$4" py="$2.5" width="100%">
-        <GlowText level="label" tone="soft">
-          {seconds !== null ? t('game.match.reveal.votingIn', { seconds }) : t('game.match.reveal.title')}
-        </GlowText>
+        <XStack items="center" justify="space-between" gap="$2" flexWrap="wrap">
+          <GlowText level="label" tone="soft">
+            {seconds !== null ? t('game.match.reveal.votingIn', { seconds }) : t('game.match.reveal.title')}
+          </GlowText>
+          {onRewatch && gameState === 'ASSIGNING' ? (
+            <GlossButton
+              tone="glass"
+              btnSize="sm"
+              onPress={onRewatch}
+              accessibilityLabel={t('game.match.rewatchReveal')}
+              tooltip={t('game.match.rewatchRevealHint')}
+            >
+              {t('game.match.rewatchReveal')}
+            </GlossButton>
+          ) : null}
+        </XStack>
       </GlassPanel>
     )
   }

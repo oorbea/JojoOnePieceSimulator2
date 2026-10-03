@@ -441,6 +441,8 @@
       "drawing": "Repartiendo poderes…",
       "revealing": "Revelando poderes…",
       "skipReveal": "Saltar",
+      "rewatchReveal": "Volver al sorteo en directo",
+      "rewatchRevealHint": "Vuelve al sorteo de poderes por donde lo están viendo los demás.",
       "skipRevealA11y": "Saltar la revelación de poderes",
       "tiebreakOpen": "Voto de desempate abierto",
       "closesIn": "Cierra en {{seconds}}s",

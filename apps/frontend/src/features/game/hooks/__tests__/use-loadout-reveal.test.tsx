@@ -191,6 +191,50 @@ describe('useLoadoutReveal', () => {
     expect(readState().isRevealing).toBe(false)
   })
 
+  it('rewatch rejoins the sorteo after a skip while the server is still assigning', async () => {
+    const mangas: Manga[] = ['JOJO', 'ONE_PIECE']
+    const participants = [participant('p1')]
+    const refs: { skip: (() => void) | null; rewatch: (() => void) | null } = {
+      skip: null,
+      rewatch: null,
+    }
+
+    function RewatchHarness() {
+      // Same shape as the real container: active flips false once the
+      // assignment has been marked revealed.
+      const [revealedOnce, setRevealedOnce] = useState(false)
+      const result = useLoadoutReveal({
+        gameId: 'g1',
+        roundIndex: 0,
+        mangas,
+        participants,
+        speed: 'SWIFT',
+        active: !revealedOnce,
+        markRevealed: () => setRevealedOnce(true),
+        sendRevealReady: () => {},
+        revealEndsAt: null,
+        revealStartedAt: null,
+        stillAssigning: true,
+      })
+      useEffect(() => {
+        refs.skip = result.skip
+        refs.rewatch = result.rewatch
+      }, [result.skip, result.rewatch])
+      return <Text testID="state">{JSON.stringify({ isRevealing: result.isRevealing })}</Text>
+    }
+
+    await render(<RewatchHarness />)
+    await act(async () => {
+      refs.skip?.()
+    })
+    expect(readState().isRevealing).toBe(false)
+
+    await act(async () => {
+      refs.rewatch?.()
+    })
+    expect(readState().isRevealing).toBe(true)
+  })
+
   it('narrator/spin/land phases advance one slot at a time, in order, for the current player', async () => {
     const mangas: Manga[] = ['JOJO']
     const participants = [participant('p1')]
