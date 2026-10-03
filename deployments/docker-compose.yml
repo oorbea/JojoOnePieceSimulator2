@@ -120,6 +120,12 @@ services:
       # this to the prod wss:// socket origin instead (prod's REST calls are
       # same-origin already).
       CSP_CONNECT_EXTRA: "http://localhost:${PORT:-8080} ws://localhost:${PORT:-8080}"
+      # Who may embed the app in an iframe (CSP frame-ancestors). 'none' =
+      # anti-clickjacking default for every environment; the stock nginx
+      # envsubst turns an UNSET variable into an empty string (an invalid
+      # directive), so the safe value must live here, in the base file.
+      # docker-compose.dev.yml relaxes it to 'self' for device-emulation tools.
+      CSP_FRAME_ANCESTORS: "'none'"
     # No `ports:` here either - see the backend service comment above.
     networks:
       - public-net
