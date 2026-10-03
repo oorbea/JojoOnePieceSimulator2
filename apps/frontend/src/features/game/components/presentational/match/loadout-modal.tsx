@@ -1,4 +1,5 @@
 import { X } from '@tamagui/lucide-icons-2'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -10,8 +11,11 @@ import {
   STAND_STAT_LABELS,
 } from '@/features/game/components/presentational/match/loadout-card'
 import { PowerBlock } from '@/features/game/components/presentational/match/power-block'
+import { DevilFruitDetail } from '@/features/devil-fruits'
+import { StandDetail } from '@/features/stands'
 import { loadoutSlots } from '@/features/game/lib/match-rules'
 import type { GameParticipant } from '@/features/game/types/game.types'
+import { DetailModal } from '@/shared/components/presentational/detail-modal'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { notifyScroll } from '@/shared/lib/scroll-bus'
@@ -34,6 +38,8 @@ type Props = {
 export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: Props) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
+  // Which power's full catalogue card is open on top of this modal.
+  const [detail, setDetail] = useState<'stand' | 'fruit' | null>(null)
 
   if (!participant) return null
   const loadout = participant.loadout
@@ -135,6 +141,17 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
                       </XStack>
                     ) : null}
                   </PowerBlock>
+                  {stand ? (
+                    <GlossButton
+                      tone="glass"
+                      btnSize="sm"
+                      onPress={() => setDetail('stand')}
+                      accessibilityLabel={t('game.match.loadout.viewPowerA11y', { name: stand.name })}
+                      tooltip={t('game.match.loadout.viewPowerHint')}
+                    >
+                      {t('game.match.loadout.viewPower')}
+                    </GlossButton>
+                  ) : null}
                 </YStack>
               ) : null}
 
@@ -150,6 +167,17 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
                     skills={fruit?.skills}
                     fallbackLabel={t('game.match.noFruit')}
                   />
+                  {fruit ? (
+                    <GlossButton
+                      tone="glass"
+                      btnSize="sm"
+                      onPress={() => setDetail('fruit')}
+                      accessibilityLabel={t('game.match.loadout.viewPowerA11y', { name: fruit.name })}
+                      tooltip={t('game.match.loadout.viewPowerHint')}
+                    >
+                      {t('game.match.loadout.viewPower')}
+                    </GlossButton>
+                  ) : null}
                 </YStack>
               ) : null}
 
@@ -184,6 +212,16 @@ export function LoadoutModal({ visible, participant, isSelf, mangas, onClose }: 
           </ScrollView>
         </GlassPanel>
       </YStack>
+
+      <DetailModal
+        visible={detail !== null}
+        title={(detail === 'stand' ? stand?.name : fruit?.name) ?? ''}
+        onClose={() => setDetail(null)}
+        closeA11y={t('common.close')}
+      >
+        {detail === 'stand' && stand ? <StandDetail stand={stand} /> : null}
+        {detail === 'fruit' && fruit ? <DevilFruitDetail devilFruit={fruit} /> : null}
+      </DetailModal>
     </Modal>
   )
 }

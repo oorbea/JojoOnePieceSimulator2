@@ -539,6 +539,9 @@
       },
       "loadout": {
         "viewA11y": "View {{name}}'s powers",
+        "viewPower": "View full card",
+        "viewPowerHint": "Open this power's full card (description, stats, skills).",
+        "viewPowerA11y": "View {{name}}'s full card",
         "closeA11y": "Close power breakdown",
         "viewImageA11y": "View {{name}}'s image full-size"
       },

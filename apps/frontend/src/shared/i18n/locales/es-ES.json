@@ -539,6 +539,9 @@
       },
       "loadout": {
         "viewA11y": "Ver los poderes de {{name}}",
+        "viewPower": "Ver ficha completa",
+        "viewPowerHint": "Abre la ficha completa de este poder (descripción, stats, habilidades).",
+        "viewPowerA11y": "Ver la ficha completa de {{name}}",
         "closeA11y": "Cerrar el desglose de poderes",
         "viewImageA11y": "Ver la imagen de {{name}} en grande"
       },

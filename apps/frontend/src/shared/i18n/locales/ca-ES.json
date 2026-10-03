@@ -539,6 +539,9 @@
       },
       "loadout": {
         "viewA11y": "Veure els poders de {{name}}",
+        "viewPower": "Veure fitxa completa",
+        "viewPowerHint": "Obre la fitxa completa d'aquest poder (descripció, estadístiques, habilitats).",
+        "viewPowerA11y": "Veure la fitxa completa de {{name}}",
         "closeA11y": "Tancar el desglossament de poders",
         "viewImageA11y": "Veure la imatge de {{name}} en gran"
       },
