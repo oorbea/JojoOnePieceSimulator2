@@ -12,22 +12,19 @@ var (
 	// with whether a DevilFruit is present: NONE without a fruit, at least
 	// REGULAR with one.
 	ErrFruitMasteryMismatch = errors.New("fruit mastery must be NONE without a devil fruit, and at least REGULAR with one")
-
-	// ErrSpin4Required is returned when a Stand carrying
-	// enums.RequiresSpin4 is paired with any Spin level other than
-	// enums.SpinInfinite.
-	ErrSpin4Required = errors.New("this stand requires spin level INFINITE")
 )
 
 // Loadout is the immutable set of abilities assigned to a Participant for a
 // game (Gauntlet) or a single round (Versus). Spin and Hamon are
 // independent of the Stand and of each other - a player can hold any
-// combination of the three - except for the handful of Stands carrying
-// enums.RequiresSpin4, which force SpinInfinite. FruitMastery is coupled
-// to DevilFruit: no fruit forces FruitMasteryNone, any fruit forces at
-// least FruitMasteryRegular. NewLoadout enforces both invariants
-// regardless of how the values were produced (random draw or, later,
-// inventory).
+// combination of the three - except where a power demands a floor (see
+// power_effects.go: Tusk: Acto 4 forces SpinInfinite, a Zoan raises Physical
+// Form, ...). FruitMastery is coupled to DevilFruit: no fruit forces
+// FruitMasteryNone, any fruit forces at least FruitMasteryRegular.
+// NewLoadout enforces both regardless of how the values were produced
+// (random draw or, later, inventory). effects records what the builder's
+// resolver did on the way - the Stand/DevilFruit held here are the final
+// ones, after any evolution.
 type Loadout struct {
 	stand           *powers.Stand
 	devilFruit      *powers.DevilFruit
@@ -39,6 +36,7 @@ type Loadout struct {
 	conquerorHaki   enums.HakiLevel
 	physicalForm    enums.PhysicalForm
 	battleIQ        BattleIQ
+	effects         []PowerEffect
 }
 
 // LoadoutSpec is the full set of fields NewLoadoutFromSpec validates and
@@ -57,13 +55,29 @@ type LoadoutSpec struct {
 	ConquerorHaki   enums.HakiLevel
 	PhysicalForm    enums.PhysicalForm
 	BattleIQ        BattleIQ // zero value (NoBattleIQ()) is fine for a non-JoJo lobby
+	// Effects is what the LoadoutBuilder's resolver did, in order. Empty for
+	// a Loadout assembled by hand.
+	Effects []PowerEffect
+	// Mangas are the mangas in play, so cross-manga floors are only enforced
+	// when both are. Nil (tests, hand-built loadouts) means "not both".
+	Mangas []enums.Manga
 }
 
 // NewLoadoutFromSpec validates and builds a Loadout from spec. BattleIQ
 // carries no manga gate here - Loadout itself doesn't know which mangas are
 // in play (neither does Spin/Hamon), so the JoJo-only gate lives in
-// LoadoutBuilder instead.
+// LoadoutBuilder instead. Power-effect floors are enforced too (see
+// ErrPowerEffectFloorViolated); restoring a persisted Loadout skips them, see
+// newLoadout.
 func NewLoadoutFromSpec(spec LoadoutSpec) (*Loadout, error) {
+	return newLoadout(spec, true)
+}
+
+// newLoadout is NewLoadoutFromSpec with the power-effect floor check made
+// optional. Restore passes false: a snapshot already holds an assigned
+// Loadout, and re-judging it against today's rule table would make every
+// in-flight game assigned under an older table fail to restore.
+func newLoadout(spec LoadoutSpec, enforceFloors bool) (*Loadout, error) {
 	if !spec.Spin.IsValid() {
 		return nil, enums.ErrInvalidSpinLevel
 	}
@@ -91,8 +105,8 @@ func NewLoadoutFromSpec(spec LoadoutSpec) (*Loadout, error) {
 	if spec.DevilFruit != nil && spec.FruitMastery == enums.FruitMasteryNone {
 		return nil, ErrFruitMasteryMismatch
 	}
-	if spec.Stand != nil && HasTrait(&spec.Stand.Power, enums.RequiresSpin4) && spec.Spin != enums.SpinInfinite {
-		return nil, ErrSpin4Required
+	if enforceFloors && newEffectStateFromSpec(spec).floorsViolated() {
+		return nil, ErrPowerEffectFloorViolated
 	}
 	return &Loadout{
 		stand:           spec.Stand,
@@ -105,7 +119,32 @@ func NewLoadoutFromSpec(spec LoadoutSpec) (*Loadout, error) {
 		conquerorHaki:   spec.ConquerorHaki,
 		physicalForm:    spec.PhysicalForm,
 		battleIQ:        spec.BattleIQ,
+		effects:         append([]PowerEffect(nil), spec.Effects...),
 	}, nil
+}
+
+// newEffectStateFromSpec builds the resolver's state from a spec, without any
+// evolution family - enough to judge floors, which need no evolution targets.
+func newEffectStateFromSpec(spec LoadoutSpec) *effectState {
+	st := &effectState{stand: spec.Stand, fruit: spec.DevilFruit}
+	st.values[enums.SlotPhysicalForm] = int(spec.PhysicalForm)
+	st.values[enums.SlotFruitMastery] = int(spec.FruitMastery)
+	st.values[enums.SlotHamon] = int(spec.Hamon)
+	st.values[enums.SlotArmamentHaki] = int(spec.ArmamentHaki)
+	st.values[enums.SlotObservationHaki] = int(spec.ObservationHaki)
+	st.values[enums.SlotConquerorHaki] = int(spec.ConquerorHaki)
+	st.values[enums.SlotSpin] = int(spec.Spin)
+	var jojo, onePiece bool
+	for _, m := range spec.Mangas {
+		switch m {
+		case enums.Jojo:
+			jojo = true
+		case enums.OnePiece:
+			onePiece = true
+		}
+	}
+	st.bothMangas = jojo && onePiece
+	return st
 }
 
 // NewLoadout validates and builds a Loadout. Pass nil for stand/devilFruit
@@ -146,3 +185,86 @@ func (l *Loadout) ObservationHaki() enums.HakiLevel { return l.observationHaki }
 func (l *Loadout) ConquerorHaki() enums.HakiLevel   { return l.conquerorHaki }
 func (l *Loadout) PhysicalForm() enums.PhysicalForm { return l.physicalForm }
 func (l *Loadout) BattleIQ() BattleIQ               { return l.battleIQ }
+
+// Effects returns a copy of what the power-effect resolver did to this
+// Loadout during assignment, in order (empty if nothing).
+func (l *Loadout) Effects() []PowerEffect { return append([]PowerEffect(nil), l.effects...) }
+
+// DrawnStand is the Stand as it was drawn, before any evolution effect: the
+// final Stand itself if it never evolved, else the ancestor the first Stand
+// evolution started from. The sorteo reveals this one first.
+func (l *Loadout) DrawnStand() *powers.Stand {
+	if l.stand == nil {
+		return nil
+	}
+	for _, e := range l.effects {
+		if e.Kind != enums.EffectEvolution || e.Slot != enums.SlotStand {
+			continue
+		}
+		for cur := l.stand; cur != nil; cur = cur.EvolvesFrom() {
+			if cur.ID().String() == e.From {
+				return cur
+			}
+		}
+		break
+	}
+	return l.stand
+}
+
+// hakiGranted reports whether a power effect raised the haki type in slot up
+// from nothing: such a type has no level slot of its own in the sorteo, its
+// effect's beat shows the grant instead.
+func (l *Loadout) hakiGranted(slot enums.LoadoutSlot) bool {
+	for _, e := range l.effects {
+		if e.Kind == enums.EffectStatFloor && e.Slot == slot && e.From == enums.HakiNone.String() {
+			return true
+		}
+	}
+	return false
+}
+
+// effectSteps is how many evolution stages e spans along the final Stand's or
+// DevilFruit's chain (to's depth minus from's), at least 1. Zero for anything
+// but an evolution. A stage that cannot be found on the chain counts as one
+// step rather than failing: it only sizes an animation.
+func (l *Loadout) effectSteps(e PowerEffect) int {
+	if e.Kind != enums.EffectEvolution {
+		return 0
+	}
+	depths := map[string]int{}
+	switch e.Slot {
+	case enums.SlotStand:
+		for cur := l.stand; cur != nil; cur = cur.EvolvesFrom() {
+			depths[cur.ID().String()] = cur.EvolutionDepth()
+		}
+	case enums.SlotDevilFruit:
+		for cur := l.devilFruit; cur != nil; cur = cur.EvolvesFrom() {
+			depths[cur.ID().String()] = cur.EvolutionDepth()
+		}
+	}
+	from, okFrom := depths[e.From]
+	to, okTo := depths[e.To]
+	if !okFrom || !okTo || to-from < 1 {
+		return 1
+	}
+	return to - from
+}
+
+// DrawnDevilFruit is DrawnStand for the DevilFruit.
+func (l *Loadout) DrawnDevilFruit() *powers.DevilFruit {
+	if l.devilFruit == nil {
+		return nil
+	}
+	for _, e := range l.effects {
+		if e.Kind != enums.EffectEvolution || e.Slot != enums.SlotDevilFruit {
+			continue
+		}
+		for cur := l.devilFruit; cur != nil; cur = cur.EvolvesFrom() {
+			if cur.ID().String() == e.From {
+				return cur
+			}
+		}
+		break
+	}
+	return l.devilFruit
+}

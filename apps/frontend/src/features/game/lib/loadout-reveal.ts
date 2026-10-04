@@ -62,6 +62,15 @@ export const REVEAL_POWER_SPIN_MS = 5000
 export const REVEAL_EVOLVE_BASE_MS = 2000
 export const REVEAL_EVOLVING_MS = 2500
 export const REVEAL_EVOLVE_STEP_MS = 1500
+// REVEAL_EFFECT_INTRO_MS/REVEAL_EFFECT_LAND_MS mirror the backend's
+// game.RevealEffectIntroMs/RevealEffectLandMs: a power effect's beat is an
+// intro (the reveal jumps back to the card the effect changes, still showing
+// its drawn value, while the cause line plays) and a closing hold on the new
+// value / evolved form. An EVOLUTION effect puts REVEAL_EVOLVING_MS and one
+// REVEAL_EVOLVE_STEP_MS per intermediate stage between the two - see
+// reveal.go's effectMs.
+export const REVEAL_EFFECT_INTRO_MS = 1500
+export const REVEAL_EFFECT_LAND_MS = 2500
 
 // REVEAL_SPEED_MULTIPLIER mirrors enums.RevealSpeed's own Multiplier()
 // method (reveal_speed.go) - every reveal timing constant above is scaled
@@ -72,11 +81,18 @@ export const REVEAL_SPEED_MULTIPLIER: Record<RevealSpeed, number> = {
   SWIFT: 1.0,
 }
 
-// 'evolveBase'/'evolving'/'evolveStep' are the Stand slot's own extra beats
-// when the landed Stand evolves from something (2026-09-25) - see
-// reveal.go's evolveMs doc. They only ever appear between a stand slot's
-// 'spin' and 'land'; every other slot goes straight from 'spin' to 'land' as
+// 'evolveBase'/'evolving'/'evolveStep' are the Stand/DevilFruit slot's own
+// extra beats when the DRAWN power evolves from something (2026-09-25) - see
+// reveal.go's evolveMs doc. They only ever appear between that slot's 'spin'
+// and 'land'; every other slot goes straight from 'spin' to 'land' as
 // before.
+//
+// 'effectIntro'/'effectEvolving'/'effectStep'/'effectLand' are a power
+// effect's beat (see PowerEffect in the backend): they play right after the
+// slot the effect is anchored to has landed (power-effects.ts's
+// effectAnchors), at the moment its trigger has been revealed. An
+// EVOLUTION effect plays intro, evolving, steps-1 steps, land; a STAT_FLOOR
+// plays intro, land.
 export type RevealPhaseKind =
   | 'intro'
   | 'playerIntro'
@@ -85,6 +101,10 @@ export type RevealPhaseKind =
   | 'evolveBase'
   | 'evolving'
   | 'evolveStep'
+  | 'effectIntro'
+  | 'effectEvolving'
+  | 'effectStep'
+  | 'effectLand'
   | 'land'
   | 'playerOutro'
   | 'outro'
@@ -107,6 +127,18 @@ export type RevealPhase = {
   // pick chain[evolveStage + 1] without recomputing anything - see
   // reveal-stage.tsx.
   evolveStage?: number
+  // Only set for the four 'effect*' kinds: which of this player's power
+  // effects (index into loadout.effects) the beat belongs to. For
+  // 'effectStep', evolveStage above is the intermediate stage, as for
+  // 'evolveStep'.
+  effectIndex?: number
+  // How many of this player's power effects count as already applied while
+  // this phase plays: every effect whose 'effectLand' came before it, plus
+  // - on an 'effectLand' phase itself - that effect. The stage shows the
+  // loadout with every LATER effect undone (power-effects.ts's
+  // displayLoadoutAt), so the drawn values always show first. Set on every
+  // phase inside a player's turn; undefined during 'intro'/'outro'.
+  effectsApplied?: number
 }
 
 // RevealPlayer is the minimal per-participant shape the timeline needs -
@@ -127,6 +159,25 @@ export type RevealPlayer = {
   // so every existing call site/fixture that doesn't care about evolutions
   // keeps compiling unchanged.
   standEvolutionSteps?: number
+  // fruitEvolutionSteps is standEvolutionSteps for the DevilFruit slot (the
+  // DRAWN fruit's depth - a Model Nika drawn directly plays from Gomu Gomu no
+  // mi). Mirrors the backend's RevealPlayer.FruitEvolutionSteps.
+  fruitEvolutionSteps?: number
+  // effects mirrors the backend's RevealPlayer.Effects, plus where each one
+  // plays. Optional so fixtures that don't care about effects keep compiling.
+  effects?: RevealEffectPlan[]
+}
+
+// RevealEffectPlan is one power effect as the timeline needs it. `kind` and
+// `steps` are what the backend's RevealEffect carries (steps = evolution
+// stages spanned, 0 for a stat floor); `anchor` is the slot whose 'land' the
+// beat plays after - see power-effects.ts's effectAnchors, which keeps
+// anchors non-decreasing in effect order so "applied effects" is always a
+// prefix of the list.
+export type RevealEffectPlan = {
+  kind: 'STAT_FLOOR' | 'EVOLUTION'
+  steps: number
+  anchor: LoadoutSlotKind
 }
 
 // SLOT_ORDINAL mirrors the backend's RevealSlot enum ordinals exactly
@@ -286,6 +337,10 @@ export function revealTimeline(
       durationMs: scaled(REVEAL_PLAYER_INTRO_MS),
     })
     const slots = playerSlots(mangas, player)
+    const effects = player.effects ?? []
+    // Effects applied so far during this player's turn (see
+    // RevealPhase.effectsApplied).
+    let applied = 0
     slots.forEach((slot, si) => {
       phases.push({
         phase: { kind: 'narrator', participant: pi, slot: si, totalSlots: slots.length },
@@ -295,14 +350,32 @@ export function revealTimeline(
         phase: { kind: 'spin', participant: pi, slot: si, totalSlots: slots.length },
         durationMs: scaled(spinMsFor(gameId, roundIndex, pi, slot)),
       })
-      const steps = slot === 'stand' ? (player.standEvolutionSteps ?? 0) : 0
+      const steps =
+        slot === 'stand'
+          ? (player.standEvolutionSteps ?? 0)
+          : slot === 'devilFruit'
+            ? (player.fruitEvolutionSteps ?? 0)
+            : 0
+      const slotApplied = applied
       if (steps > 0) {
         phases.push({
-          phase: { kind: 'evolveBase', participant: pi, slot: si, totalSlots: slots.length },
+          phase: {
+            kind: 'evolveBase',
+            participant: pi,
+            slot: si,
+            totalSlots: slots.length,
+            effectsApplied: slotApplied,
+          },
           durationMs: scaled(REVEAL_EVOLVE_BASE_MS),
         })
         phases.push({
-          phase: { kind: 'evolving', participant: pi, slot: si, totalSlots: slots.length },
+          phase: {
+            kind: 'evolving',
+            participant: pi,
+            slot: si,
+            totalSlots: slots.length,
+            effectsApplied: slotApplied,
+          },
           durationMs: scaled(REVEAL_EVOLVING_MS),
         })
         // steps-1 INTERMEDIATE stages - the final stage gets the slot's own
@@ -315,14 +388,53 @@ export function revealTimeline(
               slot: si,
               totalSlots: slots.length,
               evolveStage: stage,
+              effectsApplied: slotApplied,
             },
             durationMs: scaled(REVEAL_EVOLVE_STEP_MS),
           })
         }
       }
       phases.push({
-        phase: { kind: 'land', participant: pi, slot: si, totalSlots: slots.length },
+        phase: {
+          kind: 'land',
+          participant: pi,
+          slot: si,
+          totalSlots: slots.length,
+          effectsApplied: slotApplied,
+        },
         durationMs: scaled(slotHoldMs(slot, player)),
+      })
+
+      // Power effects anchored to this slot play right after it lands, in
+      // effect order (anchors never decrease along the list). One whose anchor
+      // is not among this player's slots - it should not happen - plays after
+      // the last slot instead of being dropped.
+      effects.forEach((effect, ei) => {
+        const anchorIndex = slots.indexOf(effect.anchor)
+        const playsHere = (anchorIndex >= 0 ? anchorIndex : slots.length - 1) === si
+        if (!playsHere) return
+        const base = { participant: pi, slot: si, totalSlots: slots.length, effectIndex: ei }
+        phases.push({
+          phase: { kind: 'effectIntro', ...base, effectsApplied: ei },
+          durationMs: scaled(REVEAL_EFFECT_INTRO_MS),
+        })
+        if (effect.kind === 'EVOLUTION') {
+          phases.push({
+            phase: { kind: 'effectEvolving', ...base, effectsApplied: ei },
+            durationMs: scaled(REVEAL_EVOLVING_MS),
+          })
+          for (let stage = 0; stage < Math.max(1, effect.steps) - 1; stage++) {
+            phases.push({
+              phase: { kind: 'effectStep', ...base, evolveStage: stage, effectsApplied: ei },
+              durationMs: scaled(REVEAL_EVOLVE_STEP_MS),
+            })
+          }
+        }
+        phases.push({
+          phase: { kind: 'effectLand', ...base, effectsApplied: ei + 1 },
+          durationMs: scaled(REVEAL_EFFECT_LAND_MS),
+        })
+        applied = ei + 1
       })
     })
     phases.push({

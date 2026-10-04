@@ -73,7 +73,7 @@ func handleError(w http.ResponseWriter, err error) {
 		errors.Is(err, game.ErrEmptyPowerMangas),
 		errors.Is(err, game.ErrInvalidTeamSize),
 		errors.Is(err, game.ErrFruitMasteryMismatch),
-		errors.Is(err, game.ErrSpin4Required),
+		errors.Is(err, game.ErrPowerEffectFloorViolated),
 		errors.Is(err, game.ErrPowerPoolExhausted),
 		errors.Is(err, enums.ErrInvalidGameModeKind),
 		errors.Is(err, enums.ErrInvalidAbilitySource),

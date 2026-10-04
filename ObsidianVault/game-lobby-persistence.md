@@ -146,10 +146,12 @@ was missing and every Redis-gated unit test was silently skipping even under tha
 
 ## Known debt / deliberately not done here
 
-- `Restore` re-validates loadout invariants (`ErrSpin4Required`, which depends on the by-name
-  `requiresSpin4Names` lookup in `power_traits.go` — see [[gameplay-domain-design]]'s existing
-  debt note). If that table changes while lobbies are live, an affected match becomes unrestorable
-  under fail-closed semantics. TTL (2h) bounds the blast radius; not fixed here.
+- ~~`Restore` re-validates loadout invariants (`ErrSpin4Required`, by-name `requiresSpin4Names`).
+  If that table changes while lobbies are live, an affected match becomes unrestorable.~~
+  **Resolved 2026-10-04** ([[gameplay-power-effects]]): restore builds loadouts with
+  `newLoadout(spec, false)`, skipping the power-effect floor check (a snapshot already holds an
+  assigned loadout), so a rule-table change can't strand an in-flight game. Effects themselves
+  persist as `omitempty` (no `snapshotVersion` bump); an unparseable one is dropped on restore.
 - `IStageCatalog.Stages` is now a Postgres round trip on every `CreateGame`. Trivial today; a cache
   decorator mirroring `infrastructure/cache/stand_repository.go` is the obvious follow-up if it
   ever matters.

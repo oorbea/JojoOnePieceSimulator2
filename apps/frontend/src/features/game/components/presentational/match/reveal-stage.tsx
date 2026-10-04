@@ -7,6 +7,7 @@ import {
   PowerRevealCard,
   type EvolvePhase,
 } from '@/features/game/components/presentational/match/power-reveal-card'
+import { EffectLevelUp } from '@/features/game/components/presentational/match/effect-level-up'
 import { PowerRoulette } from '@/features/game/components/presentational/match/power-roulette'
 import { RevealNarrator } from '@/features/game/components/presentational/match/reveal-narrator'
 import { StageAnnouncement } from '@/features/game/components/presentational/match/stage-announcement'
@@ -19,11 +20,21 @@ import {
   revealSlotSeed,
   spinMsFor,
   type RevealPhaseKind,
-  type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
 import type { LoadoutSlotKind } from '@/features/game/lib/match-rules'
 import { applyPoolFilter } from '@/features/game/lib/power-pool'
-import { standEvolutionChain, standEvolutionSteps } from '@/features/game/lib/stand-evolution'
+import {
+  EFFECT_SLOT_KIND,
+  displayLoadoutAt,
+  revealPlayerFor,
+  type LoadoutEffect,
+} from '@/features/game/lib/power-effects'
+import {
+  devilFruitEvolutionChain,
+  devilFruitEvolutionSteps,
+  standEvolutionChain,
+  standEvolutionSteps,
+} from '@/features/game/lib/stand-evolution'
 import type { GameSnapshot } from '@/features/game/types/game.types'
 import { useDevilFruits } from '@/features/devil-fruits'
 import { useStands } from '@/features/stands'
@@ -53,9 +64,14 @@ type Props = {
   participantIndex: number
   slotIndex: number
   totalSlots: number
-  /** Only meaningful during an 'evolveStep' phase - see useLoadoutReveal's
-   * own doc. -1 otherwise. */
+  /** Only meaningful during an 'evolveStep'/'effectStep' phase - see
+   * useLoadoutReveal's own doc. -1 otherwise. */
   evolveStage: number
+  /** Which of the current participant's power effects is playing (only
+   * meaningful during the four 'effect*' phases, -1 otherwise) and how many
+   * count as already applied - see useLoadoutReveal's identical fields. */
+  effectIndex: number
+  effectsApplied: number
   /** How much every phase's local duration is being stretched/squeezed to
    * fit the server's actual reveal window - the roulette's own spinMs must
    * scale by the same factor, or its spin drifts out of step with the rest
@@ -135,6 +151,8 @@ export function RevealStage({
   slotIndex,
   totalSlots,
   evolveStage,
+  effectIndex,
+  effectsApplied,
   scale,
   readyCount,
   readyTotal,
@@ -150,57 +168,113 @@ export function RevealStage({
 
   const participants = snapshot.participants
   const currentParticipant = participantIndex >= 0 ? participants[participantIndex] : null
-  const loadout = currentParticipant?.loadout
+  const finalLoadout = currentParticipant?.loadout
+  // The loadout as it looks right now: every power effect that has not played
+  // yet is undone, so the sorteo reveals the DRAWN values slot by slot and each
+  // effect changes them at the moment its trigger shows up (power-effects.ts's
+  // displayLoadoutAt).
+  const loadout = finalLoadout ? displayLoadoutAt(finalLoadout, effectsApplied) : undefined
   // playerSlots(mangas, thisPlayer) - not the lobby-wide revealSlotKinds -
   // since which haki-level slots exist varies per participant (owner
   // request, 2026-08-30: only the haki types they actually have get a
-  // roulette at all). slotIndex indexes into THIS list.
-  const currentPlayer: RevealPlayer = {
-    hasStand: !!loadout?.stand,
-    hasDevilFruit: !!loadout?.devilFruit,
-    hasArmamentHaki: loadout?.armamentHaki !== undefined && loadout.armamentHaki !== 'NONE',
-    hasObservationHaki:
-      loadout?.observationHaki !== undefined && loadout.observationHaki !== 'NONE',
-    hasConquerorHaki: loadout?.conquerorHaki !== undefined && loadout.conquerorHaki !== 'NONE',
-  }
+  // roulette at all). slotIndex indexes into THIS list. revealPlayerFor is
+  // the same derivation the hook builds the timeline from.
+  const currentPlayer = revealPlayerFor(finalLoadout)
   const slotKinds = currentParticipant
     ? playerSlots(snapshot.config.powerMangas, currentPlayer)
     : []
-  const currentSlot: LoadoutSlotKind | null =
-    slotIndex >= 0 && slotIndex < slotKinds.length ? slotKinds[slotIndex] : null
+  const isEffectPhase =
+    phase === 'effectIntro' ||
+    phase === 'effectEvolving' ||
+    phase === 'effectStep' ||
+    phase === 'effectLand'
+  const effect: LoadoutEffect | undefined = isEffectPhase
+    ? finalLoadout?.effects?.[effectIndex]
+    : undefined
+  // During a power effect's beat the card on screen is the one the effect
+  // changes (not the anchor slot it plays after).
+  const currentSlot: LoadoutSlotKind | null = effect
+    ? EFFECT_SLOT_KIND[effect.slot]
+    : slotIndex >= 0 && slotIndex < slotKinds.length
+      ? slotKinds[slotIndex]
+      : null
   const spinning = phase === 'spin'
   const landed = phase === 'land'
-  // The full ancestor chain, root-first (see stand-evolution.ts). A
-  // non-evolving stand is a single-element chain (itself), so every
-  // downstream lookup below works unchanged whether or not this loadout's
-  // Stand actually evolves from anything.
-  const standChain = loadout?.stand ? standEvolutionChain(loadout.stand) : []
+  // The full ancestor chains, root-first (see stand-evolution.ts). A
+  // non-evolving power is a single-element chain (itself), so every downstream
+  // lookup below works unchanged whether or not this loadout's Stand/Fruit
+  // actually evolves from anything. A power effect's evolution walks the FINAL
+  // power's chain (its from/to are always on it); the slot's own evolution
+  // walks the DRAWN power's chain, up to the stage drawn.
+  const evolvesStandEffect = effect?.kind === 'EVOLUTION' && effect.slot === 'STAND'
+  const evolvesFruitEffect = effect?.kind === 'EVOLUTION' && effect.slot === 'DEVIL_FRUIT'
+  const standSource = evolvesStandEffect ? finalLoadout?.stand : loadout?.stand
+  const fruitSource = evolvesFruitEffect ? finalLoadout?.devilFruit : loadout?.devilFruit
+  const standChain = standSource ? standEvolutionChain(standSource) : []
+  const fruitChain = fruitSource ? devilFruitEvolutionChain(fruitSource) : []
   const standSteps = loadout?.stand ? standEvolutionSteps(loadout.stand) : 0
-  const isEvolvePhase = phase === 'evolveBase' || phase === 'evolving' || phase === 'evolveStep'
-  // Which stage of standChain the current phase shows: the root during
+  const fruitSteps = loadout?.devilFruit ? devilFruitEvolutionSteps(loadout.devilFruit) : 0
+  const isEvolvePhase =
+    phase === 'evolveBase' ||
+    phase === 'evolving' ||
+    phase === 'evolveStep' ||
+    (effect?.kind === 'EVOLUTION' && isEffectPhase)
+  const evolveChain =
+    currentSlot === 'stand' ? standChain : currentSlot === 'devilFruit' ? fruitChain : []
+  // Which stage of the chain the current phase shows: the root during
   // evolveBase/evolving, chain[evolveStage + 1] for each intermediate
-  // evolveStep, and the FINAL stage (== loadout.stand itself) once landed -
-  // see reveal.go's evolveMs / loadout-reveal.ts's revealTimeline doc.
-  const evolveDisplayStand =
-    currentSlot === 'stand' && standChain.length > 0
-      ? phase === 'evolveBase' || phase === 'evolving'
-        ? standChain[0]
-        : phase === 'evolveStep'
-          ? standChain[Math.min(evolveStage + 1, standChain.length - 1)]
-          : standChain[standChain.length - 1]
-      : undefined
-  const evolvePhase: EvolvePhase | undefined =
-    currentSlot === 'stand' && standSteps > 0
-      ? phase === 'evolveBase'
-        ? 'base'
-        : phase === 'evolving'
-          ? 'evolving'
+  // evolveStep, and the stage drawn once landed - see reveal.go's evolveMs /
+  // loadout-reveal.ts's revealTimeline doc. A power effect's beats do the same
+  // between the effect's `from` and `to` stages.
+  const effectFrom = effect ? evolveChain.findIndex((p) => p.id === effect.from) : -1
+  const effectTo = effect ? evolveChain.findIndex((p) => p.id === effect.to) : -1
+  const lastStage = evolveChain.length - 1
+  const evolveIndex: number | undefined =
+    evolveChain.length === 0
+      ? undefined
+      : evolvesStandEffect || evolvesFruitEffect
+        ? phase === 'effectIntro' || phase === 'effectEvolving'
+          ? Math.max(0, effectFrom)
+          : phase === 'effectStep'
+            ? Math.min(Math.max(0, effectFrom) + 1 + evolveStage, effectTo >= 0 ? effectTo : lastStage)
+            : effectTo >= 0
+              ? effectTo
+              : lastStage
+        : phase === 'evolveBase' || phase === 'evolving'
+          ? 0
           : phase === 'evolveStep'
+            ? Math.min(evolveStage + 1, lastStage)
+            : lastStage
+  const evolveDisplayStand =
+    currentSlot === 'stand' && evolveIndex !== undefined ? standChain[evolveIndex] : undefined
+  const evolveDisplayFruit =
+    currentSlot === 'devilFruit' && evolveIndex !== undefined ? fruitChain[evolveIndex] : undefined
+  const slotEvolves =
+    (currentSlot === 'stand' && standSteps > 0) || (currentSlot === 'devilFruit' && fruitSteps > 0)
+  const evolvePhase: EvolvePhase | undefined =
+    evolvesStandEffect || evolvesFruitEffect
+      ? phase === 'effectIntro'
+        ? 'base'
+        : phase === 'effectEvolving'
+          ? 'evolving'
+          : phase === 'effectStep'
             ? 'step'
-            : phase === 'land'
+            : phase === 'effectLand'
               ? 'final'
               : undefined
-      : undefined
+      : slotEvolves
+        ? phase === 'evolveBase'
+          ? 'base'
+          : phase === 'evolving'
+            ? 'evolving'
+            : phase === 'evolveStep'
+              ? 'step'
+              : phase === 'land'
+                ? 'final'
+                : undefined
+        : undefined
+  const effectLine =
+    effect && finalLoadout ? effectLineFor(t, effect, finalLoadout) : ''
 
   const { candidates, finalLabel } = slotFor(t, loadout, currentSlot, standNames, fruitNames)
   const isPowerSlot = currentSlot === 'stand' || currentSlot === 'devilFruit'
@@ -257,6 +331,9 @@ export function RevealStage({
     // beats (evolveBase/evolving/evolveStep) take over from there to reveal
     // the actual result (2026-09-25, see standChain's doc above).
     const standWinnerSource = standChain[0] ?? loadout.stand
+    // Same for a fruit that evolves (Model Nika drawn directly lands on Gomu
+    // Gomu no mi, then evolves).
+    const fruitWinnerSource = fruitChain[0] ?? loadout.devilFruit
     const winner: CaseStripCard =
       currentSlot === 'stand'
         ? standWinnerSource
@@ -267,28 +344,25 @@ export function RevealStage({
               picture: thumbSource(standWinnerSource) ?? undefined,
             }
           : { id: NONE_POWER_CARD_ID, label: t('game.match.noStand'), rarity: 'NONE' }
-        : loadout.devilFruit
+        : fruitWinnerSource
           ? {
-              id: loadout.devilFruit.id,
-              label: loadout.devilFruit.name,
-              rarity: loadout.devilFruit.rarity,
-              picture: thumbSource(loadout.devilFruit) ?? undefined,
+              id: fruitWinnerSource.id,
+              label: fruitWinnerSource.name,
+              rarity: fruitWinnerSource.rarity,
+              picture: thumbSource(fruitWinnerSource) ?? undefined,
             }
           : { id: NONE_POWER_CARD_ID, label: t('game.match.noFruit'), rarity: 'NONE' }
     return buildCaseStrip(pool, winner, slotSeed)
   })()
 
+  // A power effect that changes a stat shows the stat (EffectLevelUp), not a
+  // card: only a Stand/DevilFruit evolution takes the card over.
   const showPowerCard =
     (landed || isEvolvePhase) && currentParticipant !== null && isPowerSlot
 
-  const narratorLine = narratorLineFor(
-    t,
-    phase,
-    currentParticipant?.displayName,
-    currentSlot,
-    loadout,
-    finalLabel
-  )
+  const narratorLine = isEffectPhase
+    ? effectLine
+    : narratorLineFor(t, phase, currentParticipant?.displayName, currentSlot, loadout, finalLabel)
 
   const title =
     phase === 'intro' || phase === 'outro'
@@ -306,7 +380,7 @@ export function RevealStage({
         />
       ) : null}
       <GlowText level="heading">{title}</GlowText>
-      {currentSlot && phase !== 'outro' && phase !== 'intro' ? (
+      {currentSlot && phase !== 'outro' && phase !== 'intro' && !isEffectPhase ? (
         <GlowText level="label" tone="soft">
           {t('game.match.reveal.progress', { current: slotIndex + 1, total: totalSlots })}
         </GlowText>
@@ -334,7 +408,7 @@ export function RevealStage({
               {currentParticipant.displayName}
             </GlowText>
           </XStack>
-          {currentSlot && !showPowerCard && isPowerSlot && caseStrip ? (
+          {currentSlot && !showPowerCard && !isEffectPhase && isPowerSlot && caseStrip ? (
             <CaseStripReel
               cards={caseStrip.cards}
               landingIndex={caseStrip.landingIndex}
@@ -344,7 +418,16 @@ export function RevealStage({
               reducedMotion={reducedMotion}
               spinMs={spinMs}
             />
-          ) : currentSlot && !showPowerCard && !isPowerSlot ? (
+          ) : effect && effect.kind === 'STAT_FLOOR' && currentSlot ? (
+            <EffectLevelUp
+              statLabel={t(`game.match.trait.${currentSlot}`)}
+              fromLabel={t(`enums.${SCALAR_NAMESPACE[currentSlot]}.${effect.from}`)}
+              toLabel={t(`enums.${SCALAR_NAMESPACE[currentSlot]}.${effect.to}`)}
+              raised={phase === 'effectLand'}
+              stamp={t('game.match.reveal.effect.raised')}
+              reducedMotion={reducedMotion}
+            />
+          ) : currentSlot && !showPowerCard && !isPowerSlot && !isEffectPhase ? (
             <PowerRoulette
               candidates={candidates}
               finalLabel={finalLabel}
@@ -389,15 +472,74 @@ export function RevealStage({
           visible={showPowerCard}
           kind={currentSlot === 'stand' ? 'stand' : 'devilFruit'}
           stand={currentSlot === 'stand' ? (evolveDisplayStand ?? loadout?.stand) : undefined}
-          devilFruit={currentSlot === 'devilFruit' ? loadout?.devilFruit : undefined}
+          devilFruit={
+            currentSlot === 'devilFruit' ? (evolveDisplayFruit ?? loadout?.devilFruit) : undefined
+          }
           participantName={currentParticipant.displayName}
           onSkip={onSkip}
           evolvePhase={evolvePhase}
+          evolveMessage={
+            currentSlot === 'devilFruit'
+              ? t('game.match.reveal.evolution.evolvingFruit')
+              : undefined
+          }
+          causeLine={isEffectPhase ? effectLine : undefined}
           reducedMotion={reducedMotion}
         />
       ) : null}
     </GlassPanel>
   )
+}
+
+// effectLineFor says what triggered a power effect, in the participant's own
+// words: "Con Spin Infinito, Tusk: Acto 1 evoluciona a Tusk: Acto 4" / "King
+// Crimson te hace subir Haki de Observación a Comandante de Yonko". Power
+// names come off the final power's chain, stat values through the same enums
+// namespaces the roulette already uses.
+function effectLineFor(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  effect: LoadoutEffect,
+  loadout: NonNullable<GameSnapshot['participants'][number]['loadout']>
+): string {
+  const causeKind = EFFECT_SLOT_KIND[effect.causeSlot]
+  const causeIsPower = causeKind === 'stand' || causeKind === 'devilFruit'
+  const causeValue = causeIsPower
+    ? effect.cause
+    : t(`enums.${SCALAR_NAMESPACE[causeKind]}.${effect.cause}`)
+
+  if (effect.kind === 'EVOLUTION') {
+    const chain =
+      effect.slot === 'STAND'
+        ? loadout.stand
+          ? standEvolutionChain(loadout.stand)
+          : []
+        : loadout.devilFruit
+          ? devilFruitEvolutionChain(loadout.devilFruit)
+          : []
+    return t(
+      effect.slot === 'STAND'
+        ? 'game.match.reveal.effect.evolution.stand'
+        : 'game.match.reveal.effect.evolution.fruit',
+      {
+        cause: causeValue,
+        from: chain.find((p) => p.id === effect.from)?.name ?? '',
+        to: chain.find((p) => p.id === effect.to)?.name ?? '',
+      }
+    )
+  }
+
+  const statKind = EFFECT_SLOT_KIND[effect.slot]
+  const stat = t(`game.match.trait.${statKind}`)
+  const value = t(`enums.${SCALAR_NAMESPACE[statKind]}.${effect.to}`)
+  if (causeIsPower) {
+    return t('game.match.reveal.effect.floor.byPower', { cause: causeValue, stat, value })
+  }
+  return t('game.match.reveal.effect.floor.byStat', {
+    causeStat: t(`game.match.trait.${causeKind}`),
+    cause: causeValue,
+    stat,
+    value,
+  })
 }
 
 function narratorLineFor(

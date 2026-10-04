@@ -132,4 +132,23 @@ describe('PowerRevealCard', () => {
     fireEvent.press(screen.getByText('Skip'))
     expect(onSkip).toHaveBeenCalledTimes(1)
   })
+
+  it('shows the cause line of a power effect under the participant name', async () => {
+    await renderWithProviders(
+      <PowerRevealCard
+        visible
+        kind="stand"
+        stand={stand({ name: 'Tusk: Acto 2' })}
+        participantName="jotaro"
+        onSkip={jest.fn()}
+        evolvePhase="base"
+        causeLine="With Infinite Spin, Tusk: Acto 2 evolves into Tusk: Acto 4!"
+      />
+    )
+
+    expect(
+      screen.getByText('With Infinite Spin, Tusk: Acto 2 evolves into Tusk: Acto 4!')
+    ).toBeTruthy()
+    expect(screen.getByText('jotaro')).toBeTruthy()
+  })
 })

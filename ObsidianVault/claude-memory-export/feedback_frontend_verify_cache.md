@@ -17,3 +17,5 @@ Reuse caches when verifying frontend changes in Docker, and don't run the full `
 - During iteration (fixing a typecheck/lint/test failure), run `pnpm jest --ci --maxWorkers=2 --cacheDirectory=... <specific-test-file-names>` and `pnpm exec eslint <specific-changed-files>` instead of the full `pnpm lint`/`pnpm jest` — this cut a ~90s run down to ~50s even including install, and would be far faster for truly targeted single-file checks.
 - Only run the full `pnpm typecheck && pnpm lint && pnpm jest` (or `pnpm test:ci`) once, as the final check before committing — this is still required per [[feedback_backend_tests_via_docker]]'s sibling norm and `norma-verificacion-docker.md`, just not on every intermediate iteration.
 - The `node_modules`/pnpm-store caching via the named Docker volume (`jojo-frontend-work`) was already in place and working (install steps were already fast, ~1-2s) — the actual bottleneck was always the jest run itself, not the install.
+
+Also (2026-10-03): in a multi-item batch, run `/verify` ONCE at the very end, not after every item ("con una vez al final de todo es suficiente").

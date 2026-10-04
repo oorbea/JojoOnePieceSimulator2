@@ -106,6 +106,13 @@ a new kind of window; needs its own state/transition, not a reuse of `VOTING`.
 
 ## Loadout invariants → auto-correct upward, never block
 
+> [!note] Update 2026-10-04
+> The invariants are now the power-effect floors of [[gameplay-power-effects]] (a rule table, not
+> just `REQUIRES_SPIN_4`), enforced by `NewLoadoutFromSpec` (`ErrPowerEffectFloorViolated`).
+> "Auto-correct upward" should be implemented by running the same resolver (no tie-break needed
+> when the player picks the stage themself) instead of re-implementing it; its `PowerEffect`
+> list is exactly the "which stat got bumped and why" this section asks the selection screen to show.
+
 `NewLoadout`'s existing hard invariants (`game/loadout.go:45-97`, see [[gameplay-game-modes]] "Hard
 invariants") stay in force even here — but in `INVENTORY` mode, mastery and spin come from the
 chosen character, not from a random draw, so a selection can land on a combination the invariants

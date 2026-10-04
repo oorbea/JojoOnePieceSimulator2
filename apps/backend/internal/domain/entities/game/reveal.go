@@ -160,6 +160,15 @@ const (
 	// the vertical roulette and its existing timing untouched. Frontend
 	// mirror: loadout-reveal.ts's REVEAL_POWER_SPIN_MS - keep both in sync.
 	RevealPowerSpinMs = 5000
+	// RevealEffectIntroMs is the opening beat of a power effect (see
+	// PowerEffect): the reveal jumps back to the card the effect changes,
+	// still showing its drawn value, while the line saying what triggered
+	// it plays. Frontend mirror: loadout-reveal.ts's REVEAL_EFFECT_INTRO_MS.
+	RevealEffectIntroMs = 1500
+	// RevealEffectLandMs is the closing hold of a power effect: the new value
+	// (a stat raised to its floor) or the evolved form, held long enough to
+	// read. Frontend mirror: REVEAL_EFFECT_LAND_MS.
+	RevealEffectLandMs = 2500
 )
 
 // RevealPlayer is the minimal per-participant shape RevealDuration needs:
@@ -184,6 +193,66 @@ type RevealPlayer struct {
 	// Frontend mirror: loadout-reveal.ts's RevealPlayer.standEvolutionSteps
 	// - keep both in sync.
 	StandEvolutionSteps int
+	// FruitEvolutionSteps is StandEvolutionSteps for the DevilFruit slot: the
+	// DRAWN fruit's EvolutionDepth() - a Model Nika drawn directly (depth 1)
+	// is revealed from Gomu Gomu no mi, like Tusk: Acto 4 from Acto 1.
+	// Frontend mirror: RevealPlayer.fruitEvolutionSteps.
+	FruitEvolutionSteps int
+	// Effects are the Loadout's power effects, in order. Each plays its own
+	// beat right after the slot it is anchored to (the frontend decides
+	// where - see power-effects.ts); the anchor never changes the total, so
+	// RevealDuration only needs each effect's kind and step count.
+	Effects []RevealEffect
+}
+
+// RevealEffect is the part of a PowerEffect RevealDuration needs: a
+// STAT_FLOOR beat is an intro and a hold; an EVOLUTION beat additionally
+// steps through Steps stages (the final one is the hold itself), exactly like
+// the Stand slot's own evolution.
+type RevealEffect struct {
+	Kind  enums.PowerEffectKind
+	Steps int
+}
+
+// effectMs is how long one power effect's beat takes. Frontend mirror:
+// loadout-reveal.ts's effectMs - keep both in sync.
+func effectMs(e RevealEffect) int {
+	if e.Kind == enums.EffectEvolution {
+		steps := e.Steps
+		if steps < 1 {
+			steps = 1
+		}
+		return RevealEffectIntroMs + RevealEvolvingMs + RevealEvolveStepMs*(steps-1) + RevealEffectLandMs
+	}
+	return RevealEffectIntroMs + RevealEffectLandMs
+}
+
+// RevealPlayerFor builds the RevealPlayer for l, the one place the sorteo's
+// per-participant inputs are derived from a Loadout (nil = landed nothing).
+// Everything here describes the DRAWN loadout, before any power effect: the
+// evolution depths are the drawn stage's, and a haki type an effect granted
+// from nothing has no level slot of its own (the effect's beat shows it).
+func RevealPlayerFor(l *Loadout) RevealPlayer {
+	if l == nil {
+		return RevealPlayer{}
+	}
+	p := RevealPlayer{
+		HasStand:           l.Stand() != nil,
+		HasDevilFruit:      l.DevilFruit() != nil,
+		HasArmamentHaki:    l.ArmamentHaki() != enums.HakiNone && !l.hakiGranted(enums.SlotArmamentHaki),
+		HasObservationHaki: l.ObservationHaki() != enums.HakiNone && !l.hakiGranted(enums.SlotObservationHaki),
+		HasConquerorHaki:   l.ConquerorHaki() != enums.HakiNone && !l.hakiGranted(enums.SlotConquerorHaki),
+	}
+	if s := l.DrawnStand(); s != nil {
+		p.StandEvolutionSteps = s.EvolutionDepth()
+	}
+	if f := l.DrawnDevilFruit(); f != nil {
+		p.FruitEvolutionSteps = f.EvolutionDepth()
+	}
+	for _, e := range l.effects {
+		p.Effects = append(p.Effects, RevealEffect{Kind: e.Kind, Steps: l.effectSteps(e)})
+	}
+	return p
 }
 
 // PlayerSlots is RevealSlots(mangas) further filtered down to the slots
@@ -273,19 +342,26 @@ func slotHoldMs(slot RevealSlot, player RevealPlayer) int {
 	}
 }
 
-// evolveMs is the extra time the Stand slot needs when the landed Stand
-// evolves from something (steps > 0): a hold on the root base
+// evolveMs is the extra time the Stand/DevilFruit slot needs when the DRAWN
+// power evolves from something (steps > 0): a hold on the root base
 // (RevealEvolveBaseMs), the suspense beat (RevealEvolvingMs), and one
 // RevealEvolveStepMs per INTERMEDIATE stage (steps-1 of them - the final
 // stage instead gets the slot's own normal slotHoldMs, unaffected). Zero for
-// every other slot and for a non-evolving Stand (steps == 0), so
+// every other slot and for a non-evolving power (steps == 0), so
 // RevealDuration is unchanged from before this feature in both those cases.
 // Frontend mirror: loadout-reveal.ts's evolveMs - keep both in sync.
 func evolveMs(slot RevealSlot, player RevealPlayer) int {
-	if slot != RevealStand || player.StandEvolutionSteps <= 0 {
+	steps := 0
+	switch slot {
+	case RevealStand:
+		steps = player.StandEvolutionSteps
+	case RevealDevilFruit:
+		steps = player.FruitEvolutionSteps
+	}
+	if steps <= 0 {
 		return 0
 	}
-	return RevealEvolveBaseMs + RevealEvolvingMs + RevealEvolveStepMs*(player.StandEvolutionSteps-1)
+	return RevealEvolveBaseMs + RevealEvolvingMs + RevealEvolveStepMs*(steps-1)
 }
 
 // RevealDuration is how long the reveal overlay plays for a lobby with the
@@ -307,6 +383,9 @@ func RevealDuration(gameID GameID, roundIndex int, mangas []enums.Manga, players
 		for _, slot := range PlayerSlots(mangas, p) {
 			spinMs := spinMsFor(gameID, roundIndex, pi, slot)
 			total += RevealNarratorMs + spinMs + evolveMs(slot, p) + slotHoldMs(slot, p)
+		}
+		for _, e := range p.Effects {
+			total += effectMs(e)
 		}
 	}
 	scaled := float64(total) * speed.Multiplier()

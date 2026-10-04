@@ -600,6 +600,8 @@ export function LobbyRoomContainer() {
         revealSlotIndex={loadoutReveal.slotIndex}
         revealTotalSlots={loadoutReveal.totalSlots}
         revealEvolveStage={loadoutReveal.evolveStage}
+        revealEffectIndex={loadoutReveal.effectIndex}
+        revealEffectsApplied={loadoutReveal.effectsApplied}
         revealScale={loadoutReveal.scale}
         isRevealing={loadoutReveal.isRevealing}
         onSkipReveal={loadoutReveal.skip}

@@ -537,8 +537,20 @@
         },
         "evolution": {
           "evolving": "Alguna cosa està passant... el teu stand està evolucionant!",
+          "evolvingFruit": "Alguna cosa està passant... la teva fruita està evolucionant!",
           "step": "Continua evolucionant!",
           "final": "EVOLUCIÓ!"
+        },
+        "effect": {
+          "raised": "PUJA DE NIVELL!",
+          "floor": {
+            "byPower": "{{cause}} puja el teu {{stat}} a {{value}}!",
+            "byStat": "Amb {{causeStat}} {{cause}}, el teu {{stat}} puja a {{value}}!"
+          },
+          "evolution": {
+            "stand": "Amb Spin {{cause}}, {{from}} evoluciona a {{to}}!",
+            "fruit": "Amb mestria {{cause}}, {{from}} evoluciona a {{to}}!"
+          }
         }
       },
       "loadout": {
@@ -883,7 +895,7 @@
     "EMPTY_POWER_MANGAS": "Selecciona com a mínim un manga per als poders.",
     "INVALID_TEAM_SIZE": "Aquesta mida d'equip no és vàlida per a aquest mode de joc.",
     "FRUIT_MASTERY_MISMATCH": "Aquest domini de fruita no coincideix amb la fruita del diable.",
-    "SPIN_4_REQUIRED": "Aquest stand requereix el nivell màxim de Spin.",
+    "POWER_EFFECT_FLOOR_VIOLATED": "Aquest loadout incompleix un mínim exigit per un dels seus poders.",
     "POWER_POOL_EXHAUSTED": "No queden prou poders únics per repartir.",
     "GAME_CODE_GENERATION_FAILED": "No s'ha pogut crear un codi de partida. Torna-ho a provar.",
     "INVALID_GAME_MODE": "Aquest mode de joc no és vàlid.",

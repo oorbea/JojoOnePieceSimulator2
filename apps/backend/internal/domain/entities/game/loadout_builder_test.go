@@ -122,7 +122,8 @@ func (r *recordingRandom) IntN(n int) int {
 // TestLoadoutBuilder_DrawOrder pins the owner-mandated step order: Physical
 // Form -> Stand -> Devil Fruit -> Fruit Mastery -> Hamon -> Haki Set ->
 // Haki Mastery (once per haki the set draw landed on) -> Spin -> BattleIQ
-// (RequiresSpin4 is a post-pass, not a draw, so it never shows up here).
+// (power effects are a post-pass, not a draw, so they never show up here
+// unless an evolution has two equally ranked targets).
 // BattleIQ's band draw lands on the last bucket (recordingRandom's rule),
 // which is BattleIQVerySuperior - triggering a second draw into
 // battleIQVerySuperiorWeights for the value within the band.

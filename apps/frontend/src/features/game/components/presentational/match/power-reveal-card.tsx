@@ -48,6 +48,12 @@ type Props = {
   evolvePhase?: EvolvePhase
   /** The "algo esta pasando" narrator line - only shown during 'evolving'. */
   evolveMessage?: string
+  /** What triggered a power effect's evolution ("¡Con Spin Infinito, Tusk:
+   * Acto 1 evoluciona a Tusk: Acto 4!"), shown under the participant's name
+   * for the whole effect beat. The card is a Modal that covers the stage's
+   * own narrator, so the line has to live here. Undefined for the slot's own
+   * evolution. */
+  causeLine?: string
   reducedMotion?: boolean
 }
 
@@ -72,6 +78,7 @@ export function PowerRevealCard({
   onSkip,
   evolvePhase,
   evolveMessage,
+  causeLine,
   reducedMotion = false,
 }: Props) {
   const { t } = useTranslation()
@@ -195,6 +202,11 @@ export function PowerRevealCard({
               {participantName}
             </GlowText>
           </XStack>
+          {causeLine ? (
+            <GlowText level="label" tone="soft" align="center">
+              {causeLine}
+            </GlowText>
+          ) : null}
           {isEvolving ? (
             <YStack items="center" justify="center" gap="$3" py="$4">
               <MangaVerdictText fillColor="#F2C744">

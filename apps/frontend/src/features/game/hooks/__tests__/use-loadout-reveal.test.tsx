@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react'
 import { Text } from 'react-native'
 
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
+import { revealPlayerFor } from '@/features/game/lib/power-effects'
 import {
+  REVEAL_EFFECT_INTRO_MS,
   REVEAL_EVOLVE_BASE_MS,
   REVEAL_EVOLVE_STEP_MS,
   REVEAL_EVOLVING_MS,
@@ -13,6 +15,7 @@ import {
   REVEAL_POWER_SPIN_MS,
   REVEAL_SPIN_BASE_MS,
   revealDurationMs,
+  revealTimeline,
 } from '@/features/game/lib/loadout-reveal'
 import type { StandResponse } from '@/features/stands'
 import type { GameParticipant } from '@/features/game/types/game.types'
@@ -84,6 +87,8 @@ function Harness({
         slotIndex: result.slotIndex,
         totalSlots: result.totalSlots,
         evolveStage: result.evolveStage,
+        effectIndex: result.effectIndex,
+        effectsApplied: result.effectsApplied,
         scale: result.scale,
       })}
     </Text>
@@ -278,6 +283,48 @@ describe('useLoadoutReveal', () => {
 
     await advance(REVEAL_EVOLVE_STEP_MS + 1)
     expect(readState()).toMatchObject({ phase: 'land', evolveStage: -1 })
+  })
+
+  it('plays a power effect after the slot it is anchored to, counting it applied once it lands', async () => {
+    const mangas: Manga[] = ['JOJO']
+    const acto3 = stand('acto3', stand('acto2', stand('acto1')))
+    const acto4 = stand('acto4', acto3)
+    const loadout = {
+      spin: 'INFINITE',
+      hamon: 'NONE',
+      fruitMastery: 'NONE',
+      armamentHaki: 'NONE',
+      observationHaki: 'NONE',
+      conquerorHaki: 'NONE',
+      physicalForm: 'PRIVATE',
+      stand: acto4,
+      effects: [
+        {
+          kind: 'EVOLUTION',
+          slot: 'STAND',
+          from: 'acto3',
+          to: 'acto4',
+          causeSlot: 'SPIN',
+          cause: 'INFINITE',
+        },
+      ],
+    } as never
+    const participants: GameParticipant[] = [{ ...participant('p1'), loadout }]
+
+    await render(<Harness mangas={mangas} participants={participants} revealEndsAt={null} />)
+
+    // Advance to just inside the first effect phase, using the same timeline
+    // the hook walks.
+    const timeline = revealTimeline('g1', 0, mangas, [revealPlayerFor(loadout)], 'SWIFT')
+    const first = timeline.findIndex((p) => p.phase.kind === 'effectIntro')
+    await advance(timeline.slice(0, first).reduce((sum, p) => sum + p.durationMs, 0) + 1)
+    expect(readState()).toMatchObject({ phase: 'effectIntro', effectIndex: 0, effectsApplied: 0 })
+
+    await advance(REVEAL_EFFECT_INTRO_MS + 1)
+    expect(readState()).toMatchObject({ phase: 'effectEvolving', effectIndex: 0, effectsApplied: 0 })
+
+    await advance(REVEAL_EVOLVING_MS + 1)
+    expect(readState()).toMatchObject({ phase: 'effectLand', effectIndex: 0, effectsApplied: 1 })
   })
 
   it('plays every participant in turn, never in parallel', async () => {

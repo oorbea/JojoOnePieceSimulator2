@@ -109,6 +109,7 @@ function loadout(overrides: Partial<GameLoadout> = {}): GameLoadout {
     observationHaki: 'PRIVATE',
     conquerorHaki: 'PRIVATE',
     physicalForm: 'PRIVATE',
+    effects: [],
     ...overrides,
   }
 }

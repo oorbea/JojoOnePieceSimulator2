@@ -6,7 +6,7 @@ import {
   type RevealPhaseKind,
   type RevealPlayer,
 } from '@/features/game/lib/loadout-reveal'
-import { standEvolutionSteps } from '@/features/game/lib/stand-evolution'
+import { revealPlayerFor } from '@/features/game/lib/power-effects'
 import type { GameParticipant } from '@/features/game/types/game.types'
 import type { Manga, RevealSpeed } from '@/shared/contracts/enums'
 import { serverNow } from '@/shared/lib/server-clock'
@@ -69,10 +69,19 @@ type Result = {
    * `totalSlots` below is carried per-phase, not a single lobby constant. */
   slotIndex: number
   totalSlots: number
-  /** Only meaningful during an 'evolveStep' phase - which INTERMEDIATE
-   * evolution stage is showing (0-based). -1 otherwise. See
+  /** Only meaningful during an 'evolveStep'/'effectStep' phase - which
+   * INTERMEDIATE evolution stage is showing (0-based). -1 otherwise. See
    * loadout-reveal.ts's RevealPhase.evolveStage doc. */
   evolveStage: number
+  /** Only meaningful during the four 'effect*' phases - which of the current
+   * participant's power effects (index into loadout.effects) is playing. -1
+   * otherwise. */
+  effectIndex: number
+  /** How many of the current participant's power effects count as already
+   * applied right now - the stage shows their loadout with every later effect
+   * undone (power-effects.ts's displayLoadoutAt). 0 outside a participant's
+   * turn. */
+  effectsApplied: number
   /** How much every phase's local duration is being stretched/squeezed to
    * fit the server's actual reveal window - PowerRoulette's own spinMs must
    * be multiplied by this too (see reveal-stage.tsx), or its animation
@@ -124,21 +133,18 @@ export function useLoadoutReveal({
   stillAssigning,
 }: Params): Result {
   const mangasKey = mangas.slice().sort().join(',')
-  const players: RevealPlayer[] = participants.map((p) => ({
-    hasStand: !!p.loadout?.stand,
-    hasDevilFruit: !!p.loadout?.devilFruit,
-    hasArmamentHaki: p.loadout?.armamentHaki !== undefined && p.loadout.armamentHaki !== 'NONE',
-    hasObservationHaki:
-      p.loadout?.observationHaki !== undefined && p.loadout.observationHaki !== 'NONE',
-    hasConquerorHaki: p.loadout?.conquerorHaki !== undefined && p.loadout.conquerorHaki !== 'NONE',
-    standEvolutionSteps: standEvolutionSteps(p.loadout?.stand),
-  }))
+  const players: RevealPlayer[] = participants.map((p) => revealPlayerFor(p.loadout))
+  // Everything the timeline's shape depends on goes in the key, effects
+  // included: a different effect list is a different set of phases, and a run
+  // already seeked into the old one must not carry over.
   const playersKey = players
     .map(
       (p) =>
         [p.hasStand, p.hasDevilFruit, p.hasArmamentHaki, p.hasObservationHaki, p.hasConquerorHaki]
           .map((b) => (b ? 1 : 0))
-          .join('') + `:${p.standEvolutionSteps}`
+          .join('') +
+        `:${p.standEvolutionSteps}:${p.fruitEvolutionSteps}:` +
+        (p.effects ?? []).map((e) => `${e.kind[0]}${e.steps}@${e.anchor}`).join(',')
     )
     .join(':')
   const phases = revealTimeline(gameId, roundIndex, mangas, players, speed)
@@ -268,6 +274,8 @@ export function useLoadoutReveal({
       slotIndex: -1,
       totalSlots: 0,
       evolveStage: -1,
+      effectIndex: -1,
+      effectsApplied: 0,
       scale: 1,
       skip: () => {},
       rewatch: () => setRewatchCount((n) => n + 1),
@@ -279,6 +287,8 @@ export function useLoadoutReveal({
   const slotIndex = current.phase.slot ?? -1
   const totalSlots = current.phase.totalSlots ?? 0
   const evolveStage = current.phase.evolveStage ?? -1
+  const effectIndex = current.phase.effectIndex ?? -1
+  const effectsApplied = current.phase.effectsApplied ?? 0
   return {
     isRevealing: true,
     phase: current.phase.kind,
@@ -286,6 +296,8 @@ export function useLoadoutReveal({
     slotIndex,
     totalSlots,
     evolveStage,
+    effectIndex,
+    effectsApplied,
     scale: runScale,
     skip,
     rewatch: () => {},

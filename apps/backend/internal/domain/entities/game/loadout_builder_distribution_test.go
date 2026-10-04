@@ -35,7 +35,13 @@ func TestLoadoutBuilder_MatchesV1Distributions(t *testing.T) {
 	}
 	weights := game.DefaultAssignmentWeights()
 	rng := mathRandSource{rand.New(rand.NewSource(42))}
-	builder := game.NewLoadoutBuilder(enums.Mangas(), weights, rng)
+	// One builder per manga, not enums.Mangas(): with both in play the
+	// cross-manga power effects (e.g. Hamon ADVANCED+ raising Physical Form)
+	// deliberately shift the final distributions away from the raw draw
+	// tables this test exists to pin, so the two halves are checked on their
+	// own. The effects themselves are covered by power_effects_test.go.
+	builder := game.NewLoadoutBuilder([]enums.Manga{enums.Jojo}, weights, rng)
+	onePieceBuilder := game.NewLoadoutBuilder([]enums.Manga{enums.OnePiece}, weights, rng)
 
 	standCounts := map[string]int{"none": 0}
 	for _, s := range stands {
@@ -62,14 +68,18 @@ func TestLoadoutBuilder_MatchesV1Distributions(t *testing.T) {
 		}
 		spinCounts[l.Spin()]++
 		hamonCounts[l.Hamon()]++
-		physicalFormCounts[l.PhysicalForm()]++
-		if l.ArmamentHaki() != enums.HakiNone {
+		op, err := onePieceBuilder.Build(game.NewAvailablePowers(nil, nil))
+		if err != nil {
+			t.Fatalf("Build (one piece): %v", err)
+		}
+		physicalFormCounts[op.PhysicalForm()]++
+		if op.ArmamentHaki() != enums.HakiNone {
 			hakiPresence["armament"]++
 		}
-		if l.ObservationHaki() != enums.HakiNone {
+		if op.ObservationHaki() != enums.HakiNone {
 			hakiPresence["observation"]++
 		}
-		if l.ConquerorHaki() != enums.HakiNone {
+		if op.ConquerorHaki() != enums.HakiNone {
 			hakiPresence["conqueror"]++
 		}
 		if l.BattleIQ().Present() {

@@ -1,16 +1,16 @@
 ---
 name: two-tab-two-account-browser-testing
-description: "STALE (pre session-token-storage-2026-09-05) plus SUPERSEDED 2026-09-25 - real accounts still share one refresh cookie per profile, but dev-login accounts (dev-auth-bypass-2026-09-25) each get a real independent per-tab session"
+description: "STALE (pre session-token-storage) plus SUPERSEDED 2026-09-25 - real accounts still share one refresh cookie per profile, but dev-login accounts (dev_auth_bypass_2026-09-25) each get a real independent per-tab session"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 7d1946d5-2c78-4cf8-aa3a-99ec19417412
-  modified: 2026-09-25T09:00:00.000Z
+  modified: 2026-09-25T07:54:22.943Z
 ---
 
-**Stale as of [[session-token-storage-2026-09-05]]**: the access token moved out of `localStorage` into memory-only, backed by a rotating HttpOnly refresh cookie (web) - the mechanism below (`localStorage` token swap) no longer applies to real Google logins. That cookie is still shared per Chrome profile, so two *real* accounts still can't be independently live in two tabs the way this note originally described.
+**Stale as of the session-token-storage rework (2026-09-05)**: the access token moved out of `localStorage` into memory-only, backed by a rotating HttpOnly refresh cookie (web) - the mechanism below (`localStorage` token swap) no longer applies to real Google logins. That cookie is still shared per Chrome profile, so two *real* accounts still can't be independently live in two tabs the way this note originally described.
 
-**Superseded for the multi-account use case, 2026-09-25**: for local dev, `/dev-login` ([[dev-auth-bypass-2026-09-25]]) now gives each tab a genuinely independent session via `sessionStorage` (not `localStorage`) - no swap risk, `navigate` is safe to use again on a dev-login tab. Use that instead of this trick whenever real Google accounts aren't specifically required.
+**Superseded for the multi-account use case, 2026-09-25**: for local dev, `/dev-login` (see [[dev_auth_bypass_2026-09-25]]) now gives each tab a genuinely independent session via `sessionStorage` (not `localStorage`) - no swap risk, `navigate` is safe to use again on a dev-login tab. Use that instead of this trick whenever real Google accounts aren't specifically required.
 
 Kept for history only, below is the pre-2026-09-05 state (real accounts, `localStorage` token):
 

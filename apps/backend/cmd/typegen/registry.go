@@ -52,6 +52,7 @@ var restTypes = []any{
 	dto.PoolFilterResponse{},
 	dto.GameTeamResponse{},
 	dto.GameLoadoutResponse{},
+	dto.LoadoutEffectResponse{},
 	dto.GameParticipantResponse{},
 	dto.GameStageResponse{},
 	dto.GameRoundResultResponse{},

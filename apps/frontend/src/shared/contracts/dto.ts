@@ -5,7 +5,7 @@
 // apps/backend (or `make types-docker`). CI fails if this file is stale.
 
 import { z } from 'zod'
-import { AbilitySource, FruitMastery, FruitType, GameModeKind, GameState, HakiLevel, HamonLevel, InviteStatus, LobbyVisibility, Locale, Manga, ParticipantKind, PhysicalForm, PictureStatus, PictureSubjectKind, PowerRarity, RevealSpeed, SpinLevel, StandStat, UserRole, abilitySourceSchema, fruitMasterySchema, fruitTypeSchema, gameModeKindSchema, gameStateSchema, hakiLevelSchema, hamonLevelSchema, inviteStatusSchema, lobbyVisibilitySchema, localeSchema, mangaSchema, participantKindSchema, physicalFormSchema, pictureStatusSchema, pictureSubjectKindSchema, powerRaritySchema, revealSpeedSchema, spinLevelSchema, standStatSchema, userRoleSchema } from './enums'
+import { AbilitySource, FruitMastery, FruitType, GameModeKind, GameState, HakiLevel, HamonLevel, InviteStatus, LoadoutSlot, LobbyVisibility, Locale, Manga, ParticipantKind, PhysicalForm, PictureStatus, PictureSubjectKind, PowerEffectKind, PowerRarity, RevealSpeed, SpinLevel, StandStat, UserRole, abilitySourceSchema, fruitMasterySchema, fruitTypeSchema, gameModeKindSchema, gameStateSchema, hakiLevelSchema, hamonLevelSchema, inviteStatusSchema, loadoutSlotSchema, lobbyVisibilitySchema, localeSchema, mangaSchema, participantKindSchema, physicalFormSchema, pictureStatusSchema, pictureSubjectKindSchema, powerEffectKindSchema, powerRaritySchema, revealSpeedSchema, spinLevelSchema, standStatSchema, userRoleSchema } from './enums'
 
 export const adminUpdateUserRequestSchema = z.object({
   username: z.string(),
@@ -33,7 +33,23 @@ export const devLoginRequestSchema = z.object({
 })
 export type DevLoginRequest = z.infer<typeof devLoginRequestSchema>
 
-export const devilFruitResponseSchema = z.object({
+export type DevilFruitResponse = {
+  id: string
+  name: string
+  description: string
+  rarity: PowerRarity
+  skills: string[]
+  picture: string
+  pictureThumb: string
+  pictureCard: string
+  pictureStatus: PictureStatus
+  pictureLqip: string
+  focalX: number
+  focalY: number
+  fruitType: FruitType
+  evolvesFrom: DevilFruitResponse | null
+}
+export const devilFruitResponseSchema: z.ZodType<DevilFruitResponse> = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string(),
@@ -47,8 +63,8 @@ export const devilFruitResponseSchema = z.object({
   focalX: z.number(),
   focalY: z.number(),
   fruitType: fruitTypeSchema,
+  evolvesFrom: z.lazy(() => devilFruitResponseSchema).nullable(),
 })
-export type DevilFruitResponse = z.infer<typeof devilFruitResponseSchema>
 
 export const devilFruitPageResponseSchema = z.object({
   nextCursor: z.string().optional(),
@@ -190,6 +206,16 @@ export const jojoCharacterPageResponseSchema = z.object({
   items: z.array(jojoCharacterResponseSchema),
 })
 export type JojoCharacterPageResponse = z.infer<typeof jojoCharacterPageResponseSchema>
+
+export const loadoutEffectResponseSchema = z.object({
+  kind: powerEffectKindSchema,
+  slot: loadoutSlotSchema,
+  from: z.string(),
+  to: z.string(),
+  causeSlot: loadoutSlotSchema,
+  cause: z.string(),
+})
+export type LoadoutEffectResponse = z.infer<typeof loadoutEffectResponseSchema>
 
 export const lobbyPreviewResponseSchema = z.object({
   gameId: z.string(),
@@ -457,6 +483,7 @@ export const gameLoadoutResponseSchema = z.object({
   conquerorHaki: hakiLevelSchema,
   physicalForm: physicalFormSchema,
   battleIQ: z.number().int().optional(),
+  effects: z.array(loadoutEffectResponseSchema),
 })
 export type GameLoadoutResponse = z.infer<typeof gameLoadoutResponseSchema>
 

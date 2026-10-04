@@ -89,6 +89,24 @@ type GameLoadoutResponse struct {
 	// not sent over the wire - the frontend derives it from the number,
 	// the same way it already derives the haki set summary.
 	BattleIQ *int `json:"battleIQ,omitempty"`
+	// Effects is what the power-effect resolver did while assigning this
+	// loadout, in order (never null): a stat raised to a floor a power
+	// demands, or a Stand/DevilFruit evolved into a later stage. Stand and
+	// DevilFruit above are the final ones, after any evolution; the sorteo
+	// replays the drawn values first and animates each effect.
+	Effects []LoadoutEffectResponse `json:"effects"`
+}
+
+// LoadoutEffectResponse mirrors game.PowerEffect. From/To are enum wire
+// strings for a STAT_FLOOR and power ids for an EVOLUTION; Cause is a power
+// name or the wire string of the stat value that triggered it.
+type LoadoutEffectResponse struct {
+	Kind      string `json:"kind" ts:"PowerEffectKind"`
+	Slot      string `json:"slot" ts:"LoadoutSlot"`
+	From      string `json:"from"`
+	To        string `json:"to"`
+	CauseSlot string `json:"causeSlot" ts:"LoadoutSlot"`
+	Cause     string `json:"cause"`
 }
 
 // GameParticipantResponse mirrors game.Participant. AvatarThumb is resolved
@@ -557,6 +575,17 @@ func newGameLoadoutResponse(
 		ObservationHaki: l.ObservationHaki().String(),
 		ConquerorHaki:   l.ConquerorHaki().String(),
 		PhysicalForm:    l.PhysicalForm().String(),
+		Effects:         []LoadoutEffectResponse{},
+	}
+	for _, e := range l.Effects() {
+		lr.Effects = append(lr.Effects, LoadoutEffectResponse{
+			Kind:      e.Kind.String(),
+			Slot:      e.Slot.String(),
+			From:      e.From,
+			To:        e.To,
+			CauseSlot: e.CauseSlot.String(),
+			Cause:     e.Cause,
+		})
 	}
 	if s := l.Stand(); s != nil {
 		sr, err := NewStandResponse(ctx, s, resolveStand, media)

@@ -29,12 +29,14 @@ func TestNewLoadout_FruitRequiresAtLeastRegularMastery(t *testing.T) {
 	}
 }
 
-func TestNewLoadout_RequiresSpin4Trait(t *testing.T) {
-	tusk := mustStand(t, 1, "Tusk ACT4", enums.Legendary)
+func TestNewLoadout_StandSpinTierIsAFloor(t *testing.T) {
+	// Prod's catalogue names it "Tusk: Acto 4" - the rule once matched
+	// "Tusk ACT4" and so never fired there.
+	tusk := mustStand(t, 1, "Tusk: Acto 4", enums.Legendary)
 
 	if _, err := game.NewLoadout(tusk, nil, enums.SpinBasic, enums.HamonNone, enums.FruitMasteryNone,
-		enums.HakiPrivate, enums.HakiPrivate, enums.HakiPrivate, enums.PhysicalFormPrivate); err != game.ErrSpin4Required {
-		t.Fatalf("expected ErrSpin4Required, got %v", err)
+		enums.HakiPrivate, enums.HakiPrivate, enums.HakiPrivate, enums.PhysicalFormPrivate); err != game.ErrPowerEffectFloorViolated {
+		t.Fatalf("expected ErrPowerEffectFloorViolated, got %v", err)
 	}
 
 	l, err := game.NewLoadout(tusk, nil, enums.SpinInfinite, enums.HamonNone, enums.FruitMasteryNone,

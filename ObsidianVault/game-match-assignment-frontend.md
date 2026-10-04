@@ -391,6 +391,18 @@ power's description - that gap is now closed).
   coverage rests on the unit tests plus one incidentally-short real window (1280x575), not a forced
   390-wide screenshot - worth knowing before trusting "verified on mobile" claims from this tool.
 
+- **Power effects in the sorteo (2026-10-04)**: see [[gameplay-power-effects]] for the rules. Frontend
+  pieces: `lib/power-effects.ts` (`effectAnchors`, `displayLoadoutAt`, `revealPlayerFor`),
+  `loadout-reveal.ts`'s `effectIntro/effectEvolving/effectStep/effectLand` phases (carry
+  `effectIndex` + `effectsApplied`), `EffectLevelUp` for a stat beat, `PowerRevealCard.causeLine`
+  for an evolution beat. `seekRevealTimeline`, skip and rewatch needed no change: everything the
+  stage shows is derived from the phase (and `effectsApplied`), never from accumulated state, so
+  seeking into the middle of an effect is the same math as seeking into a slot. A drawn
+  DevilFruit that has an evolution chain now plays the stand-style evolve beat on its own slot
+  (own copy `game.match.reveal.evolution.evolvingFruit`); `reveal-stage-effects.test.tsx` is its
+  own file because an evolution effect puts a real RN `<Modal>` on screen (same reason as
+  `power-reveal-card.test.tsx`).
+
 Related: [[game-lobby-todo]], [[game-lobby-frontend]], [[gameplay-application-layer]],
 [[game-realtime-transport]], [[docker-setup]], [[frontend-stack]], [[i18n-multi-language]],
 [[gameplay-power-fx]], [[frontend-responsive-frutiger-aero]], [[admin-panel-crud-ux-fixes]].

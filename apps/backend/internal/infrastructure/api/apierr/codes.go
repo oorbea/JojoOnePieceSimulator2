@@ -62,7 +62,7 @@ var Codes = []string{
 	EmptyPowerMangas,
 	InvalidTeamSize,
 	FruitMasteryMismatch,
-	Spin4Required,
+	PowerEffectFloorViolated,
 	PowerPoolExhausted,
 	GameCodeGenerationFailed,
 	InvalidGameMode,
@@ -147,7 +147,7 @@ const (
 	EmptyPowerMangas               = "EMPTY_POWER_MANGAS"
 	InvalidTeamSize                = "INVALID_TEAM_SIZE"
 	FruitMasteryMismatch           = "FRUIT_MASTERY_MISMATCH"
-	Spin4Required                  = "SPIN_4_REQUIRED"
+	PowerEffectFloorViolated       = "POWER_EFFECT_FLOOR_VIOLATED"
 	PowerPoolExhausted             = "POWER_POOL_EXHAUSTED"
 	GameCodeGenerationFailed       = "GAME_CODE_GENERATION_FAILED"
 	InvalidGameMode                = "INVALID_GAME_MODE"

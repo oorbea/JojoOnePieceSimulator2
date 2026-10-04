@@ -126,8 +126,8 @@ func errorCode(err error) string {
 		return apierr.InvalidTeamSize
 	case errors.Is(err, game.ErrFruitMasteryMismatch):
 		return apierr.FruitMasteryMismatch
-	case errors.Is(err, game.ErrSpin4Required):
-		return apierr.Spin4Required
+	case errors.Is(err, game.ErrPowerEffectFloorViolated):
+		return apierr.PowerEffectFloorViolated
 	case errors.Is(err, game.ErrPowerPoolExhausted):
 		return apierr.PowerPoolExhausted
 	case errors.Is(err, services.ErrCodeGenerationFailed):

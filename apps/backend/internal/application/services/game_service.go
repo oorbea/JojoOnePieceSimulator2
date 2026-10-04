@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/powers"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/user"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
@@ -122,6 +123,9 @@ type GameService struct {
 	powers   ports.IGamePowerPool
 	weights  ports.IAssignmentWeights
 	tiebreak ports.ITiebreaker
+	// ruleNamesChecked makes loadDrawCatalog log once per process which power
+	// effect rule names the catalogue lacks (see game.MissingPowerEffectNames).
+	ruleNamesChecked sync.Once
 	// history may be nil - tests exercise GameService without a real
 	// ports.IGameHistory adapter, and finalizeLocked tolerates that by
 	// simply skipping recording. Production always passes one
@@ -770,28 +774,49 @@ func (s *GameService) AbortGame(ctx context.Context, gameID game.GameID, callerI
 // ErrPowerPoolExhausted mid-match rather than letting it surface
 // unpredictably on some later round.
 func (s *GameService) checkPoolSufficiency(ctx context.Context, g *game.Game) error {
-	stands, err := s.powers.Stands(ctx)
+	stands, fruits, err := s.loadDrawCatalog(ctx, g)
 	if err != nil {
 		return err
 	}
-	fruits, err := s.powers.DevilFruits(ctx)
-	if err != nil {
-		return err
-	}
-	stands, fruits = g.Config().PoolFilter().Apply(stands, fruits)
 	needed := 0
 	for _, t := range g.Teams() {
 		if t.Size() > needed {
 			needed = t.Size()
 		}
 	}
-	if g.Config().HasPowerManga(enums.Jojo) && len(stands) < needed {
+	// Families, not entries: drawing a stand removes its whole evolution family
+	// from a team's pool (see game.AvailablePowers), so a pool of ten stages of
+	// one family can serve one teammate, not ten.
+	if g.Config().HasPowerManga(enums.Jojo) && game.CountStandFamilies(stands) < needed {
 		return game.ErrPoolTooSmall
 	}
-	if g.Config().HasPowerManga(enums.OnePiece) && len(fruits) < needed {
+	if g.Config().HasPowerManga(enums.OnePiece) && game.CountFruitFamilies(fruits) < needed {
 		return game.ErrPoolTooSmall
 	}
 	return nil
+}
+
+// loadDrawCatalog is the catalogue a loadout draw works from: every stand and
+// devil fruit, with fruit evolutions linked (on the unfiltered list, so a
+// banned Gomu Gomu no mi still parents Nika), then narrowed to what g's
+// PoolFilter allows. Shared by the pool-sufficiency check and the draw itself
+// so the two can never disagree about what is in the pool.
+func (s *GameService) loadDrawCatalog(ctx context.Context, g *game.Game) ([]*powers.Stand, []*powers.DevilFruit, error) {
+	stands, err := s.powers.Stands(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	fruits, err := s.powers.DevilFruits(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	s.ruleNamesChecked.Do(func() {
+		if missing := game.MissingPowerEffectNames(stands, fruits); len(missing) > 0 {
+			log.Printf("game: power effect rules refer to powers missing from the catalogue (renamed or not created yet?): %q", missing)
+		}
+	})
+	stands, fruits = g.Config().PoolFilter().Apply(stands, game.LinkFruitEvolutions(fruits))
+	return stands, fruits, nil
 }
 
 // beginRound resolves fresh Loadouts (when this is the first round, or the
@@ -809,15 +834,10 @@ func (s *GameService) beginRound(ctx context.Context, g *game.Game) error {
 		if err != nil {
 			return err
 		}
-		stands, err := s.powers.Stands(ctx)
+		stands, fruits, err := s.loadDrawCatalog(ctx, g)
 		if err != nil {
 			return err
 		}
-		fruits, err := s.powers.DevilFruits(ctx)
-		if err != nil {
-			return err
-		}
-		stands, fruits = g.Config().PoolFilter().Apply(stands, fruits)
 
 		// Each Team gets its own AvailablePowers built from the same
 		// catalog snapshot - drawing on one Team's pool must never affect
@@ -1574,19 +1594,7 @@ func (s *GameService) publish(g *game.Game) {
 func revealDurationFor(g *game.Game) time.Duration {
 	players := make([]game.RevealPlayer, 0, len(g.Participants()))
 	for _, p := range g.Participants() {
-		loadout := p.Loadout()
-		standEvolutionSteps := 0
-		if loadout != nil && loadout.Stand() != nil {
-			standEvolutionSteps = loadout.Stand().EvolutionDepth()
-		}
-		players = append(players, game.RevealPlayer{
-			HasStand:            loadout != nil && loadout.Stand() != nil,
-			HasDevilFruit:       loadout != nil && loadout.DevilFruit() != nil,
-			HasArmamentHaki:     loadout != nil && loadout.ArmamentHaki() != enums.HakiNone,
-			HasObservationHaki:  loadout != nil && loadout.ObservationHaki() != enums.HakiNone,
-			HasConquerorHaki:    loadout != nil && loadout.ConquerorHaki() != enums.HakiNone,
-			StandEvolutionSteps: standEvolutionSteps,
-		})
+		players = append(players, game.RevealPlayerFor(p.Loadout()))
 	}
 	roundIndex := len(g.Rounds())
 	return game.RevealDuration(g.ID(), roundIndex, g.Config().PowerMangas(), players, g.Config().RevealSpeed())

@@ -53,10 +53,14 @@ invariants below.
 2. **Spin and Hamon are independent of the Stand and of each other.** A player can have all three,
    any two, just one, or none — e.g. a pure Hamon user with no Stand is valid, same as a Stand user
    with no Spin/Hamon at all.
-3. **Exception**: a small, named set of Stands force Spin to `INFINITE` (spin level 4) regardless
-   of what was drawn: **Tusk ACT4**, **Ball Breaker**, **Soft & Wet: Go Beyond**. This is modeled
-   as a `PowerTrait` (`REQUIRES_SPIN_4`), matched by Stand name today — see
-   [[gameplay-domain-design]] for why, and what replaces the name match later.
+3. **Exceptions - power effects** (rewritten 2026-10-04, see [[gameplay-power-effects]]): some
+   powers demand a floor on another stat or evolve when a stat is high enough, regardless of what
+   was drawn. Originally just "Tusk ACT4, Ball Breaker, Soft & Wet: Go Beyond force Spin to
+   `INFINITE`" (a name-matched `PowerTrait`, which never fired for Tusk in prod - its name is
+   `Tusk: Acto 4`). Now a code table by exact power name: per-stage Spin tiers for Tusk/Ball
+   Breaker/Go Beyond with Spin-driven Stand evolution (V1's behaviour), Gomu Gomu -> Model Nika
+   at AWAKENED mastery, Zoan/Hermit purple/King Crimson/Hamon floors, some cross-manga. Every
+   effect is recorded on the Loadout so the sorteo can animate it.
 
 These are re-checked by `Loadout` construction itself, not just by the builder that produces one —
 so any future ability source (inventory-based Versus, admin-forced test loadouts, ...) gets them
@@ -65,7 +69,8 @@ for free.
 ## Uniqueness
 
 A Stand or Devil Fruit **never repeats within the same team** in the same game (Gauntlet) or the
-same round (Versus). The rival team in Versus is a separate draw pool and can repeat whatever the
+same round (Versus). Since 2026-10-04 that includes its **whole evolution family**: a team can't
+hold Whitesnake and C-MOON, or Gomu Gomu no mi and Model Nika (see [[gameplay-power-effects]]). The rival team in Versus is a separate draw pool and can repeat whatever the
 first team got. Bots draw from the same pool as humans and count towards this uniqueness.
 
 ## Voting

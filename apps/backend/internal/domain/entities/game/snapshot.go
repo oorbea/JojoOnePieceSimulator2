@@ -184,6 +184,19 @@ type LoadoutSnapshot struct {
 	// score of 0 is legitimate, so this must never collapse nil and 0 -
 	// see BattleIQ's own doc comment.
 	BattleIQ *byte
+	// Effects is what the power-effect resolver did, in order. Nil for a
+	// loadout persisted before power effects existed.
+	Effects []PowerEffectSnapshot
+}
+
+// PowerEffectSnapshot is the string form of a PowerEffect.
+type PowerEffectSnapshot struct {
+	Kind      string
+	Slot      string
+	From      string
+	To        string
+	CauseSlot string
+	Cause     string
 }
 
 // Snapshot captures g's complete state for out-of-process persistence. See
@@ -329,7 +342,40 @@ func snapshotLoadout(l *Loadout) LoadoutSnapshot {
 		v := l.battleIQ.Value()
 		ls.BattleIQ = &v
 	}
+	for _, e := range l.effects {
+		ls.Effects = append(ls.Effects, PowerEffectSnapshot{
+			Kind:      e.Kind.String(),
+			Slot:      e.Slot.String(),
+			From:      e.From,
+			To:        e.To,
+			CauseSlot: e.CauseSlot.String(),
+			Cause:     e.Cause,
+		})
+	}
 	return ls
+}
+
+// restoreEffects parses persisted effects, dropping any that fail to parse:
+// an effect only drives an animation, so losing one must never fail an
+// otherwise-valid in-flight game.
+func restoreEffects(raw []PowerEffectSnapshot) []PowerEffect {
+	var out []PowerEffect
+	for _, r := range raw {
+		kind, err := enums.ParsePowerEffectKind(r.Kind)
+		if err != nil {
+			continue
+		}
+		slot, err := enums.ParseLoadoutSlot(r.Slot)
+		if err != nil {
+			continue
+		}
+		causeSlot, err := enums.ParseLoadoutSlot(r.CauseSlot)
+		if err != nil {
+			continue
+		}
+		out = append(out, PowerEffect{Kind: kind, Slot: slot, From: r.From, To: r.To, CauseSlot: causeSlot, Cause: r.Cause})
+	}
+	return out
 }
 
 func mangaStrings(mangas []enums.Manga) []string {
@@ -711,7 +757,7 @@ func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
 	if ls.BattleIQ != nil {
 		battleIQ = NewBattleIQ(*ls.BattleIQ)
 	}
-	return NewLoadoutFromSpec(LoadoutSpec{
+	return newLoadout(LoadoutSpec{
 		Stand:           ls.Stand,
 		DevilFruit:      ls.DevilFruit,
 		Spin:            spin,
@@ -722,5 +768,6 @@ func restoreLoadout(ls LoadoutSnapshot) (*Loadout, error) {
 		ConquerorHaki:   conquerorHaki,
 		PhysicalForm:    physicalForm,
 		BattleIQ:        battleIQ,
-	})
+		Effects:         restoreEffects(ls.Effects),
+	}, false)
 }

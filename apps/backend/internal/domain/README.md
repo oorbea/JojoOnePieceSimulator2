@@ -39,7 +39,7 @@ entity.
 
 ~20 small typed-constant packages (byte- or string-backed), each exposing
 `String()`, `IsValid()`, a `Parse*` function, and an `ErrInvalid*` sentinel:
-`StandStat`, `PowerRarity`, `PowerKind`, `PowerTrait`, `FruitType`,
+`StandStat`, `PowerRarity`, `PowerKind`, `PowerEffectKind`, `LoadoutSlot`, `FruitType`,
 `FruitMastery`, `HamonLevel`, `HakiLevel`, `SpinLevel`, `PhysicalForm`,
 `AbilitySource`, `Manga`, `Locale` (with `FallbackChain`), `UserRole`,
 `PictureStatus`, `PictureSubjectKind`, `GameModeKind`, `GameState`,

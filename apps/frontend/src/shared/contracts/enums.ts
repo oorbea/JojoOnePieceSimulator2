@@ -52,6 +52,19 @@ export type HamonLevel = z.infer<typeof hamonLevelSchema>
 export const inviteStatusSchema = z.enum(['VALID', 'EXPIRED'])
 export type InviteStatus = z.infer<typeof inviteStatusSchema>
 
+export const loadoutSlotSchema = z.enum([
+  'PHYSICAL_FORM',
+  'STAND',
+  'DEVIL_FRUIT',
+  'FRUIT_MASTERY',
+  'HAMON',
+  'ARMAMENT_HAKI',
+  'OBSERVATION_HAKI',
+  'CONQUEROR_HAKI',
+  'SPIN',
+])
+export type LoadoutSlot = z.infer<typeof loadoutSlotSchema>
+
 export const lobbyVisibilitySchema = z.enum(['PRIVATE', 'PUBLIC'])
 export type LobbyVisibility = z.infer<typeof lobbyVisibilitySchema>
 
@@ -87,6 +100,9 @@ export const pictureSubjectKindSchema = z.enum([
 ])
 export type PictureSubjectKind = z.infer<typeof pictureSubjectKindSchema>
 
+export const powerEffectKindSchema = z.enum(['STAT_FLOOR', 'EVOLUTION'])
+export type PowerEffectKind = z.infer<typeof powerEffectKindSchema>
+
 export const powerKindSchema = z.enum(['STAND', 'DEVIL_FRUIT'])
 export type PowerKind = z.infer<typeof powerKindSchema>
 
@@ -98,9 +114,6 @@ export const powerRaritySchema = z.enum([
   'MYTHICAL',
 ])
 export type PowerRarity = z.infer<typeof powerRaritySchema>
-
-export const powerTraitSchema = z.enum(['REQUIRES_SPIN_4'])
-export type PowerTrait = z.infer<typeof powerTraitSchema>
 
 export const revealSpeedSchema = z.enum(['NORMAL', 'RELAXED', 'SWIFT'])
 export type RevealSpeed = z.infer<typeof revealSpeedSchema>
