@@ -229,5 +229,10 @@ design (see T1.4's note on why the admin container needs the full set).
 
 ## Still open
 
-- Native accessibility focus after "Cargar más" (see above) - currently a
-  no-op on native, not a crash, but not the real fix either.
+- ~~Native accessibility focus after "Cargar más" - currently a no-op on
+  native.~~ **Stale, corrected 2026-10-04**: already implemented in
+  `52e753b` - `focusElement` (`shared/lib/a11y.ts`) calls
+  `AccessibilityInfo.setAccessibilityFocus(findNodeHandle(el))` on native,
+  wired in the Stand/DevilFruit/Stage/Character screens. Only the native
+  branch's manual on-device check remains (needs an EAS/native build, no
+  unit test by design - see "Focus management" above).
