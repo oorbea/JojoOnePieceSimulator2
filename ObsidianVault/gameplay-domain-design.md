@@ -159,17 +159,19 @@ All under `apps/backend/internal/domain/entities/game/` unless noted.
 - **Confirmed pending with the owner (2026-08-28)**: raised this exact concern with the owner, who
   confirmed it's still open/unresolved — not dismissed, not scheduled, just genuinely pending a
   decision on the weight tables. Re-raise it rather than assuming it got silently deprioritized.
-- **TODO, not yet discussed with the owner (2026-08-27)**: `DefaultLoadoutEvaluator.Score`
-  (`loadout_evaluator.go:20-22`) sums `enums.SpinLevel`/`HamonLevel`/`FruitMastery`/`HakiLevel`/
-  `PhysicalForm` as their **raw ordinal** (`int(l.Spin())`, etc), not a chosen weight per level.
-  That means every time one of those enums gets reshuffled or grows/shrinks, the score silently
-  rebalances as a side effect — nobody decided "Infinite spin should now be worth 3 instead of 4",
-  it just fell out of the enum's `iota` order. This already happened once, during the
-  probabilities-from-V1 port ([[gameplay-game-modes]]): spin lost a tier (max ordinal 4→3), haki
-  gained one (`HakiNone` inserted at 0, so `HakiYonkoPlus` moved 3→4), and physical form's max grew
-  3→5 (4→6 levels). Open questions for whoever revisits this: should each enum have its own
-  explicit weight table (decoupling "position in the enum" from "score contribution"), and if so
-  what should the actual weights be — this needs the owner's input, not a unilateral pick.
+- ~~**TODO, not yet discussed with the owner (2026-08-27)**: `DefaultLoadoutEvaluator.Score` summed
+  `SpinLevel`/`HamonLevel`/`FruitMastery`/`HakiLevel`/`PhysicalForm` as their raw ordinal, so every
+  enum reshuffle silently rebalanced the score.~~ **Resolved 2026-10-04 (owner-approved weights)**:
+  `loadout_evaluator.go` now has one explicit table per ability (`spinScore`, `hamonScore`,
+  `fruitMasteryScore`, `hakiScore`, `conquerorHakiScore`, `physicalFormScore`), decoupled from enum
+  order. Weights, per level in enum order:
+  Spin 0/1/3/6 (was 0/1/2/3), Hamon 0/1/2/3 (unchanged), FruitMastery 0/1/3/5 (was 0/1/2/3),
+  Armament and Observation Haki 0/1/2/3/4 (unchanged), Conqueror's Haki 0/1/2/4/6 (was 0/1/2/3/4),
+  PhysicalForm 0/1/2/3/4/5 (unchanged). Net effect: bots in Versus value Infinite spin, Awakened
+  mastery and a Yonko+ Conqueror's Haki more. `TestDefaultLoadoutEvaluator_AbilityWeights` pins every
+  table. Gotcha for tests: Hamon Advanced+ and Perfect trip power-effect floors
+  ([[gameplay-power-effects]]), and FruitMastery needs a Devil Fruit, so the test builds those
+  loadouts with their forced companions and expects hamon weight + companion weights.
 
 The application layer that wires this domain up (game store, voting timer, event hub, the cheap
 adapters, and what's still stubbed) landed the same day — see [[gameplay-application-layer]].
