@@ -9,23 +9,20 @@ type LoadoutEvaluator interface {
 	Score(l *Loadout) int
 }
 
-// DefaultLoadoutEvaluator sums normalized ability levels plus Stand stats
-// and a rarity bonus for the Stand/DevilFruit, if any.
-//
-// TODO(owner): Score sums enums.SpinLevel/HakiLevel/PhysicalForm/etc as
-// their raw ordinal (int(l.Spin()), ...), not a hand-picked weight per
-// level. Every enum reshuffle silently rebalances this score - see
-// ObsidianVault/gameplay-domain-design.md's "Known debt" for the open
-// question (not yet discussed with the owner).
+// DefaultLoadoutEvaluator sums per-level ability weights, Stand stats, a
+// BattleIQ band score and a rarity bonus for the Stand/DevilFruit, if any.
+// Every ability weight is an explicit table (spinScore, hamonScore, ...),
+// never the enum's raw ordinal, so reshuffling or growing an enum can't
+// silently rebalance bot votes.
 type DefaultLoadoutEvaluator struct{}
 
 func (DefaultLoadoutEvaluator) Score(l *Loadout) int {
 	if l == nil {
 		return 0
 	}
-	score := int(l.Spin()) + int(l.Hamon()) + int(l.FruitMastery()) +
-		int(l.ArmamentHaki()) + int(l.ObservationHaki()) + int(l.ConquerorHaki()) +
-		int(l.PhysicalForm()) + battleIQScore(l.BattleIQ())
+	score := spinScore(l.Spin()) + hamonScore(l.Hamon()) + fruitMasteryScore(l.FruitMastery()) +
+		hakiScore(l.ArmamentHaki()) + hakiScore(l.ObservationHaki()) + conquerorHakiScore(l.ConquerorHaki()) +
+		physicalFormScore(l.PhysicalForm()) + battleIQScore(l.BattleIQ())
 
 	if s := l.Stand(); s != nil {
 		score += standStatScore(s.AttackPower()) + standStatScore(s.Speed()) +
@@ -37,6 +34,100 @@ func (DefaultLoadoutEvaluator) Score(l *Loadout) int {
 		score += rarityBonus(f.Rarity())
 	}
 	return score
+}
+
+// spinScore weighs Spin 0/1/3/6: Golden is worth more than one step over
+// Basic, and Infinite (Stand-class power) is the single biggest ability tier.
+func spinScore(l enums.SpinLevel) int {
+	switch l {
+	case enums.SpinBasic:
+		return 1
+	case enums.SpinGolden:
+		return 3
+	case enums.SpinInfinite:
+		return 6
+	default:
+		return 0
+	}
+}
+
+// hamonScore weighs Hamon 0/1/2/3.
+func hamonScore(l enums.HamonLevel) int {
+	switch l {
+	case enums.HamonBasic:
+		return 1
+	case enums.HamonAdvanced:
+		return 2
+	case enums.HamonPerfect:
+		return 3
+	default:
+		return 0
+	}
+}
+
+// fruitMasteryScore weighs Devil Fruit mastery 0/1/3/5.
+func fruitMasteryScore(m enums.FruitMastery) int {
+	switch m {
+	case enums.FruitMasteryRegular:
+		return 1
+	case enums.FruitMasteryAdvanced:
+		return 3
+	case enums.FruitMasteryAwakened:
+		return 5
+	default:
+		return 0
+	}
+}
+
+// hakiScore weighs Armament and Observation Haki 0/1/2/3/4.
+func hakiScore(h enums.HakiLevel) int {
+	switch h {
+	case enums.HakiPrivate:
+		return 1
+	case enums.HakiViceAdmiral:
+		return 2
+	case enums.HakiYonkoCommander:
+		return 3
+	case enums.HakiYonkoPlus:
+		return 4
+	default:
+		return 0
+	}
+}
+
+// conquerorHakiScore weighs Conqueror's Haki 0/1/2/4/6 - rarer and steeper
+// at the top than the other two Haki.
+func conquerorHakiScore(h enums.HakiLevel) int {
+	switch h {
+	case enums.HakiPrivate:
+		return 1
+	case enums.HakiViceAdmiral:
+		return 2
+	case enums.HakiYonkoCommander:
+		return 4
+	case enums.HakiYonkoPlus:
+		return 6
+	default:
+		return 0
+	}
+}
+
+// physicalFormScore weighs PhysicalForm 0/1/2/3/4/5.
+func physicalFormScore(f enums.PhysicalForm) int {
+	switch f {
+	case enums.PhysicalFormStrongFishman:
+		return 1
+	case enums.PhysicalFormMarineCaptain:
+		return 2
+	case enums.PhysicalFormViceAdmiral:
+		return 3
+	case enums.PhysicalFormYonkoCommander:
+		return 4
+	case enums.PhysicalFormYonkoPlus:
+		return 5
+	default:
+		return 0
+	}
 }
 
 // standStatScore maps a StandStat to a magnitude: E..A become 1..5,
