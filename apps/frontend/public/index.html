@@ -3,9 +3,29 @@
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <meta name="theme-color" content="#00A0E9" />
+    <!-- `viewport-fit=cover` is what makes `env(safe-area-inset-*)` non-zero
+         on notched phones / standalone mode, which the SafeAreaProvider insets
+         rely on. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Simulador de Stands y Frutas del Diablo: JoJo x One Piece"
+    />
+    <!-- First-paint theme colours (OS scheme). Once the app boots,
+         applyThemeColor() overwrites both with the resolved in-app theme so
+         the manual light/dark toggle is respected too. Keep in sync with
+         shared/lib/theme-color.ts. -->
+    <meta name="theme-color" content="#00A0E9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A1626" media="(prefers-color-scheme: dark)" />
     <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="JOPS" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>%WEB_TITLE%</title>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
