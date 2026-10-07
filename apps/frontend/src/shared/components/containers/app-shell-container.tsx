@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next'
 
 import { useOnlineStatus } from '@/shared/hooks/use-online-status'
 import { AppShell, type AppShellNavItem } from '@/shared/components/presentational/app-shell'
+import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { useGameActivityStore } from '@/shared/stores/game-activity.store'
+import { useExitGuardStore } from '@/shared/stores/exit-guard.store'
 import {
   canInstall,
   shouldShowInstallBanner,
@@ -18,7 +20,11 @@ import { useThemeStore } from '@/shared/stores/theme.store'
 // widen the union and add an entry here once a new route exists. Labels
 // come from useTranslation() in the component below - this only pins the
 // i18n key per route.
-const NAV_ITEMS: { href: '/' | '/play' | '/profile' | '/admin'; labelKey: string; icon: AppShellNavItem['icon'] }[] = [
+const NAV_ITEMS: {
+  href: '/' | '/play' | '/profile' | '/admin'
+  labelKey: string
+  icon: AppShellNavItem['icon']
+}[] = [
   { href: '/', labelKey: 'nav.home', icon: Home },
   { href: '/play', labelKey: 'nav.play', icon: Gamepad2 },
   { href: '/profile', labelKey: 'nav.profile', icon: User },
@@ -44,6 +50,13 @@ export function AppShellContainer({ children }: { children: React.ReactNode }) {
   const online = useOnlineStatus()
   const inGame = useGameActivityStore((state) => state.activity !== 'none')
 
+  // Leaving a game in progress (any nav item, logout) asks first; see
+  // exit-guard.store.ts. Outside a game request() just runs the action.
+  const requestExit = useExitGuardStore((state) => state.request)
+  const pendingExit = useExitGuardStore((state) => state.pending)
+  const confirmExit = useExitGuardStore((state) => state.confirm)
+  const cancelExit = useExitGuardStore((state) => state.cancel)
+
   // Admin nav item is hidden entirely for non-admins — the actual gate lives
   // server-side (RequireAdmin) plus the /admin route group's own guard, this
   // is purely about not advertising a channel a REGULAR user can't use.
@@ -60,17 +73,27 @@ export function AppShellContainer({ children }: { children: React.ReactNode }) {
   }))
 
   return (
-    <AppShell
-      items={items}
-      onNavigate={(href) => router.navigate(href as never)}
-      onLogout={() => void clearSession()}
-      themeMode={themeMode}
-      onCycleTheme={() => void cycleTheme()}
-      offline={!online}
-      onInstall={installable ? () => void promptInstall() : undefined}
-      onDismissInstallBanner={showBanner && !inGame ? () => void dismissBanner() : undefined}
-    >
-      {children}
-    </AppShell>
+    <>
+      <AppShell
+        items={items}
+        onNavigate={(href) => requestExit(() => router.navigate(href as never))}
+        onLogout={() => requestExit(() => void clearSession())}
+        themeMode={themeMode}
+        onCycleTheme={() => void cycleTheme()}
+        offline={!online}
+        onInstall={installable ? () => void promptInstall() : undefined}
+        onDismissInstallBanner={showBanner && !inGame ? () => void dismissBanner() : undefined}
+      >
+        {children}
+      </AppShell>
+      <ConfirmSheet
+        visible={!!pendingExit}
+        title={t('game.leave.title')}
+        message={t('game.leave.message')}
+        confirmLabel={t('game.leave.confirm')}
+        onConfirm={() => void confirmExit()}
+        onCancel={cancelExit}
+      />
+    </>
   )
 }
