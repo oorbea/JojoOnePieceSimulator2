@@ -7,6 +7,9 @@ tags:
   - bug
   - fixed
 ---
+> [!note] Actualizado 2026-10-08
+> El SW ya no se versiona a mano (`CACHE_NAME` sale del build id sellado por Docker) y no hace `skipWaiting` solo: ver [[pwa-movil-2026-10-08]].
+
 
 # Bug: admin Stand/Devil Fruit CRUD invisible until a manual cache clear, in prod only
 
