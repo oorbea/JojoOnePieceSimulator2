@@ -29,27 +29,28 @@
     <title>%WEB_TITLE%</title>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
-      /* These styles make the body full-height. `100dvh` tracks the real
-         visible viewport on mobile browsers (Chrome/Safari collapse their
-         address bar on scroll, which `100%`/`100vh` don't react to, so a
-         fixed-height layer like AppShell's floating nav bars would drift
-         relative to the actual screen); `100%` stays as a fallback for
-         browsers without `dvh` support. */
+      /* The app fills exactly the window it is shown in. #root is pinned to
+         the viewport with `position: fixed; inset: 0` instead of a
+         `100vh`/`100dvh` height on purpose: in an installed Android PWA the
+         first layout resolved `dvh` to the full screen height - status bar
+         included - so the whole app (and AppShell's floating bottom dock)
+         hung ~one status bar below the visible window until the first
+         resize, which "fixed" it. A fixed box is laid out against the real
+         window (and tracks a collapsing browser address bar just as well),
+         so there is nothing to correct afterwards. */
       html,
       body {
         height: 100%;
-        height: 100dvh;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
         overflow: hidden;
       }
-      /* These styles make the root element full-height */
+      /* These styles make the root element fill the window */
       #root {
+        position: fixed;
+        inset: 0;
         display: flex;
-        height: 100%;
-        height: 100dvh;
-        flex: 1;
       }
     </style>
   </head>
