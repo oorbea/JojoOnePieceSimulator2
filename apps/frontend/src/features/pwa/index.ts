@@ -2,3 +2,4 @@
 // from this feature. Everything else (lib/, internal hooks) stays
 // unexported and reachable only from inside this folder.
 export { useServiceWorkerUpdate } from './hooks/use-service-worker-update'
+export { useInstallPromptCapture } from './hooks/use-install-prompt-capture'

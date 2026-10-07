@@ -65,7 +65,18 @@
     "play": "Play",
     "profile": "Profile",
     "admin": "Admin",
-    "logOut": "Log out"
+    "logOut": "Log out",
+    "installApp": "Install app"
+  },
+  "pwa": {
+    "banner": {
+      "title": "Install JOPS",
+      "body": "Open it from your home screen, full screen.",
+      "install": "Install",
+      "installHint": "Install JOPS on your phone",
+      "dismiss": "Not now",
+      "dismissHint": "Dismiss this notice; it will come back in two weeks"
+    }
   },
   "home": {
     "pickChannel": "Pick a channel",

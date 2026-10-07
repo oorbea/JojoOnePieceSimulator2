@@ -65,7 +65,18 @@
     "play": "Jugar",
     "profile": "Perfil",
     "admin": "Admin",
-    "logOut": "Cerrar sesión"
+    "logOut": "Cerrar sesión",
+    "installApp": "Instalar app"
+  },
+  "pwa": {
+    "banner": {
+      "title": "Instala JOPS",
+      "body": "Ábrelo desde tu pantalla de inicio, a pantalla completa.",
+      "install": "Instalar",
+      "installHint": "Instala JOPS en tu móvil",
+      "dismiss": "Ahora no",
+      "dismissHint": "Cerrar este aviso; volverá a aparecer en dos semanas"
+    }
   },
   "home": {
     "pickChannel": "Elige un canal",

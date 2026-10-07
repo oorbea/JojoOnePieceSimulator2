@@ -65,7 +65,18 @@
     "play": "Juga",
     "profile": "Perfil",
     "admin": "Admin",
-    "logOut": "Tanca la sessió"
+    "logOut": "Tanca la sessió",
+    "installApp": "Instal·la l'app"
+  },
+  "pwa": {
+    "banner": {
+      "title": "Instal·la JOPS",
+      "body": "Obre'l des de la pantalla d'inici, a pantalla completa.",
+      "install": "Instal·la",
+      "installHint": "Instal·la JOPS al teu mòbil",
+      "dismiss": "Ara no",
+      "dismissHint": "Tanca aquest avís; tornarà a aparèixer d'aquí a dues setmanes"
+    }
   },
   "home": {
     "pickChannel": "Tria un canal",

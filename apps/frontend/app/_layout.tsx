@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
 import { useColorScheme } from 'react-native'
 
-import { useServiceWorkerUpdate } from '@/features/pwa'
+import { useInstallPromptCapture, useServiceWorkerUpdate } from '@/features/pwa'
 import { AppProviders } from '@/providers/app-providers'
 import { useAudioSettingsStore } from '@/shared/stores/audio-settings.store'
 import { useLanguageStore } from '@/shared/stores/language.store'
@@ -37,6 +37,8 @@ export default function RootLayout() {
 
   // Registers the service worker and applies new deploys to the installed PWA.
   useServiceWorkerUpdate()
+  // Captures the browser's install prompt for the shell's install button/banner.
+  useInstallPromptCapture()
 
   // Once a session is known, the backend's users.language is the source of
   // truth and overrides whatever was device-detected/stored pre-login - see
