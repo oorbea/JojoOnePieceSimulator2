@@ -37,6 +37,7 @@ interface FakeResponse {
 
 interface FakeEvent {
   request: FakeRequest
+  data?: { type?: string }
   respondWith: (p: Promise<FakeResponse>) => void
   waitUntil: (p: Promise<unknown>) => void
 }
@@ -139,7 +140,7 @@ function loadSw(caches: FakeCacheStorage, fetchImpl: FetchImpl) {
   }
   const factory = new Function('self', 'caches', 'fetch', SW_SRC) as unknown as SwFactory
   factory(self, caches, fetchImpl)
-  return { handlers }
+  return { handlers, self }
 }
 
 async function dispatchFetch(
@@ -192,6 +193,61 @@ it('install seeds the shell cache with the shell URLs', async () => {
   const shellCache = await caches.open(names[0])
   const keys = await shellCache.keys()
   expect(keys.map((k) => k.url).sort()).toEqual([ORIGIN + '/', ORIGIN + '/manifest.json'])
+})
+
+describe('update lifecycle', () => {
+  function dispatchMessage(
+    handlers: Record<string, (event: FakeEvent) => void>,
+    data: FakeEvent['data']
+  ) {
+    handlers.message({
+      request: req('/'),
+      data,
+      respondWith: () => {},
+      waitUntil: () => {},
+    })
+  }
+
+  it('does not skipWaiting on install (a new deploy waits for the page to ask)', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchLifecycle(handlers, 'install')
+
+    expect(self.skipWaiting).not.toHaveBeenCalled()
+  })
+
+  it('skipWaiting on a SKIP_WAITING message', () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    dispatchMessage(handlers, { type: 'SKIP_WAITING' })
+
+    expect(self.skipWaiting).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores any other message', () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    dispatchMessage(handlers, { type: 'SOMETHING_ELSE' })
+    dispatchMessage(handlers, undefined)
+
+    expect(self.skipWaiting).not.toHaveBeenCalled()
+  })
+
+  it('claims clients only after stale caches are deleted', async () => {
+    const caches = makeCaches()
+    const { handlers, self } = loadSw(caches, jest.fn())
+    await caches.open('jops-shell-previous-build')
+
+    await dispatchLifecycle(handlers, 'activate')
+
+    expect(await caches.keys()).not.toContain('jops-shell-previous-build')
+    expect(self.clients.claim).toHaveBeenCalledTimes(1)
+  })
+
+  it('names the shell cache after the build id placeholder Docker stamps', () => {
+    expect(SW_SRC).toContain("const BUILD_ID = '__BUILD_ID__'")
+    expect(SW_SRC).toContain('CACHE_NAME = `jops-shell-${BUILD_ID}`')
+  })
 })
 
 it('activate preserves only the two live cache names and deletes the rest', async () => {

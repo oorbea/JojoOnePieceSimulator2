@@ -1,19 +1,18 @@
 // Network-first for navigations/HTML, cache-first only for hashed immutable
-// static assets. Bump CACHE_NAME on every deploy that changes this file's
-// own logic so stale caches get evicted instead of serving an old shell
-// forever - but the network-first navigation strategy below is what makes
-// every *other* deploy (i.e. one that doesn't touch this file) self-healing
-// too: a stale service worker still fetches the new index.html from the
-// network on every load, it just never learns about the new deploy from its
-// own cache the way the old cache-first-everything strategy did.
+// static assets. CACHE_NAME is derived from the per-deploy BUILD_ID below, so
+// stale shell caches are evicted on every deploy without hand-bumping
+// anything - and the network-first navigation strategy is what keeps a
+// not-yet-updated service worker self-healing: it still fetches the new
+// index.html from the network on every load, it just never learns about the
+// new deploy from its own cache the way the old cache-first-everything
+// strategy did.
 //
-// Deliberate exception to "bump on every logic change": excluding the
-// `/p/...` private-media scope from isImmutableImage below (2026-09-09)
-// does NOT bump CACHE_NAME. A bump exists to stop stale caches serving
-// obsolete content; this change can never do that - it only *stops*
-// caching a scope it shouldn't have, and does not touch CACHE_NAME's own
-// cache. Any already-cached `/p/...` entries in IMG_CACHE_NAME are simply
-// never matched again and get evicted by trimImageCache's normal
+// IMG_CACHE_NAME is NOT build-scoped (and is only bumped by hand if its
+// contents ever become invalid): excluding the `/p/...` private-media scope
+// from isImmutableImage below (2026-09-09) did not bump it, because that
+// change can never serve stale content - it only *stops* caching a scope it
+// shouldn't have. Any already-cached `/p/...` entries in IMG_CACHE_NAME are
+// simply never matched again and get evicted by trimImageCache's normal
 // insertion-order cap - no active purge needed.
 //
 // History: the previous version cached every same-origin GET (including
@@ -50,9 +49,22 @@ const IMG_CACHE_NAME = 'jops-img-v1'
 // same trade-off shared/api/etag.ts's rememberResponse cap makes.
 const IMG_CACHE_MAX_ENTRIES = 200
 
+// No skipWaiting() here, deliberately. A new deploy's worker installs in the
+// background and then WAITS: activating it swaps CACHE_NAME's cache (the
+// activate handler below deletes the previous build's), which must not happen
+// under a page still running the previous bundle - and must never interrupt
+// a game in progress. The page decides when it is safe (features/pwa/lib/
+// sw-update.ts) and asks for activation with a SKIP_WAITING message, then
+// reloads on controllerchange. The very first install has no previous worker
+// to wait behind, so it still activates immediately.
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)))
-  self.skipWaiting()
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })
 
 self.addEventListener('activate', (event) => {
@@ -66,8 +78,8 @@ self.addEventListener('activate', (event) => {
             .map((key) => caches.delete(key))
         )
       )
+      .then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
 // Hashed build output (apps/frontend/dist/_expo/static/...) - the filename

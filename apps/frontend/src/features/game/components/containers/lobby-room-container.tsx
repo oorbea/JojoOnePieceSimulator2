@@ -39,6 +39,7 @@ import { ShareInviteSheet } from '@/features/game/components/presentational/shar
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
+import { activityForState, useGameActivityStore } from '@/shared/stores/game-activity.store'
 import type { GameMode, RevealSpeed, Manga } from '@/shared/contracts/enums'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
@@ -112,6 +113,18 @@ export function LobbyRoomContainer() {
   const snapshot = socket.snapshot ?? detail.data?.game ?? null
   const you = socket.you ?? detail.data?.you ?? null
   const reducedMotion = useReducedMotion()
+
+  // Publishes "in a lobby" / "game in progress" app-wide so the PWA layer
+  // (service-worker updates, wake lock, ...) can avoid interrupting a live
+  // game. Two separate effects on purpose: resetting to 'none' inside the
+  // state-keyed effect's cleanup would flash 'none' between every phase
+  // change and let a pending update reload the page in that gap.
+  const setActivity = useGameActivityStore((state) => state.setActivity)
+  const snapshotState = snapshot?.state
+  useEffect(() => {
+    setActivity(activityForState(snapshotState))
+  }, [snapshotState, setActivity])
+  useEffect(() => () => setActivity('none'), [setActivity])
 
   // Warms the sorteo strip's images well before ASSIGNING - see
   // use-power-pool-prefetch.ts. Also covers Versus's ReassignsEachRound
