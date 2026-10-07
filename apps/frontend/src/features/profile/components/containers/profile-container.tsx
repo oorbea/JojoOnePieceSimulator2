@@ -16,7 +16,7 @@ import {
 } from '@/features/profile/hooks/use-profile-mutations'
 import { useProfile } from '@/features/profile/hooks/use-profile'
 import { usernameFormSchema, type UsernameFormValues } from '@/features/profile/types/profile.types'
-import { PushToggleContainer } from '@/features/pwa'
+import { HapticsTestContainer, PushToggleContainer } from '@/features/pwa'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import type { Locale } from '@/shared/contracts/enums'
 
@@ -171,7 +171,12 @@ export function ProfileContainer() {
       canSaveUsername={isDirty && !errors.username}
       onChangeLanguage={onChangeLanguage}
       isSavingLanguage={updateLanguageMutation.isPending}
-      notificationsSlot={<PushToggleContainer />}
+      notificationsSlot={
+        <>
+          <PushToggleContainer />
+          <HapticsTestContainer />
+        </>
+      }
       onRequestRemoveAvatar={() => setIsRemoveAvatarOpen(true)}
       onRequestDeleteAccount={() => setIsDeleteAccountOpen(true)}
       removeAvatarConfirm={{

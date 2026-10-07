@@ -38,7 +38,7 @@ import {
 import { voteOptions } from '@/features/game/lib/vote-options'
 import { ShareInviteSheet } from '@/features/game/components/presentational/share-invite-sheet'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
-import { BackButtonGuard } from '@/shared/components/containers/back-button-guard'
+import { GameExitGuard } from '@/shared/components/containers/game-exit-guard'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
 import { activityForState, useGameActivityStore } from '@/shared/stores/game-activity.store'
@@ -333,10 +333,14 @@ export function LobbyRoomContainer() {
   // (not just close the socket) - otherwise the backend treats this as a
   // Disconnect, which keeps the seat and reassigns host, so a rematch the
   // remaining players start would copy this ghost participant right back in.
-  const handleBackToLobbies = () => {
+  const performLeave = () => {
     commands.leave()
     queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
     resetSocket()
+  }
+
+  const handleBackToLobbies = () => {
+    performLeave()
     router.replace('/play' as never)
   }
 
@@ -351,9 +355,7 @@ export function LobbyRoomContainer() {
       message: t('game.leave.message'),
       confirmLabel: t('game.leave.confirm'),
       onConfirm: () => {
-        commands.leave()
-        queryClient.removeQueries({ queryKey: gameKeys.detail(id ?? '') })
-        resetSocket()
+        performLeave()
         router.replace('/play' as never)
       },
     })
@@ -513,11 +515,12 @@ export function LobbyRoomContainer() {
 
   return (
     <>
-      {/* Installed app only: a system back press mid-game asks to leave instead
-          of silently navigating away (see use-back-button-guard.ts). */}
-      <BackButtonGuard
+      {/* While a game is in progress, every way out (navigation, logout, the
+          system back button/swipe) asks before leaving - see game-exit-guard. */}
+      <GameExitGuard
         enabled={activityForState(snapshot.state) === 'playing'}
-        onBackAttempt={handleLeave}
+        onLeave={performLeave}
+        onBackConfirmed={() => router.replace('/play' as never)}
       />
       {shareUrl ? (
         <ShareInviteSheet
