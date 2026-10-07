@@ -375,6 +375,29 @@ export const publicUserResponseSchema = z.object({
 })
 export type PublicUserResponse = z.infer<typeof publicUserResponseSchema>
 
+export const pushConfigResponseSchema = z.object({
+  enabled: z.boolean(),
+  publicKey: z.string(),
+})
+export type PushConfigResponse = z.infer<typeof pushConfigResponseSchema>
+
+export const pushKeysSchema = z.object({
+  p256dh: z.string(),
+  auth: z.string(),
+})
+export type PushKeys = z.infer<typeof pushKeysSchema>
+
+export const pushSubscribeRequestSchema = z.object({
+  endpoint: z.string(),
+  keys: pushKeysSchema,
+})
+export type PushSubscribeRequest = z.infer<typeof pushSubscribeRequestSchema>
+
+export const pushUnsubscribeRequestSchema = z.object({
+  endpoint: z.string(),
+})
+export type PushUnsubscribeRequest = z.infer<typeof pushUnsubscribeRequestSchema>
+
 export const stageResponseSchema = z.object({
   id: z.string(),
   manga: mangaSchema,

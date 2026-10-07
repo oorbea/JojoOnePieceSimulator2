@@ -31,6 +31,7 @@ import (
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/idgen"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/imaging"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/postgres"
+	pushinfra "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/push"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/random"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/refreshtoken"
 	redisrefreshtoken "github.com/oorbea/JojoOnePieceSimulator2/internal/infrastructure/refreshtoken/redis"
@@ -415,6 +416,23 @@ func main() {
 		services.VotingPolicy{Window: cfg.GameVotingWindow},
 		gameInvites,
 	)
+
+	// Web Push for game moments (start, voting, results). Only when the VAPID
+	// identity is configured (config.Load enforces all-or-nothing): without it
+	// GET /users/me/push reports enabled=false, the frontend hides the feature
+	// and the game never tries to notify.
+	if cfg.VAPIDPublicKey != "" {
+		pushSubscriptions := repositories.NewPushSubscriptionRepository(pool)
+		pushSender := pushinfra.NewWebPushSender(pushinfra.Config{
+			PublicKey:  cfg.VAPIDPublicKey,
+			PrivateKey: cfg.VAPIDPrivateKey,
+			Subject:    cfg.VAPIDSubject,
+		}, nil)
+		gameService.SetNotifier(services.NewPushNotificationService(pushSubscriptions, pushSender, userRepo))
+		userEndpoints.SetPushSubscriptions(pushSubscriptions, cfg.VAPIDPublicKey)
+		log.Printf("push notifications enabled")
+	}
+
 	gameEndpoints := endpoints.NewGameEndpoints(gameService, gameEventHub, stageRepo, standRepo, devilFruitRepo, userRepo, tokenIssuer, streamTickets, ctx, endpoints.GameWSConfig{
 		VotingWindow:             cfg.GameVotingWindow,
 		AllowedOrigins:           cfg.CORSAllowedOrigins,
