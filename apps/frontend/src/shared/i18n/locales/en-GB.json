@@ -79,6 +79,28 @@
     },
     "offline": {
       "banner": "You're offline. We'll reconnect as soon as the network is back."
+    },
+    "push": {
+      "prompt": {
+        "title": "Game alerts",
+        "body": "We'll let you know when the game starts, it's your turn to vote or the result is in, even with the app closed.",
+        "enable": "Turn on alerts",
+        "enableHint": "Turn on game alerts on this device",
+        "dismiss": "Not now",
+        "dismissHint": "Don't ask again"
+      },
+      "toggle": {
+        "label": "Game alerts",
+        "description": "Notifications when the game starts, it's your turn to vote or the result is in.",
+        "turnOn": "Turn on",
+        "turnOnHint": "Turn on game alerts on this device",
+        "turnOff": "Turn off",
+        "turnOffHint": "Turn off game alerts on this device",
+        "blocked": "Your browser is blocking notifications for this site. Allow them in the site settings to receive alerts."
+      },
+      "enabled": "Alerts turned on",
+      "denied": "Notifications are blocked in your browser. Allow them in the site settings.",
+      "failed": "Couldn't turn on alerts. Try again."
     }
   },
   "home": {

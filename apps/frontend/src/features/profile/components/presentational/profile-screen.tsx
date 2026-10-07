@@ -47,6 +47,9 @@ type Props = {
   deleteAccountConfirm: ConfirmState
   onChangeLanguage: (language: Locale) => void
   isSavingLanguage: boolean
+  /** Device notification settings, supplied by the container so this screen
+   * stays free of feature-to-feature wiring. Renders nothing when absent. */
+  notificationsSlot?: React.ReactNode
   avatarFocalX: number
   avatarFocalY: number
   onAdjustFocal: () => void
@@ -79,6 +82,7 @@ export function ProfileScreen({
   deleteAccountConfirm,
   onChangeLanguage,
   isSavingLanguage,
+  notificationsSlot,
   avatarFocalX,
   avatarFocalY,
   onAdjustFocal,
@@ -216,6 +220,8 @@ export function ProfileScreen({
               value={profile.language}
               onChange={(value) => value && onChangeLanguage(value as Locale)}
             />
+
+            {notificationsSlot}
           </YStack>
         </GlassPanel>
 

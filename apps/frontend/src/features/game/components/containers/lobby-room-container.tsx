@@ -46,6 +46,7 @@ import type { GameMode, RevealSpeed, Manga } from '@/shared/contracts/enums'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
 import { useDevilFruits } from '@/features/devil-fruits'
+import { PushPromptContainer } from '@/features/pwa'
 import { useStands } from '@/features/stands'
 
 // REVEAL_SPEED_CYCLE fixes the order onCycleRevealSpeed steps through -
@@ -537,6 +538,7 @@ export function LobbyRoomContainer() {
         socketStatus={socket.status}
         nextRetryAt={socket.nextRetryAt}
         onRetryNow={socket.retryNow}
+        lobbyNoticeSlot={<PushPromptContainer />}
         gate={gate}
         starting={starting}
         onStart={handleStart}
