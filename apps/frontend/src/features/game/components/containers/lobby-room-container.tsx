@@ -11,6 +11,7 @@ import {
 import { gameKeys } from '@/features/game/api/game.keys'
 import { useGameCommands } from '@/features/game/hooks/use-game-commands'
 import { useGameDetail } from '@/features/game/hooks/use-game-detail'
+import { useGameHaptics } from '@/features/game/hooks/use-game-haptics'
 import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { useMatchHotkeys } from '@/features/game/hooks/use-match-hotkeys'
@@ -37,6 +38,7 @@ import {
 import { voteOptions } from '@/features/game/lib/vote-options'
 import { ShareInviteSheet } from '@/features/game/components/presentational/share-invite-sheet'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
+import { BackButtonGuard } from '@/shared/components/containers/back-button-guard'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
 import { activityForState, useGameActivityStore } from '@/shared/stores/game-activity.store'
@@ -180,6 +182,17 @@ export function LobbyRoomContainer() {
     revealStartedAt: socket.live.revealStartedAt,
     stillAssigning: snapshot?.state === 'ASSIGNING',
   })
+
+  // Vibrate when YOUR power lands in the sorteo (the slot index doubles as a
+  // per-landing key), and on the state changes worth looking up for.
+  const ownLandingKey =
+    loadoutReveal.isRevealing &&
+    loadoutReveal.phase === 'land' &&
+    !!you &&
+    snapshot?.participants[loadoutReveal.participantIndex]?.id === you.participantId
+      ? loadoutReveal.slotIndex
+      : -1
+  useGameHaptics({ state: snapshot?.state, ownLandingKey })
 
   useSkipNotice({
     state: snapshot?.state,
@@ -499,6 +512,12 @@ export function LobbyRoomContainer() {
 
   return (
     <>
+      {/* Installed app only: a system back press mid-game asks to leave instead
+          of silently navigating away (see use-back-button-guard.ts). */}
+      <BackButtonGuard
+        enabled={activityForState(snapshot.state) === 'playing'}
+        onBackAttempt={handleLeave}
+      />
       {shareUrl ? (
         <ShareInviteSheet
           visible={shareSheetOpen}

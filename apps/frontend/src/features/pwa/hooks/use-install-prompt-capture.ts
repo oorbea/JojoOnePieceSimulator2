@@ -1,17 +1,11 @@
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
 
+import { isStandaloneDisplay } from '@/shared/lib/pwa-display'
 import {
   usePwaInstallStore,
   type BeforeInstallPromptEvent,
 } from '@/shared/stores/pwa-install.store'
-
-function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false
-  // `navigator.standalone` is the iOS Safari spelling of the same thing.
-  const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true
-  return iosStandalone || window.matchMedia?.('(display-mode: standalone)').matches === true
-}
 
 // Wires the browser's install events into the shared pwa-install store the
 // app shell reads: captures the one-shot install prompt (and suppresses
@@ -23,7 +17,7 @@ export function useInstallPromptCapture() {
 
     const { hydrate, setDeferred, setInstalled } = usePwaInstallStore.getState()
     void hydrate()
-    setInstalled(isStandalone())
+    setInstalled(isStandaloneDisplay())
 
     const onBeforeInstallPrompt = (event: Event) => {
       event.preventDefault()
