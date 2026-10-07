@@ -138,6 +138,10 @@ type GameService struct {
 	// invites mints/looks up short-lived, multi-use lobby share-link
 	// tokens - see game_invite.go.
 	invites ports.IGameInviteStore
+	// notifier announces game moments (start, voting, results) to the
+	// players' devices as Web Push. Optional: nil when push is not
+	// configured (no VAPID keys), and every call site tolerates that.
+	notifier ports.IGameNotifier
 
 	// locks serializes every mutation of a given Game by its GameID, so
 	// concurrent requests (a vote, a disconnect, a timer firing) against the
@@ -280,6 +284,13 @@ func NewGameService(
 		finalized:    make(map[game.GameID]struct{}),
 		graceTimers:  make(map[graceKey]Timer),
 	}
+}
+
+// SetNotifier wires push notifications for game moments. Optional, and to be
+// called before the service starts handling requests, like
+// PictureWorker.SetMediaRepository.
+func (s *GameService) SetNotifier(n ports.IGameNotifier) {
+	s.notifier = n
 }
 
 // --- Creation / membership ---
@@ -1577,7 +1588,49 @@ func (s *GameService) publish(g *game.Game) {
 			VotingWindow: window, RevealWindow: revealWindow, SummaryWindow: summaryWindow,
 			ClosesAt: closesAt, RevealStartsAt: revealStartedAt,
 		})
+		s.notifyPlayers(g, e)
 	}
+}
+
+// notifyPlayers announces the game moments worth waking a phone for to every
+// registered player. Called from publish while the game's lock is held, so it
+// only extracts a value snapshot and hands it to the notifier, which must not
+// block (see ports.IGameNotifier). Bots have no device and an abandoned seat
+// no longer cares, so neither is notified. A client that already has the game
+// open and visible ignores the push itself (public/sw.js), so there is no
+// need to filter on Connected here - which would also skip exactly the
+// players whose backgrounded app still holds a socket.
+func (s *GameService) notifyPlayers(g *game.Game, e game.DomainEvent) {
+	if s.notifier == nil {
+		return
+	}
+	var kind ports.GameNotificationKind
+	switch e.(type) {
+	case game.GameStarted:
+		kind = ports.NotifyGameStarted
+	case game.VotingOpened:
+		kind = ports.NotifyVotingOpened
+	case game.TiebreakOpened:
+		kind = ports.NotifyTiebreak
+	case game.RoundResolved:
+		kind = ports.NotifyRoundResolved
+	case game.GameFinished:
+		kind = ports.NotifyGameFinished
+	default:
+		return
+	}
+
+	var recipients []user.UserID
+	for _, p := range g.Participants() {
+		if p == nil || p.IsBot() || p.Abandoned() || p.UserID() == nil {
+			continue
+		}
+		recipients = append(recipients, *p.UserID())
+	}
+	if len(recipients) == 0 {
+		return
+	}
+	s.notifier.NotifyGame(ports.GameNotification{GameID: g.ID(), Kind: kind, Recipients: recipients})
 }
 
 // revealDurationFor computes game.RevealDuration for g as it stands right
