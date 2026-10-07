@@ -15,10 +15,22 @@ const SW_PATH = join(__dirname, '..', '..', '..', 'public', 'sw.js')
 const SW_SRC = readFileSync(SW_PATH, 'utf8')
 const ORIGIN = 'https://app.test'
 
+interface FakeWindowClient {
+  url: string
+  visibilityState: string
+  focus: jest.Mock
+  postMessage: jest.Mock
+}
+
 interface FakeSelf {
   addEventListener: (type: string, handler: (event: FakeEvent) => void) => void
   skipWaiting: () => void
-  clients: { claim: () => void }
+  clients: {
+    claim: () => void
+    matchAll: jest.Mock
+    openWindow: jest.Mock
+  }
+  registration: { showNotification: jest.Mock }
   location: { origin: string }
 }
 
@@ -38,7 +50,8 @@ interface FakeResponse {
 
 interface FakeEvent {
   request: FakeRequest
-  data?: { type?: string }
+  data?: { type?: string; json?: () => unknown }
+  notification?: { close: jest.Mock; data?: { url?: string } }
   respondWith: (p: Promise<FakeResponse>) => void
   waitUntil: (p: Promise<unknown>) => void
 }
@@ -138,7 +151,12 @@ function loadSw(caches: FakeCacheStorage, fetchImpl: FetchImpl) {
       handlers[type] = handler
     },
     skipWaiting: jest.fn(),
-    clients: { claim: jest.fn() },
+    clients: {
+      claim: jest.fn(),
+      matchAll: jest.fn().mockResolvedValue([]),
+      openWindow: jest.fn().mockResolvedValue(undefined),
+    },
+    registration: { showNotification: jest.fn().mockResolvedValue(undefined) },
     location: { origin: ORIGIN },
   }
   const factory = new Function('self', 'caches', 'fetch', SW_SRC) as unknown as SwFactory
@@ -203,6 +221,131 @@ it('install precaches the shell, the offline page and its icon', async () => {
       ORIGIN + '/offline.html',
     ].sort()
   )
+})
+
+function windowClient(url: string, visibilityState: string): FakeWindowClient {
+  return { url, visibilityState, focus: jest.fn().mockResolvedValue(undefined), postMessage: jest.fn() }
+}
+
+async function dispatchWaiting(
+  handlers: Record<string, (event: FakeEvent) => void>,
+  type: 'push' | 'notificationclick',
+  extra: Partial<FakeEvent>
+) {
+  const waited: Promise<unknown>[] = []
+  handlers[type]({
+    request: req('/'),
+    respondWith: () => {},
+    waitUntil: (p) => {
+      waited.push(p)
+    },
+    ...extra,
+  })
+  await Promise.all(waited)
+}
+
+function pushEvent(payload: unknown): Partial<FakeEvent> {
+  return { data: { json: () => payload } }
+}
+
+describe('web push', () => {
+  it('shows a notification with the game url and a per-game tag when no window is visible', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+    self.clients.matchAll.mockResolvedValue([windowClient(ORIGIN + '/play/1', 'hidden')])
+
+    await dispatchWaiting(
+      handlers,
+      'push',
+      pushEvent({ title: 'Te toca votar', body: 'Se ha abierto la votación.', url: '/play/1', tag: 'game-1' })
+    )
+
+    expect(self.registration.showNotification).toHaveBeenCalledTimes(1)
+    const [title, options] = self.registration.showNotification.mock.calls[0]
+    expect(title).toBe('Te toca votar')
+    expect(options).toEqual(
+      expect.objectContaining({
+        body: 'Se ha abierto la votación.',
+        tag: 'game-1',
+        renotify: true,
+        data: { url: '/play/1' },
+      })
+    )
+  })
+
+  it('stays silent while a window of the app is visible (the player is looking at the game)', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+    self.clients.matchAll.mockResolvedValue([
+      windowClient(ORIGIN + '/play/1', 'hidden'),
+      windowClient(ORIGIN + '/', 'visible'),
+    ])
+
+    await dispatchWaiting(handlers, 'push', pushEvent({ title: 't', url: '/play/1', tag: 'game-1' }))
+
+    expect(self.registration.showNotification).not.toHaveBeenCalled()
+  })
+
+  it('still shows a notification for a malformed or empty payload', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchWaiting(handlers, 'push', {
+      data: {
+        json: () => {
+          throw new Error('not json')
+        },
+      },
+    })
+    await dispatchWaiting(handlers, 'push', {})
+
+    expect(self.registration.showNotification).toHaveBeenCalledTimes(2)
+    expect(self.registration.showNotification.mock.calls[0][0]).toBe('JOPS')
+  })
+
+  it.each(['https://evil.example/x', '//evil.example/x', 'javascript:alert(1)', 42, undefined])(
+    'never keeps a non-app url from the payload (%p)',
+    async (url) => {
+      const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+      await dispatchWaiting(handlers, 'push', pushEvent({ title: 't', url }))
+
+      expect(self.registration.showNotification.mock.calls[0][1].data).toEqual({ url: '/' })
+    }
+  )
+
+  it('a tap focuses the open app window and hands it the path to route to', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+    const open = windowClient(ORIGIN + '/', 'hidden')
+    self.clients.matchAll.mockResolvedValue([windowClient('https://other.test/', 'visible'), open])
+    const close = jest.fn()
+
+    await dispatchWaiting(handlers, 'notificationclick', {
+      notification: { close, data: { url: '/play/7' } },
+    })
+
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(open.focus).toHaveBeenCalledTimes(1)
+    expect(open.postMessage).toHaveBeenCalledWith({ type: 'NOTIFICATION_CLICK', url: '/play/7' })
+    expect(self.clients.openWindow).not.toHaveBeenCalled()
+  })
+
+  it('a tap opens the app when no window exists', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchWaiting(handlers, 'notificationclick', {
+      notification: { close: jest.fn(), data: { url: '/play/7' } },
+    })
+
+    expect(self.clients.openWindow).toHaveBeenCalledWith('/play/7')
+  })
+
+  it('a tap with a hostile url falls back to the app root', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchWaiting(handlers, 'notificationclick', {
+      notification: { close: jest.fn(), data: { url: 'https://evil.example/' } },
+    })
+
+    expect(self.clients.openWindow).toHaveBeenCalledWith('/')
+  })
 })
 
 describe('update lifecycle', () => {

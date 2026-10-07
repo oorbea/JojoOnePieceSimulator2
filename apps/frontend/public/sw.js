@@ -222,3 +222,65 @@ self.addEventListener('fetch', (event) => {
   // opportunistic caching of arbitrary same-origin GETs, which is what let
   // an old index.html linger indefinitely under the previous strategy.
 })
+
+// --- Web Push ---------------------------------------------------------------
+//
+// The backend (PushNotificationService) sends {title, body, url, tag} for the
+// moments of a game worth waking a phone for. Chrome requires every push to
+// end in a visible notification unless a window of this site is visible - so
+// a visible window is the one case where the notification is skipped (the
+// player is already looking at the live game), everything else shows one.
+
+// Only same-origin paths may be opened from a notification: `url` comes from
+// a push payload, and an absolute or protocol-relative value must never turn a
+// tap into a navigation off-site.
+function safeAppPath(raw) {
+  return typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
+}
+
+async function showPushNotification(data) {
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  if (windows.some((client) => client.visibilityState === 'visible')) return
+
+  await self.registration.showNotification(data.title || 'JOPS', {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/badge-96.png',
+    // One notification per game: a newer moment replaces the previous one
+    // (and re-alerts, since the content changed).
+    tag: data.tag || undefined,
+    renotify: !!data.tag,
+    data: { url: safeAppPath(data.url) },
+  })
+}
+
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch (error) {
+    // A malformed payload still has to produce a notification (see above).
+    data = {}
+  }
+  event.waitUntil(showPushNotification(data))
+})
+
+async function focusOrOpenApp(rawUrl) {
+  const path = safeAppPath(rawUrl)
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  const existing = windows.find((client) => new URL(client.url).origin === self.location.origin)
+  if (existing) {
+    // Hand the path to the running app so it routes without a full reload
+    // (a reload would drop its in-memory session and live game socket).
+    await existing.focus()
+    existing.postMessage({ type: 'NOTIFICATION_CLICK', url: path })
+    return
+  }
+  await self.clients.openWindow(path)
+}
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = event.notification.data && event.notification.data.url
+  event.waitUntil(focusOrOpenApp(url))
+})
