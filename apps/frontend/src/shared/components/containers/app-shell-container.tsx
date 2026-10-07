@@ -2,6 +2,7 @@ import { Gamepad2, Home, Shield, User } from '@tamagui/lucide-icons-2'
 import { usePathname, useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 
+import { useOnlineStatus } from '@/shared/hooks/use-online-status'
 import { AppShell, type AppShellNavItem } from '@/shared/components/presentational/app-shell'
 import { useGameActivityStore } from '@/shared/stores/game-activity.store'
 import {
@@ -40,6 +41,7 @@ export function AppShellContainer({ children }: { children: React.ReactNode }) {
   const showBanner = usePwaInstallStore((state) => shouldShowInstallBanner(state))
   const promptInstall = usePwaInstallStore((state) => state.promptInstall)
   const dismissBanner = usePwaInstallStore((state) => state.dismissBanner)
+  const online = useOnlineStatus()
   const inGame = useGameActivityStore((state) => state.activity !== 'none')
 
   // Admin nav item is hidden entirely for non-admins — the actual gate lives
@@ -64,6 +66,7 @@ export function AppShellContainer({ children }: { children: React.ReactNode }) {
       onLogout={() => void clearSession()}
       themeMode={themeMode}
       onCycleTheme={() => void cycleTheme()}
+      offline={!online}
       onInstall={installable ? () => void promptInstall() : undefined}
       onDismissInstallBanner={showBanner && !inGame ? () => void dismissBanner() : undefined}
     >

@@ -18,6 +18,7 @@ import { ChannelBarIndicator, type ChannelBarIndicatorLayout } from './channel-b
 import type { IconComponent } from './channel-tile'
 import { GlowText } from './glow-text'
 import { InstallBanner } from './install-banner'
+import { OfflineBanner } from './offline-banner'
 import { ThemeToggle } from './theme-toggle'
 import { WiiCard } from './wii-card'
 
@@ -48,6 +49,8 @@ type AppShellProps = {
   // Present only when the one-time install banner should show. It floats
   // above the bottom dock, so it only ever renders on narrow screens.
   onDismissInstallBanner?: () => void
+  // True while the device has no network; shows a notice under the top bar.
+  offline?: boolean
 }
 
 // Two floating glass pills over the animated sky: a top bar with nav links
@@ -68,6 +71,7 @@ export function AppShell({
   onCycleTheme,
   onInstall,
   onDismissInstallBanner,
+  offline,
 }: AppShellProps) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
@@ -176,6 +180,21 @@ export function AppShell({
       <NavInsetsProvider value={navInsets}>
         <YStack flex={1}>{children}</YStack>
       </NavInsetsProvider>
+
+      {offline ? (
+        <YStack
+          position="absolute"
+          l={0}
+          r={0}
+          t={navInsets.top + 8}
+          px="$3"
+          items="center"
+          z="$nav"
+          style={{ pointerEvents: 'none' }}
+        >
+          <OfflineBanner />
+        </YStack>
+      ) : null}
 
       {onInstall && onDismissInstallBanner && !showTopLinks ? (
         // `box-none` so the empty strip around the card never swallows taps

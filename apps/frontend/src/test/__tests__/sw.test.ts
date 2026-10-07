@@ -31,6 +31,7 @@ interface FakeRequest {
 
 interface FakeResponse {
   ok: boolean
+  status?: number
   tag: string
   clone: () => FakeResponse
 }
@@ -44,7 +45,7 @@ interface FakeEvent {
 
 interface FakeCache {
   keys: () => Promise<{ url: string }[]>
-  match: (request: FakeRequest) => Promise<FakeResponse | undefined>
+  match: (request: FakeRequest | string) => Promise<FakeResponse | undefined>
   put: (request: FakeRequest, response: FakeResponse) => Promise<void>
   delete: (requestOrKey: FakeRequest | { url: string }) => Promise<boolean>
   addAll: (urls: string[]) => Promise<void>
@@ -53,7 +54,7 @@ interface FakeCache {
 interface FakeCacheStorage {
   open: (name: string) => Promise<FakeCache>
   keys: () => Promise<string[]>
-  match: (request: FakeRequest) => Promise<FakeResponse | undefined>
+  match: (request: FakeRequest | string) => Promise<FakeResponse | undefined>
   delete: (name: string) => Promise<boolean>
 }
 
@@ -86,7 +87,9 @@ function makeCache(): FakeCache {
   const store = new Map<string, FakeResponse>()
   return {
     keys: async () => [...store.keys()].map((url) => ({ url })),
-    match: async (request) => store.get(request.url),
+    // The real Cache API accepts a URL string as well as a Request.
+    match: async (request) =>
+      store.get(typeof request === 'string' ? (request.startsWith('http') ? request : ORIGIN + request) : request.url),
     put: async (request, response) => {
       store.set(request.url, response)
     },
@@ -181,7 +184,7 @@ it('stays a plain classic worker (no import/export/require)', () => {
   expect(SW_SRC).not.toMatch(/require\(/)
 })
 
-it('install seeds the shell cache with the shell URLs', async () => {
+it('install precaches the shell, the offline page and its icon', async () => {
   const caches = makeCaches()
   const fetchImpl = jest.fn<Promise<FakeResponse>, [FakeRequest]>()
   const { handlers } = loadSw(caches, fetchImpl)
@@ -192,7 +195,14 @@ it('install seeds the shell cache with the shell URLs', async () => {
   expect(names).toHaveLength(1)
   const shellCache = await caches.open(names[0])
   const keys = await shellCache.keys()
-  expect(keys.map((k) => k.url).sort()).toEqual([ORIGIN + '/', ORIGIN + '/manifest.json'])
+  expect(keys.map((k) => k.url).sort()).toEqual(
+    [
+      ORIGIN + '/',
+      ORIGIN + '/icons/icon-192.png',
+      ORIGIN + '/manifest.json',
+      ORIGIN + '/offline.html',
+    ].sort()
+  )
 })
 
 describe('update lifecycle', () => {
@@ -417,5 +427,75 @@ describe('navigation fallback (networkFirst)', () => {
     const { handlers } = loadSw(caches, fetchImpl)
 
     await expect(dispatchFetch(handlers, req('/', { mode: 'navigate' }))).rejects.toThrow('offline')
+  })
+
+  describe('offline start', () => {
+    function offlineSetup() {
+      const caches = makeCaches()
+      let fail = false
+      const fetchImpl: FetchImpl = async (request) => {
+        if (fail) throw new Error('offline')
+        return res(request.url)
+      }
+      const { handlers } = loadSw(caches, fetchImpl)
+      return { caches, handlers, goOffline: () => (fail = true) }
+    }
+
+    it('boots the cached shell on a route that was never visited', async () => {
+      const { handlers, goOffline } = offlineSetup()
+      await dispatchLifecycle(handlers, 'install')
+      goOffline()
+
+      const response = await dispatchFetch(handlers, req('/play/create', { mode: 'navigate' }))
+      expectResponse(response, '/')
+    })
+
+    it('serves the offline page when no shell is cached', async () => {
+      const { caches, handlers, goOffline } = offlineSetup()
+      const cache = await caches.open('jops-shell-test')
+      await cache.put(req('/offline.html'), res('offline-page'))
+      goOffline()
+
+      const response = await dispatchFetch(handlers, req('/play/create', { mode: 'navigate' }))
+      expectResponse(response, 'offline-page')
+    })
+
+    it('does not substitute the shell for non-navigation HTML requests', async () => {
+      const { handlers, goOffline } = offlineSetup()
+      await dispatchLifecycle(handlers, 'install')
+      goOffline()
+
+      const htmlFetch = req('/fragment', {
+        headers: { get: (n) => (n === 'accept' ? 'text/html' : null) },
+      })
+      await expect(dispatchFetch(handlers, htmlFetch)).rejects.toThrow('offline')
+    })
+
+    it('falls back to the shell when the proxy answers 5xx mid-deploy', async () => {
+      const caches = makeCaches()
+      let down = false
+      const fetchImpl: FetchImpl = async (request) =>
+        down ? { ok: false, status: 502, tag: '502', clone: () => res('502', false) } : res(request.url)
+      const { handlers } = loadSw(caches, fetchImpl)
+      await dispatchLifecycle(handlers, 'install')
+      down = true
+
+      const response = await dispatchFetch(handlers, req('/', { mode: 'navigate' }))
+      expectResponse(response, '/')
+    })
+
+    it('passes a 5xx through when there is nothing cached to fall back to', async () => {
+      const caches = makeCaches()
+      const fetchImpl: FetchImpl = async () => ({
+        ok: false,
+        status: 502,
+        tag: '502',
+        clone: () => res('502', false),
+      })
+      const { handlers } = loadSw(caches, fetchImpl)
+
+      const response = await dispatchFetch(handlers, req('/', { mode: 'navigate' }))
+      expectResponse(response, '502', false)
+    })
   })
 })

@@ -76,6 +76,9 @@
       "installHint": "Install JOPS on your phone",
       "dismiss": "Not now",
       "dismissHint": "Dismiss this notice; it will come back in two weeks"
+    },
+    "offline": {
+      "banner": "You're offline. We'll reconnect as soon as the network is back."
     }
   },
   "home": {

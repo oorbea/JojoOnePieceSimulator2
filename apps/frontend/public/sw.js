@@ -32,7 +32,9 @@
 // server) it stays the literal placeholder, which is still a valid cache name.
 const BUILD_ID = '__BUILD_ID__'
 const CACHE_NAME = `jops-shell-${BUILD_ID}`
-const SHELL_URLS = ['/', '/manifest.json']
+const OFFLINE_URL = '/offline.html'
+// '/' is the SPA shell; the icon is what offline.html shows.
+const SHELL_URLS = ['/', '/manifest.json', OFFLINE_URL, '/icons/icon-192.png']
 
 // Separate cache for the content-addressed media proxy (T2 -
 // media-proxy-content-addressed.md) - a group id is immutable by
@@ -149,24 +151,44 @@ async function trimImageCache(cache) {
   await Promise.all(keys.slice(0, excess).map((key) => cache.delete(key)))
 }
 
+// What a navigation gets when the network can't serve it: this is a SPA, so
+// the cached shell boots the app on any path (the in-app offline banner
+// explains the missing data). Only when there is no shell at all - a first
+// visit that lost its connection mid-install - does the standalone offline
+// page take over. undefined = nothing to offer.
+async function offlineFallback() {
+  const shell = await caches.match('/')
+  if (shell) return shell
+  return caches.match(OFFLINE_URL)
+}
+
 // Network-first: always tries to get the latest deploy's HTML, only falling
 // back to whatever shell is cached when the network is unreachable (true
-// offline, or the dev-only first-load race documented below).
+// offline, or the dev-only first-load race documented below) or the server
+// side is down mid-deploy (a 5xx from the proxy while the frontend container
+// restarts).
 async function networkFirst(request) {
   try {
     const response = await fetch(request)
     if (response.ok) {
       const cache = await caches.open(CACHE_NAME)
       void cache.put(request, response.clone())
+    } else if (request.mode === 'navigate' && response.status >= 500) {
+      const fallback = await offlineFallback()
+      if (fallback) return fallback
     }
     return response
   } catch (error) {
     const cached = await caches.match(request)
     if (cached) return cached
-    // A rejected fetch with nothing cached yet (offline on a first-ever
-    // visit, or the browser cancelling this SW-side request in favor of the
-    // real navigation's own fetch - a known race right after the SW
-    // installs) must not surface as an unhandled rejection.
+    if (request.mode === 'navigate') {
+      const fallback = await offlineFallback()
+      if (fallback) return fallback
+    }
+    // A rejected fetch with nothing cached yet (the browser cancelling this
+    // SW-side request in favor of the real navigation's own fetch - a known
+    // race right after the SW installs) must not surface as an unhandled
+    // rejection.
     throw error
   }
 }

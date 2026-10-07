@@ -76,6 +76,9 @@
       "installHint": "Instala JOPS en tu móvil",
       "dismiss": "Ahora no",
       "dismissHint": "Cerrar este aviso; volverá a aparecer en dos semanas"
+    },
+    "offline": {
+      "banner": "Sin conexión. Reconectaremos en cuanto vuelva la red."
     }
   },
   "home": {
