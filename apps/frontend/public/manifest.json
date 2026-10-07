@@ -42,6 +42,22 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/lobby.png",
+      "sizes": "412x892",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Sala de espera con el código para invitar"
+    },
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "412x892",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Inicio: elige un canal"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Crear partida",
