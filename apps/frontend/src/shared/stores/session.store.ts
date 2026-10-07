@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { Platform } from 'react-native'
 
+import { runLogoutHooks } from '@/shared/lib/logout-hooks'
 import { secureStorage } from '@/shared/lib/secure-storage'
 import { refreshSession } from '@/shared/api/refresh'
 import { postLogout } from '@/features/auth/api/auth.api'
@@ -68,6 +69,10 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   clearSession: async () => {
+    // While the access token is still valid: lets features drop per-account
+    // device state (push subscriptions) with an authenticated request. Bounded
+    // and failure-proof - see logout-hooks.ts.
+    await runLogoutHooks()
     try {
       await postLogout()
     } catch {
