@@ -23,7 +23,16 @@
 // cache invalidation was fine) but the browser was still running pre-fix JS
 // until the user manually cleared site data. See ObsidianVault's
 // admin-crud-cache-stale-sw.md for the investigation.
-const CACHE_NAME = 'jops-shell-v4'
+//
+// BUILD_ID is replaced at image build time (deployments/docker/
+// Dockerfile.frontend) with EXPO_PUBLIC_BUILD_ID - the commit SHA in CD. That
+// makes sw.js byte-different on every deploy, which is the only signal a
+// browser has that a new service worker (and so a new app version) exists,
+// and ties the shell cache to the build so it is evicted on every deploy
+// instead of by hand-bumping a version string. Unstamped (expo start dev
+// server) it stays the literal placeholder, which is still a valid cache name.
+const BUILD_ID = '__BUILD_ID__'
+const CACHE_NAME = `jops-shell-${BUILD_ID}`
 const SHELL_URLS = ['/', '/manifest.json']
 
 // Separate cache for the content-addressed media proxy (T2 -

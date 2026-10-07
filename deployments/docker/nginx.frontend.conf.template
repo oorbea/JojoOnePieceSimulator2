@@ -97,7 +97,57 @@ server {
     }
 
     location = /manifest.json {
+        # nginx's mime.types only maps .webmanifest to the manifest type;
+        # .json would be served as application/json.
+        types { }
+        default_type application/manifest+json;
         add_header Cache-Control "no-cache";
+        # Repeated verbatim from the server block above - see the
+        # IMPORTANT note there.
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: ${CSP_CONNECT_EXTRA}; worker-src 'self'; manifest-src 'self'; frame-ancestors ${CSP_FRAME_ANCESTORS}; base-uri 'self'; object-src 'none'; form-action 'self' https://accounts.google.com" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+    }
+
+    # The HTML shell is the one file every deploy changes without changing its
+    # URL. Without an explicit Cache-Control nginx sends only ETag/
+    # Last-Modified, which browsers may heuristically cache for a while (10%
+    # of the file's age) - so an installed PWA could keep booting yesterday's
+    # index.html pointing at bundles that no longer exist. `no-cache` forces
+    # a revalidation on every load (a cheap 304 when unchanged). Both `/` (via
+    # `index`) and the SPA fallback below internally redirect to
+    # /index.html, so this one location covers every navigation.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+        # Repeated verbatim from the server block above - see the
+        # IMPORTANT note there.
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: ${CSP_CONNECT_EXTRA}; worker-src 'self'; manifest-src 'self'; frame-ancestors ${CSP_FRAME_ANCESTORS}; base-uri 'self'; object-src 'none'; form-action 'self' https://accounts.google.com" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+    }
+
+    # Offline fallback page the service worker precaches; revalidated like the
+    # shell so a redeploy's copy is the one that gets precached.
+    location = /offline.html {
+        add_header Cache-Control "no-cache";
+        # Repeated verbatim from the server block above - see the
+        # IMPORTANT note there.
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: ${CSP_CONNECT_EXTRA}; worker-src 'self'; manifest-src 'self'; frame-ancestors ${CSP_FRAME_ANCESTORS}; base-uri 'self'; object-src 'none'; form-action 'self' https://accounts.google.com" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()" always;
+    }
+
+    # Unhashed but rarely-changing PWA artwork (install icons, notification
+    # badge, store screenshots). One day, not a year: the filenames are fixed,
+    # so a replaced icon must reach users within a deploy cycle or two.
+    location ~ ^/(icons|screenshots)/ {
+        add_header Cache-Control "public, max-age=86400";
         # Repeated verbatim from the server block above - see the
         # IMPORTANT note there.
         add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
