@@ -101,6 +101,14 @@
       "enabled": "Alerts turned on",
       "denied": "Notifications are blocked in your browser. Allow them in the site settings.",
       "failed": "Couldn't turn on alerts. Try again."
+    },
+    "haptics": {
+      "label": "Vibration",
+      "description": "Your phone buzzes when your power lands, voting opens and the result is in.",
+      "test": "Try it",
+      "testHint": "Buzz your phone to check it works",
+      "tried": "You should have felt it buzz. If not, check that your phone's vibration or haptic feedback is on and battery saver is off.",
+      "refused": "The browser wouldn't vibrate. Try the installed app or check the site's permissions."
     }
   },
   "home": {

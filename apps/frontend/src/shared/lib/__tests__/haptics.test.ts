@@ -1,4 +1,4 @@
-import { HAPTIC_PATTERNS, vibrate, type HapticCue } from '../haptics'
+import { HAPTIC_PATTERNS, vibrate, vibrationSupported, type HapticCue } from '../haptics'
 
 type VibrateFn = (pattern: number[]) => boolean
 
@@ -29,12 +29,48 @@ describe('vibrate', () => {
     expect(vibrate('roundResolved')).toBe(false)
   })
 
-  it('keeps every pattern short and well-formed', () => {
+  it('keeps every pattern brief but strong enough to feel', () => {
     for (const cue of Object.keys(HAPTIC_PATTERNS) as HapticCue[]) {
       const pattern = HAPTIC_PATTERNS[cue]
       expect(pattern.length).toBeGreaterThan(0)
       expect(pattern.every((ms) => Number.isInteger(ms) && ms > 0)).toBe(true)
-      expect(pattern.reduce((sum, ms) => sum + ms, 0)).toBeLessThanOrEqual(600)
+      expect(pattern.reduce((sum, ms) => sum + ms, 0)).toBeLessThanOrEqual(1200)
+      // Even-index entries are the actual buzzes; very short ones are not
+      // rendered by many phone motors.
+      const buzzes = pattern.filter((_, i) => i % 2 === 0)
+      expect(Math.min(...buzzes)).toBeGreaterThanOrEqual(120)
     }
+  })
+})
+
+describe('vibrationSupported', () => {
+  const originalMatchMedia = window.matchMedia
+  afterEach(() => {
+    setVibrate(undefined)
+    window.matchMedia = originalMatchMedia
+  })
+
+  function setPointerCoarse(coarse: boolean) {
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(pointer: coarse)' ? coarse : false,
+    })) as unknown as typeof window.matchMedia
+  }
+
+  it('is true on a touch device that exposes the API', () => {
+    setVibrate(() => true)
+    setPointerCoarse(true)
+    expect(vibrationSupported()).toBe(true)
+  })
+
+  it('is false on desktop even though Chrome defines navigator.vibrate', () => {
+    setVibrate(() => false)
+    setPointerCoarse(false)
+    expect(vibrationSupported()).toBe(false)
+  })
+
+  it('is false when the API is missing', () => {
+    setVibrate(undefined)
+    setPointerCoarse(true)
+    expect(vibrationSupported()).toBe(false)
   })
 })

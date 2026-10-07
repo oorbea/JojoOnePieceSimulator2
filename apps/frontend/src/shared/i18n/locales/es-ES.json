@@ -101,6 +101,14 @@
       "enabled": "Avisos activados",
       "denied": "Las notificaciones están bloqueadas en el navegador. Actívalas en los ajustes del sitio.",
       "failed": "No se han podido activar los avisos. Inténtalo de nuevo."
+    },
+    "haptics": {
+      "label": "Vibración",
+      "description": "El móvil vibra cuando llega tu poder, se abre la votación y sale el resultado.",
+      "test": "Probar",
+      "testHint": "Haz vibrar el móvil para comprobar que funciona",
+      "tried": "Deberías haberlo notado vibrar. Si no, revisa que la vibración o la respuesta háptica del móvil esté activada y que no esté en ahorro de batería.",
+      "refused": "El navegador no ha dejado vibrar. Prueba con la app instalada o revisa los permisos del sitio."
     }
   },
   "home": {
