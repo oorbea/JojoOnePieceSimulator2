@@ -36,6 +36,15 @@ ENV EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}
 ENV EXPO_PUBLIC_BUILD_ID=${EXPO_PUBLIC_BUILD_ID}
 ENV EXPO_PUBLIC_DEV_AUTH=${EXPO_PUBLIC_DEV_AUTH}
 RUN pnpm expo export -p web
+# Stamp the service worker with this build's id. Browsers only look for a new
+# service worker by comparing sw.js byte-for-byte, and sw.js itself never
+# changes between deploys unless its logic does - so without this an installed
+# PWA would never learn a new build exists. The grep makes the build fail
+# loudly if the placeholder ever disappears from public/sw.js, instead of
+# silently shipping an un-updatable PWA.
+RUN grep -q "__BUILD_ID__" dist/sw.js \
+    && sed -i "s/__BUILD_ID__/${EXPO_PUBLIC_BUILD_ID}/g" dist/sw.js \
+    && ! grep -q "__BUILD_ID__" dist/sw.js
 
 FROM nginx:alpine
 RUN adduser -D -u 10001 app

@@ -65,7 +65,43 @@
     "play": "Jugar",
     "profile": "Perfil",
     "admin": "Admin",
-    "logOut": "Cerrar sesión"
+    "logOut": "Cerrar sesión",
+    "installApp": "Instalar app"
+  },
+  "pwa": {
+    "banner": {
+      "title": "Instala JOPS",
+      "body": "Ábrelo desde tu pantalla de inicio, a pantalla completa.",
+      "install": "Instalar",
+      "installHint": "Instala JOPS en tu móvil",
+      "dismiss": "Ahora no",
+      "dismissHint": "Cerrar este aviso; volverá a aparecer en dos semanas"
+    },
+    "offline": {
+      "banner": "Sin conexión. Reconectaremos en cuanto vuelva la red."
+    },
+    "push": {
+      "prompt": {
+        "title": "Avisos de partida",
+        "body": "Te avisamos cuando empiece la partida, te toque votar o haya resultado, aunque tengas la app cerrada.",
+        "enable": "Activar avisos",
+        "enableHint": "Activa los avisos de partida en este dispositivo",
+        "dismiss": "Ahora no",
+        "dismissHint": "No volver a preguntar"
+      },
+      "toggle": {
+        "label": "Avisos de partida",
+        "description": "Notificaciones cuando empieza la partida, te toca votar o hay resultado.",
+        "turnOn": "Activar",
+        "turnOnHint": "Activa los avisos de partida en este dispositivo",
+        "turnOff": "Desactivar",
+        "turnOffHint": "Desactiva los avisos de partida en este dispositivo",
+        "blocked": "El navegador tiene bloqueadas las notificaciones de este sitio. Actívalas en los ajustes del sitio para poder recibir avisos."
+      },
+      "enabled": "Avisos activados",
+      "denied": "Las notificaciones están bloqueadas en el navegador. Actívalas en los ajustes del sitio.",
+      "failed": "No se han podido activar los avisos. Inténtalo de nuevo."
+    }
   },
   "home": {
     "pickChannel": "Elige un canal",

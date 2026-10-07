@@ -1,4 +1,4 @@
-import { LogOut } from '@tamagui/lucide-icons-2'
+import { Download, LogOut } from '@tamagui/lucide-icons-2'
 import { useState } from 'react'
 import type { LayoutChangeEvent } from 'react-native'
 import { Image } from 'react-native'
@@ -17,6 +17,8 @@ import { ChannelBar, ChannelBarItem } from './channel-bar'
 import { ChannelBarIndicator, type ChannelBarIndicatorLayout } from './channel-bar-indicator'
 import type { IconComponent } from './channel-tile'
 import { GlowText } from './glow-text'
+import { InstallBanner } from './install-banner'
+import { OfflineBanner } from './offline-banner'
 import { ThemeToggle } from './theme-toggle'
 import { WiiCard } from './wii-card'
 
@@ -41,6 +43,14 @@ type AppShellProps = {
   onLogout: () => void
   themeMode: ThemeMode
   onCycleTheme: () => void
+  // Present only while the app can be installed as a PWA; shows the install
+  // button in the top bar.
+  onInstall?: () => void
+  // Present only when the one-time install banner should show. It floats
+  // above the bottom dock, so it only ever renders on narrow screens.
+  onDismissInstallBanner?: () => void
+  // True while the device has no network; shows a notice under the top bar.
+  offline?: boolean
 }
 
 // Two floating glass pills over the animated sky: a top bar with nav links
@@ -59,6 +69,9 @@ export function AppShell({
   onLogout,
   themeMode,
   onCycleTheme,
+  onInstall,
+  onDismissInstallBanner,
+  offline,
 }: AppShellProps) {
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
@@ -139,6 +152,18 @@ export function AppShell({
           </XStack>
         ) : null}
 
+        {onInstall ? (
+          <ChannelBarItem
+            iconOnly
+            tooltip={t('nav.installApp')}
+            onPress={onInstall}
+            {...a11yProps(t('nav.installApp'), 'button')}
+            hitSlop={8}
+          >
+            <Download size={20} color="$panelText" strokeWidth={2.5} />
+          </ChannelBarItem>
+        ) : null}
+
         <ThemeToggle mode={themeMode} onCycle={onCycleTheme} />
 
         <ChannelBarItem
@@ -155,6 +180,37 @@ export function AppShell({
       <NavInsetsProvider value={navInsets}>
         <YStack flex={1}>{children}</YStack>
       </NavInsetsProvider>
+
+      {offline ? (
+        <YStack
+          position="absolute"
+          l={0}
+          r={0}
+          t={navInsets.top + 8}
+          px="$3"
+          items="center"
+          z="$nav"
+          style={{ pointerEvents: 'none' }}
+        >
+          <OfflineBanner />
+        </YStack>
+      ) : null}
+
+      {onInstall && onDismissInstallBanner && !showTopLinks ? (
+        // `box-none` so the empty strip around the card never swallows taps
+        // meant for the page underneath.
+        <YStack
+          position="absolute"
+          l={0}
+          r={0}
+          b={navInsets.bottom + 8}
+          px="$3"
+          z="$nav"
+          style={{ pointerEvents: 'box-none' }}
+        >
+          <InstallBanner onInstall={onInstall} onDismiss={onDismissInstallBanner} />
+        </YStack>
+      ) : null}
 
       {!showTopLinks ? (
         <ChannelBar

@@ -1,5 +1,6 @@
 import { Redirect, Slot } from 'expo-router'
 
+import { useNotificationNavigation, usePushBootstrap } from '@/features/pwa'
 import { AppShellContainer } from '@/shared/components/containers/app-shell-container'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useSessionStore } from '@/shared/stores/session.store'
@@ -11,6 +12,12 @@ import { useSessionStore } from '@/shared/stores/session.store'
 export default function AppGroupLayout() {
   const session = useSessionStore((state) => state.session)
   const isHydrated = useSessionStore((state) => state.isHydrated)
+
+  // Push notifications: load availability once signed in (and drop this
+  // device's subscription at sign-out), and route a tapped notification to
+  // its game inside the already-open app.
+  usePushBootstrap(!!session)
+  useNotificationNavigation()
 
   if (!isHydrated) {
     return <LoadingScreen />

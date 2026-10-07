@@ -65,7 +65,43 @@
     "play": "Juga",
     "profile": "Perfil",
     "admin": "Admin",
-    "logOut": "Tanca la sessió"
+    "logOut": "Tanca la sessió",
+    "installApp": "Instal·la l'app"
+  },
+  "pwa": {
+    "banner": {
+      "title": "Instal·la JOPS",
+      "body": "Obre'l des de la pantalla d'inici, a pantalla completa.",
+      "install": "Instal·la",
+      "installHint": "Instal·la JOPS al teu mòbil",
+      "dismiss": "Ara no",
+      "dismissHint": "Tanca aquest avís; tornarà a aparèixer d'aquí a dues setmanes"
+    },
+    "offline": {
+      "banner": "Sense connexió. Tornarem a connectar en cuant hi hagi xarxa."
+    },
+    "push": {
+      "prompt": {
+        "title": "Avisos de partida",
+        "body": "T'avisem quan comenci la partida, et toqui votar o hi hagi resultat, encara que tinguis l'app tancada.",
+        "enable": "Activa els avisos",
+        "enableHint": "Activa els avisos de partida en aquest dispositiu",
+        "dismiss": "Ara no",
+        "dismissHint": "No tornis a preguntar"
+      },
+      "toggle": {
+        "label": "Avisos de partida",
+        "description": "Notificacions quan comença la partida, et toca votar o hi ha resultat.",
+        "turnOn": "Activa",
+        "turnOnHint": "Activa els avisos de partida en aquest dispositiu",
+        "turnOff": "Desactiva",
+        "turnOffHint": "Desactiva els avisos de partida en aquest dispositiu",
+        "blocked": "El navegador té bloquejades les notificacions d'aquest lloc. Activa-les als ajustos del lloc per rebre avisos."
+      },
+      "enabled": "Avisos activats",
+      "denied": "Les notificacions estan bloquejades al navegador. Activa-les als ajustos del lloc.",
+      "failed": "No s'han pogut activar els avisos. Torna-ho a provar."
+    }
   },
   "home": {
     "pickChannel": "Tria un canal",

@@ -11,6 +11,7 @@ import {
 import { gameKeys } from '@/features/game/api/game.keys'
 import { useGameCommands } from '@/features/game/hooks/use-game-commands'
 import { useGameDetail } from '@/features/game/hooks/use-game-detail'
+import { useGameHaptics } from '@/features/game/hooks/use-game-haptics'
 import { useGameSocket } from '@/features/game/hooks/use-game-socket'
 import { useLoadoutReveal } from '@/features/game/hooks/use-loadout-reveal'
 import { useMatchHotkeys } from '@/features/game/hooks/use-match-hotkeys'
@@ -37,12 +38,15 @@ import {
 import { voteOptions } from '@/features/game/lib/vote-options'
 import { ShareInviteSheet } from '@/features/game/components/presentational/share-invite-sheet'
 import { useGameSocketStore } from '@/features/game/stores/game-socket.store'
+import { BackButtonGuard } from '@/shared/components/containers/back-button-guard'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
 import { useReducedMotion } from '@/shared/hooks/use-reduced-motion'
+import { activityForState, useGameActivityStore } from '@/shared/stores/game-activity.store'
 import type { GameMode, RevealSpeed, Manga } from '@/shared/contracts/enums'
 import { showErrorToast, showSuccessToast } from '@/shared/lib/toast'
 import { AppError } from '@/shared/api/errors'
 import { useDevilFruits } from '@/features/devil-fruits'
+import { PushPromptContainer } from '@/features/pwa'
 import { useStands } from '@/features/stands'
 
 // REVEAL_SPEED_CYCLE fixes the order onCycleRevealSpeed steps through -
@@ -113,6 +117,18 @@ export function LobbyRoomContainer() {
   const you = socket.you ?? detail.data?.you ?? null
   const reducedMotion = useReducedMotion()
 
+  // Publishes "in a lobby" / "game in progress" app-wide so the PWA layer
+  // (service-worker updates, wake lock, ...) can avoid interrupting a live
+  // game. Two separate effects on purpose: resetting to 'none' inside the
+  // state-keyed effect's cleanup would flash 'none' between every phase
+  // change and let a pending update reload the page in that gap.
+  const setActivity = useGameActivityStore((state) => state.setActivity)
+  const snapshotState = snapshot?.state
+  useEffect(() => {
+    setActivity(activityForState(snapshotState))
+  }, [snapshotState, setActivity])
+  useEffect(() => () => setActivity('none'), [setActivity])
+
   // Warms the sorteo strip's images well before ASSIGNING - see
   // use-power-pool-prefetch.ts. Also covers Versus's ReassignsEachRound
   // (the pool can change every round), since it re-fires whenever the
@@ -167,6 +183,17 @@ export function LobbyRoomContainer() {
     revealStartedAt: socket.live.revealStartedAt,
     stillAssigning: snapshot?.state === 'ASSIGNING',
   })
+
+  // Vibrate when YOUR power lands in the sorteo (the slot index doubles as a
+  // per-landing key), and on the state changes worth looking up for.
+  const ownLandingKey =
+    loadoutReveal.isRevealing &&
+    loadoutReveal.phase === 'land' &&
+    !!you &&
+    snapshot?.participants[loadoutReveal.participantIndex]?.id === you.participantId
+      ? loadoutReveal.slotIndex
+      : -1
+  useGameHaptics({ state: snapshot?.state, ownLandingKey })
 
   useSkipNotice({
     state: snapshot?.state,
@@ -486,6 +513,12 @@ export function LobbyRoomContainer() {
 
   return (
     <>
+      {/* Installed app only: a system back press mid-game asks to leave instead
+          of silently navigating away (see use-back-button-guard.ts). */}
+      <BackButtonGuard
+        enabled={activityForState(snapshot.state) === 'playing'}
+        onBackAttempt={handleLeave}
+      />
       {shareUrl ? (
         <ShareInviteSheet
           visible={shareSheetOpen}
@@ -505,6 +538,7 @@ export function LobbyRoomContainer() {
         socketStatus={socket.status}
         nextRetryAt={socket.nextRetryAt}
         onRetryNow={socket.retryNow}
+        lobbyNoticeSlot={<PushPromptContainer />}
         gate={gate}
         starting={starting}
         onStart={handleStart}

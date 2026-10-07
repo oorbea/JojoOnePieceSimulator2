@@ -15,10 +15,22 @@ const SW_PATH = join(__dirname, '..', '..', '..', 'public', 'sw.js')
 const SW_SRC = readFileSync(SW_PATH, 'utf8')
 const ORIGIN = 'https://app.test'
 
+interface FakeWindowClient {
+  url: string
+  visibilityState: string
+  focus: jest.Mock
+  postMessage: jest.Mock
+}
+
 interface FakeSelf {
   addEventListener: (type: string, handler: (event: FakeEvent) => void) => void
   skipWaiting: () => void
-  clients: { claim: () => void }
+  clients: {
+    claim: () => void
+    matchAll: jest.Mock
+    openWindow: jest.Mock
+  }
+  registration: { showNotification: jest.Mock }
   location: { origin: string }
 }
 
@@ -31,19 +43,22 @@ interface FakeRequest {
 
 interface FakeResponse {
   ok: boolean
+  status?: number
   tag: string
   clone: () => FakeResponse
 }
 
 interface FakeEvent {
   request: FakeRequest
+  data?: { type?: string; json?: () => unknown }
+  notification?: { close: jest.Mock; data?: { url?: string } }
   respondWith: (p: Promise<FakeResponse>) => void
   waitUntil: (p: Promise<unknown>) => void
 }
 
 interface FakeCache {
   keys: () => Promise<{ url: string }[]>
-  match: (request: FakeRequest) => Promise<FakeResponse | undefined>
+  match: (request: FakeRequest | string) => Promise<FakeResponse | undefined>
   put: (request: FakeRequest, response: FakeResponse) => Promise<void>
   delete: (requestOrKey: FakeRequest | { url: string }) => Promise<boolean>
   addAll: (urls: string[]) => Promise<void>
@@ -52,7 +67,7 @@ interface FakeCache {
 interface FakeCacheStorage {
   open: (name: string) => Promise<FakeCache>
   keys: () => Promise<string[]>
-  match: (request: FakeRequest) => Promise<FakeResponse | undefined>
+  match: (request: FakeRequest | string) => Promise<FakeResponse | undefined>
   delete: (name: string) => Promise<boolean>
 }
 
@@ -85,7 +100,9 @@ function makeCache(): FakeCache {
   const store = new Map<string, FakeResponse>()
   return {
     keys: async () => [...store.keys()].map((url) => ({ url })),
-    match: async (request) => store.get(request.url),
+    // The real Cache API accepts a URL string as well as a Request.
+    match: async (request) =>
+      store.get(typeof request === 'string' ? (request.startsWith('http') ? request : ORIGIN + request) : request.url),
     put: async (request, response) => {
       store.set(request.url, response)
     },
@@ -134,12 +151,17 @@ function loadSw(caches: FakeCacheStorage, fetchImpl: FetchImpl) {
       handlers[type] = handler
     },
     skipWaiting: jest.fn(),
-    clients: { claim: jest.fn() },
+    clients: {
+      claim: jest.fn(),
+      matchAll: jest.fn().mockResolvedValue([]),
+      openWindow: jest.fn().mockResolvedValue(undefined),
+    },
+    registration: { showNotification: jest.fn().mockResolvedValue(undefined) },
     location: { origin: ORIGIN },
   }
   const factory = new Function('self', 'caches', 'fetch', SW_SRC) as unknown as SwFactory
   factory(self, caches, fetchImpl)
-  return { handlers }
+  return { handlers, self }
 }
 
 async function dispatchFetch(
@@ -180,7 +202,7 @@ it('stays a plain classic worker (no import/export/require)', () => {
   expect(SW_SRC).not.toMatch(/require\(/)
 })
 
-it('install seeds the shell cache with the shell URLs', async () => {
+it('install precaches the shell, the offline page and its icon', async () => {
   const caches = makeCaches()
   const fetchImpl = jest.fn<Promise<FakeResponse>, [FakeRequest]>()
   const { handlers } = loadSw(caches, fetchImpl)
@@ -191,7 +213,194 @@ it('install seeds the shell cache with the shell URLs', async () => {
   expect(names).toHaveLength(1)
   const shellCache = await caches.open(names[0])
   const keys = await shellCache.keys()
-  expect(keys.map((k) => k.url).sort()).toEqual([ORIGIN + '/', ORIGIN + '/manifest.json'])
+  expect(keys.map((k) => k.url).sort()).toEqual(
+    [
+      ORIGIN + '/',
+      ORIGIN + '/icons/icon-192.png',
+      ORIGIN + '/manifest.json',
+      ORIGIN + '/offline.html',
+    ].sort()
+  )
+})
+
+function windowClient(url: string, visibilityState: string): FakeWindowClient {
+  return { url, visibilityState, focus: jest.fn().mockResolvedValue(undefined), postMessage: jest.fn() }
+}
+
+async function dispatchWaiting(
+  handlers: Record<string, (event: FakeEvent) => void>,
+  type: 'push' | 'notificationclick',
+  extra: Partial<FakeEvent>
+) {
+  const waited: Promise<unknown>[] = []
+  handlers[type]({
+    request: req('/'),
+    respondWith: () => {},
+    waitUntil: (p) => {
+      waited.push(p)
+    },
+    ...extra,
+  })
+  await Promise.all(waited)
+}
+
+function pushEvent(payload: unknown): Partial<FakeEvent> {
+  return { data: { json: () => payload } }
+}
+
+describe('web push', () => {
+  it('shows a notification with the game url and a per-game tag when no window is visible', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+    self.clients.matchAll.mockResolvedValue([windowClient(ORIGIN + '/play/1', 'hidden')])
+
+    await dispatchWaiting(
+      handlers,
+      'push',
+      pushEvent({ title: 'Te toca votar', body: 'Se ha abierto la votación.', url: '/play/1', tag: 'game-1' })
+    )
+
+    expect(self.registration.showNotification).toHaveBeenCalledTimes(1)
+    const [title, options] = self.registration.showNotification.mock.calls[0]
+    expect(title).toBe('Te toca votar')
+    expect(options).toEqual(
+      expect.objectContaining({
+        body: 'Se ha abierto la votación.',
+        tag: 'game-1',
+        renotify: true,
+        data: { url: '/play/1' },
+      })
+    )
+  })
+
+  it('stays silent while a window of the app is visible (the player is looking at the game)', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+    self.clients.matchAll.mockResolvedValue([
+      windowClient(ORIGIN + '/play/1', 'hidden'),
+      windowClient(ORIGIN + '/', 'visible'),
+    ])
+
+    await dispatchWaiting(handlers, 'push', pushEvent({ title: 't', url: '/play/1', tag: 'game-1' }))
+
+    expect(self.registration.showNotification).not.toHaveBeenCalled()
+  })
+
+  it('still shows a notification for a malformed or empty payload', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchWaiting(handlers, 'push', {
+      data: {
+        json: () => {
+          throw new Error('not json')
+        },
+      },
+    })
+    await dispatchWaiting(handlers, 'push', {})
+
+    expect(self.registration.showNotification).toHaveBeenCalledTimes(2)
+    expect(self.registration.showNotification.mock.calls[0][0]).toBe('JOPS')
+  })
+
+  it.each(['https://evil.example/x', '//evil.example/x', 'javascript:alert(1)', 42, undefined])(
+    'never keeps a non-app url from the payload (%p)',
+    async (url) => {
+      const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+      await dispatchWaiting(handlers, 'push', pushEvent({ title: 't', url }))
+
+      expect(self.registration.showNotification.mock.calls[0][1].data).toEqual({ url: '/' })
+    }
+  )
+
+  it('a tap focuses the open app window and hands it the path to route to', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+    const open = windowClient(ORIGIN + '/', 'hidden')
+    self.clients.matchAll.mockResolvedValue([windowClient('https://other.test/', 'visible'), open])
+    const close = jest.fn()
+
+    await dispatchWaiting(handlers, 'notificationclick', {
+      notification: { close, data: { url: '/play/7' } },
+    })
+
+    expect(close).toHaveBeenCalledTimes(1)
+    expect(open.focus).toHaveBeenCalledTimes(1)
+    expect(open.postMessage).toHaveBeenCalledWith({ type: 'NOTIFICATION_CLICK', url: '/play/7' })
+    expect(self.clients.openWindow).not.toHaveBeenCalled()
+  })
+
+  it('a tap opens the app when no window exists', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchWaiting(handlers, 'notificationclick', {
+      notification: { close: jest.fn(), data: { url: '/play/7' } },
+    })
+
+    expect(self.clients.openWindow).toHaveBeenCalledWith('/play/7')
+  })
+
+  it('a tap with a hostile url falls back to the app root', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchWaiting(handlers, 'notificationclick', {
+      notification: { close: jest.fn(), data: { url: 'https://evil.example/' } },
+    })
+
+    expect(self.clients.openWindow).toHaveBeenCalledWith('/')
+  })
+})
+
+describe('update lifecycle', () => {
+  function dispatchMessage(
+    handlers: Record<string, (event: FakeEvent) => void>,
+    data: FakeEvent['data']
+  ) {
+    handlers.message({
+      request: req('/'),
+      data,
+      respondWith: () => {},
+      waitUntil: () => {},
+    })
+  }
+
+  it('does not skipWaiting on install (a new deploy waits for the page to ask)', async () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    await dispatchLifecycle(handlers, 'install')
+
+    expect(self.skipWaiting).not.toHaveBeenCalled()
+  })
+
+  it('skipWaiting on a SKIP_WAITING message', () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    dispatchMessage(handlers, { type: 'SKIP_WAITING' })
+
+    expect(self.skipWaiting).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores any other message', () => {
+    const { handlers, self } = loadSw(makeCaches(), jest.fn())
+
+    dispatchMessage(handlers, { type: 'SOMETHING_ELSE' })
+    dispatchMessage(handlers, undefined)
+
+    expect(self.skipWaiting).not.toHaveBeenCalled()
+  })
+
+  it('claims clients only after stale caches are deleted', async () => {
+    const caches = makeCaches()
+    const { handlers, self } = loadSw(caches, jest.fn())
+    await caches.open('jops-shell-previous-build')
+
+    await dispatchLifecycle(handlers, 'activate')
+
+    expect(await caches.keys()).not.toContain('jops-shell-previous-build')
+    expect(self.clients.claim).toHaveBeenCalledTimes(1)
+  })
+
+  it('names the shell cache after the build id placeholder Docker stamps', () => {
+    expect(SW_SRC).toContain("const BUILD_ID = '__BUILD_ID__'")
+    expect(SW_SRC).toContain('CACHE_NAME = `jops-shell-${BUILD_ID}`')
+  })
 })
 
 it('activate preserves only the two live cache names and deletes the rest', async () => {
@@ -361,5 +570,75 @@ describe('navigation fallback (networkFirst)', () => {
     const { handlers } = loadSw(caches, fetchImpl)
 
     await expect(dispatchFetch(handlers, req('/', { mode: 'navigate' }))).rejects.toThrow('offline')
+  })
+
+  describe('offline start', () => {
+    function offlineSetup() {
+      const caches = makeCaches()
+      let fail = false
+      const fetchImpl: FetchImpl = async (request) => {
+        if (fail) throw new Error('offline')
+        return res(request.url)
+      }
+      const { handlers } = loadSw(caches, fetchImpl)
+      return { caches, handlers, goOffline: () => (fail = true) }
+    }
+
+    it('boots the cached shell on a route that was never visited', async () => {
+      const { handlers, goOffline } = offlineSetup()
+      await dispatchLifecycle(handlers, 'install')
+      goOffline()
+
+      const response = await dispatchFetch(handlers, req('/play/create', { mode: 'navigate' }))
+      expectResponse(response, '/')
+    })
+
+    it('serves the offline page when no shell is cached', async () => {
+      const { caches, handlers, goOffline } = offlineSetup()
+      const cache = await caches.open('jops-shell-test')
+      await cache.put(req('/offline.html'), res('offline-page'))
+      goOffline()
+
+      const response = await dispatchFetch(handlers, req('/play/create', { mode: 'navigate' }))
+      expectResponse(response, 'offline-page')
+    })
+
+    it('does not substitute the shell for non-navigation HTML requests', async () => {
+      const { handlers, goOffline } = offlineSetup()
+      await dispatchLifecycle(handlers, 'install')
+      goOffline()
+
+      const htmlFetch = req('/fragment', {
+        headers: { get: (n) => (n === 'accept' ? 'text/html' : null) },
+      })
+      await expect(dispatchFetch(handlers, htmlFetch)).rejects.toThrow('offline')
+    })
+
+    it('falls back to the shell when the proxy answers 5xx mid-deploy', async () => {
+      const caches = makeCaches()
+      let down = false
+      const fetchImpl: FetchImpl = async (request) =>
+        down ? { ok: false, status: 502, tag: '502', clone: () => res('502', false) } : res(request.url)
+      const { handlers } = loadSw(caches, fetchImpl)
+      await dispatchLifecycle(handlers, 'install')
+      down = true
+
+      const response = await dispatchFetch(handlers, req('/', { mode: 'navigate' }))
+      expectResponse(response, '/')
+    })
+
+    it('passes a 5xx through when there is nothing cached to fall back to', async () => {
+      const caches = makeCaches()
+      const fetchImpl: FetchImpl = async () => ({
+        ok: false,
+        status: 502,
+        tag: '502',
+        clone: () => res('502', false),
+      })
+      const { handlers } = loadSw(caches, fetchImpl)
+
+      const response = await dispatchFetch(handlers, req('/', { mode: 'navigate' }))
+      expectResponse(response, '502', false)
+    })
   })
 })

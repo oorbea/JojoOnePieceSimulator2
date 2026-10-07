@@ -726,6 +726,16 @@ type PowerTranslation struct {
 	Skills      []string
 }
 
+type PushSubscription struct {
+	ID         pgtype.UUID
+	UserID     pgtype.UUID
+	Endpoint   string
+	P256dh     string
+	Auth       string
+	CreatedAt  pgtype.Timestamptz
+	LastSeenAt pgtype.Timestamptz
+}
+
 type Stage struct {
 	ID             pgtype.UUID
 	Manga          string

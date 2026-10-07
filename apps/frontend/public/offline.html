@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#00A0E9" />
+    <title>JOPS</title>
+    <!-- Safety-net page served by sw.js only when a navigation fails AND no
+         app shell is cached (e.g. the very first visit lost its connection).
+         Static on purpose: the CSP forbids inline scripts, so there is no
+         language detection - the three supported languages are stacked.
+         Self-contained apart from the precached icon. -->
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(160deg, #b8ecff 0%, #e9f8ff 55%, #f1e9ff 100%);
+        color: #16283c;
+      }
+      body {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+        box-sizing: border-box;
+      }
+      main {
+        width: 100%;
+        max-width: 380px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1.5px solid #c9dde9;
+        border-radius: 28px;
+        padding: 28px 24px;
+        box-shadow: 0 12px 30px rgba(22, 40, 60, 0.15);
+      }
+      img {
+        width: 96px;
+        height: 96px;
+      }
+      h1 {
+        margin: 12px 0 4px;
+        font-size: 1.4rem;
+      }
+      p {
+        margin: 0 0 4px;
+        color: #4a6480;
+        line-height: 1.45;
+      }
+      .lang {
+        margin-top: 14px;
+      }
+      .lang strong {
+        display: block;
+        color: #16283c;
+      }
+      a.retry {
+        display: inline-block;
+        margin-top: 20px;
+        min-height: 44px;
+        line-height: 44px;
+        padding: 0 28px;
+        border-radius: 999px;
+        background: #00a0e9;
+        border-bottom: 4px solid #0072b5;
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      a.retry:focus-visible {
+        outline: 3px solid #16283c;
+        outline-offset: 3px;
+      }
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: linear-gradient(160deg, #071a30 0%, #0d2a47 55%, #1a1230 100%);
+          color: #eaf4ff;
+        }
+        main {
+          background: rgba(21, 36, 55, 0.85);
+          border-color: #28405c;
+        }
+        p {
+          color: #9fb8d4;
+        }
+        .lang strong {
+          color: #eaf4ff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="JOPS" width="96" height="96" />
+      <h1>Jojo One Piece Simulator</h1>
+      <div class="lang" lang="es">
+        <strong>Sin conexión</strong>
+        <p>Comprueba tu red e inténtalo de nuevo.</p>
+      </div>
+      <div class="lang" lang="en">
+        <strong>You're offline</strong>
+        <p>Check your network and try again.</p>
+      </div>
+      <div class="lang" lang="ca">
+        <strong>Sense connexió</strong>
+        <p>Comprova la xarxa i torna-ho a provar.</p>
+      </div>
+      <a class="retry" href="/">Reintentar · Retry</a>
+    </main>
+  </body>
+</html>

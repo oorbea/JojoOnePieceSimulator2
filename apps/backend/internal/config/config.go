@@ -267,6 +267,15 @@ type Config struct {
 	// fallback.PictureStorage.SetPutTimeout. 0 disables it (each Put then
 	// runs under the picture job's own ctx, unwrapped).
 	StoragePutTimeout time.Duration
+	// VAPIDPublicKey/VAPIDPrivateKey/VAPIDSubject identify this server to the
+	// browsers' push services for Web Push notifications. All three or none:
+	// unset disables push entirely (GET /users/me/push reports enabled=false
+	// and the game never tries to notify). Generate the pair once with
+	// webpush.GenerateVAPIDKeys and keep it - rotating it invalidates every
+	// existing subscription.
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDSubject    string
 	// StorageDisableDelete makes the picture storage chain's Delete a no-op
 	// - see fallback.PictureStorage.SetDeleteDisabled. Set in environments
 	// (e.g. local dev) whose storage tiers point at the same bucket as
@@ -1186,6 +1195,13 @@ func Load() (*Config, error) {
 		}
 	}
 
+	vapidPublicKey := os.Getenv("VAPID_PUBLIC_KEY")
+	vapidPrivateKey := os.Getenv("VAPID_PRIVATE_KEY")
+	vapidSubject := os.Getenv("VAPID_SUBJECT")
+	if err := validateVAPID(vapidPublicKey, vapidPrivateKey, vapidSubject); err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		DatabaseURL:          dsn,
 		Port:                 port,
@@ -1232,6 +1248,9 @@ func Load() (*Config, error) {
 		StorageQuotaThresholdPct: storageQuotaThresholdPct,
 		StorageReconcileInterval: storageReconcileInterval,
 		StoragePutTimeout:        storagePutTimeout,
+		VAPIDPublicKey:           vapidPublicKey,
+		VAPIDPrivateKey:          vapidPrivateKey,
+		VAPIDSubject:             vapidSubject,
 		StorageDisableDelete:     storageDisableDelete,
 
 		B2Endpoint:        b2Endpoint,
@@ -1312,4 +1331,21 @@ func isLocalOrigin(origin string) bool {
 		hostname = h
 	}
 	return hostname == "localhost" || hostname == "127.0.0.1"
+}
+
+// validateVAPID enforces that the Web Push identity is either fully set or
+// fully unset - a half-configured one would boot a server that advertises push
+// but fails every send - and that the subject is a contact the push services
+// accept (RFC 8292: a mailto: or https: URI).
+func validateVAPID(publicKey, privateKey, subject string) error {
+	if publicKey == "" && privateKey == "" && subject == "" {
+		return nil
+	}
+	if publicKey == "" || privateKey == "" || subject == "" {
+		return fmt.Errorf("VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT must be set together (or all left unset to disable push notifications)")
+	}
+	if !strings.HasPrefix(subject, "mailto:") && !strings.HasPrefix(subject, "https://") {
+		return fmt.Errorf("VAPID_SUBJECT must start with mailto: or https://")
+	}
+	return nil
 }

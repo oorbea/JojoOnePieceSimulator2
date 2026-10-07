@@ -43,6 +43,9 @@ type Props = {
   socketStatus: SocketStatus
   nextRetryAt: number | null
   onRetryNow: () => void
+  /** Optional card shown at the top of the lobby (the push-notification
+   * ask), supplied by the container so this screen stays presentational. */
+  lobbyNoticeSlot?: React.ReactNode
   gate: Gate
   starting: boolean
   onStart: () => void
@@ -124,6 +127,7 @@ export function LobbyRoomScreen({
   socketStatus,
   nextRetryAt,
   onRetryNow,
+  lobbyNoticeSlot,
   gate,
   starting,
   onStart,
@@ -277,6 +281,8 @@ export function LobbyRoomScreen({
             nextRetryAt={nextRetryAt}
             onRetryNow={onRetryNow}
           />
+
+          {lobbyNoticeSlot}
 
           <XStack width="100%" items="center" justify="space-between" flexWrap="wrap" gap="$2">
             <GlowText level="title">{t(`enums.gameMode.${snapshot.mode}`)}</GlowText>

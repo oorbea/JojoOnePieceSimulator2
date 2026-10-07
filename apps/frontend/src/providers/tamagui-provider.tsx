@@ -3,9 +3,11 @@ import { DelaGothicOne_400Regular } from '@expo-google-fonts/dela-gothic-one'
 import { Fredoka_500Medium, Fredoka_600SemiBold } from '@expo-google-fonts/fredoka'
 import { Nunito_500Medium, Nunito_700Bold } from '@expo-google-fonts/nunito'
 import { useFonts } from 'expo-font'
+import { useEffect } from 'react'
 import { Platform, useColorScheme } from 'react-native'
 import { TamaguiProvider as TamaguiRootProvider } from 'tamagui'
 
+import { applyThemeColor } from '@/shared/lib/theme-color'
 import { useThemeStore } from '@/shared/stores/theme.store'
 
 import tamaguiConfig from '../../tamagui.config'
@@ -27,6 +29,14 @@ export function TamaguiProvider({ children }: { children: React.ReactNode }) {
     DelaGothicOne_400Regular,
   })
 
+  const resolvedTheme = mode === 'system' ? (scheme ?? 'light') : mode
+
+  // Keep the browser/PWA chrome colour (status bar, standalone title bar) in
+  // step with the in-app theme, including a manual override of the OS scheme.
+  useEffect(() => {
+    if (Platform.OS === 'web') applyThemeColor(resolvedTheme === 'dark' ? 'dark' : 'light')
+  }, [resolvedTheme])
+
   // Web fonts ship via the CSS emitted by @tamagui/metro-plugin
   // (tamagui-web.css, imported in app/_layout.tsx) instead of this JS
   // loader, so gating on `fontsLoaded` here only matters on native. On web
@@ -34,8 +44,6 @@ export function TamaguiProvider({ children }: { children: React.ReactNode }) {
   // which aborts that Suspense boundary and forces a client-only re-render
   // (surfaces as React error #419 / "Switched to client rendering").
   if (Platform.OS !== 'web' && !fontsLoaded) return null
-
-  const resolvedTheme = mode === 'system' ? (scheme ?? 'light') : mode
 
   return (
     <TamaguiRootProvider config={tamaguiConfig} defaultTheme={resolvedTheme}>

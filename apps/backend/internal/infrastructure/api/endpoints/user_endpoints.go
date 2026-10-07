@@ -25,6 +25,10 @@ const (
 type UserEndpoints struct {
 	svc   *services.UserService
 	media dto.MediaURLBuilder
+
+	// push/pushPublicKey are set by SetPushSubscriptions; see user_push_endpoints.go.
+	push          ports.IPushSubscriptionRepository
+	pushPublicKey string
 }
 
 func NewUserEndpoints(svc *services.UserService) *UserEndpoints {
@@ -54,6 +58,9 @@ func (e *UserEndpoints) Routes(rateCfg RateLimitConfig) chi.Router {
 	r.With(write).Patch("/me/picture", Wrap(e.patchMePicture))
 	r.With(write).Delete("/me/picture", Wrap(e.deleteMePicture))
 	r.With(write).Delete("/me", Wrap(e.deleteMe))
+	r.With(read).Get("/me/push", Wrap(e.getPushConfig))
+	r.With(write).Post("/me/push/subscriptions", Wrap(e.subscribePush))
+	r.With(write).Delete("/me/push/subscriptions", Wrap(e.unsubscribePush))
 	r.With(read).Get("/{id}", Wrap(e.getByID))
 
 	r.Group(func(r chi.Router) {

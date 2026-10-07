@@ -3,22 +3,14 @@ import '../tamagui-web.css'
 import { Slot } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
-import { Platform, useColorScheme } from 'react-native'
+import { useColorScheme } from 'react-native'
 
+import { useInstallPromptCapture, useServiceWorkerUpdate, useWakeLock } from '@/features/pwa'
 import { AppProviders } from '@/providers/app-providers'
 import { useAudioSettingsStore } from '@/shared/stores/audio-settings.store'
 import { useLanguageStore } from '@/shared/stores/language.store'
 import { useSessionStore } from '@/shared/stores/session.store'
 import { useThemeStore } from '@/shared/stores/theme.store'
-
-function registerServiceWorker() {
-  if (Platform.OS !== 'web') return
-  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
-
-  navigator.serviceWorker.register('/sw.js').catch((error) => {
-    console.warn('Service worker registration failed', error)
-  })
-}
 
 function ThemedStatusBar() {
   const scheme = useColorScheme()
@@ -41,8 +33,14 @@ export default function RootLayout() {
     void hydrateTheme()
     void hydrateLanguage()
     void hydrateAudioSettings()
-    registerServiceWorker()
   }, [hydrate, hydrateTheme, hydrateLanguage, hydrateAudioSettings])
+
+  // Registers the service worker and applies new deploys to the installed PWA.
+  useServiceWorkerUpdate()
+  // Captures the browser's install prompt for the shell's install button/banner.
+  useInstallPromptCapture()
+  // Keeps the screen on while in a lobby or a game.
+  useWakeLock()
 
   // Once a session is known, the backend's users.language is the source of
   // truth and overrides whatever was device-detected/stored pre-login - see
