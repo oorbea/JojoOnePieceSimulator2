@@ -64,6 +64,7 @@
     "home": "Inici",
     "play": "Juga",
     "profile": "Perfil",
+    "manual": "Manual",
     "admin": "Admin",
     "logOut": "Tanca la sessió",
     "installApp": "Instal·la l'app"
@@ -783,6 +784,275 @@
     "characterDeleted": "Personatge eliminat",
     "characterPictureUploading": "Pujant la foto. Això triga una mica.",
     "characterPictureFailed": "No s'ha pogut processar la foto del personatge. Torna-ho a provar."
+  },
+  "manual": {
+    "title": "Manual de normes i convenis",
+    "intro": "Com funciona el joc, què fa cada poder i els convenis que segueixen els votants. Els números i les taules surten directament de les regles del propi joc.",
+    "index": {
+      "jump": "Ves a {{section}}"
+    },
+    "sections": {
+      "how": "Com es juga",
+      "modes": "Modes de joc",
+      "abilities": "Habilitats",
+      "odds": "Probabilitats del sorteig",
+      "effects": "Efectes dels poders",
+      "battleIQ": "Coeficient de batalla",
+      "conventions": "Convenis de combat",
+      "etiquette": "Etiqueta i honor"
+    },
+    "how": {
+      "intro": "Una partida es juga per rondes. Als jugadors se'ls reparteixen poders (una alineació) i després tothom vota el resultat de la ronda.",
+      "host": {
+        "title": "L'amfitrió",
+        "text": "L'amfitrió crea la sala i tria el mode, quines mangues estan en joc (JoJo, One Piece o totes dues), la mida d'equip, els bots i la velocitat del sorteig. Només ell pot començar o cancel·lar la partida. Si l'amfitrió se'n va, un altre jugador connectat passa a ser-ho a l'atzar. Si no queda cap jugador humà, la partida es cancel·la."
+      },
+      "draw": {
+        "title": "El sorteig",
+        "text": "A cada jugador se li reparteix una alineació: Stand, Spin, Hamon, Fruita del Diable, Haki i més, segons les mangues en joc. El sorteig es mostra jugador per jugador."
+      },
+      "vote": {
+        "title": "La votació",
+        "text": "Tothom vota en {{default}} segons per defecte (l'amfitrió pot fixar entre {{min}} i {{max}}). La votació es tanca abans si ja han votat tots els jugadors connectats. Pots canviar el teu vot fins que es tanqui. Si no votes o et desconnectes, el teu vot és nul: la ronda es decideix amb els vots emesos."
+      },
+      "resolve": {
+        "title": "El resultat",
+        "text": "Guanya la majoria. L'amfitrió pot afegir {{ext}} segons a una votació oberta, tantes vegades com calgui."
+      },
+      "tie": {
+        "title": "Empats",
+        "text": "Un empat, inclosa una ronda sense cap vot, obre una única revotació amb la papereta buida. Si la revotació també empata, decideix un cara o creu."
+      },
+      "skip": {
+        "title": "Saltar",
+        "text": "El sorteig i el resum se salten per a tothom en el moment que una majoria estricta dels jugadors connectats ho demana."
+      }
+    },
+    "modes": {
+      "gauntlet": {
+        "title": "Gauntlet: tots contra la història",
+        "text": "Cooperatiu. Un equip de {{min}} a {{max}} jugadors. Cada ronda és una part de JoJo o una saga de One Piece, i tothom vota Sobreviu o Cau per a l'etapa actual. Si més de la meitat vota Cau, la partida acaba aquí amb derrota; si més de la meitat vota Sobreviu, l'equip passa a l'etapa següent. Supera totes les etapes per guanyar. Els poders es reparteixen una sola vegada, a la primera ronda, i el teu equip els conserva fins al final."
+      },
+      "versus": {
+        "title": "Versus: equip contra equip",
+        "text": "Competitiu. {{teams}} equips de {{min}} a {{max}} jugadors, sempre de la mateixa mida. Exactament {{rounds}} rondes, cadascuna amb un escenari aleatori nou i alineacions repartides de nou. Tothom vota l'equip que creu que guanya la ronda, i pots votar el teu. Guanya la partida l'equip que guanyi més rondes. L'escenari és només el marc del combat i no influeix en el resultat."
+      },
+      "bots": {
+        "title": "Bots",
+        "text": "Els bots només existeixen a Versus, per completar equips desiguals. Reben poders amb les mateixes regles que els humans i compten per a la norma de no repetir. Voten a l'instant, per l'equip els poders del qual sumen més."
+      },
+      "unique": {
+        "title": "Sense repetits dins d'un equip",
+        "text": "Un Stand o una Fruita del Diable mai es repeteix dins del mateix equip en la mateixa partida (Gauntlet) o ronda (Versus). Això inclou tota la seva família d'evolució: un equip no pot tenir alhora Whitesnake i C-MOON, ni Gomu Gomu i Model Nika. L'equip rival a Versus agafa del seu propi grup i sí que pot repetir."
+      }
+    },
+    "abilities": {
+      "jojo": {
+        "title": "JoJo's Bizarre Adventure",
+        "text": "Stand, Spin, Hamon i coeficient de batalla (Battle IQ)."
+      },
+      "onePiece": {
+        "title": "One Piece",
+        "text": "Forma física, Fruita del Diable, Mestratge de fruita i els tres Haki: d'Armadura, d'Observació i del Rei."
+      },
+      "both": "Amb totes dues mangues en joc et pot tocar tot l'anterior, i alguns poders arriben d'una manga a l'altra (mira Efectes dels poders).",
+      "none": {
+        "title": "No treure res",
+        "text": "No treure Stand o no treure Fruita del Diable és vàlid: pots quedar-te sense cap dels dos poders de la teva manga."
+      },
+      "coupled": {
+        "title": "Què va amb què",
+        "text": "Primer se sorteja la Fruita del Diable i després el seu Mestratge: sense fruita no hi ha Mestratge, i tota fruita porta com a mínim Regular. El Spin i el Hamon són independents de l'Stand i entre ells: pots tenir-los tots, qualsevol o cap."
+      },
+      "scales": {
+        "title": "Nivells, de menor a major",
+        "haki": "Haki (cada tipus)"
+      }
+    },
+    "odds": {
+      "intro": "Aquestes són les probabilitats en repartir els poders, abans d'aplicar els efectes. Els efectes només pugen estadístiques, així que el resultat final tira una mica més alt que aquestes taules.",
+      "pool": {
+        "title": "Stand i Fruita del Diable",
+        "text": "Cada Stand del grup pesa 1 i «sense Stand» pesa {{stand}}: amb N Stands al grup, cadascun té 1 possibilitat entre (N + {{stand}}), i no treure'n cap en té {{stand}} entre (N + {{stand}}). Les Fruites del Diable funcionen igual, amb un pes de «cap» de {{fruit}}. La raresa no canvia les probabilitats."
+      },
+      "mastery": {
+        "note": "Només es reparteix amb Fruita del Diable; sense, és Cap."
+      },
+      "haki": {
+        "title": "Haki",
+        "text": "Primer se sorteja quin Haki tens (un conjunt) i després un nivell per a cadascun que tinguis.",
+        "presence": "Probabilitat de tenir cada tipus:",
+        "combos": "Probabilitat de cada conjunt:",
+        "level": "Nivell de cada Haki que tinguis:"
+      },
+      "battleIQ": "El coeficient de batalla té la seva pròpia secció."
+    },
+    "effects": {
+      "intro": "Alguns poders canvien les teves altres habilitats just després del sorteig. Les regles s'apliquen en ordre i es repeteixen fins que res canvia. El sorteig mostra cada efecte en el moment en què apareix la seva causa.",
+      "stageNeeds": "{{stage}} demana {{stat}} {{level}}",
+      "ifYouDraw": "Si et toca {{name}}",
+      "outcome": {
+        "NONE": "{{stat}} {{level}}: no canvia res",
+        "LEVEL_RAISED": "{{stat}} {{level}}: {{stat}} puja a {{after}}",
+        "EVOLVED": "{{stat}} {{level}}: evoluciona a {{power}}"
+      },
+      "evolutions": {
+        "title": "Evolucions",
+        "text": "Un Stand o una Fruita del Diable evoluciona quan el nivell que l'impulsa (el Spin als Stands, el Mestratge a les fruites) és més alt que el que demana. Es converteix en l'etapa més avançada el nivell de la qual queda cobert. Si el nivell és més baix que el que demana el poder, es puja el nivell fins al seu.",
+        "banned": "Les etapes que la sala ha vetat mai són destí: arribes a l'etapa més avançada que estigui permesa."
+      },
+      "tie": {
+        "FURTHEST_EVOLVED": "Quan dues etapes demanen el mateix nivell (Tusk: Act 2 i Act 3 demanen totes dues Spin Auri) guanya sempre la més evolucionada. No hi ha cara o creu."
+      },
+      "floors": {
+        "title": "Nivells mínims",
+        "text": "Alguns poders exigeixen un mínim en una altra habilitat. Si et va tocar menys, es puja a aquest mínim. Mai es baixa.",
+        "line": "puja {{stat}} a {{level}} o superior",
+        "cross": "Entre mangues",
+        "crossNote": "Les regles entre mangues arriben d'una manga a l'altra, així que només s'apliquen quan hi ha les dues en joc."
+      },
+      "family": {
+        "title": "Un per família",
+        "text": "Que et toqui un poder retira tota la seva família d'evolució del grup del teu equip, així que un company mai pot tenir la forma base ni una evolució del mateix Stand o fruita."
+      }
+    },
+    "battleIQ": {
+      "intro": "El coeficient de batalla (Battle IQ) és la ment tàctica d'un lluitador de JoJo: una puntuació de 0 a 255 que només es reparteix quan JoJo està en joc. Es mostra com a número i com a banda.",
+      "bands": {
+        "title": "Bandes",
+        "text": "Les puntuacions segueixen la classificació WAIS-IV. Dins de la banda més alta (el sostre és {{top}}) com més alta és la puntuació, més rara és."
+      },
+      "convention": {
+        "title": "Com valorar-ho",
+        "text": "El coeficient de batalla representa l'estratègia, no el poder brut. Pesa més en combats igualats: una diferència de dues bandes o més pot justificar una victòria sobre un rival una mica més fort. Els bots també el compten, sumant-lo al total del seu equip."
+      }
+    },
+    "conventions": {
+      "intro": "Els vots són humans, així que tots hauríem de discutir amb les mateixes regles de base. Aquests convenis diuen qui pot veure, tocar o vèncer qui.",
+      "judgementNote": "Els convenis marcats «A criteri dels votants» no tenen resposta automàtica: valora'ls cas per cas.",
+      "judgement": "A criteri dels votants",
+      "categories": {
+        "VISIBILITY": "Visibilitat",
+        "CONTACT": "Tocar i fer mal",
+        "TIME": "Temps",
+        "WILL": "Força de voluntat",
+        "WEAKNESS": "Debilitats",
+        "NULLIFICATION": "Anul·lar poders",
+        "SUPREMACY": "Spin Infinit i Stands absoluts"
+      },
+      "labels": {
+        "actors": "Qui",
+        "targets": "Contra",
+        "overcomers": "Poden superar-lo",
+        "theStand": "L'Stand",
+        "immune": "No afecta",
+        "attenuated": "Ho suavitza un esglaó"
+      },
+      "absolute": {
+        "title": "{{stand}} és absolut",
+        "text": "Res venç {{stand}} llevat dels poders que s'indiquen aquí."
+      },
+      "items": {
+        "SEE_STANDS": {
+          "title": "Veure Stands",
+          "text": "Només els usuaris d'Stand, de Spin i de Haki d'Observació poden veure un Stand. Els altres ni el veuen ni el poden esquivar."
+        },
+        "TOUCH_LOGIA": {
+          "title": "Tocar un Logia",
+          "text": "Un usuari de Logia és intangible. Només aquests poders el poden tocar."
+        },
+        "TOUCH_LOGIA_HAMON": {
+          "title": "Hamon contra un Logia",
+          "text": "El Hamon només toca un Logia quan té sentit que l'energia solar l'assoleixi. Els votants ho decideixen cas per cas."
+        },
+        "DAMAGE_STAND": {
+          "title": "Fer mal a un Stand",
+          "text": "Un Stand pot ser ferit per un altre Stand, el Haki d'Armadura, el Haki del Rei, l'element d'un Logia o qualsevol nivell de Spin."
+        },
+        "TIME_STOP": {
+          "title": "Aturadors del temps",
+          "text": "Aquests Stands aturen o esborren el temps. Mentre ho fan, només actuen els qui poden moure's dins seu."
+        },
+        "MOVE_IN_TIME_STOP": {
+          "title": "Moure's en el temps aturat",
+          "text": "Un altre aturador del temps, el Spin Infinit o el Haki del Rei Yonko+ poden moure's mentre el temps està aturat."
+        },
+        "MADE_IN_HEAVEN_STOPPED_BY": {
+          "title": "Aturar Made in Heaven",
+          "text": "Made in Heaven accelera el temps en lloc d'aturar-lo. Un aturador del temps el pot frenar uns segons, més curts del normal."
+        },
+        "MADE_IN_HEAVEN_KEEP_PACE": {
+          "title": "Seguir el ritme a Made in Heaven",
+          "text": "El Spin Infinit pot seguir el ritme de la seva acceleració."
+        },
+        "MADE_IN_HEAVEN_SLOWED_BY": {
+          "title": "Alentir Made in Heaven",
+          "text": "El Haki del Rei Yonko+ frena la seva acceleració."
+        },
+        "MADE_IN_HEAVEN_TRACKED_BY": {
+          "title": "Seguir la pista a Made in Heaven",
+          "text": "El Haki d'Observació Yonko+ veu per on es mou i pot predir on és."
+        },
+        "CONQUEROR_KNOCKOUT": {
+          "title": "Haki del Rei: noquejar",
+          "text": "Si el Haki del Rei de l'usuari està almenys {{gap}} nivells per sobre del teu, quedes noquejat. No tenir-ne cap compta com el nivell més baix. El Spin Infinit ho resisteix i el Hamon Perfecte ho suavitza un esglaó."
+        },
+        "CONQUEROR_HINDER": {
+          "title": "Haki del Rei: pressió",
+          "text": "Exactament {{gap}} nivell per sobre del teu només dificulta moure's. El Spin Infinit ho resisteix i el Hamon Perfecte ho suavitza un esglaó: un noqueig passa a pressió, i la pressió passa a res."
+        },
+        "WATER_WEAKNESS": {
+          "title": "L'aigua i les Fruites del Diable",
+          "text": "Weather Report pot debilitar els usuaris de Fruita del Diable."
+        },
+        "YAMI_NULLIFIES": {
+          "title": "Yami Yami no mi",
+          "text": "Tocar l'usuari, o el seu Stand, anul·la les Fruites del Diable i els Stands mentre duri el contacte. No anul·la el Spin, el Hamon ni el Haki, i pot tocar usuaris de Logia. No pot anul·lar els poders que figuren a No afecta."
+        },
+        "SPIN_INFINITE_SUPREME": {
+          "title": "Spin Infinit",
+          "text": "El Spin Infinit venç qualsevol defensa llevat de les que figuren a No afecta."
+        },
+        "SPIN_INFINITE_DUEL": {
+          "title": "Spin Infinit contra Spin Infinit",
+          "text": "No hi ha un guanyador evident: els votants decideixen qui lluita millor."
+        }
+      }
+    },
+    "subject": {
+      "anyStand": "Usuaris d'Stand",
+      "anyFruit": "Usuaris de Fruita del Diable",
+      "fruitType": "Usuaris de fruita {{types}}",
+      "slotAny": "{{stat}} (qualsevol nivell)",
+      "slotMin": "{{stat}} {{level}} o superior"
+    },
+    "groups": {
+      "TIME_STOPPERS": "Aturadors del temps ({{names}})",
+      "ABSOLUTE_STANDS": "Stands absoluts ({{names}})"
+    },
+    "etiquette": {
+      "intro": "Unes normes d'honor perquè la votació sigui divertida per a tothom.",
+      "honest": {
+        "title": "Vota amb honestedat",
+        "a": "Vota el que passaria segons el manga i els convenis, no el que et convé. Votar el teu propi equip està bé si de debò creus que guanya.",
+        "b": "Res de votar en bloc per amistat o per venjança d'una ronda a l'altra."
+      },
+      "respect": {
+        "title": "Respecta els altres votants",
+        "a": "No facis pressa ni pressionis ningú perquè voti.",
+        "b": "Accepta la revotació i el cara o creu sense queixar-te."
+      },
+      "host": {
+        "title": "Joc net de l'amfitrió",
+        "a": "No cancel·lis una partida només perquè el teu equip va perdent.",
+        "b": "No demanis saltar el sorteig mentre algú encara no l'ha vist."
+      },
+      "spoilers": {
+        "title": "Sense espòilers",
+        "a": "No facis espòilers del manga a qui no l'hagi llegit, tret que ho demani.",
+        "b": "Si vols parlar d'un gir de la trama, pregunta abans."
+      }
+    }
   },
   "notFound": {
     "title": "Aquesta pantalla no existeix.",

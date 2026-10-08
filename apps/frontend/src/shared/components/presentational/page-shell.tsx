@@ -1,3 +1,4 @@
+import type { ScrollView as RNScrollView } from 'react-native'
 import { ScrollView, YStack } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -21,6 +22,9 @@ type PageShellProps = {
    * need to opt into this by hand: it's derived from whether NavInsetsProvider
    * is actually reserving space above this page. */
   backdrop?: boolean
+  /** Ref to the inner ScrollView (only when `scroll`), for screens that scroll
+   * to a section themselves (the manual's table of contents). */
+  scrollRef?: React.Ref<RNScrollView>
 }
 
 // Kills the 5x duplicated centering-wrapper-over-gradient recipe that used
@@ -37,6 +41,7 @@ export function PageShell({
   scroll = false,
   plain = false,
   backdrop,
+  scrollRef,
 }: PageShellProps) {
   const insets = useSafeAreaInsets()
   const navInsets = useNavInsets()
@@ -85,6 +90,7 @@ export function PageShell({
       {showBackdrop ? <AquaBackground plain={plain} /> : null}
       {scroll ? (
         <ScrollView
+          ref={scrollRef as never}
           flex={1}
           contentContainerStyle={
             { flexGrow: 1, paddingTop: padTop, paddingBottom: padBottom } as object

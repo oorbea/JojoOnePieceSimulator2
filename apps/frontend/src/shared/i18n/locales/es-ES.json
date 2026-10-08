@@ -64,6 +64,7 @@
     "home": "Inicio",
     "play": "Jugar",
     "profile": "Perfil",
+    "manual": "Manual",
     "admin": "Admin",
     "logOut": "Cerrar sesión",
     "installApp": "Instalar app"
@@ -783,6 +784,275 @@
     "characterDeleted": "Personaje eliminado",
     "characterPictureUploading": "Subiendo la foto. Esto tarda un momento.",
     "characterPictureFailed": "No se ha podido procesar la foto del personaje. Inténtalo de nuevo."
+  },
+  "manual": {
+    "title": "Manual de normas y convenios",
+    "intro": "Cómo funciona el juego, qué hace cada poder y los convenios que siguen los votantes. Los números y las tablas salen directamente de las reglas del propio juego.",
+    "index": {
+      "jump": "Ir a {{section}}"
+    },
+    "sections": {
+      "how": "Cómo se juega",
+      "modes": "Modos de juego",
+      "abilities": "Habilidades",
+      "odds": "Probabilidades del sorteo",
+      "effects": "Efectos de los poderes",
+      "battleIQ": "Coeficiente de batalla",
+      "conventions": "Convenios de combate",
+      "etiquette": "Etiqueta y honor"
+    },
+    "how": {
+      "intro": "Una partida se juega por rondas. A los jugadores se les reparten poderes (una alineación) y después todos votan el resultado de la ronda.",
+      "host": {
+        "title": "El anfitrión",
+        "text": "El anfitrión crea la sala y elige el modo, qué mangas están en juego (JoJo, One Piece o ambas), el tamaño de equipo, los bots y la velocidad del sorteo. Solo él puede empezar o cancelar la partida. Si el anfitrión se va, otro jugador conectado pasa a serlo al azar. Si no queda ningún jugador humano, la partida se cancela."
+      },
+      "draw": {
+        "title": "El sorteo",
+        "text": "A cada jugador se le reparte una alineación: Stand, Spin, Hamon, Fruta del Diablo, Haki y más, según las mangas en juego. El sorteo se muestra jugador por jugador."
+      },
+      "vote": {
+        "title": "La votación",
+        "text": "Todos votan en {{default}} segundos por defecto (el anfitrión puede fijar entre {{min}} y {{max}}). La votación se cierra antes si ya han votado todos los jugadores conectados. Puedes cambiar tu voto hasta que se cierre. Si no votas o te desconectas, tu voto es nulo: la ronda se decide con los votos emitidos."
+      },
+      "resolve": {
+        "title": "El resultado",
+        "text": "Gana la mayoría. El anfitrión puede añadir {{ext}} segundos a una votación abierta, tantas veces como haga falta."
+      },
+      "tie": {
+        "title": "Empates",
+        "text": "Un empate, incluida una ronda sin ningún voto, abre una única revotación con la papeleta vacía. Si la revotación también empata, decide un cara o cruz."
+      },
+      "skip": {
+        "title": "Saltar",
+        "text": "El sorteo y el resumen se saltan para todos en cuanto una mayoría estricta de los jugadores conectados lo pide."
+      }
+    },
+    "modes": {
+      "gauntlet": {
+        "title": "Gauntlet: todos contra la historia",
+        "text": "Cooperativo. Un equipo de {{min}} a {{max}} jugadores. Cada ronda es una parte de JoJo o una saga de One Piece, y todos votan Sobrevive o Cae para la etapa actual. Si más de la mitad vota Cae, la partida termina ahí con derrota; si más de la mitad vota Sobrevive, el equipo pasa a la siguiente etapa. Supera todas las etapas para ganar. Los poderes se reparten una sola vez, en la primera ronda, y tu equipo los conserva hasta el final."
+      },
+      "versus": {
+        "title": "Versus: equipo contra equipo",
+        "text": "Competitivo. {{teams}} equipos de {{min}} a {{max}} jugadores, siempre del mismo tamaño. Exactamente {{rounds}} rondas, cada una con un escenario aleatorio nuevo y alineaciones repartidas de nuevo. Todos votan al equipo que creen que gana la ronda, y puedes votar al tuyo. Gana la partida el equipo que gane más rondas. El escenario es solo el marco del combate y no influye en el resultado."
+      },
+      "bots": {
+        "title": "Bots",
+        "text": "Los bots solo existen en Versus, para completar equipos desiguales. Reciben poderes con las mismas reglas que los humanos y cuentan para la norma de no repetir. Votan al instante, al equipo cuyos poderes suman más."
+      },
+      "unique": {
+        "title": "Sin repetidos dentro de un equipo",
+        "text": "Un Stand o una Fruta del Diablo nunca se repite dentro del mismo equipo en la misma partida (Gauntlet) o ronda (Versus). Eso incluye a toda su familia de evolución: un equipo no puede tener a la vez Whitesnake y C-MOON, ni Gomu Gomu y Model Nika. El equipo rival en Versus saca de su propio grupo y sí puede repetir."
+      }
+    },
+    "abilities": {
+      "jojo": {
+        "title": "JoJo's Bizarre Adventure",
+        "text": "Stand, Spin, Hamon y coeficiente de batalla (Battle IQ)."
+      },
+      "onePiece": {
+        "title": "One Piece",
+        "text": "Forma Física, Fruta del Diablo, Maestría de la Fruta y los tres Haki: de Armadura, de Observación y del Rey."
+      },
+      "both": "Con ambas mangas en juego te puede tocar todo lo anterior, y algunos poderes llegan de una manga a la otra (mira Efectos de los poderes).",
+      "none": {
+        "title": "No sacar nada",
+        "text": "No sacar Stand o no sacar Fruta del Diablo es válido: puedes quedarte sin ninguno de los dos poderes de tu manga."
+      },
+      "coupled": {
+        "title": "Qué va con qué",
+        "text": "Primero se sortea la Fruta del Diablo y después su Maestría: sin fruta no hay Maestría, y toda fruta trae al menos Regular. El Spin y el Hamon son independientes del Stand y entre sí: puedes tener todos, cualquiera o ninguno."
+      },
+      "scales": {
+        "title": "Niveles, de menor a mayor",
+        "haki": "Haki (cada tipo)"
+      }
+    },
+    "odds": {
+      "intro": "Estas son las probabilidades al repartir los poderes, antes de aplicar los efectos. Los efectos solo suben estadísticas, así que el resultado final tira un poco más alto que estas tablas.",
+      "pool": {
+        "title": "Stand y Fruta del Diablo",
+        "text": "Cada Stand del grupo pesa 1 y «sin Stand» pesa {{stand}}: con N Stands en el grupo, cada uno tiene 1 posibilidad entre (N + {{stand}}), y no sacar ninguno tiene {{stand}} entre (N + {{stand}}). Las Frutas del Diablo funcionan igual, con un peso de «ninguna» de {{fruit}}. La rareza no cambia las probabilidades."
+      },
+      "mastery": {
+        "note": "Solo se reparte con Fruta del Diablo; sin ella es Ninguna."
+      },
+      "haki": {
+        "title": "Haki",
+        "text": "Primero se sortea qué Haki tienes (un conjunto) y luego un nivel para cada uno que tengas.",
+        "presence": "Probabilidad de tener cada tipo:",
+        "combos": "Probabilidad de cada conjunto:",
+        "level": "Nivel de cada Haki que tengas:"
+      },
+      "battleIQ": "El coeficiente de batalla tiene su propia sección."
+    },
+    "effects": {
+      "intro": "Algunos poderes cambian tus otras habilidades justo después del sorteo. Las reglas se aplican en orden y se repiten hasta que nada cambia. El sorteo muestra cada efecto en el momento en que aparece su causa.",
+      "stageNeeds": "{{stage}} pide {{stat}} {{level}}",
+      "ifYouDraw": "Si te toca {{name}}",
+      "outcome": {
+        "NONE": "{{stat}} {{level}}: no cambia nada",
+        "LEVEL_RAISED": "{{stat}} {{level}}: {{stat}} sube a {{after}}",
+        "EVOLVED": "{{stat}} {{level}}: evoluciona a {{power}}"
+      },
+      "evolutions": {
+        "title": "Evoluciones",
+        "text": "Un Stand o una Fruta del Diablo evoluciona cuando el nivel que lo impulsa (el Spin en los Stands, la Maestría en las frutas) es mayor que el que pide. Se convierte en la etapa más avanzada cuyo nivel queda cubierto. Si el nivel es menor que el que pide el poder, se sube el nivel hasta el suyo.",
+        "banned": "Las etapas que la sala ha vetado nunca son destino: llegas a la etapa más avanzada que esté permitida."
+      },
+      "tie": {
+        "FURTHEST_EVOLVED": "Cuando dos etapas piden el mismo nivel (Tusk: Act 2 y Act 3 piden ambas Spin Áureo) gana siempre la más evolucionada. No hay cara o cruz."
+      },
+      "floors": {
+        "title": "Niveles mínimos",
+        "text": "Algunos poderes exigen un mínimo en otra habilidad. Si te tocó menos, se sube a ese mínimo. Nunca se baja.",
+        "line": "sube {{stat}} a {{level}} o superior",
+        "cross": "Entre mangas",
+        "crossNote": "Las reglas entre mangas llegan de una manga a la otra, así que solo se aplican cuando están en juego las dos."
+      },
+      "family": {
+        "title": "Uno por familia",
+        "text": "Que te toque un poder retira a toda su familia de evolución del grupo de tu equipo, así que un compañero nunca puede tener la forma base ni una evolución del mismo Stand o fruta."
+      }
+    },
+    "battleIQ": {
+      "intro": "El coeficiente de batalla (Battle IQ) es la mente táctica de un luchador de JoJo: una puntuación de 0 a 255 que solo se reparte cuando JoJo está en juego. Se muestra como número y como banda.",
+      "bands": {
+        "title": "Bandas",
+        "text": "Las puntuaciones siguen la clasificación WAIS-IV. Dentro de la banda más alta (el tope es {{top}}) cuanto mayor es la puntuación, más rara es."
+      },
+      "convention": {
+        "title": "Cómo valorarlo",
+        "text": "El coeficiente de batalla representa la estrategia, no el poder bruto. Pesa más en combates igualados: una diferencia de dos bandas o más puede justificar una victoria sobre un rival algo más fuerte. Los bots también lo cuentan, sumándolo al total de su equipo."
+      }
+    },
+    "conventions": {
+      "intro": "Los votos son humanos, así que todos deberíamos discutir con las mismas reglas de base. Estos convenios dicen quién puede ver, tocar o vencer a quién.",
+      "judgementNote": "Los convenios marcados «A criterio de los votantes» no tienen respuesta automática: valóralos caso por caso.",
+      "judgement": "A criterio de los votantes",
+      "categories": {
+        "VISIBILITY": "Visibilidad",
+        "CONTACT": "Tocar y dañar",
+        "TIME": "Tiempo",
+        "WILL": "Fuerza de voluntad",
+        "WEAKNESS": "Debilidades",
+        "NULLIFICATION": "Anular poderes",
+        "SUPREMACY": "Spin Infinito y Stands absolutos"
+      },
+      "labels": {
+        "actors": "Quién",
+        "targets": "Contra",
+        "overcomers": "Pueden superarlo",
+        "theStand": "El Stand",
+        "immune": "No afecta a",
+        "attenuated": "Lo suaviza un escalón"
+      },
+      "absolute": {
+        "title": "{{stand}} es absoluto",
+        "text": "Nada vence a {{stand}} salvo los poderes que se indican aquí."
+      },
+      "items": {
+        "SEE_STANDS": {
+          "title": "Ver Stands",
+          "text": "Solo los usuarios de Stand, de Spin y de Haki de Observación pueden ver un Stand. Los demás ni lo ven ni pueden esquivarlo."
+        },
+        "TOUCH_LOGIA": {
+          "title": "Tocar a un Logia",
+          "text": "Un usuario de Logia es intangible. Solo estos poderes pueden tocarlo."
+        },
+        "TOUCH_LOGIA_HAMON": {
+          "title": "Hamon contra un Logia",
+          "text": "El Hamon solo toca a un Logia cuando tiene sentido que la energía solar lo alcance. Los votantes lo deciden caso por caso."
+        },
+        "DAMAGE_STAND": {
+          "title": "Dañar a un Stand",
+          "text": "A un Stand lo puede dañar otro Stand, el Haki de Armadura, el Haki del Rey, el elemento de un Logia o cualquier nivel de Spin."
+        },
+        "TIME_STOP": {
+          "title": "Paradores del tiempo",
+          "text": "Estos Stands paran o borran el tiempo. Mientras lo hacen, solo actúan quienes pueden moverse dentro de él."
+        },
+        "MOVE_IN_TIME_STOP": {
+          "title": "Moverse en el tiempo parado",
+          "text": "Otro parador del tiempo, el Spin Infinito o el Haki del Rey Yonko+ pueden moverse mientras el tiempo está parado."
+        },
+        "MADE_IN_HEAVEN_STOPPED_BY": {
+          "title": "Detener a Made in Heaven",
+          "text": "Made in Heaven acelera el tiempo en lugar de pararlo. Un parador del tiempo puede detenerlo unos segundos, más cortos de lo normal."
+        },
+        "MADE_IN_HEAVEN_KEEP_PACE": {
+          "title": "Seguir el ritmo a Made in Heaven",
+          "text": "El Spin Infinito puede seguir el ritmo de su aceleración."
+        },
+        "MADE_IN_HEAVEN_SLOWED_BY": {
+          "title": "Ralentizar a Made in Heaven",
+          "text": "El Haki del Rey Yonko+ frena su aceleración."
+        },
+        "MADE_IN_HEAVEN_TRACKED_BY": {
+          "title": "Seguir la pista a Made in Heaven",
+          "text": "El Haki de Observación Yonko+ ve por dónde se mueve y puede predecir dónde está."
+        },
+        "CONQUEROR_KNOCKOUT": {
+          "title": "Haki del Rey: noquear",
+          "text": "Si el Haki del Rey del usuario está al menos {{gap}} niveles por encima del tuyo, quedas noqueado. No tener ninguno cuenta como el nivel más bajo. El Spin Infinito lo resiste y el Hamon Perfecto lo suaviza un escalón."
+        },
+        "CONQUEROR_HINDER": {
+          "title": "Haki del Rey: presión",
+          "text": "Exactamente {{gap}} nivel por encima del tuyo solo dificulta moverse. El Spin Infinito lo resiste y el Hamon Perfecto lo suaviza un escalón: un noqueo pasa a presión, y la presión pasa a nada."
+        },
+        "WATER_WEAKNESS": {
+          "title": "El agua y las Frutas del Diablo",
+          "text": "Weather Report puede debilitar a los usuarios de Fruta del Diablo."
+        },
+        "YAMI_NULLIFIES": {
+          "title": "Yami Yami no mi",
+          "text": "Tocar al usuario, o a su Stand, anula las Frutas del Diablo y los Stands mientras dure el contacto. No anula el Spin, el Hamon ni el Haki, y puede tocar a usuarios de Logia. No puede anular los poderes que figuran en No afecta a."
+        },
+        "SPIN_INFINITE_SUPREME": {
+          "title": "Spin Infinito",
+          "text": "El Spin Infinito vence cualquier defensa salvo las que figuran en No afecta a."
+        },
+        "SPIN_INFINITE_DUEL": {
+          "title": "Spin Infinito contra Spin Infinito",
+          "text": "No hay un ganador evidente: los votantes deciden quién pelea mejor."
+        }
+      }
+    },
+    "subject": {
+      "anyStand": "Usuarios de Stand",
+      "anyFruit": "Usuarios de Fruta del Diablo",
+      "fruitType": "Usuarios de fruta {{types}}",
+      "slotAny": "{{stat}} (cualquier nivel)",
+      "slotMin": "{{stat}} {{level}} o superior"
+    },
+    "groups": {
+      "TIME_STOPPERS": "Paradores del tiempo ({{names}})",
+      "ABSOLUTE_STANDS": "Stands absolutos ({{names}})"
+    },
+    "etiquette": {
+      "intro": "Unas normas de honor para que la votación sea divertida para todos.",
+      "honest": {
+        "title": "Vota con honestidad",
+        "a": "Vota lo que pasaría según el manga y los convenios, no lo que te conviene. Votar a tu propio equipo está bien si de verdad crees que gana.",
+        "b": "Nada de votar en bloque por amistad o por venganza de una ronda a otra."
+      },
+      "respect": {
+        "title": "Respeta a los demás votantes",
+        "a": "No metas prisa ni presiones a nadie para que vote.",
+        "b": "Acepta la revotación y el cara o cruz sin quejarte."
+      },
+      "host": {
+        "title": "Juego limpio del anfitrión",
+        "a": "No canceles una partida solo porque tu equipo va perdiendo.",
+        "b": "No pidas saltar el sorteo mientras alguien aún no lo ha visto."
+      },
+      "spoilers": {
+        "title": "Sin spoilers",
+        "a": "No hagas spoilers del manga a quien no lo haya leído, salvo que lo pida.",
+        "b": "Si quieres hablar de un giro de la trama, pregunta antes."
+      }
+    }
   },
   "notFound": {
     "title": "Esta pantalla no existe.",

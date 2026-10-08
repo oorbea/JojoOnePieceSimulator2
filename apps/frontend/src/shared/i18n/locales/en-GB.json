@@ -64,6 +64,7 @@
     "home": "Home",
     "play": "Play",
     "profile": "Profile",
+    "manual": "Manual",
     "admin": "Admin",
     "logOut": "Log out",
     "installApp": "Install app"
@@ -783,6 +784,275 @@
     "characterDeleted": "Character deleted",
     "characterPictureUploading": "Uploading picture. This takes a moment.",
     "characterPictureFailed": "Couldn't process the Character's picture. Please try again."
+  },
+  "manual": {
+    "title": "Rules and conventions",
+    "intro": "How the game works, what the powers do and the conventions voters follow. The numbers and tables come straight from the game's own rules.",
+    "index": {
+      "jump": "Go to {{section}}"
+    },
+    "sections": {
+      "how": "How to play",
+      "modes": "Game modes",
+      "abilities": "Abilities",
+      "odds": "Draw odds",
+      "effects": "Power effects",
+      "battleIQ": "Battle IQ",
+      "conventions": "Combat conventions",
+      "etiquette": "Etiquette and honour"
+    },
+    "how": {
+      "intro": "A game is played in rounds. Players are dealt powers (a loadout), then everyone votes on the outcome of the round.",
+      "host": {
+        "title": "The host",
+        "text": "The host creates the lobby and chooses the mode, which manga are in play (JoJo, One Piece or both), the team size, bots and how fast the reveal plays. Only the host can start or cancel the game. If the host leaves, another connected player becomes host at random. If no human player is left, the game is cancelled."
+      },
+      "draw": {
+        "title": "The draw",
+        "text": "Each player is dealt a loadout: Stand, Spin, Hamon, Devil Fruit, Haki and more, depending on the manga in play. The reveal plays player by player."
+      },
+      "vote": {
+        "title": "The vote",
+        "text": "Everyone votes within {{default}} seconds by default (the host can set anything from {{min}} to {{max}}). The vote closes early once every connected player has voted. You can change your vote until it closes. If you do not vote, or you disconnect, your vote is null: the round is decided by the votes that were cast."
+      },
+      "resolve": {
+        "title": "The result",
+        "text": "The majority wins. The host can add {{ext}} seconds to an open vote, as many times as needed."
+      },
+      "tie": {
+        "title": "Ties",
+        "text": "A tie, including a round with no votes at all, opens one revote on a clean ballot. If the revote ties too, a coin flip decides."
+      },
+      "skip": {
+        "title": "Skipping",
+        "text": "The reveal and the summary screen are skipped for everyone as soon as a strict majority of the connected players asks to skip."
+      }
+    },
+    "modes": {
+      "gauntlet": {
+        "title": "Gauntlet: everyone against the story",
+        "text": "Cooperative. One team of {{min}} to {{max}} players. Each round is a JoJo part or a One Piece saga, and everyone votes Survive or Fall for the current stage. If more than half vote Fall, the run ends there in defeat; if more than half vote Survive, the team moves on to the next stage. Clear every stage to win. Powers are dealt once, in the first round, and your team keeps them to the end."
+      },
+      "versus": {
+        "title": "Versus: team against team",
+        "text": "Competitive. {{teams}} teams of {{min}} to {{max}} players, always the same size. Exactly {{rounds}} rounds, each with a new random stage and freshly dealt loadouts. Everyone votes for the team they think wins the round, and you may vote for your own. The team that wins more rounds wins the match. The stage is only the setting of the fight and has no effect on the result."
+      },
+      "bots": {
+        "title": "Bots",
+        "text": "Bots only exist in Versus, to fill uneven teams. They are dealt powers under the same rules as humans and count towards the no-repeat rule. They vote straight away, for the team whose powers add up to more."
+      },
+      "unique": {
+        "title": "No repeats inside a team",
+        "text": "A Stand or Devil Fruit never repeats inside the same team in the same game (Gauntlet) or round (Versus). That includes its whole evolution family: a team cannot hold both Whitesnake and C-MOON, or both Gomu Gomu and Model Nika. The rival team in Versus draws from its own pool and can repeat."
+      }
+    },
+    "abilities": {
+      "jojo": {
+        "title": "JoJo's Bizarre Adventure",
+        "text": "Stand, Spin, Hamon and Battle IQ."
+      },
+      "onePiece": {
+        "title": "One Piece",
+        "text": "Physical Form, Devil Fruit, Fruit Mastery and the three Haki: Armament, Observation and Conqueror's."
+      },
+      "both": "With both manga in play you can be dealt everything above, and some powers reach from one manga into the other (see Power effects).",
+      "none": {
+        "title": "Drawing nothing",
+        "text": "Drawing no Stand or no Devil Fruit is valid: you can end up with neither power from your manga."
+      },
+      "coupled": {
+        "title": "What goes with what",
+        "text": "A Devil Fruit is drawn first and its Mastery second: no fruit means no Mastery, and any fruit comes with at least Regular. Spin and Hamon are independent of the Stand and of each other: you can have all, any or none of them."
+      },
+      "scales": {
+        "title": "Levels, lowest to highest",
+        "haki": "Haki (each type)"
+      }
+    },
+    "odds": {
+      "intro": "These are the chances when powers are dealt, before power effects. Effects only ever raise a stat, so final results lean a little higher than these tables.",
+      "pool": {
+        "title": "Stand and Devil Fruit",
+        "text": "Every Stand in the pool weighs 1 and 'no Stand' weighs {{stand}}: with N Stands in the pool each one has a 1 in (N + {{stand}}) chance, and drawing none has {{stand}} in (N + {{stand}}). Devil Fruits work the same way, with a 'none' weight of {{fruit}}. Rarity does not change the odds."
+      },
+      "mastery": {
+        "note": "Only dealt with a Devil Fruit; without one it is None."
+      },
+      "haki": {
+        "title": "Haki",
+        "text": "First you are dealt which Haki you have (a set), then a level for each one you have.",
+        "presence": "Chance of having each type:",
+        "combos": "Chance of each set:",
+        "level": "Level of each Haki you have:"
+      },
+      "battleIQ": "Battle IQ has its own section."
+    },
+    "effects": {
+      "intro": "Some powers change your other abilities right after the draw. Rules apply in order and repeat until nothing changes. The reveal plays each effect at the moment its cause shows up.",
+      "stageNeeds": "{{stage}} needs {{stat}} {{level}}",
+      "ifYouDraw": "If you are dealt {{name}}",
+      "outcome": {
+        "NONE": "{{stat}} {{level}}: nothing changes",
+        "LEVEL_RAISED": "{{stat}} {{level}}: {{stat}} is raised to {{after}}",
+        "EVOLVED": "{{stat}} {{level}}: evolves into {{power}}"
+      },
+      "evolutions": {
+        "title": "Evolutions",
+        "text": "A Stand or Devil Fruit evolves when the level that drives it (Spin for Stands, Fruit Mastery for fruits) is higher than the level it asks for. It becomes the furthest stage whose level is covered. If the level is lower than the power asks for, the level is raised to it instead.",
+        "banned": "Stages the lobby has banned are never a target: you land on the furthest stage that is allowed."
+      },
+      "tie": {
+        "FURTHEST_EVOLVED": "When two stages ask for the same level (Tusk: Act 2 and Act 3 both ask for Golden Spin) the more evolved one always wins. There is no coin flip."
+      },
+      "floors": {
+        "title": "Minimum levels",
+        "text": "Some powers demand a minimum in another ability. If you were dealt less, it is raised to that minimum. It is never lowered.",
+        "line": "raises {{stat}} to {{level}} or higher",
+        "cross": "Cross-verse",
+        "crossNote": "Cross-verse rules reach from one manga into the other, so they only apply when both manga are in play."
+      },
+      "family": {
+        "title": "One per family",
+        "text": "Being dealt a power removes its whole evolution family from your team's pool, so a teammate can never hold the base form or an evolution of the same Stand or fruit."
+      }
+    },
+    "battleIQ": {
+      "intro": "Battle IQ is the tactical mind of a JoJo fighter: a score from 0 to 255, dealt only when JoJo is in play. It is shown as a number and a band.",
+      "bands": {
+        "title": "Bands",
+        "text": "Scores follow the WAIS-IV classification. Inside the top band (the cap is {{top}}) the higher the score, the rarer it is."
+      },
+      "convention": {
+        "title": "How to weigh it",
+        "text": "Battle IQ stands for strategy, not raw power. It matters most in close fights: a gap of two bands or more can justify a win over a somewhat stronger opponent. Bots count it too, adding it to their team's total."
+      }
+    },
+    "conventions": {
+      "intro": "Votes are human, so everyone should argue from the same ground rules. These conventions say who can see, touch or beat whom.",
+      "judgementNote": "Conventions marked 'For the voters to judge' have no automatic answer: weigh them case by case.",
+      "judgement": "For the voters to judge",
+      "categories": {
+        "VISIBILITY": "Visibility",
+        "CONTACT": "Touching and hurting",
+        "TIME": "Time",
+        "WILL": "Willpower",
+        "WEAKNESS": "Weaknesses",
+        "NULLIFICATION": "Cancelling powers",
+        "SUPREMACY": "Spin Infinite and absolute Stands"
+      },
+      "labels": {
+        "actors": "Who",
+        "targets": "Against",
+        "overcomers": "Can overcome it",
+        "theStand": "The Stand",
+        "immune": "Not affected",
+        "attenuated": "Softened one step by"
+      },
+      "absolute": {
+        "title": "{{stand}} is absolute",
+        "text": "Nothing beats {{stand}} except the powers listed here."
+      },
+      "items": {
+        "SEE_STANDS": {
+          "title": "Seeing Stands",
+          "text": "Only Stand users, Spin users and Observation Haki users can see a Stand. Everyone else can neither see it nor dodge it."
+        },
+        "TOUCH_LOGIA": {
+          "title": "Touching a Logia",
+          "text": "A Logia user is intangible. Only these powers can touch them."
+        },
+        "TOUCH_LOGIA_HAMON": {
+          "title": "Hamon against a Logia",
+          "text": "Hamon only touches a Logia when it makes sense for solar energy to reach it. The voters decide case by case."
+        },
+        "DAMAGE_STAND": {
+          "title": "Hurting a Stand",
+          "text": "A Stand can be hurt by another Stand, Armament Haki, Conqueror's Haki, a Logia's element or any level of Spin."
+        },
+        "TIME_STOP": {
+          "title": "Time stoppers",
+          "text": "These Stands stop or erase time. While they do, only those who can move inside it can act."
+        },
+        "MOVE_IN_TIME_STOP": {
+          "title": "Moving in stopped time",
+          "text": "Another time stopper, Spin Infinite or Conqueror's Haki Yonko+ can move while time is stopped."
+        },
+        "MADE_IN_HEAVEN_STOPPED_BY": {
+          "title": "Stopping Made in Heaven",
+          "text": "Made in Heaven speeds time up instead of stopping it. A time stopper can halt it for a few seconds, shorter than usual."
+        },
+        "MADE_IN_HEAVEN_KEEP_PACE": {
+          "title": "Keeping up with Made in Heaven",
+          "text": "Spin Infinite can keep up with its acceleration."
+        },
+        "MADE_IN_HEAVEN_SLOWED_BY": {
+          "title": "Slowing Made in Heaven",
+          "text": "Conqueror's Haki Yonko+ slows its acceleration down."
+        },
+        "MADE_IN_HEAVEN_TRACKED_BY": {
+          "title": "Tracking Made in Heaven",
+          "text": "Observation Haki Yonko+ sees where it moves and can predict where it is."
+        },
+        "CONQUEROR_KNOCKOUT": {
+          "title": "Conqueror's Haki: knockout",
+          "text": "If the user's Conqueror's Haki is at least {{gap}} levels above yours, you are knocked out. Having none counts as the lowest level. Spin Infinite resists it and Hamon Perfect softens it one step."
+        },
+        "CONQUEROR_HINDER": {
+          "title": "Conqueror's Haki: pressure",
+          "text": "Exactly {{gap}} level above yours only makes it hard to move. Spin Infinite resists it and Hamon Perfect softens it one step: a knockout becomes pressure, and pressure becomes nothing."
+        },
+        "WATER_WEAKNESS": {
+          "title": "Water and Devil Fruits",
+          "text": "Weather Report can weaken Devil Fruit users."
+        },
+        "YAMI_NULLIFIES": {
+          "title": "Yami Yami no mi",
+          "text": "Touching the user, or their Stand, cancels Devil Fruits and Stands for as long as the contact lasts. It does not cancel Spin, Hamon or Haki, and it can touch Logia users. It cannot cancel the powers listed under Not affected."
+        },
+        "SPIN_INFINITE_SUPREME": {
+          "title": "Spin Infinite",
+          "text": "Spin Infinite beats any defence except the ones listed under Not affected."
+        },
+        "SPIN_INFINITE_DUEL": {
+          "title": "Spin Infinite against Spin Infinite",
+          "text": "There is no obvious winner: the voters decide who fights better."
+        }
+      }
+    },
+    "subject": {
+      "anyStand": "Stand users",
+      "anyFruit": "Devil Fruit users",
+      "fruitType": "{{types}} fruit users",
+      "slotAny": "{{stat}} (any level)",
+      "slotMin": "{{stat}} {{level}} or higher"
+    },
+    "groups": {
+      "TIME_STOPPERS": "Time stoppers ({{names}})",
+      "ABSOLUTE_STANDS": "Absolute Stands ({{names}})"
+    },
+    "etiquette": {
+      "intro": "A few rules of honour that keep the vote fun for everyone.",
+      "honest": {
+        "title": "Vote honestly",
+        "a": "Vote for what would happen according to the manga and the conventions, not for what suits you. Voting for your own team is fine when you truly think it wins.",
+        "b": "No block voting out of friendship or revenge from one round to the next."
+      },
+      "respect": {
+        "title": "Respect the other voters",
+        "a": "Do not rush or pressure anyone to vote.",
+        "b": "Accept the revote and the coin flip without complaint."
+      },
+      "host": {
+        "title": "Host fair play",
+        "a": "Do not cancel a game just because your team is losing.",
+        "b": "Do not ask to skip the reveal while someone has not seen it yet."
+      },
+      "spoilers": {
+        "title": "No spoilers",
+        "a": "Do not spoil the manga for anyone who has not read it, unless they ask.",
+        "b": "If you want to talk about a plot twist, ask first."
+      }
+    }
   },
   "notFound": {
     "title": "This screen doesn't exist.",
