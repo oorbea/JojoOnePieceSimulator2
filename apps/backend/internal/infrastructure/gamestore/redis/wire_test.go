@@ -687,8 +687,8 @@ func TestEncodeDecodeRoundTrip_PowerEffects(t *testing.T) {
 		}
 		return f
 	}
-	acto1 := mkStand(70, "Tusk: Acto 1", nil)
-	acto4 := mkStand(71, "Tusk: Acto 4", acto1)
+	acto1 := mkStand(70, "Tusk: Act 1", nil)
+	acto4 := mkStand(71, "Tusk: Act 4", acto1)
 	gomu := mkFruit(80, "Gomu Gomu no mi", enums.Paramecia)
 	nika := mkFruit(81, "Hito Hito no mi: Model Nika", enums.MythicalZoan).WithEvolvesFrom(gomu)
 
@@ -727,7 +727,7 @@ func TestEncodeDecodeRoundTrip_PowerEffects(t *testing.T) {
 	if !reflect.DeepEqual(got.Effects(), effects) {
 		t.Fatalf("effects lost or reordered across decode:\n got  %+v\n want %+v", got.Effects(), effects)
 	}
-	if got.DrawnStand() == nil || got.DrawnStand().Name() != "Tusk: Acto 1" {
+	if got.DrawnStand() == nil || got.DrawnStand().Name() != "Tusk: Act 1" {
 		t.Fatalf("drawn stand lost across decode, got %v", got.DrawnStand())
 	}
 	if parent := got.DevilFruit().EvolvesFrom(); parent == nil || parent.Name() != "Gomu Gomu no mi" {

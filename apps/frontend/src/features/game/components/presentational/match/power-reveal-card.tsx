@@ -49,7 +49,7 @@ type Props = {
   /** The "algo esta pasando" narrator line - only shown during 'evolving'. */
   evolveMessage?: string
   /** What triggered a power effect's evolution ("¡Con Spin Infinito, Tusk:
-   * Acto 1 evoluciona a Tusk: Acto 4!"), shown under the participant's name
+   * Act 1 evoluciona a Tusk: Act 4!"), shown under the participant's name
    * for the whole effect beat. The card is a Modal that covers the stage's
    * own narrator, so the line has to live here. Undefined for the slot's own
    * evolution. */

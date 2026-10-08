@@ -30,9 +30,9 @@ func TestNewLoadout_FruitRequiresAtLeastRegularMastery(t *testing.T) {
 }
 
 func TestNewLoadout_StandSpinTierIsAFloor(t *testing.T) {
-	// Prod's catalogue names it "Tusk: Acto 4" - the rule once matched
+	// Prod's catalogue names it "Tusk: Act 4" - the rule once matched
 	// "Tusk ACT4" and so never fired there.
-	tusk := mustStand(t, 1, "Tusk: Acto 4", enums.Legendary)
+	tusk := mustStand(t, 1, "Tusk: Act 4", enums.Legendary)
 
 	if _, err := game.NewLoadout(tusk, nil, enums.SpinBasic, enums.HamonNone, enums.FruitMasteryNone,
 		enums.HakiPrivate, enums.HakiPrivate, enums.HakiPrivate, enums.PhysicalFormPrivate); err != game.ErrPowerEffectFloorViolated {

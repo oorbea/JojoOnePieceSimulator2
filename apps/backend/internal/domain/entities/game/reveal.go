@@ -195,7 +195,7 @@ type RevealPlayer struct {
 	StandEvolutionSteps int
 	// FruitEvolutionSteps is StandEvolutionSteps for the DevilFruit slot: the
 	// DRAWN fruit's EvolutionDepth() - a Model Nika drawn directly (depth 1)
-	// is revealed from Gomu Gomu no mi, like Tusk: Acto 4 from Acto 1.
+	// is revealed from Gomu Gomu no mi, like Tusk: Act 4 from Act 1.
 	// Frontend mirror: RevealPlayer.fruitEvolutionSteps.
 	FruitEvolutionSteps int
 	// Effects are the Loadout's power effects, in order. Each plays its own

@@ -69,9 +69,9 @@ function fruit(
   }
 }
 
-const acto1 = stand('acto1', 'Tusk: Acto 1')
-const acto2 = stand('acto2', 'Tusk: Acto 2', acto1)
-const acto4 = stand('acto4', 'Tusk: Acto 4', stand('acto3', 'Tusk: Acto 3', acto2))
+const acto1 = stand('acto1', 'Tusk: Act 1')
+const acto2 = stand('acto2', 'Tusk: Act 2', acto1)
+const acto4 = stand('acto4', 'Tusk: Act 4', stand('acto3', 'Tusk: Act 3', acto2))
 
 function snapshotWith(loadout: Record<string, unknown>) {
   return {
@@ -212,10 +212,10 @@ describe('RevealStage - power effects', () => {
     // The stage's own narrator and the card's cause line both carry it; the card
     // (a Modal) is what covers the stage on screen.
     expect(
-      screen.getAllByText('With Infinite Spin, Tusk: Acto 2 evolves into Tusk: Acto 4!').length
+      screen.getAllByText('With Infinite Spin, Tusk: Act 2 evolves into Tusk: Act 4!').length
     ).toBeGreaterThan(0)
-    expect(screen.getAllByText('Tusk: Acto 2').length).toBeGreaterThan(0)
-    expect(screen.queryByText('Tusk: Acto 4')).toBeNull()
+    expect(screen.getAllByText('Tusk: Act 2').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Tusk: Act 4')).toBeNull()
   })
 
   it('lands a Stand evolution on the evolved form with the evolution stamp', async () => {
@@ -238,7 +238,7 @@ describe('RevealStage - power effects', () => {
       stage(snapshotWith(loadout), { phase: 'effectLand', effectsApplied: 1 })
     )
 
-    expect(screen.getAllByText('Tusk: Acto 4').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Tusk: Act 4').length).toBeGreaterThan(0)
     expect(screen.getByText('EVOLUTION!')).toBeTruthy()
   })
   it('walks a DevilFruit evolution the same way: Gomu Gomu no mi first, Model Nika once landed', async () => {

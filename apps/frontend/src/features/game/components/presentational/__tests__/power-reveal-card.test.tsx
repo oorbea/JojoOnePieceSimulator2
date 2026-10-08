@@ -138,16 +138,16 @@ describe('PowerRevealCard', () => {
       <PowerRevealCard
         visible
         kind="stand"
-        stand={stand({ name: 'Tusk: Acto 2' })}
+        stand={stand({ name: 'Tusk: Act 2' })}
         participantName="jotaro"
         onSkip={jest.fn()}
         evolvePhase="base"
-        causeLine="With Infinite Spin, Tusk: Acto 2 evolves into Tusk: Acto 4!"
+        causeLine="With Infinite Spin, Tusk: Act 2 evolves into Tusk: Act 4!"
       />
     )
 
     expect(
-      screen.getByText('With Infinite Spin, Tusk: Acto 2 evolves into Tusk: Acto 4!')
+      screen.getByText('With Infinite Spin, Tusk: Act 2 evolves into Tusk: Act 4!')
     ).toBeTruthy()
     expect(screen.getByText('jotaro')).toBeTruthy()
   })

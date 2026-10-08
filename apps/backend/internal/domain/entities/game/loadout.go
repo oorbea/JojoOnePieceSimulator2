@@ -18,7 +18,7 @@ var (
 // game (Gauntlet) or a single round (Versus). Spin and Hamon are
 // independent of the Stand and of each other - a player can hold any
 // combination of the three - except where a power demands a floor (see
-// power_effects.go: Tusk: Acto 4 forces SpinInfinite, a Zoan raises Physical
+// power_effects.go: Tusk: Act 4 forces SpinInfinite, a Zoan raises Physical
 // Form, ...). FruitMastery is coupled to DevilFruit: no fruit forces
 // FruitMasteryNone, any fruit forces at least FruitMasteryRegular.
 // NewLoadout enforces both regardless of how the values were produced
