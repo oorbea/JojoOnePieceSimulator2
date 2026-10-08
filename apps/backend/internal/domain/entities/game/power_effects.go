@@ -99,12 +99,16 @@ func fruitMasteryTier(d *powers.DevilFruit) (enums.FruitMastery, bool) {
 	return t, ok
 }
 
-// PowerEffectRuleNames lists every power name (normalized) the rule tables
-// refer to, for the catalogue test that checks they exist.
+// PowerEffectRuleNames lists every power name (normalized) the rule tables and
+// the combat conventions refer to, for the catalogue test that checks they
+// exist.
 func PowerEffectRuleNames() []string {
 	set := map[string]struct{}{
 		nameHermitPurple: {},
 		nameKingCrimson:  {},
+	}
+	for _, n := range ConventionPowerNames() {
+		set[n] = struct{}{}
 	}
 	for n := range standSpinTiers {
 		set[n] = struct{}{}
