@@ -14,7 +14,10 @@ Monorepo-ish layout, but **not** a real monorepo:
 - `apps/frontend` — Expo PWA, standalone pnpm project (own lockfile, no root workspace)
 - `deployments/` — Dockerfiles + docker-compose
 
+**Pendiente de hacer: [[TODO]]** (única fuente de verdad; consultarla al empezar y actualizarla al terminar).
+
 See:
+- [[TODO]] — todo lo pendiente, auditado contra el código
 - [[backend-contract]] — API shape, auth, caching, enums
 - [[frontend-stack]] — full frontend stack, config decisions, gotchas
 - [[docker-setup]] — dev/prod images, compose wiring
