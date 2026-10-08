@@ -37,3 +37,6 @@ go.work.sum
 apps/backend/db/seed/catalog/snapshot.json
 apps/backend/db/seed/catalog/pending.json
 apps/backend/db/seed/catalog/sources.suggested.json
+
+# Obsidian per-machine UI state
+ObsidianVault/.obsidian/workspace.json
