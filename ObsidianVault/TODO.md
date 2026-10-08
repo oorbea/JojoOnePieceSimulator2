@@ -38,7 +38,6 @@ Formato: `- [ ] item — contexto breve ([[nota]])`.
 - [ ] Hoja de instrucciones iOS "Compartir → Añadir a inicio" ([[pwa-movil-2026-10-08]])
 - [ ] Regenerar swagger `apps/backend/docs` (y `-race` en CI para el test de concurrencia de game service) ([[pwa-movil-2026-10-08]], [[gameplay-application-layer]])
 
-- [ ] **BUG** Drag-to-move no funciona (verificado solo en escritorio con eventos sintéticos; reproducir en móvil y escritorio real) ([[game-lobby-todo]])
 - [ ] **BUG** Tooltips: se quedan flotando (p. ej. el de borrar un power); el scroll-hide no basta ([[norma-tooltips-y-ayuda-contextual]])
 - [ ] Dejar todo soportado para nativo (iOS/Android) aunque de momento solo se publique la PWA: no introducir APIs solo-web sin rama nativa ([[frontend-stack]])
 
@@ -62,6 +61,8 @@ Pendiente de respuesta del dueño; se mueve a sección 1 si falla o se borra si 
 - [ ] Auto-avance de 6 s + Skip en partida real ([[game-round-result-2026-08-28]])
 - [ ] Tusk evolucionando en vivo con datos de prod (tras desplegar 00024) ([[gameplay-power-effects]])
 - [ ] Foco con lector de pantalla en "Cargar más" en build nativo ([[catalogue-pagination]])
+
+- [ ] Drag-to-move en móvil físico (táctil) y host arrastrando a OTRO jugador: en web solo se verificó ratón arrastrando a uno mismo, ambos sentidos ([[game-lobby-frontend]])
 
 ## 4. Limitaciones conocidas y aceptadas (no son tareas, no tocar sin decisión)
 
