@@ -321,7 +321,7 @@ func slotAtLeast(slot enums.LoadoutSlot, min int) func(*effectState) (string, bo
 // satisfy a floor the one revealed earliest in the sorteo gets the credit.
 var statFloorRules = []statFloorRule{
 	{false, enums.SlotStand, enums.SlotHamon, int(enums.HamonBasic), standNamed(nameHermitPurple)},
-	{true, enums.SlotStand, enums.SlotObservationHaki, int(enums.HakiYonkoCommander), standNamed(nameKingCrimson)},
+	{true, enums.SlotStand, enums.SlotObservationHaki, int(enums.HakiYonkoPlus), standNamed(nameKingCrimson)},
 	{false, enums.SlotDevilFruit, enums.SlotPhysicalForm, int(enums.PhysicalFormMarineCaptain), fruitTypeIn(enums.MythicalZoan, enums.AncientZoan)},
 	{false, enums.SlotDevilFruit, enums.SlotPhysicalForm, int(enums.PhysicalFormStrongFishman), fruitTypeIn(enums.Zoan)},
 	{true, enums.SlotDevilFruit, enums.SlotHamon, int(enums.HamonAdvanced), fruitNamed(nameNika)},
@@ -383,18 +383,15 @@ type evoCandidate struct {
 	id    string
 }
 
-// pickEvolution returns the idx of the candidate with the highest tier.
-// covers is the tier the Spin/Mastery reaches.
-//
-// When several candidates share that best tier and it equals covers exactly
-// (Tusk: Act 1 + GOLDEN spin: Act 2 and Act 3 are both GOLDEN), the pick is
-// random, as in V1. When covers exceeds it - the stages above were banned, so
-// the Spin outgrows every allowed one - the furthest-evolved candidate wins
-// deterministically, so the Stand lands in one hop instead of wandering
-// through its siblings. Randomness is only consumed in the first case, so
-// LoadoutBuilder's pinned draw order is unaffected. Candidates are sorted so
-// the result never depends on catalogue order.
-func pickEvolution(cands []evoCandidate, covers int, rng RandomSource) (int, bool) {
+// pickEvolution returns the idx of the candidate with the highest tier. When
+// several candidates share that tier (Tusk: Act 1 + GOLDEN spin: Act 2 and
+// Act 3 are both GOLDEN) the furthest-evolved one wins, so the outcome is
+// always deterministic (owner decision 2026-10-09; V1 flipped a coin here) and
+// no randomness is consumed. The same rule covers the Spin outgrowing every
+// allowed stage (the ones above were banned): the Stand lands in one hop
+// instead of wandering through its siblings. Candidates are sorted so the
+// result never depends on catalogue order.
+func pickEvolution(cands []evoCandidate) (int, bool) {
 	if len(cands) == 0 {
 		return 0, false
 	}
@@ -419,10 +416,7 @@ func pickEvolution(cands []evoCandidate, covers int, rng RandomSource) (int, boo
 		}
 		return top[i].id < top[j].id
 	})
-	if best < covers {
-		return top[len(top)-1].idx, true
-	}
-	return top[rng.IntN(len(top))].idx, true
+	return top[len(top)-1].idx, true
 }
 
 func isStandDescendant(s, ancestor *powers.Stand) bool {
@@ -459,7 +453,7 @@ func isFruitDescendant(d, ancestor *powers.DevilFruit) bool {
 // tier the Spin covers. Descendants only come from the team's pool, so a stage
 // the lobby banned is never a target: with Act 4 banned, Act 2 + INFINITE
 // settles on Act 3, the highest allowed stage not above the Spin.
-func (st *effectState) evolveStand(rng RandomSource) (PowerEffect, bool) {
+func (st *effectState) evolveStand() (PowerEffect, bool) {
 	if st.stand == nil {
 		return PowerEffect{}, false
 	}
@@ -476,7 +470,7 @@ func (st *effectState) evolveStand(rng RandomSource) (PowerEffect, bool) {
 		}
 		cands = append(cands, evoCandidate{idx: i, tier: int(tier), depth: s.EvolutionDepth(), id: s.ID().String()})
 	}
-	idx, ok := pickEvolution(cands, int(spin), rng)
+	idx, ok := pickEvolution(cands)
 	if !ok {
 		return PowerEffect{}, false
 	}
@@ -493,7 +487,7 @@ func (st *effectState) evolveStand(rng RandomSource) (PowerEffect, bool) {
 }
 
 // evolveFruit is evolveStand for DevilFruits, driven by Fruit Mastery.
-func (st *effectState) evolveFruit(rng RandomSource) (PowerEffect, bool) {
+func (st *effectState) evolveFruit() (PowerEffect, bool) {
 	if st.fruit == nil {
 		return PowerEffect{}, false
 	}
@@ -510,7 +504,7 @@ func (st *effectState) evolveFruit(rng RandomSource) (PowerEffect, bool) {
 		}
 		cands = append(cands, evoCandidate{idx: i, tier: int(tier), depth: d.EvolutionDepth(), id: d.ID().String()})
 	}
-	idx, ok := pickEvolution(cands, int(mastery), rng)
+	idx, ok := pickEvolution(cands)
 	if !ok {
 		return PowerEffect{}, false
 	}
@@ -564,16 +558,16 @@ func (st *effectState) floorFruitTier() (PowerEffect, bool) {
 // returns what it did in order. One pass runs fruit evolution, the fruit's
 // mastery floor, stand evolution, the stand's spin floor, then the stat floor
 // table; a change in one rule can enable another (Hamon PERFECT raises Spin,
-// which can evolve Tusk), hence the repeat. The only randomness consumed is a
-// tie-break between equally ranked evolution targets.
-func resolvePowerEffects(st *effectState, rng RandomSource) ([]PowerEffect, error) {
+// which can evolve Tusk), hence the repeat. Fully deterministic: it consumes
+// no randomness.
+func resolvePowerEffects(st *effectState) ([]PowerEffect, error) {
 	var effects []PowerEffect
 	for pass := 0; pass < maxEffectPasses; pass++ {
 		changed := false
 		steps := []func() (PowerEffect, bool){
-			func() (PowerEffect, bool) { return st.evolveFruit(rng) },
+			st.evolveFruit,
 			st.floorFruitTier,
-			func() (PowerEffect, bool) { return st.evolveStand(rng) },
+			st.evolveStand,
 			st.floorStandTier,
 		}
 		for _, step := range steps {
