@@ -77,3 +77,6 @@ Pendiente de respuesta del dueño; se mueve a sección 1 si falla o se borra si 
 - `GoogleVerifier.Verify` no testeable offline ([[auth-hardening-2026-09-02]])
 - Tooltips nativos sin centrar/clamp; polling de imágenes en nativo; `tamagui-web.css` 0 bytes ([[norma-tooltips-y-ayuda-contextual]], [[picture-events-sse]], [[frontend-responsive-frutiger-aero]])
 - Test flaky bajo Docker con muchos workers (mitigado con `--maxWorkers=2`) ([[norma-verificacion-docker]])
+
+- [ ] Regenerar swagger (`swag`): los docs commiteados están desactualizados, ~2000 líneas de drift ajenas al filtro `hasPicture` ([[devil-fruit-picture-sync]])
+- [ ] Subir a mano las 15 frutas sin foto (10 EPIC/LEGENDARY/MYTHICAL + Giro, Iku, Muchi, Shari, Inu Hound); usar el filtro "Sin foto" del admin ([[devil-fruit-picture-sync]])
