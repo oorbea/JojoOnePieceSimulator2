@@ -19,3 +19,14 @@ func optString(v *string) string {
 	}
 	return *v
 }
+
+// optBool renders an optional bool field as "true"/"false", or "" when nil.
+func optBool(v *bool) string {
+	if v == nil {
+		return ""
+	}
+	if *v {
+		return "true"
+	}
+	return "false"
+}

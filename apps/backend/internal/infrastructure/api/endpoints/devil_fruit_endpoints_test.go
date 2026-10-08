@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -98,6 +99,9 @@ func (f *fakeDevilFruitRepository) Filter(_ context.Context, filters ports.Devil
 				!strings.Contains(strings.ToLower(fruit.Description()), needle) {
 				continue
 			}
+		}
+		if filters.HasPicture != nil && (fruit.Picture() != "") != *filters.HasPicture {
+			continue
 		}
 		results = append(results, fruit)
 	}
@@ -660,5 +664,57 @@ func TestGetDevilFruits_ETag_MatchingIfNoneMatchReturns304(t *testing.T) {
 
 	if rec.Code != http.StatusNotModified {
 		t.Fatalf("second GET with If-None-Match: status = %d, want %d", rec.Code, http.StatusNotModified)
+	}
+}
+
+// TestListDevilFruits_HasPictureFilter proves ?hasPicture=false returns only
+// fruits with no stored picture, =true the inverse, and that it ANDs with ?q=.
+func TestListDevilFruits_HasPictureFilter(t *testing.T) {
+	h, _, _ := newDevilFruitTestServer()
+
+	var ids = map[string]string{}
+	for _, name := range []string{"Gomu Gomu no Mi", "Mera Mera no Mi", "Gura Gura no Mi"} {
+		rec := doRequest(t, h, http.MethodPost, "/api/v1/devil-fruits", validDevilFruitBody(name))
+		var created map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &created)
+		ids[name] = created["id"].(string)
+	}
+	rec := doMultipartRequest(t, h, http.MethodPatch, "/api/v1/devil-fruits/"+ids["Gomu Gomu no Mi"]+"/picture", "picture", "pic.png", pngBytes, "admin-token")
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("picture upload status = %d, want 202, body = %s", rec.Code, rec.Body.String())
+	}
+
+	names := func(query string) []string {
+		t.Helper()
+		rec := doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits"+query, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, want 200, body = %s", query, rec.Code, rec.Body.String())
+		}
+		var list []map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &list)
+		out := make([]string, 0, len(list))
+		for _, item := range list {
+			out = append(out, item["name"].(string))
+		}
+		sort.Strings(out)
+		return out
+	}
+
+	if got := names("?hasPicture=false"); !reflect.DeepEqual(got, []string{"Gura Gura no Mi", "Mera Mera no Mi"}) {
+		t.Errorf("hasPicture=false = %v, want [Gura Gura no Mi Mera Mera no Mi]", got)
+	}
+	if got := names("?hasPicture=true"); !reflect.DeepEqual(got, []string{"Gomu Gomu no Mi"}) {
+		t.Errorf("hasPicture=true = %v, want [Gomu Gomu no Mi]", got)
+	}
+	if got := names("?hasPicture=false&q=mera"); !reflect.DeepEqual(got, []string{"Mera Mera no Mi"}) {
+		t.Errorf("hasPicture=false&q=mera = %v, want [Mera Mera no Mi] (AND, not OR)", got)
+	}
+	if got := names("?hasPicture=true&q=mera"); len(got) != 0 {
+		t.Errorf("hasPicture=true&q=mera = %v, want none", got)
+	}
+
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/devil-fruits?hasPicture=maybe", nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("hasPicture=maybe status = %d, want 400", rec.Code)
 	}
 }

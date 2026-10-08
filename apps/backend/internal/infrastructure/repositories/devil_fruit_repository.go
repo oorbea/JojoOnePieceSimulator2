@@ -125,10 +125,11 @@ func (r *DevilFruitRepository) GetAll(ctx context.Context, locale enums.Locale) 
 // description/skills resolved for locale.
 func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) ([]*powers.DevilFruit, error) {
 	rows, err := r.queries.FilterDevilFruitRows(ctx, db.FilterDevilFruitRowsParams{
-		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
-		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
-		Search:    searchPtr(filters.Search),
-		Locales:   fallbackStrings(locale),
+		Rarity:     enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		FruitType:  enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:     searchPtr(filters.Search),
+		HasPicture: filters.HasPicture,
+		Locales:    fallbackStrings(locale),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("filtering devil fruits: %w", err)
@@ -141,12 +142,13 @@ func (r *DevilFruitRepository) Filter(ctx context.Context, filters ports.DevilFr
 // PageDevilFruitRows's doc (no ancestor chain to worry about, unlike Stand).
 func (r *DevilFruitRepository) Page(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale, afterName *string, limit int) ([]*powers.DevilFruit, bool, error) {
 	rows, err := r.queries.PageDevilFruitRows(ctx, db.PageDevilFruitRowsParams{
-		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
-		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
-		Search:    searchPtr(filters.Search),
-		Locales:   fallbackStrings(locale),
-		AfterName: afterName,
-		PageLimit: int32(limit + 1),
+		Rarity:     enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		FruitType:  enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:     searchPtr(filters.Search),
+		HasPicture: filters.HasPicture,
+		Locales:    fallbackStrings(locale),
+		AfterName:  afterName,
+		PageLimit:  int32(limit + 1),
 	})
 	if err != nil {
 		return nil, false, fmt.Errorf("paging devil fruits: %w", err)
@@ -167,10 +169,11 @@ func (r *DevilFruitRepository) Page(ctx context.Context, filters ports.DevilFrui
 // pagination.
 func (r *DevilFruitRepository) Count(ctx context.Context, filters ports.DevilFruitFilters, locale enums.Locale) (int, error) {
 	count, err := r.queries.CountDevilFruitRows(ctx, db.CountDevilFruitRowsParams{
-		Rarity:    enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
-		FruitType: enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
-		Search:    searchPtr(filters.Search),
-		Locales:   fallbackStrings(locale),
+		Rarity:     enumStrPtr[enums.PowerRarity, db.PowerRarity](filters.Rarity),
+		FruitType:  enumStrPtr[enums.FruitType, db.FruitType](filters.FruitType),
+		Search:     searchPtr(filters.Search),
+		HasPicture: filters.HasPicture,
+		Locales:    fallbackStrings(locale),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("counting devil fruits: %w", err)

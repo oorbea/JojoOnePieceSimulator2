@@ -28,6 +28,12 @@ type StandFilters struct {
 	// locale-resolved description. Unescaped - callers must escape any
 	// LIKE metacharacter (%, _, \) before this reaches SQL.
 	Search *string
+	// HasPicture, when set, keeps only entries that do (true) or do not
+	// (false) have a stored main picture rendition (powers.picture <> '').
+	// Deliberately NOT picture_status: a re-upload moves the row to
+	// PENDING/FAILED while the old rendition is still served, so status
+	// alone would misreport those as "without picture".
+	HasPicture *bool
 }
 
 // Canonical renders every field in a fixed order, joined by "|", so two
@@ -53,6 +59,7 @@ func (f StandFilters) Canonical() string {
 		optStringer(f.Potential),
 		optString(f.EvolvesFrom),
 		optString(f.Search),
+		optBool(f.HasPicture),
 	}, "|")
 }
 

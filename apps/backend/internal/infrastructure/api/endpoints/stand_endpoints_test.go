@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -113,6 +114,9 @@ func (f *fakeStandRepository) Filter(_ context.Context, filters ports.StandFilte
 				continue
 			}
 		}
+		if filters.HasPicture != nil && (stand.Picture() != "") != *filters.HasPicture {
+			continue
+		}
 		results = append(results, stand)
 	}
 	return results, nil
@@ -136,6 +140,9 @@ func (f *fakeStandRepository) matches(stand *powers.Stand, filters ports.StandFi
 			!strings.Contains(strings.ToLower(stand.Description()), needle) {
 			return false
 		}
+	}
+	if filters.HasPicture != nil && (stand.Picture() != "") != *filters.HasPicture {
+		return false
 	}
 	return true
 }
@@ -1293,5 +1300,54 @@ func TestStandRoutes_RegularUserCannotWrite(t *testing.T) {
 	rec = userAuthRequest(t, h, http.MethodDelete, "/api/v1/stands/"+id, nil)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("DELETE: status = %d, want %d, body = %s", rec.Code, http.StatusForbidden, rec.Body.String())
+	}
+}
+
+// TestListStands_HasPictureFilter mirrors the DevilFruit one: false keeps
+// only stands without a stored picture, true the inverse, AND-ed with ?q=.
+func TestListStands_HasPictureFilter(t *testing.T) {
+	h := newTestServer()
+
+	ids := map[string]string{}
+	for _, name := range []string{"Silver Chariot", "Star Platinum", "Silver Haze"} {
+		rec := doRequest(t, h, http.MethodPost, "/api/v1/stands", validStandBody(name))
+		var created map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &created)
+		ids[name] = created["id"].(string)
+	}
+	rec := doMultipartRequest(t, h, http.MethodPatch, "/api/v1/stands/"+ids["Star Platinum"]+"/picture", "picture", "stand.png", pngBytes, "admin-token")
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("picture upload status = %d, want 202, body = %s", rec.Code, rec.Body.String())
+	}
+
+	names := func(query string) []string {
+		t.Helper()
+		rec := doRequest(t, h, http.MethodGet, "/api/v1/stands"+query, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, want 200, body = %s", query, rec.Code, rec.Body.String())
+		}
+		var list []map[string]any
+		_ = json.Unmarshal(rec.Body.Bytes(), &list)
+		out := make([]string, 0, len(list))
+		for _, item := range list {
+			out = append(out, item["name"].(string))
+		}
+		sort.Strings(out)
+		return out
+	}
+
+	if got := names("?hasPicture=false"); !reflect.DeepEqual(got, []string{"Silver Chariot", "Silver Haze"}) {
+		t.Errorf("hasPicture=false = %v, want [Silver Chariot Silver Haze]", got)
+	}
+	if got := names("?hasPicture=true"); !reflect.DeepEqual(got, []string{"Star Platinum"}) {
+		t.Errorf("hasPicture=true = %v, want [Star Platinum]", got)
+	}
+	if got := names("?hasPicture=false&q=haze"); !reflect.DeepEqual(got, []string{"Silver Haze"}) {
+		t.Errorf("hasPicture=false&q=haze = %v, want [Silver Haze] (AND, not OR)", got)
+	}
+
+	rec = doRequest(t, h, http.MethodGet, "/api/v1/stands?hasPicture=maybe", nil)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("hasPicture=maybe status = %d, want 400", rec.Code)
 	}
 }

@@ -35,6 +35,7 @@ WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
   AND ($10::text IS NULL
     OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
     OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')
+  AND ($11::boolean IS NULL OR (p.picture <> '') = $11::boolean)
 `
 
 type CountStandRowsParams struct {
@@ -48,6 +49,7 @@ type CountStandRowsParams struct {
 	Potential       *StandStat
 	EvolvesFromName *string
 	Search          *string
+	HasPicture      *bool
 }
 
 // Total count of stands matching the same filters as PageStandRows (no
@@ -65,6 +67,7 @@ func (q *Queries) CountStandRows(ctx context.Context, arg CountStandRowsParams) 
 		arg.Potential,
 		arg.EvolvesFromName,
 		arg.Search,
+		arg.HasPicture,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -146,7 +149,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 efp.name = $9::text)
                            AND ($10::text IS NULL
                                 OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
-                                OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')),
+                                OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')
+                           AND ($11::boolean IS NULL OR (p.picture <> '') = $11::boolean)),
      chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id, focal_x, focal_y, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
                FROM base
                UNION
@@ -237,6 +241,7 @@ type FilterStandRowsParams struct {
 	Potential       *StandStat
 	EvolvesFromName *string
 	Search          *string
+	HasPicture      *bool
 }
 
 type FilterStandRowsRow struct {
@@ -279,6 +284,7 @@ func (q *Queries) FilterStandRows(ctx context.Context, arg FilterStandRowsParams
 		arg.Potential,
 		arg.EvolvesFromName,
 		arg.Search,
+		arg.HasPicture,
 	)
 	if err != nil {
 		return nil, err
@@ -905,9 +911,10 @@ WITH RECURSIVE base AS (SELECT p.id,
                            AND ($10::text IS NULL
                                 OR p.name ILIKE '%' || $10::text || '%' ESCAPE '\'
                                 OR base_tr.description ILIKE '%' || $10::text || '%' ESCAPE '\')
-                           AND ($11::text IS NULL OR p.name > $11::text)
+                           AND ($11::boolean IS NULL OR (p.picture <> '') = $11::boolean)
+                           AND ($12::text IS NULL OR p.name > $12::text)
                          ORDER BY p.name
-                         LIMIT $12::int),
+                         LIMIT $13::int),
      chain AS (SELECT id, name, rarity, picture, picture_thumb, picture_card, picture_status, picture_lqip, picture_media_id, focal_x, focal_y, attack_power, speed, attack_range, endurance, precision, potential, evolves_from_id, matched
                FROM base
                UNION
@@ -998,6 +1005,7 @@ type PageStandRowsParams struct {
 	Potential       *StandStat
 	EvolvesFromName *string
 	Search          *string
+	HasPicture      *bool
 	AfterName       *string
 	PageLimit       int32
 }
@@ -1046,6 +1054,7 @@ func (q *Queries) PageStandRows(ctx context.Context, arg PageStandRowsParams) ([
 		arg.Potential,
 		arg.EvolvesFromName,
 		arg.Search,
+		arg.HasPicture,
 		arg.AfterName,
 		arg.PageLimit,
 	)

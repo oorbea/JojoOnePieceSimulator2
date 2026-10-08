@@ -137,6 +137,7 @@ WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity
   AND (sqlc.narg('search')::text IS NULL
        OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
        OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+  AND (sqlc.narg('has_picture')::boolean IS NULL OR (p.picture <> '') = sqlc.narg('has_picture')::boolean)
 ORDER BY p.name;
 
 -- Keyset-paginated counterpart of FilterDevilFruitRows. Unlike Stand, a
@@ -173,6 +174,7 @@ WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity
   AND (sqlc.narg('search')::text IS NULL
        OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
        OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+  AND (sqlc.narg('has_picture')::boolean IS NULL OR (p.picture <> '') = sqlc.narg('has_picture')::boolean)
   AND (sqlc.narg('after_name')::text IS NULL OR p.name > sqlc.narg('after_name')::text)
 ORDER BY p.name
 LIMIT sqlc.arg('page_limit')::int;
@@ -194,4 +196,5 @@ WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity
   AND (sqlc.narg('fruit_type')::fruit_type IS NULL OR d.fruit_type = sqlc.narg('fruit_type')::fruit_type)
   AND (sqlc.narg('search')::text IS NULL
        OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
-       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\');
+       OR tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+  AND (sqlc.narg('has_picture')::boolean IS NULL OR (p.picture <> '') = sqlc.narg('has_picture')::boolean);

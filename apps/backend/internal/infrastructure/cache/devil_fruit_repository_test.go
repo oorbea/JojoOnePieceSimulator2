@@ -375,6 +375,33 @@ func TestDevilFruitRepository_Filter_SearchDifferentiatesCacheKey(t *testing.T) 
 	}
 }
 
+// TestDevilFruitRepository_Filter_HasPictureDifferentiatesCacheKey proves
+// devilFruitFilterKey includes HasPicture - see the Stand counterpart.
+func TestDevilFruitRepository_Filter_HasPictureDifferentiatesCacheKey(t *testing.T) {
+	next := newCountingDevilFruitRepository()
+	fruit := newTestDevilFruit(t, "Gomu Gomu no Mi")
+	_ = next.Save(context.Background(), fruit, ports.PowerTranslations{enums.EnGB: {Description: fruit.Description(), Skills: fruit.Skills()}})
+
+	repo := infracache.NewDevilFruitRepository(next, newFakeCache(), time.Minute, time.Second)
+	ctx := context.Background()
+
+	yes, no := true, false
+	for _, f := range []ports.DevilFruitFilters{{HasPicture: &no}, {HasPicture: &yes}, {}} {
+		if _, err := repo.Filter(ctx, f, enums.EnGB); err != nil {
+			t.Fatalf("Filter(%+v): %v", f, err)
+		}
+	}
+	if next.filterCalls != 3 {
+		t.Errorf("underlying Filter calls = %d, want 3 (unset/false/true must not share a cache slot)", next.filterCalls)
+	}
+	if _, err := repo.Filter(ctx, ports.DevilFruitFilters{HasPicture: &no}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(hasPicture=false) again: %v", err)
+	}
+	if next.filterCalls != 3 {
+		t.Errorf("underlying Filter calls = %d, want 3 (repeating hasPicture=false should hit cache)", next.filterCalls)
+	}
+}
+
 // failingSaveDevilFruitRepository makes Save always fail, to prove the
 // decorator never invalidates the cache for a write that never committed.
 type failingSaveDevilFruitRepository struct {

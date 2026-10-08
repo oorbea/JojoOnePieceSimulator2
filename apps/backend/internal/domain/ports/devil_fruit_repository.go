@@ -15,6 +15,12 @@ type DevilFruitFilters struct {
 	// locale-resolved description. Unescaped - callers must escape any
 	// LIKE metacharacter (%, _, \) before this reaches SQL.
 	Search *string
+	// HasPicture, when set, keeps only entries that do (true) or do not
+	// (false) have a stored main picture rendition (powers.picture <> '').
+	// Deliberately NOT picture_status: a re-upload moves the row to
+	// PENDING/FAILED while the old rendition is still served, so status
+	// alone would misreport those as "without picture".
+	HasPicture *bool
 }
 
 // Canonical - see StandFilters.Canonical's doc for why this exists and what
@@ -24,6 +30,7 @@ func (f DevilFruitFilters) Canonical() string {
 		optStringer(f.Rarity),
 		optStringer(f.FruitType),
 		optString(f.Search),
+		optBool(f.HasPicture),
 	}, "|")
 }
 

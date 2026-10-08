@@ -5,6 +5,8 @@ package repositories_test
 import (
 	"context"
 	"errors"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -459,4 +461,73 @@ func TestStandRepository_Locale_ResolvesAndFallsBack(t *testing.T) {
 func uniqueName(t *testing.T, base string) string {
 	t.Helper()
 	return base + " #" + t.Name()
+}
+
+// TestStandRepository_HasPictureFilter mirrors the DevilFruit test: the
+// signal is the stored main rendition key (picture <> ”), not
+// picture_status. The WHERE sits inside the recursive CTE's base, so this
+// also checks an ancestor is not dropped nor leaked: a WITHOUT-picture child
+// whose parent HAS a picture is returned (with its parent hydrated), while
+// the parent itself is not returned as a match.
+func TestStandRepository_HasPictureFilter(t *testing.T) {
+	repo := newTestRepo(t)
+	ctx := context.Background()
+
+	with := newTestStand(t, uniqueName(t, "With"), nil)
+	pending := newTestStand(t, uniqueName(t, "Pending"), nil)
+	pending.SetPictureRenditions("old.webp", "", "", "", enums.PicturePending)
+	without := newTestStand(t, uniqueName(t, "Without"), nil)
+	without.SetPicture("")
+	child := newTestStand(t, uniqueName(t, "Child"), with)
+	child.SetPicture("")
+	for _, s := range []*powers.Stand{with, pending, without, child} {
+		saveStand(t, repo, ctx, s)
+	}
+
+	scope := t.Name()
+	yes, no := true, false
+
+	names := func(stands []*powers.Stand) []string {
+		out := make([]string, 0, len(stands))
+		for _, s := range stands {
+			out = append(out, strings.SplitN(s.Name(), " ", 2)[0])
+		}
+		sort.Strings(out)
+		return out
+	}
+
+	cases := []struct {
+		name    string
+		filters ports.StandFilters
+		want    []string
+	}{
+		{"false", ports.StandFilters{Search: &scope, HasPicture: &no}, []string{"Child", "Without"}},
+		{"true", ports.StandFilters{Search: &scope, HasPicture: &yes}, []string{"Pending", "With"}},
+		{"unset", ports.StandFilters{Search: &scope}, []string{"Child", "Pending", "With", "Without"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := repo.Filter(ctx, c.filters, enums.EnGB)
+			if err != nil {
+				t.Fatalf("Filter: %v", err)
+			}
+			if !reflect.DeepEqual(names(got), c.want) {
+				t.Errorf("Filter = %v, want %v", names(got), c.want)
+			}
+			paged, _, err := repo.Page(ctx, c.filters, enums.EnGB, nil, 50)
+			if err != nil {
+				t.Fatalf("Page: %v", err)
+			}
+			if !reflect.DeepEqual(names(paged), c.want) {
+				t.Errorf("Page = %v, want %v", names(paged), c.want)
+			}
+			n, err := repo.Count(ctx, c.filters, enums.EnGB)
+			if err != nil {
+				t.Fatalf("Count: %v", err)
+			}
+			if n != len(c.want) {
+				t.Errorf("Count = %d, want %d", n, len(c.want))
+			}
+		})
+	}
 }
