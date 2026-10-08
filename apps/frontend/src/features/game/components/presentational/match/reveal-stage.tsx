@@ -492,7 +492,7 @@ export function RevealStage({
 }
 
 // effectLineFor says what triggered a power effect, in the participant's own
-// words: "Con Spin Infinito, Tusk: Acto 1 evoluciona a Tusk: Acto 4" / "King
+// words: "Con Spin Infinito, Tusk: Act 1 evoluciona a Tusk: Act 4" / "King
 // Crimson te hace subir Haki de Observación a Comandante de Yonko". Power
 // names come off the final power's chain, stat values through the same enums
 // namespaces the roulette already uses.

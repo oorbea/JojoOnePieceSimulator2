@@ -12,7 +12,7 @@ import (
 var (
 	// ErrPowerEffectFloorViolated is returned when a Loadout holds a stat
 	// below a floor one of its own powers (or another of its stats) demands -
-	// e.g. Tusk: Acto 4 with anything below SpinInfinite. The LoadoutBuilder
+	// e.g. Tusk: Act 4 with anything below SpinInfinite. The LoadoutBuilder
 	// never produces one; this guards every other way of assembling a Loadout.
 	ErrPowerEffectFloorViolated = errors.New("loadout violates a power effect floor")
 
@@ -44,7 +44,7 @@ type PowerEffect struct {
 // Rule tables. Keyed by normalizePowerName(power.Name()) - the catalogue has
 // no persisted traits column, so the rules match by name, exactly (never by
 // prefix: "Hito Hito no mi" is Chopper's fruit, unrelated to Nika). Names are
-// the prod catalogue's: "Tusk: Acto N", not "Tusk ACT4". A rename in prod
+// the prod catalogue's: "Tusk: Act N", not "Tusk ACT4". A rename in prod
 // silently stops a rule from firing, which is what
 // db/migrations/power_effect_names_test.go guards against for the seeded names.
 const (
@@ -60,10 +60,10 @@ const (
 // the Spin still covers. Ported from the original JoJoOnePiece_Simulator's
 // main.cc, where Tusk and Soft & Wet: Go Beyond behaved this way.
 var standSpinTiers = map[string]enums.SpinLevel{
-	"tusk: acto 1":          enums.SpinBasic,
-	"tusk: acto 2":          enums.SpinGolden,
-	"tusk: acto 3":          enums.SpinGolden,
-	"tusk: acto 4":          enums.SpinInfinite,
+	"tusk: act 1":          enums.SpinBasic,
+	"tusk: act 2":          enums.SpinGolden,
+	"tusk: act 3":          enums.SpinGolden,
+	"tusk: act 4":          enums.SpinInfinite,
 	"ball breaker":          enums.SpinInfinite,
 	"soft & wet: go beyond": enums.SpinInfinite,
 }
@@ -387,7 +387,7 @@ type evoCandidate struct {
 // covers is the tier the Spin/Mastery reaches.
 //
 // When several candidates share that best tier and it equals covers exactly
-// (Tusk: Acto 1 + GOLDEN spin: Acto 2 and Acto 3 are both GOLDEN), the pick is
+// (Tusk: Act 1 + GOLDEN spin: Act 2 and Act 3 are both GOLDEN), the pick is
 // random, as in V1. When covers exceeds it - the stages above were banned, so
 // the Spin outgrows every allowed one - the furthest-evolved candidate wins
 // deterministically, so the Stand lands in one hop instead of wandering
@@ -454,11 +454,11 @@ func isFruitDescendant(d, ancestor *powers.DevilFruit) bool {
 }
 
 // evolveStand moves the Stand forward along its chain once the Spin goes
-// beyond the Stand's own tier (equal is "just right": Tusk: Acto 2 with
-// GOLDEN spin stays Acto 2, as in V1), to the highest-tier descendant whose
+// beyond the Stand's own tier (equal is "just right": Tusk: Act 2 with
+// GOLDEN spin stays Act 2, as in V1), to the highest-tier descendant whose
 // tier the Spin covers. Descendants only come from the team's pool, so a stage
-// the lobby banned is never a target: with Acto 4 banned, Acto 2 + INFINITE
-// settles on Acto 3, the highest allowed stage not above the Spin.
+// the lobby banned is never a target: with Act 4 banned, Act 2 + INFINITE
+// settles on Act 3, the highest allowed stage not above the Spin.
 func (st *effectState) evolveStand(rng RandomSource) (PowerEffect, bool) {
 	if st.stand == nil {
 		return PowerEffect{}, false

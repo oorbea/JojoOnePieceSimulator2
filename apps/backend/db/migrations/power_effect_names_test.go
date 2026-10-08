@@ -13,10 +13,6 @@ import (
 // against the seeds, so they are pinned here by hand: if an admin renames one
 // in prod, the rule stops firing silently (power effects match by exact name).
 var prodOnlyRuleNames = map[string]bool{
-	"tusk: acto 1":          true,
-	"tusk: acto 2":          true,
-	"tusk: acto 3":          true,
-	"tusk: acto 4":          true,
 	"ball breaker":          true,
 	"soft & wet: go beyond": true,
 }

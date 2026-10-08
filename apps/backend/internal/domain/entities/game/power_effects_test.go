@@ -13,13 +13,13 @@ import (
 
 // --- fixtures -------------------------------------------------------------
 
-// tuskFamily is prod's chain: Acto 1 -> 2 -> 3 -> 4 (ids 1..4).
+// tuskFamily is prod's chain: Act 1 -> 2 -> 3 -> 4 (ids 1..4).
 func tuskFamily(t *testing.T) []*powers.Stand {
 	t.Helper()
-	a1 := mustEvolvedStand(t, 1, "Tusk: Acto 1", enums.Epic, nil)
-	a2 := mustEvolvedStand(t, 2, "Tusk: Acto 2", enums.Epic, a1)
-	a3 := mustEvolvedStand(t, 3, "Tusk: Acto 3", enums.Epic, a2)
-	a4 := mustEvolvedStand(t, 4, "Tusk: Acto 4", enums.Epic, a3)
+	a1 := mustEvolvedStand(t, 1, "Tusk: Act 1", enums.Epic, nil)
+	a2 := mustEvolvedStand(t, 2, "Tusk: Act 2", enums.Epic, a1)
+	a3 := mustEvolvedStand(t, 3, "Tusk: Act 3", enums.Epic, a2)
+	a4 := mustEvolvedStand(t, 4, "Tusk: Act 4", enums.Epic, a3)
 	return []*powers.Stand{a1, a2, a3, a4}
 }
 
@@ -127,10 +127,10 @@ func TestPowerEffects_StandSpinTierRaisesSpin(t *testing.T) {
 		drawn    int
 		wantSpin enums.SpinLevel
 	}{
-		{0, enums.SpinBasic},    // Acto 1
-		{1, enums.SpinGolden},   // Acto 2
-		{2, enums.SpinGolden},   // Acto 3
-		{3, enums.SpinInfinite}, // Acto 4
+		{0, enums.SpinBasic},    // Act 1
+		{1, enums.SpinGolden},   // Act 2
+		{2, enums.SpinGolden},   // Act 3
+		{3, enums.SpinInfinite}, // Act 4
 	}
 	for _, tc := range tests {
 		stands := tuskFamily(t)
@@ -157,7 +157,7 @@ func TestPowerEffects_BallBreakerAndGoBeyondForceInfinite(t *testing.T) {
 }
 
 func TestPowerEffects_LegacyTuskNameDoesNotMatch(t *testing.T) {
-	// The old table said "Tusk ACT4"; prod says "Tusk: Acto 4". Matching is
+	// The old table said "Tusk ACT4"; prod says "Tusk: Act 4". Matching is
 	// exact, so the old spelling must not match.
 	stand := mustStand(t, 9, "Tusk ACT4", enums.Legendary)
 	l := build(t, jojo, pinnedWeights(pinned{spin: enums.SpinNone}), newScript(nil), []*powers.Stand{stand}, nil)
@@ -178,20 +178,20 @@ func TestPowerEffects_SpinEvolvesStand(t *testing.T) {
 		wantTies  int
 		wantFx    []string
 	}{
-		{"acto1 + infinite -> acto4", 0, enums.SpinInfinite, 0, "Tusk: Acto 4", 0,
-			[]string{"EVOLUTION STAND Tusk: Acto 1>Tusk: Acto 4 by SPIN:INFINITE"}},
-		{"acto2 + infinite -> acto4", 1, enums.SpinInfinite, 0, "Tusk: Acto 4", 0,
-			[]string{"EVOLUTION STAND Tusk: Acto 2>Tusk: Acto 4 by SPIN:INFINITE"}},
-		{"acto3 + infinite -> acto4", 2, enums.SpinInfinite, 0, "Tusk: Acto 4", 0,
-			[]string{"EVOLUTION STAND Tusk: Acto 3>Tusk: Acto 4 by SPIN:INFINITE"}},
-		{"acto1 + golden tie -> acto2", 0, enums.SpinGolden, 0, "Tusk: Acto 2", 1,
-			[]string{"EVOLUTION STAND Tusk: Acto 1>Tusk: Acto 2 by SPIN:GOLDEN"}},
-		{"acto1 + golden tie -> acto3", 0, enums.SpinGolden, 1, "Tusk: Acto 3", 1,
-			[]string{"EVOLUTION STAND Tusk: Acto 1>Tusk: Acto 3 by SPIN:GOLDEN"}},
-		{"acto1 + basic stays", 0, enums.SpinBasic, 0, "Tusk: Acto 1", 0, nil},
-		{"acto2 + golden stays (V1)", 1, enums.SpinGolden, 0, "Tusk: Acto 2", 0, nil},
-		{"acto3 + golden stays (V1)", 2, enums.SpinGolden, 0, "Tusk: Acto 3", 0, nil},
-		{"acto4 + infinite stays", 3, enums.SpinInfinite, 0, "Tusk: Acto 4", 0, nil},
+		{"acto1 + infinite -> acto4", 0, enums.SpinInfinite, 0, "Tusk: Act 4", 0,
+			[]string{"EVOLUTION STAND Tusk: Act 1>Tusk: Act 4 by SPIN:INFINITE"}},
+		{"acto2 + infinite -> acto4", 1, enums.SpinInfinite, 0, "Tusk: Act 4", 0,
+			[]string{"EVOLUTION STAND Tusk: Act 2>Tusk: Act 4 by SPIN:INFINITE"}},
+		{"acto3 + infinite -> acto4", 2, enums.SpinInfinite, 0, "Tusk: Act 4", 0,
+			[]string{"EVOLUTION STAND Tusk: Act 3>Tusk: Act 4 by SPIN:INFINITE"}},
+		{"acto1 + golden tie -> acto2", 0, enums.SpinGolden, 0, "Tusk: Act 2", 1,
+			[]string{"EVOLUTION STAND Tusk: Act 1>Tusk: Act 2 by SPIN:GOLDEN"}},
+		{"acto1 + golden tie -> acto3", 0, enums.SpinGolden, 1, "Tusk: Act 3", 1,
+			[]string{"EVOLUTION STAND Tusk: Act 1>Tusk: Act 3 by SPIN:GOLDEN"}},
+		{"acto1 + basic stays", 0, enums.SpinBasic, 0, "Tusk: Act 1", 0, nil},
+		{"acto2 + golden stays (V1)", 1, enums.SpinGolden, 0, "Tusk: Act 2", 0, nil},
+		{"acto3 + golden stays (V1)", 2, enums.SpinGolden, 0, "Tusk: Act 3", 0, nil},
+		{"acto4 + infinite stays", 3, enums.SpinInfinite, 0, "Tusk: Act 4", 0, nil},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -216,19 +216,19 @@ func TestPowerEffects_SpinEvolvesStand(t *testing.T) {
 }
 
 func TestPowerEffects_EvolutionRespectsBannedStages(t *testing.T) {
-	// Acto 4 banned: the pool only holds Acto 1..3.
+	// Act 4 banned: the pool only holds Act 1..3.
 	// The Spin outgrows every allowed stage, so it is the furthest-evolved one
 	// that wins - in one hop and without a tie-break draw, whichever of the
-	// equally ranked Acto 2 / Acto 3 would otherwise have been picked first.
+	// equally ranked Act 2 / Act 3 would otherwise have been picked first.
 	tests := []struct {
 		name  string
 		drawn int
 		want  string
 		hops  int
 	}{
-		{"acto2 + infinite -> acto3", 1, "Tusk: Acto 3", 1},
-		{"acto1 + infinite -> acto3 in one hop", 0, "Tusk: Acto 3", 1},
-		{"acto3 + infinite stays, nothing allowed above", 2, "Tusk: Acto 3", 0},
+		{"acto2 + infinite -> acto3", 1, "Tusk: Act 3", 1},
+		{"acto1 + infinite -> acto3 in one hop", 0, "Tusk: Act 3", 1},
+		{"acto3 + infinite stays, nothing allowed above", 2, "Tusk: Act 3", 0},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -742,7 +742,7 @@ func TestRevealPlayerFor(t *testing.T) {
 	if !got.HasStand || !got.HasDevilFruit {
 		t.Fatalf("expected a stand and a devil fruit, got %+v", got)
 	}
-	// Drawn Acto 2 (depth 1); Nika was drawn directly, so its depth-1 chain from Gomu is revealed.
+	// Drawn Act 2 (depth 1); Nika was drawn directly, so its depth-1 chain from Gomu is revealed.
 	if got.StandEvolutionSteps != 1 || got.FruitEvolutionSteps != 1 {
 		t.Fatalf("expected drawn depths 1/1, got %d/%d", got.StandEvolutionSteps, got.FruitEvolutionSteps)
 	}
@@ -751,7 +751,7 @@ func TestRevealPlayerFor(t *testing.T) {
 		t.Fatalf("expected only observation haki in the drawn loadout, got %+v", got)
 	}
 	want := []game.RevealEffect{
-		{Kind: enums.EffectEvolution, Steps: 2}, // Acto 2 -> Acto 4 spans two stages
+		{Kind: enums.EffectEvolution, Steps: 2}, // Act 2 -> Act 4 spans two stages
 		{Kind: enums.EffectStatFloor},
 		{Kind: enums.EffectStatFloor},
 	}
