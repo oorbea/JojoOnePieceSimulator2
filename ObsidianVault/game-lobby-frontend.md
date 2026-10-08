@@ -280,3 +280,10 @@ Verified: backend `go build`/`go vet`/`go test ./...` clean via Docker (endpoint
 regenerated `shared/contracts/ws.ts` with the new command/frame and a follow-up `types-check`
 confirmed no drift; frontend `tsc --noEmit` clean, `pnpm lint` 0 errors (same pre-existing CRLF
 warnings as always), full `pnpm jest --ci --maxWorkers=2` green at 75 suites / 1411 tests.
+
+## Config del lobby "no llega a los demás" (2026-10-08) - NO era el WS
+
+Reproducido en vivo con dos cuentas (`host1` + `guest2`, dev-login con `sessionStorage` propio por pestaña): el backend emite `CONFIG_UPDATED` + `STATE` y el invitado recibe los cambios al instante **después de pulsar Guardar** (probado: escenarios, ventana de votación, resumen, velocidad, privacidad, máx. jugadores). Solo los chips de manga autoguardan; el resto de campos son borrador local. El bug era de UI: tras un guardado previo el botón seguía diciendo "Guardado" aunque el host hubiera editado más cosas, así que parecía aplicado y nadie más lo recibía. Arreglo: `isConfigFormDirty` (`lib/config-form.ts`) y `configSaved && !configDirty` en el contenedor, así el botón vuelve a "Guardar" al haber cambios pendientes. Gotcha: un chip de manga autoguarda el formulario entero, incluidos los borradores pendientes.
+
+Gotcha de pruebas: dos pestañas del mismo perfil comparten la cookie de refresh, así que ambas acaban siendo el mismo usuario; para tener dos cuentas hay que llamar a `POST /auth/dev-login` desde cada pestaña y guardar el `refreshToken` en `sessionStorage['jops.dev_rt']` antes de recargar ([[dev-auth-bypass-2026-09-25]]). El frontend local sirve en `:8081`, no en `:3000`.
+

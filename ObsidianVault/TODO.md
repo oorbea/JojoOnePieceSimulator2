@@ -40,8 +40,6 @@ Formato: `- [ ] item — contexto breve ([[nota]])`.
 
 - [ ] **BUG** Drag-to-move no funciona (verificado solo en escritorio con eventos sintéticos; reproducir en móvil y escritorio real) ([[game-lobby-todo]])
 - [ ] **BUG** Tooltips: se quedan flotando (p. ej. el de borrar un power); el scroll-hide no basta ([[norma-tooltips-y-ayuda-contextual]])
-- [ ] **BUG** Config del lobby: los cambios no llegan a los demás usuarios; falta emitir evento WS de config actualizada y consumirlo en el cliente ([[game-lobby-frontend]], [[game-realtime-transport]])
-- [ ] Migración que corrige el typo de fuente de Born This Way (Kei Nijimura) ([[catalog-seed-p7-p8-fruits-2026-10-08]])
 - [ ] Dejar todo soportado para nativo (iOS/Android) aunque de momento solo se publique la PWA: no introducir APIs solo-web sin rama nativa ([[frontend-stack]])
 
 ## 2. Decisiones abiertas (necesitan al dueño)
