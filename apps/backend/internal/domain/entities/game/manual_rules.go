@@ -16,11 +16,27 @@ import (
 type ManualRules struct {
 	// TieRule says how an evolution tie is broken: FURTHEST_EVOLVED.
 	TieRule     string             `json:"tieRule"`
+	Limits      ManualLimits       `json:"limits"`
 	Evolutions  []ManualChain      `json:"evolutions"`
 	StatFloors  []ManualStatFloor  `json:"statFloors"`
 	Odds        ManualOdds         `json:"odds"`
 	BattleIQ    []ManualBattleBand `json:"battleIQ"`
 	Conventions []ManualConvention `json:"conventions"`
+}
+
+// ManualLimits are the numbers the manual quotes about how a game is played,
+// straight from the game's own constants (config.go).
+type ManualLimits struct {
+	GauntletMinPlayers     int `json:"gauntletMinPlayers"`
+	GauntletMaxPlayers     int `json:"gauntletMaxPlayers"`
+	VersusMinTeamSize      int `json:"versusMinTeamSize"`
+	VersusMaxTeamSize      int `json:"versusMaxTeamSize"`
+	VersusTeamCount        int `json:"versusTeamCount"`
+	VersusRounds           int `json:"versusRounds"`
+	VotingDefaultSeconds   int `json:"votingDefaultSeconds"`
+	VotingMinSeconds       int `json:"votingMinSeconds"`
+	VotingMaxSeconds       int `json:"votingMaxSeconds"`
+	VotingExtensionSeconds int `json:"votingExtensionSeconds"`
 }
 
 // ManualChain is one evolution family and what every (drawn stage x driver
@@ -185,7 +201,19 @@ func BuildManualRules() ManualRules {
 	}
 	w := DefaultAssignmentWeights()
 	return ManualRules{
-		TieRule:     "FURTHEST_EVOLVED",
+		TieRule: "FURTHEST_EVOLVED",
+		Limits: ManualLimits{
+			GauntletMinPlayers:     MinGauntletPlayers,
+			GauntletMaxPlayers:     MaxGauntletPlayers,
+			VersusMinTeamSize:      MinVersusTeamSize,
+			VersusMaxTeamSize:      MaxVersusTeamSize,
+			VersusTeamCount:        VersusTeamCount,
+			VersusRounds:           VersusRounds,
+			VotingDefaultSeconds:   DefaultVotingWindowSeconds,
+			VotingMinSeconds:       MinVotingWindowSeconds,
+			VotingMaxSeconds:       MaxVotingWindowSeconds,
+			VotingExtensionSeconds: VotingExtensionSeconds,
+		},
 		Evolutions:  chains,
 		StatFloors:  floors,
 		Odds:        manualOdds(w),

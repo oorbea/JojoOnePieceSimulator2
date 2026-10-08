@@ -8,6 +8,18 @@
 
 export const MANUAL_RULES = {
   "tieRule": "FURTHEST_EVOLVED",
+  "limits": {
+    "gauntletMinPlayers": 1,
+    "gauntletMaxPlayers": 10,
+    "versusMinTeamSize": 1,
+    "versusMaxTeamSize": 5,
+    "versusTeamCount": 2,
+    "versusRounds": 3,
+    "votingDefaultSeconds": 30,
+    "votingMinSeconds": 5,
+    "votingMaxSeconds": 180,
+    "votingExtensionSeconds": 10
+  },
   "evolutions": [
     {
       "kind": "STAND",

@@ -1115,8 +1115,9 @@ func (s *GameService) MarkSummaryReady(ctx context.Context, gameID game.GameID, 
 }
 
 // votingExtension is how much time the host's "+10s" adds to the open voting
-// window, however many times it is pressed.
-const votingExtension = 10 * time.Second
+// window, however many times it is pressed. The number itself is
+// game.VotingExtensionSeconds so the manual can state it.
+const votingExtension = game.VotingExtensionSeconds * time.Second
 
 // ExtendVoting pushes the open voting (or tiebreak) window's deadline back by
 // votingExtension. Host-only. The timer is re-armed before the event is

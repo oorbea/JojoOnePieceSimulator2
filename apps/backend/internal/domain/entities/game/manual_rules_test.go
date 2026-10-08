@@ -122,6 +122,18 @@ func TestManualRules_StatFloorsMirrorResolverTable(t *testing.T) {
 	}
 }
 
+func TestManualRules_LimitsComeFromGameConstants(t *testing.T) {
+	l := game.BuildManualRules().Limits
+	want := game.ManualLimits{
+		GauntletMinPlayers: 1, GauntletMaxPlayers: 10,
+		VersusMinTeamSize: 1, VersusMaxTeamSize: 5, VersusTeamCount: 2, VersusRounds: 3,
+		VotingDefaultSeconds: 30, VotingMinSeconds: 5, VotingMaxSeconds: 180, VotingExtensionSeconds: 10,
+	}
+	if l != want {
+		t.Errorf("limits = %+v, want %+v", l, want)
+	}
+}
+
 func TestManualRules_OddsAreDistributions(t *testing.T) {
 	odds := game.BuildManualRules().Odds
 	for name, ps := range map[string][]game.ManualPct{
