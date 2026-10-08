@@ -15,6 +15,61 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/dev-login": {
+            "post": {
+                "description": "Only mounted when DEV_AUTH_BYPASS is set (docker-compose.dev.yml) and the caller is loopback/private with no proxy headers. Creates or re-authenticates \"\u003cname\u003e@dev.invalid\", setting its role from the admin flag on every call. No refresh cookie is set - the refresh token is always returned in the body, so a caller can keep it in per-tab storage (sessionStorage) instead of the shared browser-wide cookie the Google flow uses, letting several dev accounts be logged into at once in separate tabs.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log in as a local-only dev account (never available in prod)",
+                "parameters": [
+                    {
+                        "description": "dev account name and desired role",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.DevLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "existing dev account logged in",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "new dev account registered",
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "route not mounted, or caller is not local"
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/google": {
             "post": {
                 "description": "Verifies a Google ID token and returns an access token, creating the User the first time this Google account is seen. Also mints a refresh token, set as an HttpOnly cookie (or, with X-Refresh-Token-Transport: header, returned in the body instead).",
@@ -213,6 +268,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "free-text search over name and description",
                         "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "true: only entries with a picture; false: only entries without one",
+                        "name": "hasPicture",
                         "in": "query"
                     }
                 ],
@@ -846,6 +907,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/games/invite/{token}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Authenticated counterpart of GET /games/preview - the token is the credential, so this also works for PRIVATE lobbies. Roster-free, join-code-free, exactly like every other lobby preview shape.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Preview a lobby by its invite token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invite token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.InvitePreviewResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/invite/{token}/status": {
+            "get": {
+                "description": "PUBLIC - no bearer token required, reachable by a visitor who has not logged in yet (or an unfurl bot). Answers only VALID/EXPIRED, deliberately nothing else - see dto.InviteStatusResponse's doc. Always 200; Cache-Control: no-store so neither a cache nor the HTTP status itself becomes an existence oracle.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Check whether a lobby invite link is still usable",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invite token",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.InviteStatusResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/games/join": {
             "post": {
                 "security": [
@@ -907,6 +1055,109 @@ const docTemplate = `{
                     },
                     "429": {
                         "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/join-invite": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Works against PRIVATE lobbies too - see GameService.JoinByInvite's doc for exactly how this differs from POST /games/join (idempotent if already seated, a dedicated 409 if the game already started, revoked if the host has since rotated the join code).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Join a lobby by its invite token",
+                "parameters": [
+                    {
+                        "description": "Invite token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.JoinByInviteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GameStateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns whichever Game the caller is currently seated in as a human participant (excluding FINISHED/ABORTED ones, which keep their own short-lived result screen instead), so reopening the app can route straight back to a lobby/match instead of leaving the player stranded with no way back in. 204 if there is none.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Resume the caller's active game, if any",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GameStateResponse"
+                        }
+                    },
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1163,6 +1414,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/games/{id}/invite": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Any seated human participant may mint one, not only the host - see POST /games/{id}/ws-ticket for the same authorization shape. Multi-use and short-lived (see GameService.CreateInvite); dies early if the host rotates the join code before it expires on its own.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "games"
+                ],
+                "summary": "Mint a lobby share-link invite token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GameInviteResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/games/{id}/join": {
             "post": {
                 "security": [
@@ -1220,6 +1535,58 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/games/{id}/leave": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes the caller from the game entirely. Exists as a REST route (mirroring the WS LEAVE command GameService.LeaveGame already backs) specifically for a visitor who has opened a lobby share link while already seated somewhere else and confirmed they want to switch - that flow has no open socket to the game being left.",
+                "tags": [
+                    "games"
+                ],
+                "summary": "Leave a game",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Game id (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -2831,6 +3198,12 @@ const docTemplate = `{
                         "description": "free-text search over name and description",
                         "name": "q",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "true: only entries with a picture; false: only entries without one",
+                        "name": "hasPicture",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3584,6 +3957,137 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/push": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The key the browser needs to subscribe. enabled=false when the server has no VAPID keys configured.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Web Push availability and the VAPID public key",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PushConfigResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/push/subscriptions": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Idempotent: re-registering an endpoint refreshes its keys, and an endpoint last registered by another account moves to the caller (a shared device). Only real browser push services are accepted as endpoints.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Register this device for push notifications",
+                "parameters": [
+                    {
+                        "description": "The browser's PushSubscription",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PushSubscribeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Only ever removes the caller's own subscription; an unknown endpoint is a no-op.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Unregister this device from push notifications",
+                "parameters": [
+                    {
+                        "description": "The subscription's endpoint",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PushUnsubscribeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{id}": {
             "get": {
                 "security": [
@@ -3924,9 +4428,26 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.DevLoginRequest": {
+            "type": "object",
+            "properties": {
+                "admin": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.DevilFruitRequest": {
             "type": "object",
             "properties": {
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
+                },
                 "fruitType": {
                     "type": "string"
                 },
@@ -3949,6 +4470,20 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "evolvesFrom": {
+                    "description": "EvolvesFrom is the fruit this one is the evolved form of (Model Nika's\nparent is Gomu Gomu no mi). Always null from the catalogue endpoints -\nthe relation lives in game's rule table and is only attached to the\nfruit of a drawn loadout - see game.LinkFruitEvolutions.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.DevilFruitResponse"
+                        }
+                    ]
+                },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
                 },
                 "fruitType": {
                     "type": "string"
@@ -3994,10 +4529,24 @@ const docTemplate = `{
                 "details": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/dto.FieldError"
                     }
                 },
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.FieldError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "field": {
+                    "type": "string"
+                },
+                "message": {
                     "type": "string"
                 }
             }
@@ -4044,6 +4593,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GameInviteResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.GameLoadoutResponse": {
             "type": "object",
             "properties": {
@@ -4059,6 +4619,13 @@ const docTemplate = `{
                 },
                 "devilFruit": {
                     "$ref": "#/definitions/dto.DevilFruitResponse"
+                },
+                "effects": {
+                    "description": "Effects is what the power-effect resolver did while assigning this\nloadout, in order (never null): a stat raised to a floor a power\ndemands, or a Stand/DevilFruit evolved into a later stage. Stand and\nDevilFruit above are the final ones, after any evolution; the sorteo\nreplays the drawn values first and animates each effect.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LoadoutEffectResponse"
+                    }
                 },
                 "fruitMastery": {
                     "type": "string"
@@ -4083,11 +4650,23 @@ const docTemplate = `{
         "dto.GameParticipantResponse": {
             "type": "object",
             "properties": {
+                "abandoned": {
+                    "type": "boolean"
+                },
+                "avatarFocalX": {
+                    "type": "number"
+                },
+                "avatarFocalY": {
+                    "type": "number"
+                },
                 "avatarThumb": {
                     "type": "string"
                 },
                 "connected": {
                     "type": "boolean"
+                },
+                "disconnectedAt": {
+                    "type": "string"
                 },
                 "displayName": {
                     "type": "string"
@@ -4223,6 +4802,10 @@ const docTemplate = `{
                     "description": "RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a\npending reveal - see NewGameStateResponse's deadlines param.",
                     "type": "string"
                 },
+                "revealStartedAt": {
+                    "description": "RevealStartedAt mirrors RevealEndsAt, set to the instant the reveal\ntimer was armed - a (re)connecting client uses the pair to seek its\nlocally-computed reveal timeline instead of restarting it at phase\nzero. See LoadoutsAssignedPayload's identical field.",
+                    "type": "string"
+                },
                 "rounds": {
                     "type": "array",
                     "items": {
@@ -4242,6 +4825,14 @@ const docTemplate = `{
                         "$ref": "#/definitions/dto.GameTeamResponse"
                     }
                 },
+                "upcomingStage": {
+                    "description": "UpcomingStage is the stage the round being assigned/previewed will be\nplayed on (Versus only) - set from the sorteo until voting opens, so\nplayers are told where the fight happens before they vote.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.GameStageResponse"
+                        }
+                    ]
+                },
                 "votingEndsAt": {
                     "description": "VotingEndsAt is set (RFC3339) only while the game is VOTING/TIEBREAK\nwith a pending window - the deadline a client reconnecting mid-vote\nneeds, since the VOTING_OPENED/TIEBREAK_OPENED frames that carry\nclosesAt are one-shot and long gone by then.",
                     "type": "string"
@@ -4253,6 +4844,12 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
                 },
                 "id": {
                     "type": "string"
@@ -4336,6 +4933,63 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.InvitePreviewResponse": {
+            "type": "object",
+            "properties": {
+                "abilitySource": {
+                    "type": "string"
+                },
+                "allowBots": {
+                    "type": "boolean"
+                },
+                "gameId": {
+                    "type": "string"
+                },
+                "hostDisplayName": {
+                    "type": "string"
+                },
+                "locked": {
+                    "type": "boolean"
+                },
+                "mangas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "maxPlayers": {
+                    "type": "integer"
+                },
+                "mode": {
+                    "type": "string"
+                },
+                "playerCount": {
+                    "type": "integer"
+                },
+                "visibility": {
+                    "type": "string"
+                },
+                "votingWindowSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.InviteStatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.JoinByInviteRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.JoinGameRequest": {
             "type": "object",
             "properties": {
@@ -4349,6 +5003,12 @@ const docTemplate = `{
             "properties": {
                 "battleIq": {
                     "type": "integer"
+                },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
                 },
                 "hamon": {
                     "type": "string"
@@ -4379,6 +5039,12 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
+                },
                 "hamon": {
                     "type": "string"
                 },
@@ -4407,6 +5073,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "spin": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.LoadoutEffectResponse": {
+            "type": "object",
+            "properties": {
+                "cause": {
+                    "type": "string"
+                },
+                "causeSlot": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "slot": {
+                    "type": "string"
+                },
+                "to": {
                     "type": "string"
                 }
             }
@@ -4485,6 +5174,12 @@ const docTemplate = `{
                 "conquerorHaki": {
                     "type": "string"
                 },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
+                },
                 "fruitMastery": {
                     "type": "string"
                 },
@@ -4519,6 +5214,12 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
                 },
                 "fruitMastery": {
                     "type": "string"
@@ -4699,6 +5400,12 @@ const docTemplate = `{
                 "avatarCard": {
                     "type": "string"
                 },
+                "avatarFocalX": {
+                    "type": "number"
+                },
+                "avatarFocalY": {
+                    "type": "number"
+                },
                 "avatarLqip": {
                     "type": "string"
                 },
@@ -4716,9 +5423,56 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PushConfigResponse": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "publicKey": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PushKeys": {
+            "type": "object",
+            "properties": {
+                "auth": {
+                    "type": "string"
+                },
+                "p256dh": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PushSubscribeRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                },
+                "keys": {
+                    "$ref": "#/definitions/dto.PushKeys"
+                }
+            }
+        },
+        "dto.PushUnsubscribeRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.StageRequest": {
             "type": "object",
             "properties": {
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
+                },
                 "manga": {
                     "type": "string"
                 },
@@ -4741,6 +5495,12 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
                 },
                 "id": {
                     "type": "string"
@@ -4824,6 +5584,12 @@ const docTemplate = `{
                 "evolvesFromId": {
                     "type": "string"
                 },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -4864,6 +5630,12 @@ const docTemplate = `{
                 },
                 "evolvesFrom": {
                     "$ref": "#/definitions/dto.StandResponse"
+                },
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
                 },
                 "id": {
                     "type": "string"
@@ -4993,6 +5765,12 @@ const docTemplate = `{
         "dto.UpdateProfileRequest": {
             "type": "object",
             "properties": {
+                "focalX": {
+                    "type": "number"
+                },
+                "focalY": {
+                    "type": "number"
+                },
                 "language": {
                     "type": "string"
                 },
@@ -5017,6 +5795,12 @@ const docTemplate = `{
                 },
                 "avatarCard": {
                     "type": "string"
+                },
+                "avatarFocalX": {
+                    "type": "number"
+                },
+                "avatarFocalY": {
+                    "type": "number"
                 },
                 "avatarLqip": {
                     "type": "string"

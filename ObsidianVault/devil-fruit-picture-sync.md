@@ -84,7 +84,7 @@ controls in both admin screens (shared `FilterChip`, with tooltip).
 - sqlc regenerated with the `sqlc/sqlc` image (`MSYS_NO_PATHCONV=1`, mount `apps/backend`); `make` is
   not installed in this Git Bash, run the compose commands directly.
 - `swag@latest` regen produces ~2000 lines of unrelated drift (checked-in docs are stale) — not
-  committed; annotations are in source. A separate swagger regen commit is pending.
+  committed; annotations are in source. Regenerated 2026-10-08 in its own commit.
 - Frontend verify recipe: `cp -r /repo/apps/frontend/.` copied the Windows `node_modules` and hung for
   hours; replaced with `tar --exclude=node_modules` and jest now runs with `--forceExit` + `timeout`
   (updated in `.claude/skills/verify/SKILL.md`; see [[norma-verificacion-docker]]).

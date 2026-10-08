@@ -54,8 +54,19 @@ definitions:
       votingWindowSeconds:
         type: integer
     type: object
+  dto.DevLoginRequest:
+    properties:
+      admin:
+        type: boolean
+      name:
+        type: string
+    type: object
   dto.DevilFruitRequest:
     properties:
+      focalX:
+        type: number
+      focalY:
+        type: number
       fruitType:
         type: string
       name:
@@ -71,6 +82,18 @@ definitions:
     properties:
       description:
         type: string
+      evolvesFrom:
+        allOf:
+        - $ref: '#/definitions/dto.DevilFruitResponse'
+        description: |-
+          EvolvesFrom is the fruit this one is the evolved form of (Model Nika's
+          parent is Gomu Gomu no mi). Always null from the catalogue endpoints -
+          the relation lives in game's rule table and is only attached to the
+          fruit of a drawn loadout - see game.LinkFruitEvolutions.
+      focalX:
+        type: number
+      focalY:
+        type: number
       fruitType:
         type: string
       id:
@@ -100,9 +123,18 @@ definitions:
         type: string
       details:
         items:
-          type: string
+          $ref: '#/definitions/dto.FieldError'
         type: array
       error:
+        type: string
+    type: object
+  dto.FieldError:
+    properties:
+      code:
+        type: string
+      field:
+        type: string
+      message:
         type: string
     type: object
   dto.GameConfigResponse:
@@ -135,6 +167,13 @@ definitions:
       votingWindowSeconds:
         type: integer
     type: object
+  dto.GameInviteResponse:
+    properties:
+      expiresAt:
+        type: string
+      token:
+        type: string
+    type: object
   dto.GameLoadoutResponse:
     properties:
       armamentHaki:
@@ -150,6 +189,16 @@ definitions:
         type: string
       devilFruit:
         $ref: '#/definitions/dto.DevilFruitResponse'
+      effects:
+        description: |-
+          Effects is what the power-effect resolver did while assigning this
+          loadout, in order (never null): a stat raised to a floor a power
+          demands, or a Stand/DevilFruit evolved into a later stage. Stand and
+          DevilFruit above are the final ones, after any evolution; the sorteo
+          replays the drawn values first and animates each effect.
+        items:
+          $ref: '#/definitions/dto.LoadoutEffectResponse'
+        type: array
       fruitMastery:
         type: string
       hamon:
@@ -165,10 +214,18 @@ definitions:
     type: object
   dto.GameParticipantResponse:
     properties:
+      abandoned:
+        type: boolean
+      avatarFocalX:
+        type: number
+      avatarFocalY:
+        type: number
       avatarThumb:
         type: string
       connected:
         type: boolean
+      disconnectedAt:
+        type: string
       displayName:
         type: string
       id:
@@ -267,6 +324,13 @@ definitions:
           RevealEndsAt is set (RFC3339) only while the game is ASSIGNING with a
           pending reveal - see NewGameStateResponse's deadlines param.
         type: string
+      revealStartedAt:
+        description: |-
+          RevealStartedAt mirrors RevealEndsAt, set to the instant the reveal
+          timer was armed - a (re)connecting client uses the pair to seek its
+          locally-computed reveal timeline instead of restarting it at phase
+          zero. See LoadoutsAssignedPayload's identical field.
+        type: string
       rounds:
         items:
           $ref: '#/definitions/dto.GameRoundResponse'
@@ -282,6 +346,13 @@ definitions:
         items:
           $ref: '#/definitions/dto.GameTeamResponse'
         type: array
+      upcomingStage:
+        allOf:
+        - $ref: '#/definitions/dto.GameStageResponse'
+        description: |-
+          UpcomingStage is the stage the round being assigned/previewed will be
+          played on (Versus only) - set from the sorteo until voting opens, so
+          players are told where the fight happens before they vote.
       votingEndsAt:
         description: |-
           VotingEndsAt is set (RFC3339) only while the game is VOTING/TIEBREAK
@@ -294,6 +365,10 @@ definitions:
     properties:
       description:
         type: string
+      focalX:
+        type: number
+      focalY:
+        type: number
       id:
         type: string
       manga:
@@ -347,6 +422,43 @@ definitions:
       idToken:
         type: string
     type: object
+  dto.InvitePreviewResponse:
+    properties:
+      abilitySource:
+        type: string
+      allowBots:
+        type: boolean
+      gameId:
+        type: string
+      hostDisplayName:
+        type: string
+      locked:
+        type: boolean
+      mangas:
+        items:
+          type: string
+        type: array
+      maxPlayers:
+        type: integer
+      mode:
+        type: string
+      playerCount:
+        type: integer
+      visibility:
+        type: string
+      votingWindowSeconds:
+        type: integer
+    type: object
+  dto.InviteStatusResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  dto.JoinByInviteRequest:
+    properties:
+      token:
+        type: string
+    type: object
   dto.JoinGameRequest:
     properties:
       code:
@@ -356,6 +468,10 @@ definitions:
     properties:
       battleIq:
         type: integer
+      focalX:
+        type: number
+      focalY:
+        type: number
       hamon:
         type: string
       name:
@@ -375,6 +491,10 @@ definitions:
         type: integer
       description:
         type: string
+      focalX:
+        type: number
+      focalY:
+        type: number
       hamon:
         type: string
       id:
@@ -394,6 +514,21 @@ definitions:
       rarity:
         type: string
       spin:
+        type: string
+    type: object
+  dto.LoadoutEffectResponse:
+    properties:
+      cause:
+        type: string
+      causeSlot:
+        type: string
+      from:
+        type: string
+      kind:
+        type: string
+      slot:
+        type: string
+      to:
         type: string
     type: object
   dto.LobbyPreviewResponse:
@@ -447,6 +582,10 @@ definitions:
         type: string
       conquerorHaki:
         type: string
+      focalX:
+        type: number
+      focalY:
+        type: number
       fruitMastery:
         type: string
       name:
@@ -470,6 +609,10 @@ definitions:
         type: string
       description:
         type: string
+      focalX:
+        type: number
+      focalY:
+        type: number
       fruitMastery:
         type: string
       id:
@@ -587,6 +730,10 @@ definitions:
         type: string
       avatarCard:
         type: string
+      avatarFocalX:
+        type: number
+      avatarFocalY:
+        type: number
       avatarLqip:
         type: string
       avatarThumb:
@@ -598,8 +745,38 @@ definitions:
       username:
         type: string
     type: object
+  dto.PushConfigResponse:
+    properties:
+      enabled:
+        type: boolean
+      publicKey:
+        type: string
+    type: object
+  dto.PushKeys:
+    properties:
+      auth:
+        type: string
+      p256dh:
+        type: string
+    type: object
+  dto.PushSubscribeRequest:
+    properties:
+      endpoint:
+        type: string
+      keys:
+        $ref: '#/definitions/dto.PushKeys'
+    type: object
+  dto.PushUnsubscribeRequest:
+    properties:
+      endpoint:
+        type: string
+    type: object
   dto.StageRequest:
     properties:
+      focalX:
+        type: number
+      focalY:
+        type: number
       manga:
         type: string
       name:
@@ -615,6 +792,10 @@ definitions:
     properties:
       description:
         type: string
+      focalX:
+        type: number
+      focalY:
+        type: number
       id:
         type: string
       manga:
@@ -668,6 +849,10 @@ definitions:
         type: string
       evolvesFromId:
         type: string
+      focalX:
+        type: number
+      focalY:
+        type: number
       name:
         type: string
       potential:
@@ -695,6 +880,10 @@ definitions:
         type: string
       evolvesFrom:
         $ref: '#/definitions/dto.StandResponse'
+      focalX:
+        type: number
+      focalY:
+        type: number
       id:
         type: string
       name:
@@ -781,6 +970,10 @@ definitions:
     type: object
   dto.UpdateProfileRequest:
     properties:
+      focalX:
+        type: number
+      focalY:
+        type: number
       language:
         type: string
       username:
@@ -797,6 +990,10 @@ definitions:
         type: string
       avatarCard:
         type: string
+      avatarFocalX:
+        type: number
+      avatarFocalY:
+        type: number
       avatarLqip:
         type: string
       avatarStatus:
@@ -823,6 +1020,48 @@ info:
   title: JojoOnePieceSimulator2 API
   version: "1.0"
 paths:
+  /auth/dev-login:
+    post:
+      consumes:
+      - application/json
+      description: Only mounted when DEV_AUTH_BYPASS is set (docker-compose.dev.yml)
+        and the caller is loopback/private with no proxy headers. Creates or re-authenticates
+        "<name>@dev.invalid", setting its role from the admin flag on every call.
+        No refresh cookie is set - the refresh token is always returned in the body,
+        so a caller can keep it in per-tab storage (sessionStorage) instead of the
+        shared browser-wide cookie the Google flow uses, letting several dev accounts
+        be logged into at once in separate tabs.
+      parameters:
+      - description: dev account name and desired role
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DevLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: existing dev account logged in
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "201":
+          description: new dev account registered
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: route not mounted, or caller is not local
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Log in as a local-only dev account (never available in prod)
+      tags:
+      - auth
   /auth/google:
     post:
       consumes:
@@ -962,6 +1201,11 @@ paths:
         in: query
         name: q
         type: string
+      - description: 'true: only entries with a picture; false: only entries without
+          one'
+        in: query
+        name: hasPicture
+        type: boolean
       produces:
       - application/json
       responses:
@@ -1438,6 +1682,50 @@ paths:
       summary: Edit a lobby's configuration
       tags:
       - games
+  /games/{id}/invite:
+    post:
+      description: Any seated human participant may mint one, not only the host -
+        see POST /games/{id}/ws-ticket for the same authorization shape. Multi-use
+        and short-lived (see GameService.CreateInvite); dies early if the host rotates
+        the join code before it expires on its own.
+      parameters:
+      - description: Game id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GameInviteResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mint a lobby share-link invite token
+      tags:
+      - games
   /games/{id}/join:
     post:
       description: Only reachable for a PUBLIC, unlocked lobby - see POST /games/join
@@ -1482,6 +1770,43 @@ paths:
       security:
       - BearerAuth: []
       summary: Join a public lobby by id
+      tags:
+      - games
+  /games/{id}/leave:
+    post:
+      description: Removes the caller from the game entirely. Exists as a REST route
+        (mirroring the WS LEAVE command GameService.LeaveGame already backs) specifically
+        for a visitor who has opened a lobby share link while already seated somewhere
+        else and confirmed they want to switch - that flow has no open socket to the
+        game being left.
+      parameters:
+      - description: Game id (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Leave a game
       tags:
       - games
   /games/{id}/ws-ticket:
@@ -1566,6 +1891,68 @@ paths:
       summary: Get a game by its join code
       tags:
       - games
+  /games/invite/{token}:
+    get:
+      description: Authenticated counterpart of GET /games/preview - the token is
+        the credential, so this also works for PRIVATE lobbies. Roster-free, join-code-free,
+        exactly like every other lobby preview shape.
+      parameters:
+      - description: Invite token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.InvitePreviewResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Preview a lobby by its invite token
+      tags:
+      - games
+  /games/invite/{token}/status:
+    get:
+      description: 'PUBLIC - no bearer token required, reachable by a visitor who
+        has not logged in yet (or an unfurl bot). Answers only VALID/EXPIRED, deliberately
+        nothing else - see dto.InviteStatusResponse''s doc. Always 200; Cache-Control:
+        no-store so neither a cache nor the HTTP status itself becomes an existence
+        oracle.'
+      parameters:
+      - description: Invite token
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.InviteStatusResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Check whether a lobby invite link is still usable
+      tags:
+      - games
   /games/join:
     post:
       consumes:
@@ -1607,6 +1994,78 @@ paths:
       security:
       - BearerAuth: []
       summary: Join a game by its code
+      tags:
+      - games
+  /games/join-invite:
+    post:
+      consumes:
+      - application/json
+      description: Works against PRIVATE lobbies too - see GameService.JoinByInvite's
+        doc for exactly how this differs from POST /games/join (idempotent if already
+        seated, a dedicated 409 if the game already started, revoked if the host has
+        since rotated the join code).
+      parameters:
+      - description: Invite token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.JoinByInviteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GameStateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Join a lobby by its invite token
+      tags:
+      - games
+  /games/me:
+    get:
+      description: Returns whichever Game the caller is currently seated in as a human
+        participant (excluding FINISHED/ABORTED ones, which keep their own short-lived
+        result screen instead), so reopening the app can route straight back to a
+        lobby/match instead of leaving the player stranded with no way back in. 204
+        if there is none.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GameStateResponse'
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Resume the caller's active game, if any
       tags:
       - games
   /games/preview:
@@ -2682,6 +3141,11 @@ paths:
         in: query
         name: q
         type: string
+      - description: 'true: only entries with a picture; false: only entries without
+          one'
+        in: query
+        name: hasPicture
+        type: boolean
       produces:
       - application/json
       responses:
@@ -3350,6 +3814,92 @@ paths:
       security:
       - BearerAuth: []
       summary: Set the authenticated caller's avatar
+      tags:
+      - users
+  /users/me/push:
+    get:
+      description: The key the browser needs to subscribe. enabled=false when the
+        server has no VAPID keys configured.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PushConfigResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Web Push availability and the VAPID public key
+      tags:
+      - users
+  /users/me/push/subscriptions:
+    delete:
+      consumes:
+      - application/json
+      description: Only ever removes the caller's own subscription; an unknown endpoint
+        is a no-op.
+      parameters:
+      - description: The subscription's endpoint
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PushUnsubscribeRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unregister this device from push notifications
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: 'Idempotent: re-registering an endpoint refreshes its keys, and
+        an endpoint last registered by another account moves to the caller (a shared
+        device). Only real browser push services are accepted as endpoints.'
+      parameters:
+      - description: The browser's PushSubscription
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PushSubscribeRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Register this device for push notifications
       tags:
       - users
 securityDefinitions:
