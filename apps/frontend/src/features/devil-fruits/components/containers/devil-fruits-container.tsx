@@ -58,14 +58,16 @@ export function DevilFruitsContainer() {
   const debouncedSearch = useDebouncedValue(search)
   const [rarityFilter, setRarityFilter] = useState<string | null>(null)
   const [fruitTypeFilter, setFruitTypeFilter] = useState<string | null>(null)
+  const [withoutPictureFilter, setWithoutPictureFilter] = useState(false)
 
   const filters = useMemo(() => {
     const f: DevilFruitFilters = {}
     if (rarityFilter) f.rarity = rarityFilter as DevilFruitFilters['rarity']
     if (fruitTypeFilter) f.fruitType = fruitTypeFilter as DevilFruitFilters['fruitType']
     if (debouncedSearch.trim()) f.q = debouncedSearch.trim()
+    if (withoutPictureFilter) f.hasPicture = false
     return f
-  }, [rarityFilter, fruitTypeFilter, debouncedSearch])
+  }, [rarityFilter, fruitTypeFilter, withoutPictureFilter, debouncedSearch])
   const hasActiveFilters = Object.keys(filters).length > 0
 
   const {
@@ -252,6 +254,8 @@ export function DevilFruitsContainer() {
       fruitTypeFilter={fruitTypeFilter}
       fruitTypeFilterOptions={fruitTypeFilterOptions}
       onFruitTypeFilterChange={setFruitTypeFilter}
+      withoutPictureFilter={withoutPictureFilter}
+      onWithoutPictureFilterChange={setWithoutPictureFilter}
       hasActiveFilters={hasActiveFilters}
       detailFruit={detailFruit}
       onOpenDetail={setDetailFruit}

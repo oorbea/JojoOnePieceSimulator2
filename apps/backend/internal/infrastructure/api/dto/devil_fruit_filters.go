@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/enums"
 	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/ports"
@@ -38,6 +39,15 @@ func DevilFruitFiltersFromQuery(q url.Values) (ports.DevilFruitFilters, bool, er
 	if v := q.Get("q"); v != "" {
 		hasFilters = true
 		filters.Search = &v
+	}
+	if v := q.Get("hasPicture"); v != "" {
+		hasFilters = true
+		b, err := strconv.ParseBool(v)
+		if err != nil || (v != "true" && v != "false") {
+			errs = append(errs, FieldError{Field: "hasPicture", Code: ValInvalidValue, Message: "hasPicture: must be true or false"})
+		} else {
+			filters.HasPicture = &b
+		}
 	}
 
 	if len(errs) > 0 {

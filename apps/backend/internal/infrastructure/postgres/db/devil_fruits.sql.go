@@ -27,13 +27,15 @@ WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
   AND ($4::text IS NULL
        OR p.name ILIKE '%' || $4::text || '%' ESCAPE '\'
        OR tr.description ILIKE '%' || $4::text || '%' ESCAPE '\')
+  AND ($5::boolean IS NULL OR (p.picture <> '') = $5::boolean)
 `
 
 type CountDevilFruitRowsParams struct {
-	Locales   []string
-	Rarity    *PowerRarity
-	FruitType *FruitType
-	Search    *string
+	Locales    []string
+	Rarity     *PowerRarity
+	FruitType  *FruitType
+	Search     *string
+	HasPicture *bool
 }
 
 // Total count of devil fruits matching the same filters as
@@ -44,6 +46,7 @@ func (q *Queries) CountDevilFruitRows(ctx context.Context, arg CountDevilFruitRo
 		arg.Rarity,
 		arg.FruitType,
 		arg.Search,
+		arg.HasPicture,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -91,14 +94,16 @@ WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
   AND ($4::text IS NULL
        OR p.name ILIKE '%' || $4::text || '%' ESCAPE '\'
        OR tr.description ILIKE '%' || $4::text || '%' ESCAPE '\')
+  AND ($5::boolean IS NULL OR (p.picture <> '') = $5::boolean)
 ORDER BY p.name
 `
 
 type FilterDevilFruitRowsParams struct {
-	Locales   []string
-	Rarity    *PowerRarity
-	FruitType *FruitType
-	Search    *string
+	Locales    []string
+	Rarity     *PowerRarity
+	FruitType  *FruitType
+	Search     *string
+	HasPicture *bool
 }
 
 type FilterDevilFruitRowsRow struct {
@@ -125,6 +130,7 @@ func (q *Queries) FilterDevilFruitRows(ctx context.Context, arg FilterDevilFruit
 		arg.Rarity,
 		arg.FruitType,
 		arg.Search,
+		arg.HasPicture,
 	)
 	if err != nil {
 		return nil, err
@@ -415,18 +421,20 @@ WHERE ($2::power_rarity IS NULL OR p.rarity = $2::power_rarity)
   AND ($4::text IS NULL
        OR p.name ILIKE '%' || $4::text || '%' ESCAPE '\'
        OR tr.description ILIKE '%' || $4::text || '%' ESCAPE '\')
-  AND ($5::text IS NULL OR p.name > $5::text)
+  AND ($5::boolean IS NULL OR (p.picture <> '') = $5::boolean)
+  AND ($6::text IS NULL OR p.name > $6::text)
 ORDER BY p.name
-LIMIT $6::int
+LIMIT $7::int
 `
 
 type PageDevilFruitRowsParams struct {
-	Locales   []string
-	Rarity    *PowerRarity
-	FruitType *FruitType
-	Search    *string
-	AfterName *string
-	PageLimit int32
+	Locales    []string
+	Rarity     *PowerRarity
+	FruitType  *FruitType
+	Search     *string
+	HasPicture *bool
+	AfterName  *string
+	PageLimit  int32
 }
 
 type PageDevilFruitRowsRow struct {
@@ -457,6 +465,7 @@ func (q *Queries) PageDevilFruitRows(ctx context.Context, arg PageDevilFruitRows
 		arg.Rarity,
 		arg.FruitType,
 		arg.Search,
+		arg.HasPicture,
 		arg.AfterName,
 		arg.PageLimit,
 	)

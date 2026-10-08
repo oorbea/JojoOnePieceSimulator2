@@ -141,7 +141,7 @@ future access, is now truly dead the instant logout completes.
 
 | Var | Default | Notes |
 |---|---|---|
-| `JWT_TTL` | `15m` (was `24h`) | access-token lifetime |
+| `JWT_TTL` | `15m` default in `.env.example` (was `24h`); **prod's `deployments/.env` sets `8h`** (checked 2026-10-08) | access-token lifetime |
 | `REFRESH_TOKEN_TTL` | `720h` (30d) | |
 | `REFRESH_TOKEN_REAP_INTERVAL` | `1h` | memory store only — Redis expires its own keys |
 | `AUTH_COOKIE_NAME` | `jops_rt` | |

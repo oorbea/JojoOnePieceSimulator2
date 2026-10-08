@@ -396,6 +396,34 @@ func TestStandRepository_Filter_SearchDifferentiatesCacheKey(t *testing.T) {
 	}
 }
 
+// TestStandRepository_Filter_HasPictureDifferentiatesCacheKey proves
+// standFilterKey includes HasPicture: unset, false and true are three
+// distinct cache slots.
+func TestStandRepository_Filter_HasPictureDifferentiatesCacheKey(t *testing.T) {
+	next := newCountingStandRepository()
+	stand := newTestStand(t, "Silver Chariot")
+	_ = next.Save(context.Background(), stand, ports.PowerTranslations{enums.EnGB: {Description: stand.Description(), Skills: stand.Skills()}})
+
+	repo := infracache.NewStandRepository(next, newFakeCache(), time.Minute, time.Second)
+	ctx := context.Background()
+
+	yes, no := true, false
+	for _, f := range []ports.StandFilters{{HasPicture: &no}, {HasPicture: &yes}, {}} {
+		if _, err := repo.Filter(ctx, f, enums.EnGB); err != nil {
+			t.Fatalf("Filter(%+v): %v", f, err)
+		}
+	}
+	if next.filterCalls != 3 {
+		t.Errorf("underlying Filter calls = %d, want 3 (unset/false/true must not share a cache slot)", next.filterCalls)
+	}
+	if _, err := repo.Filter(ctx, ports.StandFilters{HasPicture: &no}, enums.EnGB); err != nil {
+		t.Fatalf("Filter(hasPicture=false) again: %v", err)
+	}
+	if next.filterCalls != 3 {
+		t.Errorf("underlying Filter calls = %d, want 3 (repeating hasPicture=false should hit cache)", next.filterCalls)
+	}
+}
+
 // failingSaveRepository makes Save always fail, to prove the decorator
 // never invalidates the cache for a write that never committed.
 type failingSaveRepository struct {

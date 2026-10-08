@@ -230,6 +230,7 @@ func (r *StandRepository) Filter(ctx context.Context, filters ports.StandFilters
 		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
 		EvolvesFromName: filters.EvolvesFrom,
 		Search:          searchPtr(filters.Search),
+		HasPicture:      filters.HasPicture,
 		Locales:         fallbackStrings(locale),
 	})
 	if err != nil {
@@ -252,6 +253,7 @@ func (r *StandRepository) Page(ctx context.Context, filters ports.StandFilters, 
 		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
 		EvolvesFromName: filters.EvolvesFrom,
 		Search:          searchPtr(filters.Search),
+		HasPicture:      filters.HasPicture,
 		Locales:         fallbackStrings(locale),
 		AfterName:       afterName,
 		PageLimit:       int32(limit + 1),
@@ -281,6 +283,7 @@ func (r *StandRepository) Count(ctx context.Context, filters ports.StandFilters,
 		Potential:       enumStrPtr[enums.StandStat, db.StandStat](filters.Potential),
 		EvolvesFromName: filters.EvolvesFrom,
 		Search:          searchPtr(filters.Search),
+		HasPicture:      filters.HasPicture,
 		Locales:         fallbackStrings(locale),
 	})
 	if err != nil {

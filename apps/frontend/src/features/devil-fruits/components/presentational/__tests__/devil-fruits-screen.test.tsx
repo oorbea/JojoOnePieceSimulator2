@@ -38,6 +38,7 @@ type HarnessProps = {
   search?: string
   onSearchChange?: (search: string) => void
   hasActiveFilters?: boolean
+  withoutPicture?: { active: boolean; onChange: (value: boolean) => void }
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
   isLoadMoreError?: boolean
@@ -53,6 +54,7 @@ function Harness({
   search,
   onSearchChange,
   hasActiveFilters,
+  withoutPicture,
   hasNextPage,
   isFetchingNextPage,
   isLoadMoreError,
@@ -87,6 +89,8 @@ function Harness({
     fruitTypeFilterOptions: [{ value: 'MYTHICAL_ZOAN', label: 'Mythical Zoan' }],
     onFruitTypeFilterChange: jest.fn(),
     hasActiveFilters: hasActiveFilters ?? false,
+    withoutPictureFilter: withoutPicture?.active,
+    onWithoutPictureFilterChange: withoutPicture?.onChange,
     detailFruit,
     onOpenDetail: setDetailFruit,
     onCloseDetail: () => setDetailFruit(null),
@@ -140,6 +144,36 @@ function Harness({
 }
 
 describe('DevilFruitsScreen', () => {
+  describe('no-picture filter chip', () => {
+    it('renders no chip when the screen is not given the handler', async () => {
+      await renderWithProviders(<Harness />)
+
+      expect(screen.queryByLabelText('No picture')).toBeNull()
+    })
+
+    it('turns the filter on when pressed while off', async () => {
+      const onChange = jest.fn()
+      await renderWithProviders(<Harness withoutPicture={{ active: false, onChange }} />)
+
+      await act(async () => {
+        fireEvent.press(screen.getByLabelText('No picture'))
+      })
+
+      expect(onChange).toHaveBeenCalledWith(true)
+    })
+
+    it('turns the filter off when pressed while on', async () => {
+      const onChange = jest.fn()
+      await renderWithProviders(<Harness withoutPicture={{ active: true, onChange }} />)
+
+      await act(async () => {
+        fireEvent.press(screen.getByLabelText('No picture'))
+      })
+
+      expect(onChange).toHaveBeenCalledWith(false)
+    })
+  })
+
   it('renders the search, rarity, and fruit-type filters', async () => {
     await renderWithProviders(<Harness />)
 

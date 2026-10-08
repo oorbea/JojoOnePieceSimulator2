@@ -5,6 +5,8 @@ package repositories_test
 import (
 	"context"
 	"errors"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -341,5 +343,73 @@ func TestDeleteDevilFruitByID_DoesNotDeleteStand(t *testing.T) {
 
 	if _, err := standRepo.FindByID(ctx, stand.ID(), enums.EnGB); err != nil {
 		t.Fatalf("FindByID(stand) after cross-kind delete attempt: %v", err)
+	}
+}
+
+// TestDevilFruitRepository_HasPictureFilter proves hasPicture is decided by
+// the stored main rendition key (picture <> ”), not picture_status: a row
+// mid re-upload (PENDING, old picture still served) counts as WITH picture,
+// while one with an empty picture counts as WITHOUT regardless of status.
+// Covers Filter, Page and Count, and the AND with Search.
+func TestDevilFruitRepository_HasPictureFilter(t *testing.T) {
+	repo := newTestDevilFruitRepo(t)
+	ctx := context.Background()
+
+	with := newTestDevilFruit(t, uniqueName(t, "With"), enums.Paramecia)
+	pending := newTestDevilFruit(t, uniqueName(t, "Pending"), enums.Paramecia)
+	pending.SetPictureRenditions("old.webp", "", "", "", enums.PicturePending)
+	without := newTestDevilFruit(t, uniqueName(t, "Without"), enums.Paramecia)
+	without.SetPicture("")
+	failed := newTestDevilFruit(t, uniqueName(t, "Failed"), enums.Paramecia)
+	failed.SetPictureRenditions("", "", "", "", enums.PictureFailed)
+	for _, f := range []*powers.DevilFruit{with, pending, without, failed} {
+		saveDevilFruit(t, repo, ctx, f)
+	}
+
+	scope := t.Name() // every fixture name carries it; isolates from other rows
+	yes, no := true, false
+
+	names := func(fruits []*powers.DevilFruit) []string {
+		out := make([]string, 0, len(fruits))
+		for _, f := range fruits {
+			out = append(out, strings.SplitN(f.Name(), " ", 2)[0])
+		}
+		sort.Strings(out)
+		return out
+	}
+
+	cases := []struct {
+		name    string
+		filters ports.DevilFruitFilters
+		want    []string
+	}{
+		{"false", ports.DevilFruitFilters{Search: &scope, HasPicture: &no}, []string{"Failed", "Without"}},
+		{"true", ports.DevilFruitFilters{Search: &scope, HasPicture: &yes}, []string{"Pending", "With"}},
+		{"unset", ports.DevilFruitFilters{Search: &scope}, []string{"Failed", "Pending", "With", "Without"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := repo.Filter(ctx, c.filters, enums.EnGB)
+			if err != nil {
+				t.Fatalf("Filter: %v", err)
+			}
+			if !reflect.DeepEqual(names(got), c.want) {
+				t.Errorf("Filter = %v, want %v", names(got), c.want)
+			}
+			paged, _, err := repo.Page(ctx, c.filters, enums.EnGB, nil, 50)
+			if err != nil {
+				t.Fatalf("Page: %v", err)
+			}
+			if !reflect.DeepEqual(names(paged), c.want) {
+				t.Errorf("Page = %v, want %v", names(paged), c.want)
+			}
+			n, err := repo.Count(ctx, c.filters, enums.EnGB)
+			if err != nil {
+				t.Fatalf("Count: %v", err)
+			}
+			if n != len(c.want) {
+				t.Errorf("Count = %d, want %d", n, len(c.want))
+			}
+		})
 	}
 }

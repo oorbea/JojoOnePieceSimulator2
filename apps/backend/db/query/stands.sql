@@ -368,7 +368,8 @@ WITH RECURSIVE base AS (SELECT p.id,
                                 efp.name = sqlc.narg('evolves_from_name')::text)
                            AND (sqlc.narg('search')::text IS NULL
                                 OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
-                                OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')),
+                                OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+                           AND (sqlc.narg('has_picture')::boolean IS NULL OR (p.picture <> '') = sqlc.narg('has_picture')::boolean)),
      chain AS (SELECT *
                FROM base
                UNION
@@ -503,6 +504,7 @@ WITH RECURSIVE base AS (SELECT p.id,
                            AND (sqlc.narg('search')::text IS NULL
                                 OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
                                 OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+                           AND (sqlc.narg('has_picture')::boolean IS NULL OR (p.picture <> '') = sqlc.narg('has_picture')::boolean)
                            AND (sqlc.narg('after_name')::text IS NULL OR p.name > sqlc.narg('after_name')::text)
                          ORDER BY p.name
                          LIMIT sqlc.arg('page_limit')::int),
@@ -610,7 +612,8 @@ WHERE (sqlc.narg('rarity')::power_rarity IS NULL OR p.rarity = sqlc.narg('rarity
   AND (sqlc.narg('evolves_from_name')::text IS NULL OR efp.name = sqlc.narg('evolves_from_name')::text)
   AND (sqlc.narg('search')::text IS NULL
     OR p.name ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\'
-    OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\');
+    OR base_tr.description ILIKE '%' || sqlc.narg('search')::text || '%' ESCAPE '\')
+  AND (sqlc.narg('has_picture')::boolean IS NULL OR (p.picture <> '') = sqlc.narg('has_picture')::boolean);
 
 -- Every stand's id/name only, unfiltered and translation-free - powers.name
 -- is deliberately non-translatable (see 00008_stages.sql), so this is

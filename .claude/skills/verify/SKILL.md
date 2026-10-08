@@ -64,13 +64,12 @@ reasoning):
 docker run --rm -v "$(pwd):/repo:ro" -v jojo-frontend-work:/work node:22-alpine sh -c '
   corepack enable && corepack prepare pnpm@11.18.0 --activate
   rm -rf /work/repo/frontend_new && mkdir -p /work/repo/frontend_new
-  cp -r /repo/apps/frontend/. /work/repo/frontend_new/
-  rm -rf /work/repo/frontend_new/node_modules
+  tar -C /repo/apps/frontend --exclude=node_modules -cf - . | tar -C /work/repo/frontend_new -xf -
   [ -d /work/repo/frontend/node_modules ] && mv /work/repo/frontend/node_modules /work/repo/frontend_new/node_modules
   rm -rf /work/repo/frontend && mv /work/repo/frontend_new /work/repo/frontend
   cd /work/repo/frontend
   CI=true pnpm install --frozen-lockfile --prefer-offline
-  pnpm typecheck && pnpm lint && pnpm jest --ci --maxWorkers=2 --cacheDirectory=/work/.jest-cache
+  pnpm typecheck && pnpm lint && timeout 900 pnpm jest --ci --forceExit --maxWorkers=2 --cacheDirectory=/work/.jest-cache
 '
 ```
 
@@ -90,7 +89,7 @@ suite — run only the affected files:
 
 ```bash
 pnpm exec eslint <changed-files>
-pnpm jest --ci --maxWorkers=2 --cacheDirectory=/work/.jest-cache <affected-test-file-names>
+timeout 900 pnpm jest --ci --forceExit --maxWorkers=2 --cacheDirectory=/work/.jest-cache <affected-test-file-names>
 ```
 
 Run the full `pnpm typecheck && pnpm lint && pnpm jest --ci --maxWorkers=2

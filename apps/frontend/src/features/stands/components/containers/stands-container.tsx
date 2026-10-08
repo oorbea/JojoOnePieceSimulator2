@@ -98,6 +98,7 @@ export function StandsContainer() {
     potential: null,
   })
   const [evolvesFromFilter, setEvolvesFromFilter] = useState<string | null>(null)
+  const [withoutPictureFilter, setWithoutPictureFilter] = useState(false)
   const [filtersExpanded, setFiltersExpanded] = useState(false)
 
   // evolvesFromFilter is a Stand id (what the picker needs to preselect a
@@ -110,15 +111,17 @@ export function StandsContainer() {
       if (statFilters[key]) f[key] = statFilters[key] as StandFilters[typeof key]
     }
     if (debouncedSearch.trim()) f.q = debouncedSearch.trim()
+    if (withoutPictureFilter) f.hasPicture = false
     return f
-  }, [rarityFilter, statFilters, debouncedSearch])
+  }, [rarityFilter, statFilters, withoutPictureFilter, debouncedSearch])
 
   // Only counts the filters tucked inside the "More filters" disclosure
   // (stats + evolvesFrom) - the badge is about what's hidden, not about
   // search/rarity which are always visible in the row above it.
   const moreFiltersCount =
     STAT_FILTER_KEYS.filter((key) => statFilters[key]).length + (evolvesFromFilter ? 1 : 0)
-  const hasActiveFilters = Boolean(rarityFilter) || moreFiltersCount > 0 || Boolean(filters.q)
+  const hasActiveFilters =
+    Boolean(rarityFilter) || moreFiltersCount > 0 || Boolean(filters.q) || withoutPictureFilter
 
   // The unfiltered roster feeds both the "Evolves From" filter's own option
   // list and the create/edit form's "Evolves From" picker - neither should
@@ -220,6 +223,7 @@ export function StandsContainer() {
       potential: null,
     })
     setEvolvesFromFilter(null)
+    setWithoutPictureFilter(false)
   }
 
   const openCreate = () => {
@@ -377,6 +381,8 @@ export function StandsContainer() {
       rarityFilter={rarityFilter}
       rarityFilterOptions={rarityFilterOptions}
       onRarityFilterChange={setRarityFilter}
+      withoutPictureFilter={withoutPictureFilter}
+      onWithoutPictureFilterChange={setWithoutPictureFilter}
       statFilters={statFilters}
       statFilterOptions={statFilterOptions}
       onStatFilterChange={(key, value) => setStatFilters((prev) => ({ ...prev, [key]: value }))}

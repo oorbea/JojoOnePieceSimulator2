@@ -20,6 +20,7 @@ func TestCanonical_FieldCount(t *testing.T) {
 	attackPower := enums.A
 	evolvesFrom := "Star Platinum"
 	search := "star"
+	hasPicture := false
 	fruitType := enums.Paramecia
 	manga := enums.Jojo
 	hamon := enums.HamonBasic
@@ -39,13 +40,13 @@ func TestCanonical_FieldCount(t *testing.T) {
 			filters: StandFilters{
 				Rarity: &rarity, AttackPower: &attackPower, Speed: &attackPower,
 				AttackRange: &attackPower, Endurance: &attackPower, Precision: &attackPower,
-				Potential: &attackPower, EvolvesFrom: &evolvesFrom, Search: &search,
+				Potential: &attackPower, EvolvesFrom: &evolvesFrom, Search: &search, HasPicture: &hasPicture,
 			},
 			numFields: reflect.TypeOf(StandFilters{}).NumField(),
 		},
 		{
 			name:      "DevilFruitFilters",
-			filters:   DevilFruitFilters{Rarity: &rarity, FruitType: &fruitType, Search: &search},
+			filters:   DevilFruitFilters{Rarity: &rarity, FruitType: &fruitType, Search: &search, HasPicture: &hasPicture},
 			numFields: reflect.TypeOf(DevilFruitFilters{}).NumField(),
 		},
 		{
@@ -101,6 +102,16 @@ func TestCanonical_DiffersPerField(t *testing.T) {
 	changedFruit := DevilFruitFilters{Rarity: &otherRarity}
 	if baseFruit.Canonical() == changedFruit.Canonical() {
 		t.Error("DevilFruitFilters.Canonical() unchanged after changing Rarity")
+	}
+
+	yes, no := true, false
+	if (StandFilters{HasPicture: &yes}).Canonical() == (StandFilters{HasPicture: &no}).Canonical() ||
+		(StandFilters{HasPicture: &no}).Canonical() == (StandFilters{}).Canonical() {
+		t.Error("StandFilters.Canonical() must distinguish HasPicture unset/false/true")
+	}
+	if (DevilFruitFilters{HasPicture: &yes}).Canonical() == (DevilFruitFilters{HasPicture: &no}).Canonical() ||
+		(DevilFruitFilters{HasPicture: &no}).Canonical() == (DevilFruitFilters{}).Canonical() {
+		t.Error("DevilFruitFilters.Canonical() must distinguish HasPicture unset/false/true")
 	}
 
 	mangaA := enums.Jojo
