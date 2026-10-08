@@ -207,3 +207,16 @@ su propia burbuja legítimamente - eso es comportamiento correcto del navegador,
 
 Related: [[a11y-web-leak]], [[frontend-responsive-frutiger-aero]], [[norma-diseno-ui-ux]],
 [[game-lobby-frontend]], [[game-lobby-todo]], [[zettelkasten-workflow]].
+
+## Séptimo pase (2026-10-08): tooltips pegados tras tocar un botón en táctil
+
+Reporte: "el tooltip de borrar un power se suele quedar flotando". En escritorio con ratón real no se reproduce (hover, clic, Cancelar; la salida del cursor siempre lo cierra), así que la causa está en táctil, que es como se usa la PWA.
+
+Causa raíz (leída en `@tamagui/web` `createComponent.mjs`): `onMouseEnter` llama a `onHoverIn` **siempre**; el guard `lastInteractionWasTouch` solo protege el *estilo* hover. Un toque hace que el navegador emita un `mouseenter` emulado y no emite `mouseleave` hasta que se toca otra cosa, así que cada botón con tooltip dejaba la burbuja abierta tras tocarlo.
+
+Arreglo: `shared/lib/last-pointer.ts` guarda el `pointerType` del último `pointerdown`/`pointermove` (los eventos de puntero llevan el dispositivo real y no se re-emiten para los eventos de ratón de compatibilidad) y `useHoverTrigger` ignora `onHoverIn` si la última interacción fue táctil/lápiz. Tests en `tooltip.web.test.tsx` (jsdom). Verificado: ratón real sigue mostrando el tooltip; **no verificado en móvil físico**.
+
+Consecuencia aceptada: en web táctil no hay tooltip (el nombre accesible del botón sigue ahí); en nativo siguen la pulsación larga y el auto-ocultado. Añadir pulsación larga también en web táctil queda en [[TODO]].
+
+Gotcha: `dispatchEvent` de eventos de ratón sintéticos SÍ dispara el hover de Tamagui pero no el `mouseleave` esperado, así que un tooltip "pegado" así no prueba nada; para esto usar el ratón real (`hover` de la herramienta) o pointer events reales.
+
