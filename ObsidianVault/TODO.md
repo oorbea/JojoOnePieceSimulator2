@@ -36,6 +36,7 @@ Formato: `- [ ] item — contexto breve ([[nota]])`.
 - [ ] Aviso al editar en admin un poder cuyo nombre rompe una regla de efectos (hoy solo log al arrancar) ([[gameplay-power-effects]])
 - [ ] Servicio `frontend-test` en `docker-compose.test.yml` ([[norma-verificacion-docker]])
 - [ ] Hoja de instrucciones iOS "Compartir → Añadir a inicio" ([[pwa-movil-2026-10-08]])
+- [ ] Feature "Manual de normas y convenios": documento que explique bien las reglas del juego, en una pestaña del Home y en los 3 idiomas (en-GB/es-ES/ca-ES). Debe cubrir cómo se juega, los modos de juego, normas especiales (evoluciones, establecimiento de poderes) y normas cross-verse. Solo documentado como pendiente, aún no se implementa ([[gameplay-game-modes]], [[gameplay-power-effects]])
 - [ ] Regenerar swagger `apps/backend/docs` (y `-race` en CI para el test de concurrencia de game service) ([[pwa-movil-2026-10-08]], [[gameplay-application-layer]])
 
 - [ ] Dejar todo soportado para nativo (iOS/Android) aunque de momento solo se publique la PWA: no introducir APIs solo-web sin rama nativa ([[frontend-stack]])
