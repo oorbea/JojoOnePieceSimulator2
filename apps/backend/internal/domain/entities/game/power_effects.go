@@ -269,76 +269,82 @@ func slotLabel(slot enums.LoadoutSlot, v int) string {
 	}
 }
 
-// statFloorRule says: when trigger holds, target must be at least floor.
-// cross rules (a power of one manga raising a stat of the other) only apply
-// when both mangas are in play.
+// statFloorRule says: when the `when` subject holds, target must be at least
+// floor. `when` is the same Subject the manual renders (combat_conventions.go),
+// so the rule the resolver applies and the rule the manual prints are one
+// value. causeSlot says which slot a SubjectPowers/SubjectFruitType refers to
+// (Stand or DevilFruit). cross rules (a power of one manga raising a stat of
+// the other) only apply when both mangas are in play.
 type statFloorRule struct {
 	cross     bool
 	causeSlot enums.LoadoutSlot
 	target    enums.LoadoutSlot
 	floor     int
-	trigger   func(*effectState) (cause string, ok bool)
-}
-
-func standNamed(name string) func(*effectState) (string, bool) {
-	return func(st *effectState) (string, bool) {
-		if st.stand != nil && normalizePowerName(st.stand.Name()) == name {
-			return st.stand.Name(), true
-		}
-		return "", false
-	}
-}
-
-func fruitNamed(name string) func(*effectState) (string, bool) {
-	return func(st *effectState) (string, bool) {
-		if st.fruit != nil && normalizePowerName(st.fruit.Name()) == name {
-			return st.fruit.Name(), true
-		}
-		return "", false
-	}
-}
-
-func fruitTypeIn(types ...enums.FruitType) func(*effectState) (string, bool) {
-	return func(st *effectState) (string, bool) {
-		if st.fruit == nil {
-			return "", false
-		}
-		for _, t := range types {
-			if st.fruit.FruitType() == t {
-				return st.fruit.Name(), true
-			}
-		}
-		return "", false
-	}
-}
-
-func slotAtLeast(slot enums.LoadoutSlot, min int) func(*effectState) (string, bool) {
-	return func(st *effectState) (string, bool) {
-		if st.values[slot] >= min {
-			return slotLabel(slot, st.values[slot]), true
-		}
-		return "", false
-	}
+	when      Subject
 }
 
 // statFloorRules is applied in this order, so that when two causes would both
 // satisfy a floor the one revealed earliest in the sorteo gets the credit.
 var statFloorRules = []statFloorRule{
-	{false, enums.SlotStand, enums.SlotHamon, int(enums.HamonBasic), standNamed(nameHermitPurple)},
-	{true, enums.SlotStand, enums.SlotObservationHaki, int(enums.HakiYonkoPlus), standNamed(nameKingCrimson)},
-	{false, enums.SlotDevilFruit, enums.SlotPhysicalForm, int(enums.PhysicalFormMarineCaptain), fruitTypeIn(enums.MythicalZoan, enums.AncientZoan)},
-	{false, enums.SlotDevilFruit, enums.SlotPhysicalForm, int(enums.PhysicalFormStrongFishman), fruitTypeIn(enums.Zoan)},
-	{true, enums.SlotDevilFruit, enums.SlotHamon, int(enums.HamonAdvanced), fruitNamed(nameNika)},
-	{false, enums.SlotHamon, enums.SlotSpin, int(enums.SpinBasic), slotAtLeast(enums.SlotHamon, int(enums.HamonPerfect))},
-	{true, enums.SlotHamon, enums.SlotArmamentHaki, int(enums.HakiPrivate), slotAtLeast(enums.SlotHamon, int(enums.HamonPerfect))},
-	{true, enums.SlotHamon, enums.SlotPhysicalForm, int(enums.PhysicalFormMarineCaptain), slotAtLeast(enums.SlotHamon, int(enums.HamonAdvanced))},
+	{false, enums.SlotStand, enums.SlotHamon, int(enums.HamonBasic), powersNamed("", convHermitPurple)},
+	{true, enums.SlotStand, enums.SlotObservationHaki, int(enums.HakiYonkoPlus), powersNamed("", convKingCrimson)},
+	{false, enums.SlotDevilFruit, enums.SlotPhysicalForm, int(enums.PhysicalFormMarineCaptain), fruitTypes(enums.MythicalZoan, enums.AncientZoan)},
+	{false, enums.SlotDevilFruit, enums.SlotPhysicalForm, int(enums.PhysicalFormStrongFishman), fruitTypes(enums.Zoan)},
+	{true, enums.SlotDevilFruit, enums.SlotHamon, int(enums.HamonAdvanced), powersNamed("", convNika)},
+	{false, enums.SlotHamon, enums.SlotSpin, int(enums.SpinBasic), slotMin(enums.SlotHamon, int(enums.HamonPerfect))},
+	{true, enums.SlotHamon, enums.SlotArmamentHaki, int(enums.HakiPrivate), slotMin(enums.SlotHamon, int(enums.HamonPerfect))},
+	{true, enums.SlotHamon, enums.SlotPhysicalForm, int(enums.PhysicalFormMarineCaptain), slotMin(enums.SlotHamon, int(enums.HamonAdvanced))},
+}
+
+// subjectNamesPower reports whether name is one of s's powers, exactly after
+// normalizePowerName.
+func subjectNamesPower(s Subject, name string) bool {
+	n := normalizePowerName(name)
+	for _, c := range s.Names {
+		if normalizePowerName(c) == n {
+			return true
+		}
+	}
+	return false
+}
+
+// cause reports whether rule r's trigger holds and what to credit for it: the
+// triggering power's name, or the wire string of the stat value that did.
+func (st *effectState) cause(r statFloorRule) (string, bool) {
+	s := r.when
+	switch s.Kind {
+	case SubjectPowers:
+		switch r.causeSlot {
+		case enums.SlotStand:
+			if st.stand != nil && subjectNamesPower(s, st.stand.Name()) {
+				return st.stand.Name(), true
+			}
+		case enums.SlotDevilFruit:
+			if st.fruit != nil && subjectNamesPower(s, st.fruit.Name()) {
+				return st.fruit.Name(), true
+			}
+		}
+	case SubjectFruitType:
+		if st.fruit != nil {
+			for _, t := range s.FruitTypes {
+				if st.fruit.FruitType() == t {
+					return st.fruit.Name(), true
+				}
+			}
+		}
+	case SubjectSlotMin:
+		if v := st.values[s.Slot]; v >= s.MinRank {
+			return slotLabel(s.Slot, v), true
+		}
+	}
+	return "", false
 }
 
 func (st *effectState) ruleActive(r statFloorRule) (string, bool) {
 	if r.cross && !st.bothMangas {
 		return "", false
 	}
-	return r.trigger(st)
+	return st.cause(r)
 }
 
 func (st *effectState) applyFloor(r statFloorRule) (PowerEffect, bool) {

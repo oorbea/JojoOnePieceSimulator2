@@ -52,6 +52,7 @@ type Subject struct {
 	Kind       SubjectKind
 	Slot       enums.LoadoutSlot // SubjectSlotMin
 	Min        string            // SubjectSlotMin: level wire string, e.g. "GOLDEN"
+	MinRank    int               // SubjectSlotMin: the level's ordinal, what rules compare
 	FruitTypes []enums.FruitType // SubjectFruitType
 	Names      []string          // SubjectPowers: catalogue display names
 	Group      string            // SubjectPowers: optional set label
@@ -93,6 +94,9 @@ const (
 	convGoBeyond       = "Soft & Wet: Go Beyond"
 	convWeatherReport  = "Weather Report"
 	convYamiYami       = "Yami Yami no mi"
+	convHermitPurple   = "Hermit Purple"
+	convNika           = "Hito Hito no mi: Model Nika"
+	convGomuGomu       = "Gomu Gomu no mi"
 )
 
 func anyStand() Subject { return Subject{Kind: SubjectAnyStand} }
@@ -102,8 +106,10 @@ func fruitTypes(t ...enums.FruitType) Subject {
 	return Subject{Kind: SubjectFruitType, FruitTypes: t}
 }
 
-func slotMin(slot enums.LoadoutSlot, min string) Subject {
-	return Subject{Kind: SubjectSlotMin, Slot: slot, Min: min}
+// slotMin is "has slot at rank (the level's ordinal) or above"; Min carries the
+// level's wire string for the manual.
+func slotMin(slot enums.LoadoutSlot, rank int) Subject {
+	return Subject{Kind: SubjectSlotMin, Slot: slot, Min: slotLabel(slot, rank), MinRank: rank}
 }
 
 func powersNamed(group string, names ...string) Subject {
@@ -120,18 +126,18 @@ func absoluteStands() Subject {
 
 // CombatConventions returns the full table, built fresh on every call.
 func CombatConventions() []Convention {
-	spinBasic := slotMin(enums.SlotSpin, enums.SpinBasic.String())
-	spinGolden := slotMin(enums.SlotSpin, enums.SpinGolden.String())
-	spinInfinite := slotMin(enums.SlotSpin, enums.SpinInfinite.String())
-	armament := slotMin(enums.SlotArmamentHaki, enums.HakiPrivate.String())
-	conqueror := slotMin(enums.SlotConquerorHaki, enums.HakiPrivate.String())
-	observation := slotMin(enums.SlotObservationHaki, enums.HakiPrivate.String())
-	hamon := slotMin(enums.SlotHamon, enums.HamonBasic.String())
-	hamonPerfect := slotMin(enums.SlotHamon, enums.HamonPerfect.String())
+	spinBasic := slotMin(enums.SlotSpin, int(enums.SpinBasic))
+	spinGolden := slotMin(enums.SlotSpin, int(enums.SpinGolden))
+	spinInfinite := slotMin(enums.SlotSpin, int(enums.SpinInfinite))
+	armament := slotMin(enums.SlotArmamentHaki, int(enums.HakiPrivate))
+	conqueror := slotMin(enums.SlotConquerorHaki, int(enums.HakiPrivate))
+	observation := slotMin(enums.SlotObservationHaki, int(enums.HakiPrivate))
+	hamon := slotMin(enums.SlotHamon, int(enums.HamonBasic))
+	hamonPerfect := slotMin(enums.SlotHamon, int(enums.HamonPerfect))
 	logia := fruitTypes(enums.Logia)
 	madeInHeaven := powersNamed("", convMadeInHeaven)
-	conquerorYonkoPlus := slotMin(enums.SlotConquerorHaki, enums.HakiYonkoPlus.String())
-	observationYonkoPlus := slotMin(enums.SlotObservationHaki, enums.HakiYonkoPlus.String())
+	conquerorYonkoPlus := slotMin(enums.SlotConquerorHaki, int(enums.HakiYonkoPlus))
+	observationYonkoPlus := slotMin(enums.SlotObservationHaki, int(enums.HakiYonkoPlus))
 
 	return []Convention{
 		{ID: "SEE_STANDS", Category: CategoryVisibility,
