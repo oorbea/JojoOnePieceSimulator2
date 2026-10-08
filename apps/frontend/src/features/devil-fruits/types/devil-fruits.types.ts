@@ -25,4 +25,6 @@ export type DevilFruitFilters = {
   rarity?: Rarity
   fruitType?: FruitType
   q?: string
+  // Sent as ?hasPicture=false - only set when the admin turns on the no-picture chip.
+  hasPicture?: boolean
 }

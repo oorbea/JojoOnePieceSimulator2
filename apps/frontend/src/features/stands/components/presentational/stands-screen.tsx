@@ -9,6 +9,7 @@ import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { DetailModal } from '@/shared/components/presentational/detail-modal'
 import { FilterDisclosure } from '@/shared/components/presentational/filter-disclosure'
 import { FocalPointModal } from '@/shared/components/presentational/focal-point-modal'
+import { FilterChip } from '@/shared/components/presentational/filter-chip'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import {
@@ -83,6 +84,9 @@ type BaseProps = {
   rarityFilter: string | null
   rarityFilterOptions: GlassSelectOption[]
   onRarityFilterChange: (rarity: string | null) => void
+  // Admin-only no-picture chip - omit both and no chip renders (read-only catalogue).
+  withoutPictureFilter?: boolean
+  onWithoutPictureFilterChange?: (value: boolean) => void
   statFilters: Record<StandStatFilterKey, string | null>
   statFilterOptions: GlassSelectOption[]
   onStatFilterChange: (key: StandStatFilterKey, value: string | null) => void
@@ -141,6 +145,8 @@ export function StandsScreen(props: Props) {
     rarityFilter,
     rarityFilterOptions,
     onRarityFilterChange,
+    withoutPictureFilter,
+    onWithoutPictureFilterChange,
     statFilters,
     statFilterOptions,
     onStatFilterChange,
@@ -218,6 +224,16 @@ export function StandsScreen(props: Props) {
               clearable
             />
           </YStack>
+          {onWithoutPictureFilterChange ? (
+            <YStack justify="flex-end">
+              <FilterChip
+                label={t('stands.filterWithoutPicture')}
+                tooltip={t('stands.filterWithoutPictureHint')}
+                active={Boolean(withoutPictureFilter)}
+                onToggle={() => onWithoutPictureFilterChange(!withoutPictureFilter)}
+              />
+            </YStack>
+          ) : null}
         </XStack>
 
         <FilterDisclosure

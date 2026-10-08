@@ -8,6 +8,7 @@ import { Spinner, XStack, YStack } from 'tamagui'
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
 import { DetailModal } from '@/shared/components/presentational/detail-modal'
 import { FocalPointModal } from '@/shared/components/presentational/focal-point-modal'
+import { FilterChip } from '@/shared/components/presentational/filter-chip'
 import { GlassField } from '@/shared/components/presentational/glass-field'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import {
@@ -75,6 +76,9 @@ type BaseProps = {
   fruitTypeFilter: string | null
   fruitTypeFilterOptions: GlassSelectOption[]
   onFruitTypeFilterChange: (fruitType: string | null) => void
+  // Admin-only no-picture chip - omit both and no chip renders (read-only catalogue).
+  withoutPictureFilter?: boolean
+  onWithoutPictureFilterChange?: (value: boolean) => void
   hasActiveFilters: boolean
   detailFruit: DevilFruitResponse | null
   onOpenDetail: (devilFruit: DevilFruitResponse) => void
@@ -123,6 +127,8 @@ export function DevilFruitsScreen(props: Props) {
     fruitTypeFilter,
     fruitTypeFilterOptions,
     onFruitTypeFilterChange,
+    withoutPictureFilter,
+    onWithoutPictureFilterChange,
     hasActiveFilters,
     detailFruit,
     onOpenDetail,
@@ -194,6 +200,16 @@ export function DevilFruitsScreen(props: Props) {
               clearable
             />
           </YStack>
+          {onWithoutPictureFilterChange ? (
+            <YStack justify="flex-end">
+              <FilterChip
+                label={t('devilFruits.filterWithoutPicture')}
+                tooltip={t('devilFruits.filterWithoutPictureHint')}
+                active={Boolean(withoutPictureFilter)}
+                onToggle={() => onWithoutPictureFilterChange(!withoutPictureFilter)}
+              />
+            </YStack>
+          ) : null}
         </XStack>
 
         {isLoading ? (

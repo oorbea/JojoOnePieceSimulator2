@@ -39,4 +39,6 @@ export type StandFilters = {
   potential?: StandStat
   evolvesFrom?: string
   q?: string
+  // Sent as ?hasPicture=false - only set when the admin turns on the no-picture chip.
+  hasPicture?: boolean
 }

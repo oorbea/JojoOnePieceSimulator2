@@ -44,6 +44,7 @@ type HarnessProps = {
   onSearchChange?: (search: string) => void
   filtersExpanded?: boolean
   hasActiveFilters?: boolean
+  withoutPicture?: { active: boolean; onChange: (value: boolean) => void }
   hasNextPage?: boolean
   isFetchingNextPage?: boolean
   isLoadMoreError?: boolean
@@ -62,6 +63,7 @@ function Harness({
   onSearchChange,
   filtersExpanded,
   hasActiveFilters,
+  withoutPicture,
   hasNextPage,
   isFetchingNextPage,
   isLoadMoreError,
@@ -116,6 +118,8 @@ function Harness({
     moreFiltersCount: 0,
     onClearFilters: jest.fn(),
     hasActiveFilters: hasActiveFilters ?? false,
+    withoutPictureFilter: withoutPicture?.active,
+    onWithoutPictureFilterChange: withoutPicture?.onChange,
     detailStand,
     onOpenDetail: setDetailStand,
     onCloseDetail: () => setDetailStand(null),
@@ -170,6 +174,36 @@ function Harness({
 }
 
 describe('StandsScreen', () => {
+  describe('no-picture filter chip', () => {
+    it('renders no chip when the screen is not given the handler', async () => {
+      await renderWithProviders(<Harness />)
+
+      expect(screen.queryByLabelText('No picture')).toBeNull()
+    })
+
+    it('turns the filter on when pressed while off', async () => {
+      const onChange = jest.fn()
+      await renderWithProviders(<Harness withoutPicture={{ active: false, onChange }} />)
+
+      await act(async () => {
+        fireEvent.press(screen.getByLabelText('No picture'))
+      })
+
+      expect(onChange).toHaveBeenCalledWith(true)
+    })
+
+    it('turns the filter off when pressed while on', async () => {
+      const onChange = jest.fn()
+      await renderWithProviders(<Harness withoutPicture={{ active: true, onChange }} />)
+
+      await act(async () => {
+        fireEvent.press(screen.getByLabelText('No picture'))
+      })
+
+      expect(onChange).toHaveBeenCalledWith(false)
+    })
+  })
+
   it('renders the search field and rarity filter always visible', async () => {
     await renderWithProviders(<Harness />)
 
