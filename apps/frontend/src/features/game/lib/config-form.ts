@@ -59,6 +59,20 @@ export function configFormFromSnapshot(mode: GameMode, config: GameConfig): Conf
   }
 }
 
+/**
+ * True when `form` differs from what the server last confirmed. Drives the
+ * save button: without it the button kept saying "Saved" after the host had
+ * edited a stepper/toggle, so the edit looked applied while nobody else ever
+ * received it (only the manga chips autosave).
+ */
+export function isConfigFormDirty(
+  form: ConfigFormState,
+  mode: GameMode,
+  config: GameConfig
+): boolean {
+  return JSON.stringify(form) !== JSON.stringify(configFormFromSnapshot(mode, config))
+}
+
 export function applyModeChange(form: ConfigFormState, mode: GameMode): ConfigFormState {
   if (mode === 'GAUNTLET') {
     return {

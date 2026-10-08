@@ -20,6 +20,7 @@ import {
   applyModeChange,
   buildUpdateConfigPayload,
   configFormFromSnapshot,
+  isConfigFormDirty,
   TEAM_SIZE_LIMITS,
   type ConfigFormState,
 } from '@/features/game/lib/config-form'
@@ -418,6 +419,7 @@ export function LobbyRoomContainer() {
   }
 
   const configOffline = socket.status !== 'open'
+  const configDirty = isConfigFormDirty(form, snapshot.mode, snapshot.config)
 
   // Submits a full config replacement built from `next` (not from whatever
   // `form` happens to be at call time) - UPDATE_CONFIG is a full replacement,
@@ -628,7 +630,7 @@ export function LobbyRoomContainer() {
         onBanMatchingConfig={handleBanMatchingConfig}
         onClearConfigPoolFilter={handleClearConfigPoolFilter}
         configSaving={configSaving || configOffline}
-        configSaved={configSaved}
+        configSaved={configSaved && !configDirty}
         configError={configError}
         onSubmitConfig={handleSubmitConfig}
         live={socket.live}
