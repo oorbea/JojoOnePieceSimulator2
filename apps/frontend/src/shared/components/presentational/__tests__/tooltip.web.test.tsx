@@ -74,3 +74,53 @@ describe('useHoverTrigger (web onFocus branch)', () => {
     expect(api().visible).toBe(true)
   })
 })
+
+// Browsers answer a tap with an emulated mouseenter and only send the matching
+// mouseleave when the user taps elsewhere (Tamagui calls onHoverIn for it
+// regardless), so without this guard every tap left a tooltip stuck on screen.
+// Pointer events carry the real device type and are not re-fired for those
+// compatibility mouse events, so the last one seen tells which it was.
+function pointer(type: 'pointerdown' | 'pointermove', pointerType: 'mouse' | 'touch') {
+  const event = new MouseEvent(type, { bubbles: true })
+  Object.defineProperty(event, 'pointerType', { value: pointerType })
+  window.dispatchEvent(event)
+}
+
+describe('useHoverTrigger (web touch input)', () => {
+  beforeEach(async () => {
+    captured = null
+    await render(<Probe />)
+    api().triggerRef.current = { measure: (cb) => cb(0, 0, 50, 20, 100, 200) }
+  })
+
+  it('shows on hover after a mouse move', async () => {
+    pointer('pointermove', 'mouse')
+
+    await act(async () => {
+      ;(api().triggerProps as { onHoverIn?: () => void }).onHoverIn?.()
+    })
+
+    expect(api().visible).toBe(true)
+  })
+
+  it('ignores the emulated hover that follows a tap', async () => {
+    pointer('pointerdown', 'touch')
+
+    await act(async () => {
+      ;(api().triggerProps as { onHoverIn?: () => void }).onHoverIn?.()
+    })
+
+    expect(api().visible).toBe(false)
+  })
+
+  it('hovers again once the mouse moves after a touch', async () => {
+    pointer('pointerdown', 'touch')
+    pointer('pointermove', 'mouse')
+
+    await act(async () => {
+      ;(api().triggerProps as { onHoverIn?: () => void }).onHoverIn?.()
+    })
+
+    expect(api().visible).toBe(true)
+  })
+})

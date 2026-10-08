@@ -38,7 +38,6 @@ Formato: `- [ ] item — contexto breve ([[nota]])`.
 - [ ] Hoja de instrucciones iOS "Compartir → Añadir a inicio" ([[pwa-movil-2026-10-08]])
 - [ ] Regenerar swagger `apps/backend/docs` (y `-race` en CI para el test de concurrencia de game service) ([[pwa-movil-2026-10-08]], [[gameplay-application-layer]])
 
-- [ ] **BUG** Tooltips: se quedan flotando (p. ej. el de borrar un power); el scroll-hide no basta ([[norma-tooltips-y-ayuda-contextual]])
 - [ ] Dejar todo soportado para nativo (iOS/Android) aunque de momento solo se publique la PWA: no introducir APIs solo-web sin rama nativa ([[frontend-stack]])
 
 ## 2. Decisiones abiertas (necesitan al dueño)
@@ -63,6 +62,10 @@ Pendiente de respuesta del dueño; se mueve a sección 1 si falla o se borra si 
 - [ ] Foco con lector de pantalla en "Cargar más" en build nativo ([[catalogue-pagination]])
 
 - [ ] Drag-to-move en móvil físico (táctil) y host arrastrando a OTRO jugador: en web solo se verificó ratón arrastrando a uno mismo, ambos sentidos ([[game-lobby-frontend]])
+
+- [ ] Tooltips en móvil: confirmar en la PWA que ya no se quedan pegados tras tocar un botón (fix 2026-10-08, solo verificado con tests y ratón)
+- [ ] Tooltips en táctil web: hoy no se muestran nunca (se ignora el hover emulado); decidir si añadir pulsación larga como en nativo ([[norma-tooltips-y-ayuda-contextual]])
+- [ ] ConfirmSheet: Escape no la cerró al probarlo con Chrome (¿bug real o artefacto de la herramienta?) ([[norma-teclado]])
 
 ## 4. Limitaciones conocidas y aceptadas (no son tareas, no tocar sin decisión)
 

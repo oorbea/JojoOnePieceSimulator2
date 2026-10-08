@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { YStack } from 'tamagui'
 
 import { clampOverlayPosition } from '@/shared/lib/overlay-position'
+import { lastInteractionWasTouch } from '@/shared/lib/last-pointer'
 import { subscribeScroll } from '@/shared/lib/scroll-bus'
 import { isWeb } from '@/shared/lib/web-blur'
 
@@ -126,7 +127,14 @@ export function useHoverTrigger(opts?: HoverTriggerOptions) {
 
   const triggerProps = isWeb
     ? {
-        onHoverIn: scheduleShow,
+        // A tap makes the browser emit an emulated `mouseenter` and never the
+        // matching `mouseleave` (until the next tap elsewhere), and Tamagui
+        // forwards it here as a real hover - the bubble would stay stuck on
+        // screen after every tap. Touch has no hover, so ignore it.
+        onHoverIn: () => {
+          if (lastInteractionWasTouch()) return
+          scheduleShow()
+        },
         onHoverOut: hide,
         // Not just `scheduleShow` - a plain `onFocus` fires identically for
         // a real Tab keypress AND for any unrelated `.focus()` call some
