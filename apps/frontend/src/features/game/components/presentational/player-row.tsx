@@ -1,6 +1,6 @@
 import { Crown, Move, UserMinus, UserCog } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
-import { View } from 'react-native'
+import { Platform, View, type ViewStyle } from 'react-native'
 import { XStack, YStack } from 'tamagui'
 
 import { a11yProps } from '@/shared/lib/a11y'
@@ -30,6 +30,13 @@ type Props = {
   onDragEnd?: (info: DragEndInfo) => void
 }
 
+// Web-only: no text selection / native drag from the handle, and no browser
+// scroll/zoom taking over a touch that starts on it.
+const DRAG_HANDLE_WEB_STYLE: ViewStyle | undefined =
+  Platform.OS === 'web'
+    ? ({ cursor: 'grab', touchAction: 'none', userSelect: 'none' } as unknown as ViewStyle)
+    : undefined
+
 export function PlayerRow({
   participant,
   isHost,
@@ -42,11 +49,10 @@ export function PlayerRow({
 }: Props) {
   const { t } = useTranslation()
   const draggable = !!onDragEnd
-  const { translate, panHandlers } = usePlayerDrag(draggable, onDragEnd ?? (() => {}))
+  const { translate, handleProps } = usePlayerDrag(draggable, onDragEnd ?? (() => {}))
 
   return (
     <View
-      {...panHandlers}
       style={
         draggable
           ? { transform: [{ translateX: translate.x }, { translateY: translate.y }], zIndex: 1 }
@@ -134,11 +140,20 @@ export function PlayerRow({
         ) : null}
 
         {draggable ? (
-          // Purely a visual affordance ("this row can be dragged") - the tap
-          // path (TeamColumn's empty slot / host row actions) stays the
-          // primary, accessible way to move a player; this icon carries no
-          // interaction of its own and isn't in the tab order.
-          <Move size={14} color="$panelTextSoft" />
+          // The drag handle: the only part of the row that listens for the
+          // gesture. Pressing on the row's text instead made the browser
+          // start a native text selection/`dragstart` the moment the mouse
+          // moved, which cancels the mouse events the PanResponder needs, and
+          // on touch the page scroll claimed the gesture. The tap path
+          // (TeamColumn's empty slot / host row actions) stays the primary,
+          // accessible way to move a player; the handle isn't in the tab
+          // order.
+          <View
+            {...handleProps}
+            style={[{ padding: 11, margin: -11 }, DRAG_HANDLE_WEB_STYLE]}
+          >
+            <Move size={14} color="$panelTextSoft" />
+          </View>
         ) : null}
       </XStack>
     </View>

@@ -280,3 +280,23 @@ Verified: backend `go build`/`go vet`/`go test ./...` clean via Docker (endpoint
 regenerated `shared/contracts/ws.ts` with the new command/frame and a follow-up `types-check`
 confirmed no drift; frontend `tsc --noEmit` clean, `pnpm lint` 0 errors (same pre-existing CRLF
 warnings as always), full `pnpm jest --ci --maxWorkers=2` green at 75 suites / 1411 tests.
+
+## Config del lobby "no llega a los demás" (2026-10-08) - NO era el WS
+
+Reproducido en vivo con dos cuentas (`host1` + `guest2`, dev-login con `sessionStorage` propio por pestaña): el backend emite `CONFIG_UPDATED` + `STATE` y el invitado recibe los cambios al instante **después de pulsar Guardar** (probado: escenarios, ventana de votación, resumen, velocidad, privacidad, máx. jugadores). Solo los chips de manga autoguardan; el resto de campos son borrador local. El bug era de UI: tras un guardado previo el botón seguía diciendo "Guardado" aunque el host hubiera editado más cosas, así que parecía aplicado y nadie más lo recibía. Arreglo: `isConfigFormDirty` (`lib/config-form.ts`) y `configSaved && !configDirty` en el contenedor, así el botón vuelve a "Guardar" al haber cambios pendientes. Gotcha: un chip de manga autoguarda el formulario entero, incluidos los borradores pendientes.
+
+Gotcha de pruebas: dos pestañas del mismo perfil comparten la cookie de refresh, así que ambas acaban siendo el mismo usuario; para tener dos cuentas hay que llamar a `POST /auth/dev-login` desde cada pestaña y guardar el `refreshToken` en `sessionStorage['jops.dev_rt']` antes de recargar ([[dev-auth-bypass-2026-09-25]]). El frontend local sirve en `:8081`, no en `:3000`.
+
+## Drag-to-move roto en web, arreglado (2026-10-08)
+
+Síntoma: arrastrar una fila nunca movía a nadie. Diagnóstico en vivo (Chrome + logs temporales):
+
+1. Arrastrando desde el texto de la fila, al mover el ratón el navegador disparaba `dragstart` (selección de texto / arrastre nativo) y dejaba de enviar `mousemove`/`mouseup`: el gesto moría antes del release.
+2. Moviendo los handlers a un asa con `user-select: none; touch-action: none`, el `PanResponder` de react-native-web **ni siquiera llamaba a `onMoveShouldSetPanResponder`** (cero llamadas, el `mousedown`/`mousemove` DOM sí llegaban). No se llegó a la causa interna de RNW.
+
+Arreglo: `use-player-drag.ts` tiene ahora dos implementaciones elegidas por `Platform.OS`: web usa eventos de puntero DOM con `setPointerCapture` sobre el **asa** (icono `Move`, ahora con área de 36px; solo ahí se arrastra, el resto de la fila sigue seleccionable y el scroll táctil no se rompe) y `clientX/Y` (el mismo espacio que devuelve `.measure()` de las zonas); nativo conserva `PanResponder`. El callback `onDragEnd` se lee desde un ref porque el padre pasa una función nueva en cada render y re-enlazar a mitad de gesto lo cancelaba.
+
+Verificado en vivo con ratón real (`left_click_drag`): A→B y B→A mueven al jugador; un clic simple sobre el asa no hace nada. **Sin verificar**: táctil en móvil físico y host arrastrando a otro jugador (mismo camino de código, `onMovePlayer`). Sin test automatizado de la rama web (jsdom no reproduce el gesto).
+
+Gotcha de pruebas: `read_console_messages` perdió mensajes tras navegar; para depurar es más fiable envolver `console.log` en la página (`window.__l.push`) y leer el array.
+
