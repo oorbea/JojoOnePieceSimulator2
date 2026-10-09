@@ -36,7 +36,6 @@ Formato: `- [ ] item — contexto breve ([[nota]])`.
 - [ ] Aviso al editar en admin un poder cuyo nombre rompe una regla de efectos (hoy solo log al arrancar) ([[gameplay-power-effects]])
 - [ ] Servicio `frontend-test` en `docker-compose.test.yml` ([[norma-verificacion-docker]])
 - [ ] Hoja de instrucciones iOS "Compartir → Añadir a inicio" ([[pwa-movil-2026-10-08]])
-- [ ] Enlaces "?" al manual (`/manual?section=...`) desde la config del lobby, la votación y el sorteo: hoy navegar fuera de una partida activa dispara el aviso de abandonar (exit-guard); alternativas: overlay modal con la sección, o pestaña nueva en web ([[manual-normas-convenios-2026-10-09]])
 - [ ] Usar la tabla de convenios de combate (`combat_conventions.go`) en el desempate por LLM y en el evaluador de bots ([[manual-normas-convenios-2026-10-09]])
 
 - [ ] Dejar todo soportado para nativo (iOS/Android) aunque de momento solo se publique la PWA: no introducir APIs solo-web sin rama nativa ([[frontend-stack]])
@@ -61,7 +60,6 @@ Pendiente de respuesta del dueño; se mueve a sección 1 si falla o se borra si 
 - [ ] Sorteo ronda 2 Versus con 2+ humanos; sospechosos `shouldReveal`/`assignmentSeq` ([[playtest-fixes-2026-10-03]])
 - [ ] Auto-avance de 6 s + Skip en partida real ([[game-round-result-2026-08-28]])
 - [ ] Tusk evolucionando en vivo con datos de prod (tras desplegar 00024); con la regla nueva Acto 1 + Áureo debe dar siempre Acto 3 ([[gameplay-power-effects]])
-- [ ] Manual: confirmar con una query a prod (DBeaver) que el `evolves_from` real de Tusk (A1->A4), Soft & Wet -> Go Beyond y los niveles coinciden con `manualStandChains`; el manual los declara en código ([[manual-normas-convenios-2026-10-09]])
 - [ ] Manual: mirarlo en en-GB/ca-ES en vivo y en un móvil físico (en vivo solo se vio es-ES y un iframe de 390 px) ([[manual-normas-convenios-2026-10-09]])
 - [ ] Foco con lector de pantalla en "Cargar más" en build nativo ([[catalogue-pagination]])
 
