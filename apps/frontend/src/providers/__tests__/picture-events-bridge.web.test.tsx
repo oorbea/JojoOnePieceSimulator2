@@ -102,7 +102,7 @@ beforeEach(() => {
 describe('PictureEventsBridge', () => {
   it('mints a ticket and opens the stream with it in the query string, not a JWT', async () => {
     useSessionStore.setState({ session: adminSession(), isHydrated: true })
-    render(createElement(PictureEventsBridge))
+    await render(createElement(PictureEventsBridge))
     await flush()
 
     expect(mockMintEventsTicket).toHaveBeenCalledTimes(1)
@@ -115,7 +115,7 @@ describe('PictureEventsBridge', () => {
       session: { ...adminSession(), user: { ...adminSession().user, role: 'REGULAR' } },
       isHydrated: true,
     })
-    render(createElement(PictureEventsBridge))
+    await render(createElement(PictureEventsBridge))
     await flush()
 
     expect(mockMintEventsTicket).not.toHaveBeenCalled()
@@ -123,7 +123,7 @@ describe('PictureEventsBridge', () => {
   })
 
   it('does not mint without a session', async () => {
-    render(createElement(PictureEventsBridge))
+    await render(createElement(PictureEventsBridge))
     await flush()
 
     expect(mockMintEventsTicket).not.toHaveBeenCalled()
@@ -134,7 +134,7 @@ describe('PictureEventsBridge', () => {
     try {
       mockMintEventsTicket.mockRejectedValueOnce(httpError(403))
       useSessionStore.setState({ session: adminSession(), isHydrated: true })
-      render(createElement(PictureEventsBridge))
+      await render(createElement(PictureEventsBridge))
       await flush()
 
       expect(mockMintEventsTicket).toHaveBeenCalledTimes(1)
@@ -155,7 +155,7 @@ describe('PictureEventsBridge', () => {
     try {
       mockMintEventsTicket.mockRejectedValueOnce(new Error('network down'))
       useSessionStore.setState({ session: adminSession(), isHydrated: true })
-      render(createElement(PictureEventsBridge))
+      await render(createElement(PictureEventsBridge))
       await flush()
 
       expect(mockMintEventsTicket).toHaveBeenCalledTimes(1)
@@ -173,7 +173,7 @@ describe('PictureEventsBridge', () => {
 
   it('routes JOJO_CHARACTER/ONE_PIECE_CHARACTER picture events to their own query key', async () => {
     useSessionStore.setState({ session: adminSession(), isHydrated: true })
-    render(createElement(PictureEventsBridge))
+    await render(createElement(PictureEventsBridge))
     await flush()
 
     const source = FakeEventSource.instances[0]
@@ -199,7 +199,7 @@ describe('PictureEventsBridge', () => {
     jest.useFakeTimers()
     try {
       useSessionStore.setState({ session: adminSession(), isHydrated: true })
-      render(createElement(PictureEventsBridge))
+      await render(createElement(PictureEventsBridge))
       await flush()
 
       const first = FakeEventSource.instances[0]

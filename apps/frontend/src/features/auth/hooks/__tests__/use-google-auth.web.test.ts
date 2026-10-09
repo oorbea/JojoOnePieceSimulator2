@@ -109,7 +109,7 @@ function Probe() {
 async function mount() {
   captured = null
   await act(async () => {
-    render(createElement(Probe))
+    await render(createElement(Probe))
   })
 }
 
