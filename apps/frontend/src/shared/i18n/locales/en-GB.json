@@ -791,6 +791,12 @@
     "index": {
       "jump": "Go to {{section}}"
     },
+    "help": {
+      "open": "Open the manual: {{section}}",
+      "close": "Close the manual",
+      "openFull": "Open the full manual",
+      "openFullHint": "Go to this section on the manual page"
+    },
     "sections": {
       "how": "How to play",
       "modes": "Game modes",

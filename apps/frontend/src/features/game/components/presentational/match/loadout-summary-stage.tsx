@@ -9,6 +9,7 @@ import type { GameSnapshot } from '@/features/game/types/game.types'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
+import { ManualHelpButton } from '@/shared/components/presentational/manual-help-button'
 import { useNow } from '@/shared/hooks/use-now'
 
 type Props = {
@@ -75,7 +76,10 @@ export function LoadoutSummaryStage({ snapshot, selfId, summaryEndsAt, readyCoun
       {snapshot.mode === 'VERSUS' && snapshot.upcomingStage ? (
         <StageAnnouncement stage={snapshot.upcomingStage} compact />
       ) : null}
-      <GlowText level="heading">{t('game.match.summary.title')}</GlowText>
+      <XStack items="center" gap="$2">
+        <GlowText level="heading">{t('game.match.summary.title')}</GlowText>
+        <ManualHelpButton section="effects" />
+      </XStack>
       {seconds !== null ? (
         <GlowText level="label" tone="soft">
           {t('game.match.summary.votingIn', { seconds })}

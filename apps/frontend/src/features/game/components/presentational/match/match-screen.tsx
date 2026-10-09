@@ -11,6 +11,7 @@ import { StageAnnouncement } from '@/features/game/components/presentational/mat
 import { StageBanner } from '@/features/game/components/presentational/match/stage-banner'
 import { VoteBar } from '@/features/game/components/presentational/match/vote-bar'
 import { VotingStatusBar } from '@/features/game/components/presentational/match/voting-status-bar'
+import { ManualHelpButton } from '@/shared/components/presentational/manual-help-button'
 import { ConnectionBanner } from '@/features/game/components/presentational/connection-banner'
 import { roundOutcome } from '@/features/game/lib/game-result'
 import {
@@ -113,17 +114,20 @@ export function MatchScreen({
         <GlowText level="title">
           {t(`enums.gameMode.${snapshot.mode}`)} · {t(`enums.gameState.${snapshot.state}`)}
         </GlowText>
-        {you.isHost ? (
-          <GlossButton
-            tone="red"
-            btnSize="sm"
-            onPress={onAbort}
-            accessibilityLabel={t('game.abort.action')}
-            tooltip={t('game.abort.title')}
-          >
-            {t('game.abort.action')}
-          </GlossButton>
-        ) : null}
+        <XStack items="center" gap="$2">
+          <ManualHelpButton section="how" />
+          {you.isHost ? (
+            <GlossButton
+              tone="red"
+              btnSize="sm"
+              onPress={onAbort}
+              accessibilityLabel={t('game.abort.action')}
+              tooltip={t('game.abort.title')}
+            >
+              {t('game.abort.action')}
+            </GlossButton>
+          ) : null}
+        </XStack>
       </XStack>
 
       {isRevealing ? (

@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react'
 import type { LayoutChangeEvent } from 'react-native'
 import { Paragraph, XStack, YStack } from 'tamagui'
 
@@ -16,7 +17,19 @@ type SectionCardProps = {
   children: React.ReactNode
 }
 
+// Inside the overlay the modal already provides the card and the title, so the
+// same section components render bare: just their content.
+export const ManualBareContext = createContext(false)
+
 export function SectionCard({ id, title, onMeasure, children }: SectionCardProps) {
+  const bare = useContext(ManualBareContext)
+  if (bare) {
+    return (
+      <YStack width="100%" gap="$4" testID={`manual-section-${id}`}>
+        {children}
+      </YStack>
+    )
+  }
   return (
     <GlassPanel
       glossy

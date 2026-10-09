@@ -97,6 +97,7 @@ describe.each([
       'manual.title',
       'manual.intro',
       'manual.index.jump',
+      ...['open', 'close', 'openFull', 'openFullHint'].map((k) => `manual.help.${k}`),
       ...[
         'how',
         'modes',

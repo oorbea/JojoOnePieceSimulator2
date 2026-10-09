@@ -1,5 +1,6 @@
 import { Redirect, Slot } from 'expo-router'
 
+import { ManualOverlayProvider } from '@/features/manual'
 import { useNotificationNavigation, usePushBootstrap } from '@/features/pwa'
 import { AppShellContainer } from '@/shared/components/containers/app-shell-container'
 import { LoadingScreen } from '@/shared/components/presentational/loading-screen'
@@ -27,7 +28,9 @@ export default function AppGroupLayout() {
 
   return (
     <AppShellContainer>
-      <Slot />
+      <ManualOverlayProvider>
+        <Slot />
+      </ManualOverlayProvider>
     </AppShellContainer>
   )
 }
