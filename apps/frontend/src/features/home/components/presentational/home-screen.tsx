@@ -1,4 +1,4 @@
-import { Apple, Gamepad2, Landmark, Sparkles, User, Users } from '@tamagui/lucide-icons-2'
+import { Apple, BookOpen, Gamepad2, Landmark, Sparkles, User, Users } from '@tamagui/lucide-icons-2'
 import { useTranslation } from 'react-i18next'
 import { Paragraph, XStack, YStack } from 'tamagui'
 
@@ -34,6 +34,13 @@ const CHANNELS = [
     tone: 'green' as const,
     icon: Gamepad2,
     href: '/play',
+  },
+  {
+    key: 'manual',
+    labelKey: 'home.channels.manual',
+    tone: 'orange' as const,
+    icon: BookOpen,
+    href: '/manual',
   },
   {
     key: 'profile',

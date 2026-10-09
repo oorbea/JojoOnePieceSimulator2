@@ -121,6 +121,7 @@
     },
     "channels": {
       "play": "Play",
+      "manual": "Manual",
       "profile": "Profile",
       "stands": "Stands",
       "devilFruits": "Devil Fruits",

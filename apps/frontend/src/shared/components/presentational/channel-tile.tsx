@@ -9,7 +9,7 @@ import { GlowText } from './glow-text'
 import { TooltipBubble, useTooltipTrigger } from './tooltip'
 import { InsetRing } from './wii-card'
 
-export type ChannelTileTone = 'blue' | 'grape' | 'red' | 'yellow' | 'green' | 'pink'
+export type ChannelTileTone = 'blue' | 'grape' | 'red' | 'yellow' | 'green' | 'pink' | 'orange'
 
 // The icon components lucide-icons-2 exports (Home, Sparkles, Apple, Zap,
 // Lock, ...) all share this prop shape — declared locally instead of
@@ -31,6 +31,7 @@ const TONE_BG: Record<ChannelTileTone, string> = {
   yellow: '$sunYellow',
   green: '$meadowGreen',
   pink: '$bubblegum',
+  orange: '$tangerine',
 }
 
 type ChannelTileProps = {
