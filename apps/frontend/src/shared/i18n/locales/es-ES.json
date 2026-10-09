@@ -121,6 +121,7 @@
     },
     "channels": {
       "play": "Jugar",
+      "manual": "Manual",
       "profile": "Perfil",
       "stands": "Stands",
       "devilFruits": "Frutas del Diablo",
