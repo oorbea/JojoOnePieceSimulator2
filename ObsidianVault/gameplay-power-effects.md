@@ -25,7 +25,7 @@ Rule storage is a **code table keyed by power name** (`game/power_effects.go`) -
 
 **Stand spin tiers** (port of V1 `main.cc:82-126`): Tusk Acto 1 = BASIC, Acto 2 = GOLDEN, Acto 3 = GOLDEN, Acto 4 = INFINITE, Ball Breaker = INFINITE, Soft & Wet: Go Beyond = INFINITE (Soft & Wet itself has no tier).
 - Spin below the stand's tier -> Spin is raised to it.
-- Spin **above** the stand's tier -> the stand evolves to the highest-tier allowed descendant the Spin covers. Equal is "just right" (Acto 2 + GOLDEN stays Acto 2, as in V1). Acto 1 + GOLDEN is a genuine tie between Acto 2 and Acto 3 -> 50/50, like V1. If the Spin outgrows every *allowed* stage (the host banned the top ones), the furthest-evolved one wins deterministically in one hop, no tie-break draw (Acto 2 + INFINITE with Acto 4 banned -> Acto 3).
+- Spin **above** the stand's tier -> the stand evolves to the highest-tier allowed descendant the Spin covers. Equal is "just right" (Acto 2 + GOLDEN stays Acto 2, as in V1). Acto 1 + GOLDEN ties Acto 2 and Acto 3 (both GOLDEN) and **always lands on Acto 3**: since 2026-10-09 any tie goes to the furthest-evolved stage (V1 flipped a coin here; the owner overruled it). Acto 2 + GOLDEN still stays Acto 2 (equal = "just right"). If the Spin outgrows every *allowed* stage (the host banned the top ones), the furthest-evolved one wins in one hop too (Acto 2 + INFINITE with Acto 4 banned -> Acto 3).
 - Soft & Wet + INFINITE -> Go Beyond, with V1's typo bug fixed.
 
 **Fruit family Gomu -> Nika**: `Gomu Gomu no mi` + AWAKENED mastery -> `Hito Hito no mi: Model Nika`. Nika drawn directly with lower mastery -> mastery raised to AWAKENED, and its reveal starts from Gomu (like Tusk Acto 4 starts from Acto 1). `Hito Hito no mi` (Chopper's) and `...: Model Daibutsu` are unrelated - exact match, not prefix. Fruits have no `evolves_from` in the DB; the relation lives in the code table and is attached at load time by `game.LinkFruitEvolutions` (returns copies; must run on the **unfiltered** list so a banned Gomu still parents Nika).
@@ -38,7 +38,7 @@ Rule storage is a **code table keyed by power name** (`game/power_effects.go`) -
 | 3 | ZOAN fruit | Physical Form >= STRONG_FISHMAN |
 | 4 | Stand `Hermit purple` | Hamon >= BASIC |
 | 5 | Hamon PERFECT | Spin >= BASIC |
-| 6 | Stand `King Crimson` | Observation Haki >= YONKO_COMMANDER (cross-manga) |
+| 6 | Stand `King Crimson` | Observation Haki >= YONKO_PLUS (cross-manga; was YONKO_COMMANDER until 2026-10-09) |
 | 7 | Fruit `Hito Hito no mi: Model Nika` | Hamon >= ADVANCED (cross-manga) |
 | 9 | Hamon PERFECT | Armament Haki >= PRIVATE (cross-manga) |
 | 10 | Hamon >= ADVANCED | Physical Form >= MARINE_CAPTAIN (cross-manga) |
@@ -49,7 +49,7 @@ Cross-manga rules (a power of one manga raising a stat of the other) only apply 
 
 ## Architecture
 
-- `game/power_effects.go`: tables, `PowerEffect{Kind, Slot, From, To, CauseSlot, Cause}`, `resolvePowerEffects` (passes until stable, cap 16 -> `ErrPowerEffectsDiverged`; per pass: fruit evolution, fruit mastery floor, stand evolution, stand spin floor, then the ordered stat-floor table). `rng.IntN` is consumed **only** for an exact-tier tie, so `TestLoadoutBuilder_DrawOrder` still holds.
+- `game/power_effects.go`: tables, `PowerEffect{Kind, Slot, From, To, CauseSlot, Cause}`, `resolvePowerEffects` (passes until stable, cap 16 -> `ErrPowerEffectsDiverged`; per pass: fruit evolution, fruit mastery floor, stand evolution, stand spin floor, then the ordered stat-floor table). The resolver is **fully deterministic** and takes no `rng` (since 2026-10-09, when the exact-tier coin flip went away), so `TestLoadoutBuilder_DrawOrder` holds trivially. Each `statFloorRule` now describes its trigger with a `Subject` (the same type the combat conventions use) instead of a closure, so the manual can print the very rules the resolver applies ([[manual-normas-convenios-2026-10-09]]).
 - `LoadoutBuilder.Build` resolves after every draw. `Loadout` carries `effects`; `Stand()/DevilFruit()` are the **final** ones, `DrawnStand()/DrawnDevilFruit()` the pre-evolution ones (found on the final power's ancestor chain by the first evolution effect's `From`).
 - `NewLoadoutFromSpec` enforces the floors (`ErrPowerEffectFloorViolated`, wire code `POWER_EFFECT_FLOOR_VIOLATED`, replaces `SPIN_4_REQUIRED`); **restore skips them** (`newLoadout(spec, false)`), closing the debt in [[game-lobby-persistence]] where a changed rule table made in-flight lobbies unrestorable. Future inventory mode ([[gameplay-versus-inventory-characters]]) gets the floors for free.
 - New enums `PowerEffectKind` (STAT_FLOOR, EVOLUTION) and `LoadoutSlot` replace `PowerTrait` on the wire.
@@ -74,6 +74,13 @@ Each effect plays its own beat **at the moment its trigger shows up**, after rep
 ## Live verification
 
 Lobby with the pool restricted to Gomu/Nika + King Crimson/Hermit purple, both mangas, one human, viewed in Chrome. Observed in order: a fruit evolve beat, "Nika raises your Fruit Mastery to Awakened" + "LEVELLED UP", "King Crimson raises your Observation Haki to Yonko Commander", "Nika raises your Hamon to Advanced". That run exposed the fruit slot saying "your **stand** is evolving" (fixed, own copy key). Not seen live: a **spin-driven Tusk** evolution (Tusk is prod-only, not in the local seed) - covered by unit tests, worth eyeballing against prod data. The only console errors were the pre-existing audio `AbortError: play() interrupted by pause()`.
+
+## Changed 2026-10-09 (owner, while writing the manual)
+
+- **Tie -> most evolved**: any evolution tie goes to the furthest-evolved stage, no coin flip (Tusk Act 1 + GOLDEN is always Act 3). `pickEvolution` lost its `rng`; so did `evolveStand`/`evolveFruit`/`resolvePowerEffects`.
+- **King Crimson -> Observation YONKO_PLUS** (was YONKO_COMMANDER).
+- The owner's mental model of Tusk was "Act 1 + GOLDEN -> Act 3". It matched the tier table (Act 2 and Act 3 both GOLDEN) once the tie stopped being random; the tiers themselves did not change.
+- These rules now also feed the in-game manual, which prints the evolution matrix by running this very resolver: [[manual-normas-convenios-2026-10-09]].
 
 ## Open / deliberately not done
 

@@ -1,4 +1,4 @@
-import { Gamepad2, Home, Shield, User } from '@tamagui/lucide-icons-2'
+import { BookOpen, Gamepad2, Home, Shield, User } from '@tamagui/lucide-icons-2'
 import { usePathname, useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 
@@ -21,12 +21,13 @@ import { useThemeStore } from '@/shared/stores/theme.store'
 // come from useTranslation() in the component below - this only pins the
 // i18n key per route.
 const NAV_ITEMS: {
-  href: '/' | '/play' | '/profile' | '/admin'
+  href: '/' | '/play' | '/manual' | '/profile' | '/admin'
   labelKey: string
   icon: AppShellNavItem['icon']
 }[] = [
   { href: '/', labelKey: 'nav.home', icon: Home },
   { href: '/play', labelKey: 'nav.play', icon: Gamepad2 },
+  { href: '/manual', labelKey: 'nav.manual', icon: BookOpen },
   { href: '/profile', labelKey: 'nav.profile', icon: User },
 ]
 

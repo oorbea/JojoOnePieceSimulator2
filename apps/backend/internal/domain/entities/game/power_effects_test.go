@@ -49,9 +49,9 @@ func pinnedWeights(p pinned) game.AssignmentWeights {
 }
 
 // scriptRandom answers IntN(n) with at[n] (0 when unset) and counts calls per
-// n. Pool draws are IntN(poolSize) (NoStandWeight is 0) and an evolution
-// tie-break is IntN(2), so a test picks "which stand" with at[len(pool)] and
-// "which tied target" with at[2]. Pinned draws are IntN(1) and so always 0.
+// n. Pool draws are IntN(poolSize) (NoStandWeight is 0), so a test picks
+// "which stand" with at[len(pool)]. Pinned draws are IntN(1) and so always 0.
+// The effect resolver is deterministic and never calls it.
 type scriptRandom struct {
 	at    map[int]int
 	calls map[int]int
@@ -173,30 +173,27 @@ func TestPowerEffects_SpinEvolvesStand(t *testing.T) {
 		name      string
 		drawn     int
 		spin      enums.SpinLevel
-		tie       int
 		wantStand string
-		wantTies  int
 		wantFx    []string
 	}{
-		{"acto1 + infinite -> acto4", 0, enums.SpinInfinite, 0, "Tusk: Act 4", 0,
+		{"acto1 + infinite -> acto4", 0, enums.SpinInfinite, "Tusk: Act 4",
 			[]string{"EVOLUTION STAND Tusk: Act 1>Tusk: Act 4 by SPIN:INFINITE"}},
-		{"acto2 + infinite -> acto4", 1, enums.SpinInfinite, 0, "Tusk: Act 4", 0,
+		{"acto2 + infinite -> acto4", 1, enums.SpinInfinite, "Tusk: Act 4",
 			[]string{"EVOLUTION STAND Tusk: Act 2>Tusk: Act 4 by SPIN:INFINITE"}},
-		{"acto3 + infinite -> acto4", 2, enums.SpinInfinite, 0, "Tusk: Act 4", 0,
+		{"acto3 + infinite -> acto4", 2, enums.SpinInfinite, "Tusk: Act 4",
 			[]string{"EVOLUTION STAND Tusk: Act 3>Tusk: Act 4 by SPIN:INFINITE"}},
-		{"acto1 + golden tie -> acto2", 0, enums.SpinGolden, 0, "Tusk: Act 2", 1,
-			[]string{"EVOLUTION STAND Tusk: Act 1>Tusk: Act 2 by SPIN:GOLDEN"}},
-		{"acto1 + golden tie -> acto3", 0, enums.SpinGolden, 1, "Tusk: Act 3", 1,
+		// Act 2 and Act 3 are both GOLDEN: the furthest-evolved one always wins.
+		{"acto1 + golden -> acto3 (always)", 0, enums.SpinGolden, "Tusk: Act 3",
 			[]string{"EVOLUTION STAND Tusk: Act 1>Tusk: Act 3 by SPIN:GOLDEN"}},
-		{"acto1 + basic stays", 0, enums.SpinBasic, 0, "Tusk: Act 1", 0, nil},
-		{"acto2 + golden stays (V1)", 1, enums.SpinGolden, 0, "Tusk: Act 2", 0, nil},
-		{"acto3 + golden stays (V1)", 2, enums.SpinGolden, 0, "Tusk: Act 3", 0, nil},
-		{"acto4 + infinite stays", 3, enums.SpinInfinite, 0, "Tusk: Act 4", 0, nil},
+		{"acto1 + basic stays", 0, enums.SpinBasic, "Tusk: Act 1", nil},
+		{"acto2 + golden stays", 1, enums.SpinGolden, "Tusk: Act 2", nil},
+		{"acto3 + golden stays", 2, enums.SpinGolden, "Tusk: Act 3", nil},
+		{"acto4 + infinite stays", 3, enums.SpinInfinite, "Tusk: Act 4", nil},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			stands := tuskFamily(t)
-			rng := newScript(map[int]int{4: tc.drawn, 2: tc.tie})
+			rng := newScript(map[int]int{4: tc.drawn})
 			l := build(t, jojo, pinnedWeights(pinned{spin: tc.spin}), rng, stands, nil)
 			if l.Stand().Name() != tc.wantStand {
 				t.Fatalf("expected %s, got %s", tc.wantStand, l.Stand().Name())
@@ -204,8 +201,8 @@ func TestPowerEffects_SpinEvolvesStand(t *testing.T) {
 			if l.Spin() != tc.spin {
 				t.Fatalf("spin must be untouched, got %v", l.Spin())
 			}
-			if rng.calls[2] != tc.wantTies {
-				t.Fatalf("expected %d tie-break draw(s), got %d", tc.wantTies, rng.calls[2])
+			if rng.calls[2] != 0 {
+				t.Fatalf("the resolver must not consume randomness, got %d IntN(2) call(s)", rng.calls[2])
 			}
 			assertEffects(t, l, names(stands, nil), tc.wantFx...)
 			if l.DrawnStand() != stands[tc.drawn] {
@@ -218,8 +215,8 @@ func TestPowerEffects_SpinEvolvesStand(t *testing.T) {
 func TestPowerEffects_EvolutionRespectsBannedStages(t *testing.T) {
 	// Act 4 banned: the pool only holds Act 1..3.
 	// The Spin outgrows every allowed stage, so it is the furthest-evolved one
-	// that wins - in one hop and without a tie-break draw, whichever of the
-	// equally ranked Act 2 / Act 3 would otherwise have been picked first.
+	// that wins - in one hop, whichever of the equally ranked Act 2 / Act 3
+	// comes first in the catalogue.
 	tests := []struct {
 		name  string
 		drawn int
@@ -393,10 +390,10 @@ func TestPowerEffects_CrossMangaRulesNeedBothMangas(t *testing.T) {
 	stands := []*powers.Stand{kc}
 
 	l := build(t, both, pinnedWeights(pinned{}), newScript(nil), stands, nil)
-	if l.ObservationHaki() != enums.HakiYonkoCommander {
-		t.Fatalf("both mangas: King Crimson should raise observation haki, got %v", l.ObservationHaki())
+	if l.ObservationHaki() != enums.HakiYonkoPlus {
+		t.Fatalf("both mangas: King Crimson should raise observation haki to Yonko+, got %v", l.ObservationHaki())
 	}
-	assertEffects(t, l, names(stands, nil), "STAT_FLOOR OBSERVATION_HAKI NONE>YONKO_COMMANDER by STAND:King Crimson")
+	assertEffects(t, l, names(stands, nil), "STAT_FLOOR OBSERVATION_HAKI NONE>YONKO_PLUS by STAND:King Crimson")
 
 	l = build(t, jojo, pinnedWeights(pinned{}), newScript(nil), stands, nil)
 	if l.ObservationHaki() != enums.HakiNone || len(l.Effects()) != 0 {
@@ -564,8 +561,11 @@ func TestNewLoadoutFromSpec_EnforcesPowerEffectFloors(t *testing.T) {
 		{"king crimson cross rule enforced with both mangas", func(s *game.LoadoutSpec) {
 			s.Stand, s.Mangas = kc, []enums.Manga{enums.Jojo, enums.OnePiece}
 		}, game.ErrPowerEffectFloorViolated},
-		{"king crimson satisfied", func(s *game.LoadoutSpec) {
+		{"king crimson with yonko commander is not enough", func(s *game.LoadoutSpec) {
 			s.Stand, s.Mangas, s.ObservationHaki = kc, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.HakiYonkoCommander
+		}, game.ErrPowerEffectFloorViolated},
+		{"king crimson satisfied", func(s *game.LoadoutSpec) {
+			s.Stand, s.Mangas, s.ObservationHaki = kc, []enums.Manga{enums.Jojo, enums.OnePiece}, enums.HakiYonkoPlus
 		}, nil},
 	}
 	for _, tc := range tests {

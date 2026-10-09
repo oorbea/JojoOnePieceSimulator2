@@ -14,6 +14,7 @@ import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { InfoHint } from '@/shared/components/presentational/info-hint'
+import { ManualHelpButton } from '@/shared/components/presentational/manual-help-button'
 import { SettingRow } from '@/shared/components/presentational/setting-row'
 import { TooltipBubble, useTooltipTrigger } from '@/shared/components/presentational/tooltip'
 import { WiiCard } from '@/shared/components/presentational/wii-card'
@@ -121,6 +122,9 @@ export function LobbyConfigPanel({
 
   return (
     <YStack width="100%" gap="$3">
+      <XStack width="100%" justify="flex-end">
+        <ManualHelpButton section="modes" />
+      </XStack>
       {!isHost ? (
         <YStack gap="$1">
           <GlowText level="label">{t('game.config.readOnly')}</GlowText>

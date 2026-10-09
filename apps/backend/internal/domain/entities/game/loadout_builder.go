@@ -29,9 +29,9 @@ var physicalFormLevels = []enums.PhysicalForm{
 // which are uniform over the pool - see AssignmentWeights' doc comment for
 // why. After every draw the power-effect resolver runs (power_effects.go):
 // it raises stats a drawn power demands and evolves a Stand/DevilFruit the
-// drawn Spin/Mastery covers, recording each as a PowerEffect. It consumes
-// randomness only to break a tie between equally ranked evolution targets,
-// so the draw order above is unaffected. The hard invariants (fruit<->mastery
+// drawn Spin/Mastery covers, recording each as a PowerEffect. It is fully
+// deterministic (no randomness), so the draw order above is unaffected. The
+// hard invariants (fruit<->mastery
 // coupling, the effect floors) are re-checked by NewLoadout at the very end
 // regardless of what the draws and the resolver produced.
 type LoadoutBuilder struct {
@@ -130,7 +130,7 @@ func (b *LoadoutBuilder) Build(pool *AvailablePowers) (*Loadout, error) {
 	st.values[enums.SlotObservationHaki] = int(observationHaki)
 	st.values[enums.SlotConquerorHaki] = int(conquerorHaki)
 	st.values[enums.SlotSpin] = int(spin)
-	effects, err := resolvePowerEffects(st, b.rng)
+	effects, err := resolvePowerEffects(st)
 	if err != nil {
 		return nil, err
 	}

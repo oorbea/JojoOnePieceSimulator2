@@ -74,6 +74,27 @@ func (b BattleIQ) Band() BattleIQBand {
 	}
 }
 
+// Key is the band's stable identifier, shared with the frontend's
+// `enums.battleIQCategory.*` i18n keys.
+func (band BattleIQBand) Key() string {
+	switch band {
+	case BattleIQExtremelyLow:
+		return "EXTREMELY_LOW"
+	case BattleIQBorderline:
+		return "BORDERLINE"
+	case BattleIQLowAverage:
+		return "LOW_AVERAGE"
+	case BattleIQAverage:
+		return "AVERAGE"
+	case BattleIQHighAverage:
+		return "HIGH_AVERAGE"
+	case BattleIQSuperior:
+		return "SUPERIOR"
+	default:
+		return "VERY_SUPERIOR"
+	}
+}
+
 // Range returns the inclusive [lo, hi] byte range this band covers,
 // mirroring Band()'s thresholds exactly - the one place LoadoutBuilder
 // consults to know which values a drawn band may produce.

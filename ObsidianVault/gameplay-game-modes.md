@@ -33,7 +33,7 @@ play.
 
 ## Abilities per manga
 
-- **JoJo**: Stand, Spin, Hamon.
+- **JoJo**: Stand, Spin, Hamon, and Battle IQ (a 0-255 score in seven WAIS-IV bands, dealt last and only when JoJo is in play; the bot evaluator scores it 0..6 by band - see [[gameplay-versus-inventory-characters]] and [[manual-normas-convenios-2026-10-09]]).
 - **One Piece**: Physical Form, Devil Fruit, Fruit Mastery, and all three Haki types (Armament,
   Observation, Conqueror).
 - **Both**: everything above.

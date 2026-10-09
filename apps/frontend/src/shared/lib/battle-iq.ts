@@ -1,3 +1,5 @@
+import { MANUAL_RULES } from '@/shared/contracts/rules'
+
 // BattleIQ is a JoJo-only Loadout stat: a raw 0-255 score, mirroring
 // apps/backend/.../game/battle_iq.go. The backend sends only the number
 // (see GameLoadoutResponse.BattleIQ); the WAIS-IV classification band is
@@ -10,27 +12,15 @@
 // other `enums.*` namespace mirrors a real generated enum) - this is the
 // one deliberate exception, recorded here so the keys already line up if
 // the backend ever exposes the band itself.
-export type BattleIQCategory =
-  | 'EXTREMELY_LOW'
-  | 'BORDERLINE'
-  | 'LOW_AVERAGE'
-  | 'AVERAGE'
-  | 'HIGH_AVERAGE'
-  | 'SUPERIOR'
-  | 'VERY_SUPERIOR'
+export type BattleIQCategory = (typeof MANUAL_RULES.battleIQ)[number]['key']
 
 // BATTLE_IQ_BANDS is the inclusive upper bound of every band except the
-// last, in ascending order - mirrors BattleIQ.Band()'s thresholds exactly
-// (apps/backend/.../game/battle_iq.go).
-const BATTLE_IQ_BANDS: { max: number; key: BattleIQCategory }[] = [
-  { max: 69, key: 'EXTREMELY_LOW' },
-  { max: 79, key: 'BORDERLINE' },
-  { max: 89, key: 'LOW_AVERAGE' },
-  { max: 109, key: 'AVERAGE' },
-  { max: 119, key: 'HIGH_AVERAGE' },
-  { max: 129, key: 'SUPERIOR' },
-  { max: Infinity, key: 'VERY_SUPERIOR' },
-]
+// last, in ascending order. Generated from the backend's own band table
+// (contracts/rules.ts <- game.BattleIQ.Range), so it cannot drift from
+// BattleIQ.Band()'s thresholds.
+const BATTLE_IQ_BANDS: { max: number; key: BattleIQCategory }[] = MANUAL_RULES.battleIQ.map(
+  (band, i, all) => ({ max: i === all.length - 1 ? Infinity : band.hi, key: band.key })
+)
 
 export function battleIQCategory(score: number): BattleIQCategory {
   for (const band of BATTLE_IQ_BANDS) {

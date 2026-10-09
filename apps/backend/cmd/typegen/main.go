@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/oorbea/JojoOnePieceSimulator2/internal/domain/entities/game"
 )
 
 func main() {
@@ -45,6 +47,7 @@ func generate() map[string]string {
 		"errors.ts": emitErrors(reg),
 		"dto.ts":    emitDTO(reg, order, enumIdx, isRegistered),
 		"ws.ts":     emitWS(reg, order, enumIdx, isRegistered),
+		"rules.ts":  emitRules(game.BuildManualRules()),
 		"index.ts":  emitIndex(reg, order),
 	}
 }

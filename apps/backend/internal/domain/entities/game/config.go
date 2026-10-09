@@ -33,6 +33,10 @@ const (
 	// when a CreateGame request doesn't specify one.
 	DefaultVotingWindowSeconds = 30
 
+	// VotingExtensionSeconds is how much time the host's "+10s" adds to the
+	// open voting window, however many times it is pressed.
+	VotingExtensionSeconds = 10
+
 	// DefaultRevealSpeed is the fallback used by Restore for a legacy
 	// (pre-reveal-speed) Snapshot, and by the application layer when a
 	// CreateGame/ConfigUpdate request doesn't specify one.
