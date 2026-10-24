@@ -1,4 +1,11 @@
 const mockEnv: { EXPO_PUBLIC_WEB_ORIGIN?: string } = {}
+const mockLocation = { origin: 'http://localhost' }
+
+jest.mock('@/shared/lib/browser-location', () => ({
+  get browserLocation() {
+    return mockLocation
+  },
+}))
 
 jest.mock('@/shared/config/env', () => ({
   get env() {
@@ -9,11 +16,9 @@ jest.mock('@/shared/config/env', () => ({
 import { buildInviteUrl, inviteOrigin } from '@/features/game/lib/invite-url'
 
 describe('inviteOrigin / buildInviteUrl', () => {
-  const originalLocation = window.location
-
   afterEach(() => {
     delete mockEnv.EXPO_PUBLIC_WEB_ORIGIN
-    Object.defineProperty(window, 'location', { value: originalLocation, writable: true })
+    mockLocation.origin = 'http://localhost'
   })
 
   it('prefers EXPO_PUBLIC_WEB_ORIGIN when configured', () => {
@@ -24,10 +29,7 @@ describe('inviteOrigin / buildInviteUrl', () => {
   })
 
   it('falls back to window.location.origin on web when unconfigured', () => {
-    Object.defineProperty(window, 'location', {
-      value: { ...originalLocation, origin: 'https://example.com' },
-      writable: true,
-    })
+    mockLocation.origin = 'https://example.com'
 
     expect(inviteOrigin()).toBe('https://example.com')
     expect(buildInviteUrl('tok')).toBe('https://example.com/join/tok')

@@ -1,4 +1,4 @@
-import type { ScrollView as RNScrollView } from 'react-native'
+import type { ScrollViewRef } from '@/shared/lib/view-ref'
 import { ScrollView, YStack } from 'tamagui'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -24,7 +24,7 @@ type PageShellProps = {
   backdrop?: boolean
   /** Ref to the inner ScrollView (only when `scroll`), for screens that scroll
    * to a section themselves (the manual's table of contents). */
-  scrollRef?: React.Ref<RNScrollView>
+  scrollRef?: React.Ref<ScrollViewRef>
 }
 
 // Kills the 5x duplicated centering-wrapper-over-gradient recipe that used

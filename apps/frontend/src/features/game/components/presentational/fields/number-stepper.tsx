@@ -1,7 +1,7 @@
 import { Minus, Plus } from '@tamagui/lucide-icons-2'
 import { useRef, useState, type ElementRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { NativeSyntheticEvent, TextInputKeyPressEventData } from 'react-native'
+import type { TextInputKeyPressEvent } from 'react-native'
 import { Input, XStack } from 'tamagui'
 
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
@@ -68,7 +68,7 @@ export function NumberStepper({ label, value, min, max, onChange, help }: Props)
     setEditing(false)
   }
 
-  function handleKeyPress(e: NativeSyntheticEvent<TextInputKeyPressEventData>) {
+  function handleKeyPress(e: TextInputKeyPressEvent) {
     if (e.nativeEvent.key === 'Escape') cancel()
   }
 

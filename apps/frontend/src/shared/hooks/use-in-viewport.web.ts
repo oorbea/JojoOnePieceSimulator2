@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import type { View } from 'react-native'
 
 export type ViewportBucket = 'visible' | 'near' | 'far'
 
@@ -10,7 +9,7 @@ export type ViewportBucket = 'visible' | 'near' | 'far'
 // root still respects ancestor clipping. `rootMargin: 400px` is the "near"
 // prefetch band; anything outside both thresholds is "far" but still gets
 // queued (see image-queue.ts - far items aren't skipped, just deprioritized).
-export function useInViewport(ref: React.RefObject<View | null>): ViewportBucket {
+export function useInViewport(ref: React.RefObject<unknown>): ViewportBucket {
   const [bucket, setBucket] = useState<ViewportBucket>(
     typeof IntersectionObserver === 'undefined' ? 'visible' : 'far'
   )

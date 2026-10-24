@@ -1,9 +1,10 @@
 import { Pencil, Trash2, Users } from '@tamagui/lucide-icons-2'
 import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pressable, type View } from 'react-native'
+import { Pressable } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
@@ -45,7 +46,7 @@ type Props<T extends CharacterLike> = {
 // manga itself.
 function CharacterCardInner<T extends CharacterLike>(
   { character, rows, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy }: Props<T>,
-  ref: React.ForwardedRef<View>
+  ref: React.ForwardedRef<ViewRef>
 ) {
   const { t } = useTranslation()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -142,5 +143,5 @@ function CharacterCardInner<T extends CharacterLike>(
 }
 
 export const CharacterCard = forwardRef(CharacterCardInner) as <T extends CharacterLike>(
-  props: Props<T> & { ref?: React.ForwardedRef<View> }
+  props: Props<T> & { ref?: React.ForwardedRef<ViewRef> }
 ) => ReturnType<typeof CharacterCardInner>

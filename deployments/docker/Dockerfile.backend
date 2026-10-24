@@ -3,7 +3,7 @@
 # Pinned to the same alpine minor as the runtime stage: the builder's
 # vips-dev and the runtime's vips must come from the same apk snapshot,
 # since the binary is now dynamically linked against libvips.
-FROM golang:1.26-alpine3.22 AS builder
+FROM golang:1.26-alpine3.23 AS builder
 WORKDIR /src
 # The base image's Go patch version can lag go.mod's `go` directive; let the
 # toolchain fetch the pinned version itself instead of failing the build.
@@ -29,9 +29,9 @@ RUN CGO_ENABLED=1 GOOS=linux go build -tags vips -o /out/mediabackfill ./cmd/med
 # what the main module actually imports) - `go build` fails wanting a `go get`
 # that -mod=readonly refuses to run. `go install ...@version` resolves the
 # module independently instead of relying on this project's go.sum.
-RUN CGO_ENABLED=0 GOOS=linux GOBIN=/out go install github.com/pressly/goose/v3/cmd/goose@v3.27.3
+RUN CGO_ENABLED=0 GOOS=linux GOBIN=/out go install github.com/pressly/goose/v3/cmd/goose@v3.29.0
 
-FROM alpine:3.22
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates vips \
     && adduser -D -u 10001 app
 USER app

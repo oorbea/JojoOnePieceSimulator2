@@ -4,7 +4,7 @@
 # freshly-built `go test` binaries before they even start (observed for
 # anything importing net/http/httptest, and intermittently for larger test
 # binaries in general) - see ObsidianVault/storage-fallback-chain.md. Running
-# inside the same golang:1.26-alpine3.22 image the prod Dockerfile.backend
+# inside the same golang:1.26-alpine3.23 image the prod Dockerfile.backend
 # builder stage uses sidesteps that entirely and matches CI's ubuntu-latest
 # environment more closely than the bare host ever did.
 #
@@ -20,7 +20,7 @@
 
 services:
   backend-test:
-    image: golang:1.26-alpine3.22
+    image: golang:1.26-alpine3.23
     working_dir: /src
     volumes:
       - ../apps/backend:/src
@@ -69,7 +69,7 @@ services:
   # this. The diff/check half runs on the HOST afterwards, not in this
   # container - golang:alpine has no git, and .git isn't mounted here.)
   typegen:
-    image: golang:1.26-alpine3.22
+    image: golang:1.26-alpine3.23
     working_dir: /repo/apps/backend
     volumes:
       - ../apps:/repo/apps

@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { View } from 'react-native'
+
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { YStack } from 'tamagui'
 
 import { PlayerRow } from '@/features/game/components/presentational/player-row'
@@ -30,7 +32,7 @@ type Props = {
    * the parent that renders every `TeamColumn` since resolving a drop needs
    * to see all of them, not just this one). Optional so this component
    * still works standalone (e.g. Storybook/tests) without a live registry. */
-  zoneRef?: (node: View | null) => void
+  zoneRef?: (node: ViewRef | null) => void
   onZoneLayout?: () => void
   /** Called with a participant's release point; the parent resolves it
    * against every registered zone and issues switchTeam/movePlayer. */
@@ -77,7 +79,13 @@ export function TeamColumn({
       // flexDirection: 'column') via RN's default `alignItems: 'stretch'`.
       style={{ flex: 1, minWidth: 0 }}
     >
-      <GlassPanel tone="strong" width="100%" p="$4" gap="$3" borderColor={teamToneColor(tone) as never}>
+      <GlassPanel
+        tone="strong"
+        width="100%"
+        p="$4"
+        gap="$3"
+        borderColor={teamToneColor(tone) as never}
+      >
         <GlowText level="heading" color={teamToneColor(tone) as never}>
           {team.name} · {participants.length}/{capacity}
         </GlowText>

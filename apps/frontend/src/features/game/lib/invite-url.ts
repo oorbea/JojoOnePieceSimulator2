@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { env } from '@/shared/config/env'
+import { browserLocation } from '@/shared/lib/browser-location'
 
 // The one place that knows the shape of a lobby invite link. Today it's
 // always https://<origin>/join/<token> (Opción A in the design doc) - a
@@ -35,7 +36,7 @@ export function inviteOrigin(): string | null {
   const configured = env.EXPO_PUBLIC_WEB_ORIGIN
   if (configured) return isAcceptableOrigin(configured) ? configured : null
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return isAcceptableOrigin(window.location.origin) ? window.location.origin : null
+    return isAcceptableOrigin(browserLocation.origin) ? browserLocation.origin : null
   }
   return null
 }

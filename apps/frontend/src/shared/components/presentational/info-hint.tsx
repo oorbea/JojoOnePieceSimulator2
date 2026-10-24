@@ -1,6 +1,8 @@
 import { HelpCircle } from '@tamagui/lucide-icons-2'
 import { useRef, useState } from 'react'
 import { Modal, View } from 'react-native'
+
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { YStack } from 'tamagui'
 
 import { GlossButton } from './gloss-button'
@@ -31,7 +33,7 @@ type Anchor = { x: number; y: number; width: number; height: number }
 export function InfoHint({ text }: Props) {
   const [open, setOpen] = useState(false)
   const [anchor, setAnchor] = useState<Anchor | null>(null)
-  const anchorRef = useRef<View>(null)
+  const anchorRef = useRef<ViewRef>(null)
 
   const toggle = () => {
     if (open) {
@@ -57,7 +59,13 @@ export function InfoHint({ text }: Props) {
         <HelpCircle size={14} color="$panelTextSoft" />
       </GlossButton>
       {open && anchor ? (
-        <Modal visible transparent animationType="fade" onRequestClose={() => setOpen(false)} statusBarTranslucent>
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setOpen(false)}
+          statusBarTranslucent
+        >
           <YStack flex={1} onPress={() => setOpen(false)}>
             <YStack
               position="absolute"
@@ -65,7 +73,11 @@ export function InfoHint({ text }: Props) {
               l={Math.max(8, anchor.x + anchor.width / 2 - 110)}
               width={220}
             >
-              <SpeechBubble tailSide="top" p="$3" onPress={(e: { stopPropagation?: () => void }) => e.stopPropagation?.()}>
+              <SpeechBubble
+                tailSide="top"
+                p="$3"
+                onPress={(e: { stopPropagation?: () => void }) => e.stopPropagation?.()}
+              >
                 <GlowText level="label">{text}</GlowText>
               </SpeechBubble>
             </YStack>
