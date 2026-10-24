@@ -146,7 +146,7 @@ export function FocalPointPicker({ uri, x, y, onChange }: Props) {
             testID="focal-point-well"
             style={{ width: imageRect.width || '100%', height: imageRect.height || '100%' }}
             {...panResponder.panHandlers}
-            {...(isWeb ? { tabIndex: 0, onKeyDown } : undefined)}
+            {...(isWeb ? { tabIndex: 0, onKeyDown: onKeyDown as never } : undefined)}
             {...a11yProps(percentLabel, 'adjustable')}
           >
             <RNImage
@@ -203,7 +203,11 @@ export function FocalPointPicker({ uri, x, y, onChange }: Props) {
           <GlowText level="label" tone="soft" fontSize="$3">
             {t('focalPoint.previewCard')}
           </GlowText>
-          <LazyImage uri={uri} height={100} contentPosition={focalPosition({ focalX: x, focalY: y })} />
+          <LazyImage
+            uri={uri}
+            height={100}
+            contentPosition={focalPosition({ focalX: x, focalY: y })}
+          />
         </YStack>
 
         <YStack flex={1} minW={100} gap="$1.5">

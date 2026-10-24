@@ -5,7 +5,12 @@ import { isWeb } from '@/shared/lib/web-blur'
 export type RovingItemProps = {
   tabIndex: number
   id?: string
-  onKeyDown?: (e: { key: string; preventDefault?: () => void }) => void
+  // react-native-web hands the handler a DOM KeyboardEvent (`e.key` at the top
+  // level), but RN 0.88's own types model a native event (key nested under
+  // `nativeEvent`), so no single structural type satisfies both the spread
+  // into a RN/Tamagui element and our `e.key` reads. Typed loosely on purpose.
+
+  onKeyDown?: (e: any) => void
   onFocus?: () => void
 }
 
@@ -36,7 +41,12 @@ type UseRovingGroupOptions = {
 // forwarding. Web-only (isWeb branch): native has no keyboard focus model
 // to roam, so getItemProps degrades to a plain tabIndex there and the
 // existing tap/press handlers stay the only way to interact, unchanged.
-export function useRovingGroup({ groupId, count, onActivate, initialIndex = 0 }: UseRovingGroupOptions) {
+export function useRovingGroup({
+  groupId,
+  count,
+  onActivate,
+  initialIndex = 0,
+}: UseRovingGroupOptions) {
   const [activeIndex, setActiveIndex] = useState(Math.min(initialIndex, Math.max(0, count - 1)))
 
   const itemId = useCallback((index: number) => `${groupId}-${index}`, [groupId])
@@ -59,7 +69,7 @@ export function useRovingGroup({ groupId, count, onActivate, initialIndex = 0 }:
         tabIndex: index === activeIndex ? 0 : -1,
         id: itemId(index),
         onFocus: () => setActiveIndex(index),
-        onKeyDown: (e) => {
+        onKeyDown: (e: { key: string; preventDefault?: () => void }) => {
           switch (e.key) {
             case 'ArrowRight':
             case 'ArrowDown':

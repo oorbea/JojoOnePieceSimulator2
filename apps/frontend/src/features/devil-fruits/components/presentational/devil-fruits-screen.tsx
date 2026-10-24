@@ -2,7 +2,7 @@ import { Apple, Plus, TriangleAlert } from '@tamagui/lucide-icons-2'
 import { useEffect, useRef } from 'react'
 import type { Control, FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import type { View } from 'react-native'
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
@@ -143,7 +143,7 @@ export function DevilFruitsScreen(props: Props) {
 
   // Focus management for "Cargar más" - see StandsScreen's identical effect
   // for the full doc.
-  const cardRefs = useRef(new Map<string, View | null>())
+  const cardRefs = useRef(new Map<string, ViewRef | null>())
   const prevLengthRef = useRef(devilFruits.length)
   const wasFetchingRef = useRef(isFetchingNextPage ?? false)
   useEffect(() => {
@@ -290,7 +290,9 @@ export function DevilFruitsScreen(props: Props) {
                       btnSize="md"
                       onPress={onLoadMore}
                       disabled={isFetchingNextPage}
-                      accessibilityLabel={t(isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore')}
+                      accessibilityLabel={t(
+                        isLoadMoreError ? 'common.loadMoreRetry' : 'common.loadMore'
+                      )}
                     >
                       {isFetchingNextPage ? (
                         <Spinner size="small" color="white" />
@@ -370,7 +372,9 @@ export function DevilFruitsScreen(props: Props) {
           <ConfirmSheet
             visible={props.deleteConfirm.visible}
             title={t('devilFruits.deleteConfirmTitle')}
-            message={t('devilFruits.deleteConfirmMessage', { name: props.deleteConfirm.fruitName ?? '' })}
+            message={t('devilFruits.deleteConfirmMessage', {
+              name: props.deleteConfirm.fruitName ?? '',
+            })}
             confirmLabel={t('devilFruits.deleteConfirmButton')}
             isConfirming={props.deleteConfirm.isConfirming}
             onConfirm={props.deleteConfirm.onConfirm}

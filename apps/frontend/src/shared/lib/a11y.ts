@@ -1,4 +1,11 @@
-import { AccessibilityInfo, findNodeHandle, Platform, type AccessibilityRole, type View } from 'react-native'
+import {
+  AccessibilityInfo,
+  findNodeHandle,
+  Platform,
+  type AccessibilityRole,
+} from 'react-native'
+
+import type { ViewRef } from '@/shared/lib/view-ref'
 
 // RN's accessibilityLabel/accessibilityRole pass straight through to the
 // DOM on web (Tamagui doesn't translate them), which React logs as unknown
@@ -46,7 +53,7 @@ export function a11yProps(label?: string, role?: AccessibilityRole, state?: A11y
 // one belonging to a host component `findNodeHandle` can't resolve, yields
 // `null` - silently skip rather than throw, since this only ever fires
 // best-effort after a data change, never on a user's direct action.
-export function focusElement(el: View | null): void {
+export function focusElement(el: ViewRef | null): void {
   if (!el) return
   if (Platform.OS === 'web') {
     const maybeFocusable = el as unknown as { focus?: () => void }

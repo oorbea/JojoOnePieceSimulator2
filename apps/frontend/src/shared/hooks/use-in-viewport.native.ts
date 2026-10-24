@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Dimensions, type View } from 'react-native'
+import { Dimensions } from 'react-native'
 
 import { subscribeScroll } from '@/shared/lib/scroll-bus'
 
@@ -10,7 +10,7 @@ export type ViewportBucket = 'visible' | 'near' | 'far'
 // touching PageShell. `measureInWindow` gives absolute on-screen position
 // directly, so recomputing on every scroll tick is enough; no offset
 // bookkeeping needed.
-export function useInViewport(ref: React.RefObject<View | null>): ViewportBucket {
+export function useInViewport(ref: React.RefObject<unknown>): ViewportBucket {
   const [bucket, setBucket] = useState<ViewportBucket>('far')
 
   useEffect(() => {

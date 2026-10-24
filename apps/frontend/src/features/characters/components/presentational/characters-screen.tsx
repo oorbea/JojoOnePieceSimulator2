@@ -2,7 +2,7 @@ import { Plus, TriangleAlert, Users } from '@tamagui/lucide-icons-2'
 import { useEffect, useRef } from 'react'
 import type { Control, FieldErrors } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import type { View } from 'react-native'
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { Spinner, XStack, YStack } from 'tamagui'
 
 import { ConfirmSheet } from '@/shared/components/presentational/confirm-sheet'
@@ -169,7 +169,7 @@ export function CharactersScreen<T extends CharacterLike>(props: Props<T>) {
     typeof rows === 'function' ? rows(character) : rows
 
   // Focus management for "Cargar más" - see StagesScreen's identical effect.
-  const cardRefs = useRef(new Map<string, View | null>())
+  const cardRefs = useRef(new Map<string, ViewRef | null>())
   const prevLengthRef = useRef(characters.length)
   const wasFetchingRef = useRef(isFetchingNextPage ?? false)
   useEffect(() => {

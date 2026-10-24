@@ -1,7 +1,8 @@
-import type { LayoutChangeEvent, ScrollView } from 'react-native'
+import type { LayoutChangeEvent } from 'react-native'
 import { useTranslation } from 'react-i18next'
 import { XStack, YStack } from 'tamagui'
 
+import type { ScrollViewRef } from '@/shared/lib/view-ref'
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { PageShell } from '@/shared/components/presentational/page-shell'
 
@@ -27,7 +28,7 @@ type Props = {
   onMeasureRow: (y: number) => void
   onMeasureColumn: (y: number) => void
   onMeasureSection: (id: ManualSectionId, y: number) => void
-  scrollRef?: React.Ref<ScrollView>
+  scrollRef?: React.Ref<ScrollViewRef>
 }
 
 // The whole manual: title, table of contents, then every section. Pure UI -

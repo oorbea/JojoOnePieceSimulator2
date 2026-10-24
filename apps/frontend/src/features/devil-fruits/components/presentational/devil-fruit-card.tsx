@@ -1,9 +1,10 @@
 import { Apple, Pencil, Trash2 } from '@tamagui/lucide-icons-2'
 import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pressable, type View } from 'react-native'
+import { Pressable } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
@@ -25,7 +26,7 @@ type Props = {
 
 // forwardRef targets the detail Pressable (the card's main tab stop) - see
 // StandCard's identical doc for why "Cargar más" needs it.
-export const DevilFruitCard = forwardRef<View, Props>(function DevilFruitCard(
+export const DevilFruitCard = forwardRef<ViewRef, Props>(function DevilFruitCard(
   { devilFruit, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
   ref
 ) {
@@ -41,7 +42,9 @@ export const DevilFruitCard = forwardRef<View, Props>(function DevilFruitCard(
         onPress={() => (isImageError ? setRetryToken((n) => n + 1) : setIsPreviewOpen(true))}
         disabled={!uri}
         {...a11yProps(
-          t(isImageError ? 'common.imageRetry' : 'devilFruits.previewA11y', { name: devilFruit.name }),
+          t(isImageError ? 'common.imageRetry' : 'devilFruits.previewA11y', {
+            name: devilFruit.name,
+          }),
           'imagebutton'
         )}
       >
@@ -93,7 +96,11 @@ export const DevilFruitCard = forwardRef<View, Props>(function DevilFruitCard(
             disabled={isEditBusy}
             accessibilityLabel={t('devilFruits.editA11y', { name: devilFruit.name })}
           >
-            {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
+            {isEditBusy ? (
+              <Spinner size="small" color="white" />
+            ) : (
+              <Pencil size={16} color="white" />
+            )}
           </GlossButton>
           <GlossButton
             tone="red"
