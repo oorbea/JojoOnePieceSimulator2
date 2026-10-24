@@ -150,22 +150,25 @@ function loginResponse(overrides: Record<string, unknown> = {}) {
   }
 }
 
-// window.location is an own accessor property on jsdom's window and is
-// configurable, so it can be swapped for a plain object. That is the only way
-// to both read origin/pathname deterministically and observe assign(): jsdom's
-// real Location refuses cross-origin navigation and cannot be spied on.
+// jsdom's `window.location` is non-configurable and its real Location refuses
+// cross-origin navigation, so the hook reads/navigates through the
+// browser-location seam instead; this fake lets the tests read origin/pathname
+// deterministically and observe assign().
 type FakeLocation = { origin: string; pathname: string; hash: string; assign: jest.Mock }
 
-let fakeLocation: FakeLocation
+const mockFakeLocation = { origin: '', pathname: '', hash: '', assign: jest.fn() }
+const fakeLocation: FakeLocation = mockFakeLocation
+
+jest.mock('@/shared/lib/browser-location', () => ({
+  get browserLocation() {
+    return mockFakeLocation
+  },
+}))
 let replaceState: jest.Mock
 
 function setLocation(hash: string) {
-  fakeLocation = { origin: 'https://app.test', pathname: '/login', hash, assign: jest.fn() }
-  Object.defineProperty(window, 'location', {
-    configurable: true,
-    writable: true,
-    value: fakeLocation,
-  })
+  Object.assign(fakeLocation, { origin: 'https://app.test', pathname: '/login', hash })
+  fakeLocation.assign = jest.fn()
 }
 
 beforeEach(() => {

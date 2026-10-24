@@ -7,6 +7,7 @@ import { Platform } from 'react-native'
 import { postGoogleAuth } from '@/features/auth/api/auth.api'
 import { toAppError, type AppError } from '@/shared/api/errors'
 import { env } from '@/shared/config/env'
+import { browserLocation } from '@/shared/lib/browser-location'
 import { secureStorage } from '@/shared/lib/secure-storage'
 import { REFRESH_TOKEN_KEY } from '@/shared/api/refresh-token-key'
 import { fromUserResponse, useSessionStore } from '@/shared/stores/session.store'
@@ -31,7 +32,7 @@ const WEB_NONCE_KEY = 'jojo_google_auth_nonce'
 function buildWebAuthUrl(state: string, nonce: string): string {
   const params = new URLSearchParams({
     client_id: env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    redirect_uri: `${window.location.origin}${window.location.pathname}`,
+    redirect_uri: `${browserLocation.origin}${browserLocation.pathname}`,
     response_type: 'id_token',
     scope: 'openid email profile',
     prompt: 'select_account',
@@ -86,7 +87,7 @@ export function useGoogleAuth() {
   useEffect(() => {
     if (Platform.OS !== 'web' || hasHandledWebRedirect.current) return
 
-    const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+    const hash = browserLocation.hash.startsWith('#') ? browserLocation.hash.slice(1) : ''
     if (!hash) return
 
     const params = new URLSearchParams(hash)
@@ -95,7 +96,7 @@ export function useGoogleAuth() {
     if (!idToken) return
 
     hasHandledWebRedirect.current = true
-    window.history.replaceState(null, '', window.location.pathname)
+    window.history.replaceState(null, '', browserLocation.pathname)
 
     // Deferred so no setState call runs synchronously in the effect body —
     // every update happens inside this async callback's microtasks instead.
@@ -152,7 +153,7 @@ export function useGoogleAuth() {
       const nonce = crypto.randomUUID()
       window.sessionStorage.setItem(WEB_STATE_KEY, state)
       window.sessionStorage.setItem(WEB_NONCE_KEY, nonce)
-      window.location.assign(buildWebAuthUrl(state, nonce))
+      browserLocation.assign(buildWebAuthUrl(state, nonce))
       return
     }
 
