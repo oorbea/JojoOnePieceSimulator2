@@ -1,9 +1,10 @@
 import { Map, Pencil, Trash2 } from '@tamagui/lucide-icons-2'
 import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pressable, type View } from 'react-native'
+import { Pressable } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
@@ -28,7 +29,7 @@ type Props = {
 // description, since that's the field an admin actually wants to preview.
 // forwardRef targets the detail Pressable (the card's main tab stop) - see
 // StandCard's identical doc for why "Cargar más" needs it.
-export const StageCard = forwardRef<View, Props>(function StageCard(
+export const StageCard = forwardRef<ViewRef, Props>(function StageCard(
   { stage, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
   ref
 ) {
@@ -102,7 +103,11 @@ export const StageCard = forwardRef<View, Props>(function StageCard(
             disabled={isEditBusy}
             accessibilityLabel={t('stages.editA11y', { name: stage.name })}
           >
-            {isEditBusy ? <Spinner size="small" color="white" /> : <Pencil size={16} color="white" />}
+            {isEditBusy ? (
+              <Spinner size="small" color="white" />
+            ) : (
+              <Pencil size={16} color="white" />
+            )}
           </GlossButton>
           <GlossButton
             tone="red"

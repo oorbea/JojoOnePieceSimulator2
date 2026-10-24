@@ -1,8 +1,7 @@
 import { Image as ExpoImage, type ImageContentFit, type ImageContentPosition } from 'expo-image'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { View } from 'react-native'
-import { YStack } from 'tamagui'
+import { type TamaguiElement, YStack } from 'tamagui'
 
 import { GlowText } from '@/shared/components/presentational/glow-text'
 import { Skeleton } from '@/shared/components/presentational/skeleton'
@@ -71,7 +70,7 @@ export function LazyImage({
   onStateChange,
 }: Props) {
   const { t } = useTranslation()
-  const wellRef = useRef<View>(null)
+  const wellRef = useRef<TamaguiElement>(null)
   const visibility = useInViewport(wellRef)
   const { state, onLoad, onError } = useImageSlot({
     uri,

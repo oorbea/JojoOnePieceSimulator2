@@ -5,7 +5,9 @@ import { AppState, type AppStateStatus } from 'react-native'
 // features can react to foreground/background transitions (e.g. pausing
 // polling, refetching on resume) without each one wiring its own listener.
 export function useAppState(): AppStateStatus {
-  const [state, setState] = useState<AppStateStatus>(AppState.currentState)
+  const [state, setState] = useState<AppStateStatus>(
+    (AppState.currentState ?? 'active') as AppStateStatus
+  )
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', setState)

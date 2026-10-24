@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useRef, useState } from 'react'
-import type { ScrollView } from 'react-native'
+import type { ScrollViewRef } from '@/shared/lib/view-ref'
 
 import { MANUAL_RULES } from '@/shared/contracts/rules'
 
@@ -26,7 +26,7 @@ export function ManualContainer() {
   const router = useRouter()
   const requested = parseSection(params.section)
 
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewRef>(null)
   const offsets = useRef<Offsets>({ row: 0, column: 0, sections: {} })
   const pending = useRef<ManualSectionId | null>(requested)
   const [active, setActive] = useState<ManualSectionId | null>(requested)

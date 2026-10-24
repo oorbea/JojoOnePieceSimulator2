@@ -39,9 +39,9 @@ type RateLimitConfig struct {
 
 // keyByClientIP keys the limiter on chi's resolved client IP, populated by
 // two middlewares chained in NewRouter: ClientIPFromRemoteAddr first (the
-// TCP peer), then ClientIPFromXFF() with no trusted-prefix arguments, which
+// TCP peer), then ClientIPFromXFFTrustedProxies(1), which
 // overwrites it with the rightmost X-Forwarded-For entry when one is
-// present. That "no arguments" form trusts exactly one hop in front of this
+// present. That form trusts exactly one hop in front of this
 // server - correct here because prod's backend container publishes no port
 // and is reachable only through Nginx Proxy Manager on the shared
 // public-net network (docker-compose.prod.yml), which appends the real
@@ -53,7 +53,7 @@ type RateLimitConfig struct {
 // reads whatever middleware.GetClientIP resolved. If the backend is ever
 // exposed to more than one untrusted hop (a CDN in front of NPM, say),
 // switch to middleware.ClientIPFromXFF(trustedPrefixes...) with NPM's actual
-// address/CIDR instead of the argument-less form.
+// address/CIDR instead.
 func keyByClientIP(r *http.Request) (string, error) {
 	return httprate.CanonicalizeIP(middleware.GetClientIP(r.Context())), nil
 }

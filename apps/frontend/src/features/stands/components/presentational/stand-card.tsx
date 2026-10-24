@@ -1,9 +1,10 @@
 import { Pencil, Sparkles, Trash2 } from '@tamagui/lucide-icons-2'
 import { forwardRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pressable, type View } from 'react-native'
+import { Pressable } from 'react-native'
 import { Spinner, XStack, YStack } from 'tamagui'
 
+import type { ViewRef } from '@/shared/lib/view-ref'
 import { GlassPanel } from '@/shared/components/presentational/glass-panel'
 import { GlossButton } from '@/shared/components/presentational/gloss-button'
 import { GlowText } from '@/shared/components/presentational/glow-text'
@@ -33,7 +34,7 @@ type Props = {
 // stop) - "Cargar más" in stands-screen.tsx moves focus there for the first
 // newly-appended card after a page loads, per norma-teclado.md's
 // keyboard-accessibility requirement.
-export const StandCard = forwardRef<View, Props>(function StandCard(
+export const StandCard = forwardRef<ViewRef, Props>(function StandCard(
   { stand, onOpenDetail, readOnly, onEdit, onDelete, isEditBusy },
   ref
 ) {
